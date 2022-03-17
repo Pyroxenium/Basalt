@@ -13,7 +13,7 @@ local frames = {}
 local animations = {}
 
 --Utility Functions:
-function getTextAlign(text, w, textAlign)
+local function getTextAlign(text, w, textAlign)
     local text = string.sub(text, 1, w)
     local n = w-string.len(text)
     if(textAlign=="right")then
@@ -174,7 +174,7 @@ end
 
 --Object Constructors:
 function object:new()
-    local newElement = {__type = "Object",name="",drawCalls=0,x=1,y=1,w=1,h=1,textAlign="left",draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,text=""}
+    local newElement = {__type = "Object",name="",drawCalls=0,x=1,y=1,w=1,h=1,textAlign="left",draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,text="",hanchor="left",vanchor="top"}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -217,6 +217,13 @@ end
 dropdown = object:new()
 function dropdown:new()
     local newElement = {__type = "Dropdown",bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center",elements={},selected=""}
+    setmetatable(newElement, {__index = self})
+    return newElement
+end
+
+list = object:new()
+function list:new()
+    local newElement = {__type = "List",bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center",elements={},selected=""}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -292,7 +299,35 @@ function object:drawObject() -- Base class for drawing a object
     return self
 end
 
-function object:IsFocusedElement()
+function object:setAnchor(ank1,ank2)
+    if(ank1=="right")or(ank1=="left")then
+        self.hanchor = ank1
+    end
+    if(ank2=="top")or(ank2=="bottom")then
+        self.vanchor = ank2
+    end
+    if(ank1=="top")or(ank1=="bottom")then
+        self.vanchor = ank1
+    end
+    if(ank2=="right")or(ank2=="left")then
+        self.hanchor = ank2
+    end
+    return self
+end
+
+function object:toAbsolutePosition()
+local x = self.x
+local y = self.y
+    if(self.hanchor=="right")then
+        x = self.frame.w-x+1
+    end
+    if(self.vanchor=="bottom")then
+        y = self.frame.h-x
+    end
+    return x, y
+end
+
+function object:isFocusedElement()
     return self == self.frame.focusedObject
 end
 
@@ -358,7 +393,7 @@ end
 function checkbox:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-        self.frame.fWindow.setCursorPos(self.x,self.y)
+        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         if(self.checked)then
@@ -393,7 +428,7 @@ end
 function label:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-        self.frame.fWindow.setCursorPos(self.x,self.y)
+        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(self.text)
@@ -424,7 +459,7 @@ function input:drawObject()
         end
         local n = self.w-string.len(text)
         text = text..string.rep(" ", n)
-        self.frame.fWindow.setCursorPos(self.x,self.y)
+        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(text)
@@ -448,7 +483,7 @@ function button:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
 
-        self.frame.fWindow.setCursorPos(self.x,self.y)
+        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(getTextAlign(self.text, self.w, self.textAlign))
@@ -476,7 +511,7 @@ end
 function dropdown:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-        self.frame.fWindow.setCursorPos(self.x,self.y)
+        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(getTextAlign(self.selected, self.w, self.textAlign))
@@ -485,7 +520,8 @@ function dropdown:drawObject()
             if(#self.elements>0)then
                 local index = 1
                 for _,v in ipairs(self.elements)do
-                    self.frame.fWindow.setCursorPos(self.x,self.y+index)
+                    local objx, objy = self:toAbsolutePosition()
+                    self.frame.fWindow.setCursorPos(objx,objy+index)
                     self.frame.fWindow.setBackgroundColor(self.bgcolor)
                     self.frame.fWindow.setTextColor(self.fgcolor)
                     self.frame.fWindow.write(getTextAlign(v, self.w, self.textAlign))
@@ -505,11 +541,12 @@ local function checkMouseClick(clicktype,x,y)
     activeFrame.inputActive = false
     local d = activeFrame.focusedObject
     if(d.__type=="Dropdown")then
-        if(d:IsFocusedElement())then
+        if(d:isFocusedElement())then
             if(#d.elements>0)then
+                local dx,dy = d:toAbsolutePosition()
                 local index = 1
                 for _,b in pairs(d.elements)do
-                    if(d.x<=x)and(d.x+d.w>x)and(d.y+index<=y)and(d.y+index+d.h>y)then
+                    if(dx<=x)and(dx+d.w>x)and(dy+index<=y)and(dy+index+d.h>y)then
                         d.selected = b
                         if(d.changeFunc~=nil)then
                             d.changeFunc(d)
@@ -525,8 +562,9 @@ local function checkMouseClick(clicktype,x,y)
     activeFrame.focusedObject = {}
     for k,v in pairs(activeFrame.objects)do
         if(v.draw~=false)then
+            local vx,vy = v:toAbsolutePosition()
             if not(v.__type=="Timer")then
-                if(v.x<=x)and(v.x+v.w>x)and(v.y<=y)and(v.y+v.h>y)then
+                if(vx<=x)and(vx+v.w>x)and(vy<=y)and(vy+v.h>y)then
                     if(v.clickFunc~=nil)then
                         v.clickFunc(v,clicktype)
                     end
@@ -534,17 +572,17 @@ local function checkMouseClick(clicktype,x,y)
                 end
             end
             if(v.__type=="Input")then
-                if(v.x<=x)and(v.x+v.w>x)and(v.y<=y)and(v.y+v.h>y)then
+                if(vx<=x)and(vx+v.w>x)and(vy<=y)and(vy+v.h>y)then
                     v.frame.inputActive = true
                     v.frame.activeInput = v
-                    v.frame.fWindow.setCursorPos(v.x+(string.len(v.text) < v.w and string.len(v.text) or v.w)-1,v.y)
-                    v.frame.cursorX = v.x+(string.len(v.text) < v.w and string.len(v.text) or v.w-1)
-                    v.frame.cursorY = v.y
+                    v.frame.fWindow.setCursorPos(vx+(string.len(v.text) < v.w and string.len(v.text) or v.w)-1,vy)
+                    v.frame.cursorX = vx+(string.len(v.text) < v.w and string.len(v.text) or v.w-1)
+                    v.frame.cursorY = vy
                     v.frame.fWindow.setCursorBlink(true)
                 end            
             end
             if(v.__type=="Checkbox")then
-                if(v.x==x)and(v.y==y)then
+                if(vx==x)and(vy==y)then
                     v.checked = not v.checked
                     v.changed = true
                 end
