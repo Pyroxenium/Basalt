@@ -12,7 +12,7 @@ local screens = {}
 local animations = {}
 
 --Utility Functions:
-local function getTextAlign(text, w, textAlign)
+local function getTextHorizontalAlign(text, w, textAlign)
     local text = string.sub(text, 1, w)
     local n = w-string.len(text)
     if(textAlign=="right")then
@@ -24,6 +24,39 @@ local function getTextAlign(text, w, textAlign)
         text = text..string.rep(" ", n)
     end
     return text
+end
+
+local function getTextVerticalAlign(h,textAlign)
+local offset = 0
+    if(textAlign=="center")then
+        offset = h%2 == 0 and math.floor(h / 2)-1 or math.floor(h / 2)
+    end
+    if(textAlign=="bottom")then
+        offset = h
+    end
+    return offset
+end
+
+local function rpairs(t)
+	return function(t, i)
+		i = i - 1
+		if i ~= 0 then
+			return i, t[i]
+		end
+	end, t, #t + 1
+end
+
+local function reverseTable(t)
+local newT = {}
+local keys = {}
+
+    for k,v in pairs(t)do
+        table.insert(keys,k)
+    end
+    for k,v in rpairs(keys)do
+        newT[v] = t[v]
+    end
+    return newT
 end
 
 --------------
@@ -134,21 +167,21 @@ end
 
 button = object:new()
 function button:new()
-    local newElement = {__type = "Button",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center"}
+    local newElement = {__type = "Button",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",verticalTextAlign="center"}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 dropdown = object:new()
 function dropdown:new()
-    local newElement = {__type = "Dropdown",zIndex=10,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center",elements={},selected={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
+    local newElement = {__type = "Dropdown",zIndex=10,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",elements={},selected={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 list = object:new()
 function list:new()
-    local newElement = {__type = "List",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center",elements={},selected={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
+    local newElement = {__type = "List",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",elements={},selected={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -157,7 +190,7 @@ frame = object:new()
 function frame:new(name,scrn)
     local parent = scrn~=nil and scrn or term.native()
     local w, h = parent.getSize()
-    local newElement = {name=name, parent = parent,zIndex=20, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, textAlign="left",focusedObject={}, isMoveable = true}
+    local newElement = {name=name, parent = parent,zIndex=20, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = true}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -208,6 +241,16 @@ function object:onClick(func)
     return self
 end
 
+function object:onMouseUp(func)
+    self.upFunc = func
+    return self
+end
+
+function object:onMouseDrag(func)
+    self.dragFunc = func
+    return self
+end
+
 function object:setText(text)
     self.text = text
     self.changed = true
@@ -226,8 +269,9 @@ function object:setSize(w,h)
     return self
 end
 
-function object:setTextAlign(align)
-    self.textAlign = align
+function object:setTextAlign(halign,valign)
+    self.horizontalTextAlign = halign
+    if(valign~=nil)then self.verticalTextAlign = valign end
     self.changed = true
     return self
 end
@@ -285,8 +329,18 @@ end
 function object:clickEvent(event,typ,x,y) -- internal class, dont use unless you know what you do
 local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
     if(vx<=x)and(vx+self.w>x)and(vy<=y)and(vy+self.h>y)then
-        if(self.clickFunc~=nil)then
-            self.clickFunc(self,event,typ,x,y)
+        if(event=="mouse_click")then
+            if(self.clickFunc~=nil)then
+                self.clickFunc(self,typ,x,y)
+            end
+        elseif(event=="mouse_up")then
+            if(self.upFunc~=nil)then
+                self.upFunc(self,typ,x,y)
+            end
+        elseif(event=="mouse_drag")then
+            if(self.dragFunc~=nil)then
+                self.dragFunc(self,typ,x,y)
+            end
         end
         if(self.frame~=nil)then self.frame:setFocusedElement(self) end
         return true
@@ -355,7 +409,7 @@ function frame:setTitle(title,fgcolor,bgcolor)
 end
 
 function frame:setTextAlign(align)
-    self.textAlign = align
+    self.horizontalTextAlign = align
     self.changed = true
     return self
 end
@@ -453,13 +507,13 @@ function frame:drawObject()
         if(self.barActive)then
             local text = string.sub(self.title, 1, self.w)
             local n = self.w-string.len(text)
-            if(self.textAlign=="left")then
+            if(self.horizontalTextAlign=="left")then
                 text = text..string.rep(" ", n)
             end
-            if(self.textAlign=="right")then
+            if(self.horizontalTextAlign=="right")then
                 text = string.rep(" ", n)..text
             end
-            if(self.textAlign=="center")then
+            if(self.horizontalTextAlign=="center")then
                 text = string.rep(" ", math.floor(n/2))..text..string.rep(" ", math.floor(n/2))
                 text = text..(string.len(text) < self.w and " " or "")
             end
@@ -504,20 +558,27 @@ function frame:clickEvent(event,typ,x,y)
     end
     if(object.clickEvent(self,event,typ,x,y))then
         if(x>fx+self.w-1)or(y>fy+self.h-1)then return end
-        for a,b in pairs(self.objects)do
-            for _,v in pairs(b)do
-                if(v.draw~=false)then
-                    if(v:clickEvent(event,typ,x,y))then
-                        return true
+        local keys = {}
+            for k in pairs(self.objects)do
+                table.insert(keys,k)
+            end
+            for _,b in rpairs(keys)do
+                for _,v in pairs(self.objects[b])do
+                    if(v.draw~=false)then
+                        if(v:clickEvent(event,typ,x,y))then
+                            return true
+                        end
                     end
                 end
             end
-        end
         self:loseFocusedElement()
         if(x>=fx)and(x<=fx+self.w)and(y==fy)and(event=="mouse_click")then
             self.drag = true
             self.xToRem = fx-x
         end
+    end
+    if(fx<=x)and(fx+self.w>x)and(fy<=y)and(fy+self.h>y)then
+        return true
     end
     return false
 end
@@ -743,10 +804,18 @@ end
 function button:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
-        self.frame.fWindow.setBackgroundColor(self.bgcolor)
-        self.frame.fWindow.setTextColor(self.fgcolor)
-        self.frame.fWindow.write(getTextAlign(self.text, self.w, self.textAlign))
+        local x,y = self:getAnchorPosition()
+        local yOffset = getTextVerticalAlign(self.h,self.verticalTextAlign)
+            self.frame.fWindow.setBackgroundColor(self.bgcolor)
+            self.frame.fWindow.setTextColor(self.fgcolor)
+        for line=0,self.h-1 do
+            self.frame.fWindow.setCursorPos(x,y+line)
+            if(line==yOffset)then
+                self.frame.fWindow.write(getTextHorizontalAlign(self.text, self.w, self.horizontalTextAlign))
+            else
+                self.frame.fWindow.write(string.rep(" ", self.w))
+            end
+        end
         self.changed = false
     end
 end
@@ -776,7 +845,7 @@ function dropdown:drawObject()
         self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.selected.bgcolor)
         self.frame.fWindow.setTextColor(self.selected.fgcolor)
-        self.frame.fWindow.write(getTextAlign(self.selected.text, self.w, self.textAlign))
+        self.frame.fWindow.write(getTextHorizontalAlign(self.selected.text, self.w, self.horizontalTextAlign))
 
         if(self:isFocusedElement())then
             if(#self.elements>0)then
@@ -786,7 +855,7 @@ function dropdown:drawObject()
                     self.frame.fWindow.setBackgroundColor(v.bgcolor)
                     self.frame.fWindow.setTextColor(v.fgcolor)
                     self.frame.fWindow.setCursorPos(objx,objy+index)
-                    self.frame.fWindow.write(getTextAlign(v.text, self.w, self.textAlign))
+                    self.frame.fWindow.write(getTextHorizontalAlign(v.text, self.w, self.horizontalTextAlign))
                     index = index+1
                 end
             end
@@ -843,7 +912,7 @@ function list:drawObject()
         self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
-        self.frame.fWindow.write(getTextAlign(self.selected.text, self.w, self.textAlign))
+        self.frame.fWindow.write(getTextHorizontalAlign(self.selected.text, self.w, self.horizontalTextAlign))
 
         if(#self.elements>0)then
             local index = 0
@@ -853,9 +922,9 @@ function list:drawObject()
                 self.frame.fWindow.setTextColor(v.fgcolor)
                 self.frame.fWindow.setCursorPos(objx,objy+index)
                 if(v==self.selected)then
-                    self.frame.fWindow.write(">"..getTextAlign(v.text, self.w, self.textAlign))
+                    self.frame.fWindow.write(">"..getTextHorizontalAlign(v.text, self.w, self.horizontalTextAlign))
                 else
-                    self.frame.fWindow.write(" "..getTextAlign(v.text, self.w, self.textAlign))
+                    self.frame.fWindow.write(" "..getTextHorizontalAlign(v.text, self.w, self.horizontalTextAlign))
                 end
                 index = index+1
             end
@@ -894,13 +963,6 @@ function list:addElement(text,bgcolor,fgcolor)
         self.selected = self.elements[1]
     end
     return self
-end
-
-
-
-
-local function handleMouseEvent(event,typ,x,y)
-    activeScreen:clickEvent(event,typ,x,y)
 end
 
 local function handleKeyboardEvent(event, key)
