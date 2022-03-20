@@ -1,15 +1,14 @@
 -- Shad's GUI free for everyone to use
 
-frame = { __type = "Frame", name = ""} -- Frame element
-frame.__index = frame
 
 animation = {__type = "Animation", name = ""}
 animation.__index = animation
 
 local object = {} -- Base class for all UI elements
 
-local activeFrame
-local frames = {}
+local activeScreen
+local screen = {}
+local screens = {}
 local animations = {}
 
 --Utility Functions:
@@ -28,81 +27,6 @@ local function getTextAlign(text, w, textAlign)
 end
 
 --------------
-
-frame.new = function(name, screen)
-local usedScreen = screen~=nil and screen or term.native()
-local w, h = usedScreen.getSize()
-local newElement = {name=name, screen = usedScreen, fWindow = window.create(usedScreen,1,1,w,h),w=w,h=h, objects={},bgcolor = colors.black, fgcolor=colors.white, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, textAlign="left",focusedObject={}}
-    if(frames[name] == nil)then
-        frames[name] = newElement
-        newElement.fWindow.setVisible(false)
-        setmetatable(newElement, {__index = frame});
-        newElement.debugLabel=newElement:addLabel("DebugLabel")
-        return newElement;
-    else
-        return frames[name];
-    end
-end
-
-function frame:getName()
-    return self.name
-end
-
-function frame:setBackground(color)
-    self.bgcolor = color
-    self.changed = true
-    return self
-end
-
-function frame:setForeground(color)
-    self.fgcolor = color
-    self.changed = true
-    return self
-end
-
-function frame:setTitle(title,fgcolor,bgcolor)
-    self.title=title
-    if(fgcolor~=nil)then self.titlefgcolor = fgcolor end
-    if(bgcolor~=nil)then  self.titlebgcolor = bgcolor end
-    self.changed = true
-    return self
-end
-
-function frame:setTextAlign(align)
-    self.textAlign = align
-    self.changed = true
-    return self
-end
-
-function frame:show()
-    self.draw = true
-    self.changed = true
-    self.fWindow.setBackgroundColor(self.bgcolor)
-    self.fWindow.setTextColor(self.fgcolor)
-    self.fWindow.setVisible(true)
-    if(activeFrame~=nil)then
-        activeFrame:hide()
-    end
-    activeFrame = self
-    return self
-end
-
-function frame:hide()
-    self.fWindow.setVisible(false)
-    self.changed = true
-    self.draw = false
-    return self
-end
-
-function frame:getObject(name)
-    return self.objects[name]
-end
-
-function frame:getFocusedObject()
-    return self.focusedObject
-end
-
-
 --Animation System
 animation.new = function(name)
     local newElement = {name=name,animations={},nextWaitTimer=0,index=1,infiniteloop=false}
@@ -173,8 +97,9 @@ end
 
 
 --Object Constructors:
+--(base class for every element/object even frames)
 function object:new()
-    local newElement = {__type = "Object",name="",drawCalls=0,x=1,y=1,w=1,h=1,textAlign="left",draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,text="",hanchor="left",vanchor="top"}
+    local newElement = {__type = "Object",name="",zIndex=1,drawCalls=0,x=1,y=1,w=1,h=1,textAlign="left",draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,text="",hanchor="left",vanchor="top"}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -188,7 +113,7 @@ end
 
 checkbox = object:new()
 function checkbox:new()
-    local newElement = {__type = "Checkbox",symbol="x",bgcolor=colors.lightBlue,fgcolor=colors.black}
+    local newElement = {__type = "Checkbox",symbol="x",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -202,32 +127,43 @@ end
 
 input = object:new()
 function input:new()
-    local newElement = {__type = "Input",bgcolor=colors.lightBlue,fgcolor=colors.black,w=5}
+    local newElement = {__type = "Input",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 button = object:new()
 function button:new()
-    local newElement = {__type = "Button",bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center"}
+    local newElement = {__type = "Button",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center"}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 dropdown = object:new()
 function dropdown:new()
-    local newElement = {__type = "Dropdown",bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center",elements={},selected=""}
+    local newElement = {__type = "Dropdown",zIndex=10,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center",elements={},selected={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 list = object:new()
 function list:new()
-    local newElement = {__type = "List",bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center",elements={},selected=""}
+    local newElement = {__type = "List",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,textAlign="center",elements={},selected={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
+    setmetatable(newElement, {__index = self})
+    return newElement
+end
+
+frame = object:new()
+function frame:new(name,scrn)
+    local parent = scrn~=nil and scrn or term.native()
+    local w, h = parent.getSize()
+    local newElement = {name=name, parent = parent, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, textAlign="left",focusedObject={}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 --------
+
+--object methods
 function object:show()
     if not(self.draw)then
         self.draw = true
@@ -242,6 +178,10 @@ function object:hide()
         self.changed = true
     end
     return self
+end
+
+function object:getName()
+    return self.name
 end
 
 function object:setPosition(x,y)
@@ -292,11 +232,10 @@ function object:setTextAlign(align)
     return self
 end
 
-function object:drawObject() -- Base class for drawing a object
+function object:drawObject()
     if(self.draw)then
         self.drawCalls = self.drawCalls + 1
     end
-    return self
 end
 
 function object:setAnchor(ank1,ank2)
@@ -315,14 +254,26 @@ function object:setAnchor(ank1,ank2)
     return self
 end
 
-function object:toAbsolutePosition()
-local x = self.x
-local y = self.y
+function object:relativeToAbsolutePosition(x,y) -- relative position
+    if(x==nil)then x = 0 end
+    if(y==nil)then y = 0 end
+
+    x = x+self.x;y=y+self.y
+    if(self.frame~=nil)then
+        x,y = self.frame:relativeToAbsolutePosition(x,y)
+        x = x-1; y = y-1
+    end
+    return x,y
+end
+
+function object:getAnchorPosition(x,y)
+    if(x==nil)then x = self.x end
+    if(y==nil)then y = self.y end
     if(self.hanchor=="right")then
         x = self.frame.w-x+1
     end
     if(self.vanchor=="bottom")then
-        y = self.frame.h-x
+        y = self.frame.h-y
     end
     return x, y
 end
@@ -331,16 +282,263 @@ function object:isFocusedElement()
     return self == self.frame.focusedObject
 end
 
-function frame:addTimer(name)
-    if(self.objects[name] == nil)then
-        local obj = timer:new()
-        self.objects[name] = obj
+function object:clickEvent(typ,x,y) -- internal class, dont use unless you know what you do
+local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+    if(vx<=x)and(vx+self.w>x)and(vy<=y)and(vy+self.h>y)then
+        if(self.clickFunc~=nil)then
+            self.clickFunc(self,typ)
+        end
+        if(self.frame~=nil)then self.frame:setFocusedElement(self) end
+        return true
+    end
+    return false
+end
+
+function object:loseFocusEvent()   
+
+end
+
+function object:getFocusEvent()    
+end
+
+function object:setZIndex(index)
+    self.frame:changeZIndexOfObj(self,index)
+    return self
+end
+--object end
+
+--Frame object
+screen.new = function(name, scrn)
+local obj = frame:new(name,scrn)
+    if(screens[name] == nil)then
+        screens[name] = obj
+        obj.fWindow.setVisible(false)
+        obj.debugLabel=obj:addLabel("DebugLabel")
+        return obj;
+    else
+        return screens[name];
+    end
+end
+
+screen.remove = function(name)
+    screens[name].fWindow.setVisible(false)
+    screens[name] = nil
+end
+
+function frame:addFrame(name)
+    if(self:getObject(name) == nil)then
+        local obj = frame:new(name,self.fWindow)
         obj.name = name;obj.frame=self;
+        self:addObject(obj)
         return obj;
     else
         return nil, "id "..name.." already exists";
     end
+end
+
+function frame:showBar()
+    self.barActive = true
     return self
+end
+
+function frame:hideBar()
+    self.barActive = false
+    return self
+end
+
+function frame:setTitle(title,fgcolor,bgcolor)
+    self.title=title
+    if(fgcolor~=nil)then self.titlefgcolor = fgcolor end
+    if(bgcolor~=nil)then  self.titlebgcolor = bgcolor end
+    self.changed = true
+    return self
+end
+
+function frame:setTextAlign(align)
+    self.textAlign = align
+    self.changed = true
+    return self
+end
+
+function frame:setSize(width, height)
+    object.setSize(self,width,height)
+    self.fWindow.reposition(self.x,self.y,width,height)
+    return self
+end
+
+function frame:setPosition(x,y)
+    object.setPosition(self,x,y)
+    self.fWindow.reposition(x,y)
+    return self
+end
+
+function frame:show()
+    object.show(self)
+    self.fWindow.setBackgroundColor(self.bgcolor)
+    self.fWindow.setTextColor(self.fgcolor)
+    self.fWindow.setVisible(true)
+    if(self.frame == nil)then
+        activeScreen = self
+    end
+    return self
+end
+
+function frame:hide()
+    object.hide(self)
+    self.fWindow.setVisible(false)
+    self.fWindow.redraw()
+    self.parent.clear()
+    return self
+end
+
+function frame:close()
+    if(self.frame~=nil)then
+        object.hide(self)
+    end
+    self.changed = true
+    self.draw = false
+    self.fWindow.setVisible(false)
+    screens[self.name] = nil
+    self.parent.clear()
+end
+
+function frame:getObject(name)
+    if(self.objects~=nil)then
+        for k,v in pairs(self.objects)do
+            if(v[name]~=nil)then
+                return v[name]
+            end
+        end
+    end
+end
+
+function frame:getFocusedObject()
+    return self.focusedObject
+end
+
+function frame:addObject(obj) --Z index not working need bugfix
+    if(self.objects[obj.zIndex]==nil)then
+        for x=1,#self.objZKeys+1 do
+            if(self.objZKeys[x]~=nil)then
+                if(obj.zIndex >self.objZKeys[x])then
+                    table.insert(self.objZKeys,x,obj.zIndex)
+                end       
+            else
+                table.insert(self.objZKeys,x,obj.zIndex)
+            end     
+        end
+        if(#self.objZKeys<=0)then
+            table.insert(self.objZKeys,obj.zIndex)
+        end
+        local cache = {}
+        for k,v in pairs(self.objZKeys)do
+            if(self.objects[v]~=nil)then
+                cache[v] = self.objects[v]
+            else
+                cache[v] = {}
+            end
+        end
+        self.objects = cache
+    end
+    self.objects[obj.zIndex][obj.name] =  obj
+end
+
+function frame:drawObject() 
+    if(self.draw)then
+        object.drawObject(self)
+        self.fWindow.clear()
+        if(self.barActive)then
+            local text = string.sub(self.title, 1, self.w)
+            local n = self.w-string.len(text)
+            if(self.textAlign=="left")then
+                text = text..string.rep(" ", n)
+            end
+            if(self.textAlign=="right")then
+                text = string.rep(" ", n)..text
+            end
+            if(self.textAlign=="center")then
+                text = string.rep(" ", math.floor(n/2))..text..string.rep(" ", math.floor(n/2))
+                text = text..(string.len(text) < self.w and " " or "")
+            end
+            self.fWindow.setBackgroundColor(self.titlebgcolor)
+            self.fWindow.setTextColor(self.titlefgcolor)
+            self.fWindow.setCursorPos(1,1)
+            self.fWindow.write(text)
+        end
+
+        for a,b in pairs(self.objects)do
+            for k,v in pairs(b)do  
+                if(v.draw~=nil)then  
+                    v:drawObject()
+                end
+            end
+        end
+
+        if(self.inputActive)then
+            self.fWindow.setCursorPos(self.cursorX, self.cursorY)
+        end
+        self.fWindow.setBackgroundColor(self.bgcolor)
+        self.fWindow.setTextColor(self.fgcolor)
+        self.fWindow.setVisible(true)
+        self.fWindow.redraw()
+    end
+end
+
+function frame:clickEvent(typ,x,y)
+    if(object.clickEvent(self,typ,x,y))then
+        local fx,fy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+        if(x>fx+self.w-1)or(y>fy+self.h-1)then return end
+        for a,b in pairs(self.objects)do
+            for _,v in pairs(b)do
+                if(v.draw~=false)then
+                    if(v:clickEvent(typ,x,y))then
+                        return true
+                    end
+                end
+            end
+        end
+        self:loseFocusedElement()
+    end
+    return false
+end
+
+function frame:changeZIndexOfObj(obj, zindex)
+    self.objects[obj.zIndex][obj.name] =  nil
+    obj.zIndex = zindex
+    self:addObject(obj)
+end
+
+function frame:setFocusedElement(obj)
+    if(self:getObject(obj.name)~=nil)then
+        if(self.focusedObject~=obj)then
+            if(self.focusedObject.name~=nil)then
+                self.focusedObject:loseFocusEvent()
+            end
+            obj:getFocusEvent()
+            self.focusedObject = obj
+        end
+    end
+end
+
+function frame:loseFocusedElement()
+    if(self.focusedObject.name~=nil)then
+        self.focusedObject:loseFocusEvent()
+    end
+    self.focusedObject = {}
+end
+--Frames end
+
+
+--Timer object
+function frame:addTimer(name)
+    if(self:getObject(name) == nil)then
+        local obj = timer:new()
+        obj.name = name;obj.frame=self;
+        self:addObject(obj)
+        return obj;
+    else
+        return nil, "id "..name.." already exists";
+    end
 end
 
 function timer:setTime(timer, repeats)
@@ -371,17 +569,19 @@ function timer:onCall(func)
     self.call = func
     return self
 end
+--Timer end
 
+
+--Checkbox object
 function frame:addCheckbox(name)
-    if(self.objects[name] == nil)then
+    if(self:getObject(name) == nil)then
         local obj = checkbox:new()
-        self.objects[name] = obj
         obj.name = name;obj.frame=self;
+        self:addObject(obj)
         return obj;
     else
         return nil, "id "..name.." already exists";
     end
-    return self
 end
 
 function checkbox:setSymbol(symbol)
@@ -393,7 +593,7 @@ end
 function checkbox:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
+        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         if(self.checked)then
@@ -405,18 +605,28 @@ function checkbox:drawObject()
     end
 end
 
+function checkbox:clickEvent(typ,x,y)
+    if(object.clickEvent(self,typ,x,y))then
+        self.checked = not self.checked
+        self.changed = true
+        return true
+    end
+    return false
+end
+--Checkbox end
+
+--Label object
 function frame:addLabel(name)
-    if(self.objects[name] == nil)then
+    if(self:getObject(name) == nil)then
         local obj = label:new()
-        self.objects[name] = obj
-        obj.name = name;obj.frame=self;
         obj.bgcolor = self.bgcolor
         obj.fgcolor = self.fgcolor
+        obj.name=name;obj.frame=self;
+        self:addObject(obj)
         return obj;
     else
         return nil, "id "..name.." already exists";
     end
-    return self
 end
 
 function label:setText(text)
@@ -428,24 +638,38 @@ end
 function label:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
+        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(self.text)
         self.changed = false
     end
 end
+--Label end
 
 function frame:addInput(name)
-    if(self.objects[name] == nil)then
+    if(self:getObject(name) == nil)then
         local obj = input:new()
-        self.objects[name] = obj
         obj.name = name;obj.frame=self;
+        self:addObject(obj)
         return obj;
     else
         return nil, "id "..name.." already exists";
     end
-    return self
+end
+
+function input:clickEvent(typ,x,y)
+    if(object.clickEvent(self,typ,x,y))then
+        local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+        self.frame.inputActive = true
+        self.frame.activeInput = self
+        self.frame.fWindow.setCursorPos(vx+(string.len(self.text) < self.w and string.len(self.text) or self.w),vy)
+        self.frame.cursorX = vx+(string.len(self.text) < self.w and string.len(self.text) or self.w)
+        self.frame.cursorY = vy
+        self.frame.fWindow.setCursorBlink(true)
+        return true
+    end
+    return false
 end
 
 function input:drawObject()
@@ -459,7 +683,7 @@ function input:drawObject()
         end
         local n = self.w-string.len(text)
         text = text..string.rep(" ", n)
-        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
+        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(text)
@@ -467,23 +691,34 @@ function input:drawObject()
     end
 end
 
+
+function input:getFocusEvent()
+    object.getFocusEvent(self)
+    self.frame.fWindow.setCursorPos(self:getAnchorPosition())
+    self.frame.fWindow.setCursorBlink(true)
+end
+
+function input:loseFocusEvent()
+    object.loseFocusEvent(self)
+    self.frame.inputActive = false
+    self.frame.fWindow.setCursorBlink(false)
+end
+
 function frame:addButton(name)
-    if(self.objects[name] == nil)then
+    if(self:getObject(name) == nil)then
         local obj = button:new()
-        self.objects[name] = obj
         obj.name = name;obj.frame=self;
+        self:addObject(obj)
         return obj;
     else
         return nil, "id "..name.." already exists";
     end
-    return self
 end
 
 function button:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-
-        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
+        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(getTextAlign(self.text, self.w, self.textAlign))
@@ -492,39 +727,41 @@ function button:drawObject()
 end
 
 function frame:addDropdown(name)
-    if(self.objects[name] == nil)then
+    if(self:getObject(name) == nil)then
         local obj = dropdown:new()
-        self.objects[name] = obj
         obj.name = name;obj.frame=self;
+        self:addObject(obj)
         return obj;
     else
         return nil, "id "..name.." already exists";
     end
-    return self
 end
 
-function dropdown:addElement(text)
-    table.insert(self.elements,text)
+function dropdown:addElement(text,bgcolor,fgcolor)
+    table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor)})
+    if(#self.elements==1)then
+        self.selected = self.elements[1]
+    end
     return self
 end
 
 function dropdown:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-        self.frame.fWindow.setCursorPos(self:toAbsolutePosition())
-        self.frame.fWindow.setBackgroundColor(self.bgcolor)
-        self.frame.fWindow.setTextColor(self.fgcolor)
-        self.frame.fWindow.write(getTextAlign(self.selected, self.w, self.textAlign))
+        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
+        self.frame.fWindow.setBackgroundColor(self.selected.bgcolor)
+        self.frame.fWindow.setTextColor(self.selected.fgcolor)
+        self.frame.fWindow.write(getTextAlign(self.selected.text, self.w, self.textAlign))
 
-        if(self.frame:getFocusedObject()==self)then
+        if(self:isFocusedElement())then
             if(#self.elements>0)then
                 local index = 1
                 for _,v in ipairs(self.elements)do
-                    local objx, objy = self:toAbsolutePosition()
+                    local objx, objy = self:getAnchorPosition()
+                    self.frame.fWindow.setBackgroundColor(v.bgcolor)
+                    self.frame.fWindow.setTextColor(v.fgcolor)
                     self.frame.fWindow.setCursorPos(objx,objy+index)
-                    self.frame.fWindow.setBackgroundColor(self.bgcolor)
-                    self.frame.fWindow.setTextColor(self.fgcolor)
-                    self.frame.fWindow.write(getTextAlign(v, self.w, self.textAlign))
+                    self.frame.fWindow.write(getTextAlign(v.text, self.w, self.textAlign))
                     index = index+1
                 end
             end
@@ -537,65 +774,139 @@ function dropdown:getSelection()
     return self.selected
 end
 
-local function checkMouseClick(clicktype,x,y)
-    activeFrame.inputActive = false
-    local d = activeFrame.focusedObject
-    if(d.__type=="Dropdown")then
-        if(d:isFocusedElement())then
-            if(#d.elements>0)then
-                local dx,dy = d:toAbsolutePosition()
+function dropdown:clickEvent(typ,x,y)
+    object.clickEvent(self,typ,x,y)
+        if(self:isFocusedElement())then
+            if(#self.elements>0)then
+                local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
                 local index = 1
-                for _,b in pairs(d.elements)do
-                    if(dx<=x)and(dx+d.w>x)and(dy+index<=y)and(dy+index+d.h>y)then
-                        d.selected = b
-                        if(d.changeFunc~=nil)then
-                            d.changeFunc(d)
+                for _,b in pairs(self.elements)do
+                    if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
+                        self.selected = b
+                        if(self.changeFunc~=nil)then
+                            self.changeFunc(self)
                         end
-                        activeFrame.focusedObject = {}
-                        return
+                        activeScreen:loseFocusedElement()
+                        return true
                     end
                     index = index+1
                 end
+                if not((dx<=x)and(dx+self.w>x)and(dy<=y)and(dy+self.h>y))then
+                    activeScreen:loseFocusedElement()
+                end
+                return true
             end
         end
+    return false
+end
+
+
+function frame:addList(name)
+    if(self:getObject(name) == nil)then
+        local obj = list:new()
+        obj.name = name;obj.frame=self;
+        self:addObject(obj)
+        return obj;
+    else
+        return nil, "id "..name.." already exists";
     end
-    activeFrame.focusedObject = {}
-    for k,v in pairs(activeFrame.objects)do
-        if(v.draw~=false)then
-            local vx,vy = v:toAbsolutePosition()
-            if not(v.__type=="Timer")then
-                if(vx<=x)and(vx+v.w>x)and(vy<=y)and(vy+v.h>y)then
-                    if(v.clickFunc~=nil)then
-                        v.clickFunc(v,clicktype)
+end
+
+function list:drawObject()
+    object.drawObject(self) -- Base class
+    if(self.draw)then
+        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
+        self.frame.fWindow.setBackgroundColor(self.bgcolor)
+        self.frame.fWindow.setTextColor(self.fgcolor)
+        self.frame.fWindow.write(getTextAlign(self.selected.text, self.w, self.textAlign))
+
+        if(#self.elements>0)then
+            local index = 0
+            for _,v in ipairs(self.elements)do
+                local objx, objy = self:getAnchorPosition()
+                self.frame.fWindow.setBackgroundColor(v.bgcolor)
+                self.frame.fWindow.setTextColor(v.fgcolor)
+                self.frame.fWindow.setCursorPos(objx,objy+index)
+                if(v==self.selected)then
+                    self.frame.fWindow.write(">"..getTextAlign(v.text, self.w, self.textAlign))
+                else
+                    self.frame.fWindow.write(" "..getTextAlign(v.text, self.w, self.textAlign))
+                end
+                index = index+1
+            end
+        end
+        self.changed = false
+    end
+end
+
+function list:clickEvent(typ,x,y)
+    object.clickEvent(self,typ,x,y)
+    if(#self.elements>0)then
+        local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+        local index = 0
+        for _,v in pairs(self.elements)do
+            if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
+                self.selected = v
+                self.changed = true
+                if(self.changeFunc~=nil)then
+                    self.changeFunc(self)
+                end
+                return true
+            end
+            index = index+1
+        end
+    end
+    return false
+end
+
+function list:getSelection()
+    return self.selected
+end
+
+function list:addElement(text,bgcolor,fgcolor)
+    table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor)})
+    if(#self.elements==1)then
+        self.selected = self.elements[1]
+    end
+    return self
+end
+
+
+
+
+local function handleMouseEvent(typ,x,y)
+    activeScreen:clickEvent(typ,x,y)
+end
+
+local function handleKeyboardEvent(event, key)
+    if(activeScreen.inputActive)then
+        if(activeScreen.activeInput.draw)then
+            if(event=="key")then
+                if(key==259)then
+                    activeScreen.activeInput:setText(string.sub(activeScreen.activeInput.text,1,string.len(activeScreen.activeInput.text)-1))
+                end
+                if(key==257)then
+                    if(activeScreen.inputActive)then
+                        activeScreen.inputActive = false
+                        activeScreen.fWindow.setCursorBlink(false)
                     end
-                    activeFrame.focusedObject = v
                 end
             end
-            if(v.__type=="Input")then
-                if(vx<=x)and(vx+v.w>x)and(vy<=y)and(vy+v.h>y)then
-                    v.frame.inputActive = true
-                    v.frame.activeInput = v
-                    v.frame.fWindow.setCursorPos(vx+(string.len(v.text) < v.w and string.len(v.text) or v.w)-1,vy)
-                    v.frame.cursorX = vx+(string.len(v.text) < v.w and string.len(v.text) or v.w-1)
-                    v.frame.cursorY = vy
-                    v.frame.fWindow.setCursorBlink(true)
-                end            
+            if(event=="char")then
+                activeScreen.activeInput:setText(activeScreen.activeInput.text..key)
             end
-            if(v.__type=="Checkbox")then
-                if(vx==x)and(vy==y)then
-                    v.checked = not v.checked
-                    v.changed = true
-                end
+            activeScreen.cursorX = activeScreen.activeInput.x+(string.len(activeScreen.activeInput.text) < activeScreen.activeInput.w and string.len(activeScreen.activeInput.text) or activeScreen.activeInput.w-1)
+            activeScreen.cursorY = activeScreen.activeInput.y
+            if(activeScreen.activeInput.changeFunc~=nil)then
+                activeScreen.activeInput.changeFunc(activeScreen.activeInput)
             end
         end
-    end
-    if not(activeFrame.inputActive)then
-        activeFrame.fWindow.setCursorBlink(false)
     end
 end
 
 local function checkTimer(timeObject)
-        for k,v in pairs(activeFrame.objects)do  
+    for a,b in pairs(activeScreen.objects)do
+        for k,v in pairs(b)do  
             if(v.__type=="Timer")and(v.active)then 
                 if(v.timeObj == timeObject)then
                     v.call(v)
@@ -606,6 +917,7 @@ local function checkTimer(timeObject)
                 end
             end
         end
+    end
     if(#animations>0)then
         for k,v in pairs(animations)do
             if(v.timeObj==timeObject)then
@@ -615,119 +927,59 @@ local function checkTimer(timeObject)
     end
 end
 
-local function drawObjects()
-    if(activeFrame.draw)then
-        activeFrame.fWindow.clear()
-
-        if(activeFrame.title~="")then
-            local text = string.sub(activeFrame.title, 1, activeFrame.w)
-            local n = activeFrame.w-string.len(text)
-            if(activeFrame.textAlign=="left")then
-                text = text..string.rep(" ", n)
+local function handleChangedObjectsEvent()
+    local changed = activeScreen.changed
+    for a,b in pairs(activeScreen.objects)do
+        for k,v in pairs(b)do
+            if(v.changed)then
+                changed = true
             end
-            if(activeFrame.textAlign=="right")then
-                text = string.rep(" ", n)..text
-            end
-            if(activeFrame.textAlign=="center")then
-                text = string.rep(" ", math.floor(n/2))..text..string.rep(" ", math.floor(n/2))
-                text = text..(string.len(text) < activeFrame.w and " " or "")
-            end
-            activeFrame.fWindow.setBackgroundColor(activeFrame.titlebgcolor)
-            activeFrame.fWindow.setTextColor(activeFrame.titlefgcolor)
-            activeFrame.fWindow.setCursorPos(1,1)
-            activeFrame.fWindow.write(text)
-        end
-        for k,v in pairs(activeFrame.objects)do  
-            if(v.draw~=nil)then  
-                v:drawObject()
-            end
-        end
-        if(activeFrame.inputActive)then
-            activeFrame.fWindow.setCursorPos(activeFrame.cursorX, activeFrame.cursorY)
-        end
-        activeFrame.fWindow.setBackgroundColor(activeFrame.bgcolor)
-        activeFrame.fWindow.setTextColor(activeFrame.fgcolor)
-        activeFrame.fWindow.setVisible(true)
-        activeFrame.fWindow.redraw()
-    end
-end
-
-local function checkForChangedObjects()
-local changed = activeFrame.changed
-    for k,v in pairs(activeFrame.objects)do
-        if(v.changed)then
-            changed = true
         end
     end
     if(changed)then
-        drawObjects()
-    end
-end
-
-local function checkKeyboardInput(event, key)
-    if(activeFrame.inputActive)then
-        if(activeFrame.activeInput.draw)then
-            if(event=="key")then
-                if(key==259)then
-                    activeFrame.activeInput:setText(string.sub(activeFrame.activeInput.text,1,string.len(activeFrame.activeInput.text)-1))
-                end
-                if(key==257)then
-                    if(activeFrame.inputActive)then
-                        activeFrame.inputActive = false
-                        activeFrame.fWindow.setCursorBlink(false)
-                    end
-                end
-            end
-            if(event=="char")then
-                activeFrame.activeInput:setText(activeFrame.activeInput.text..key)
-            end
-            activeFrame.cursorX = activeFrame.activeInput.x+(string.len(activeFrame.activeInput.text) < activeFrame.activeInput.w and string.len(activeFrame.activeInput.text) or activeFrame.activeInput.w-1)
-            activeFrame.cursorY = activeFrame.activeInput.y
-            if(activeFrame.activeInput.changeFunc~=nil)then
-                activeFrame.activeInput.changeFunc(activeFrame.activeInput)
-            end
+        if(activeScreen.draw)then
+            activeScreen:drawObject()
         end
     end
 end
 
-function frame.startUpdate()
-    checkForChangedObjects()
+function screen.startUpdate()
+    handleChangedObjectsEvent()
     while true do
         local event, p1,p2,p3 = os.pullEvent()
-        --debug(event,p1,p2,p3)
         if(event=="mouse_click")then
-            checkMouseClick(p1,p2,p3)
+            handleMouseEvent(p1,p2,p3)
         end
         if(event=="timer")then
             checkTimer(p1)
         end
         if(event=="char")or(event=="key")then
-            checkKeyboardInput(event,p1)
+            handleKeyboardEvent(event,p1)
         end
-        checkForChangedObjects()
+        handleChangedObjectsEvent()
     end
 end
 
 
 function debug(...)
     local args = {...}
-    activeFrame.debugLabel:setPosition(1,activeFrame.h)
+    activeScreen.debugLabel:setPosition(1,activeScreen.h)
     local str = "[Debug] "
     for k,v in pairs(args)do
         str = str..tostring(v)..(#args~=k and ", " or "")
     end
-    activeFrame.debugLabel:setText(str)
-    activeFrame.debugLabel:show()
+    activeScreen.debugLabel:setText(str)
+    activeScreen.debugLabel:show()
 end
 
-frame.debug = debug
+screen.debug = debug
 
-function frame.get(name)
-    return frames[name];
+function screen.get(name)
+    return screens[name];
 end
 
-function frame.getActiveFrame()
-    return activeFrame
+function screen.getActiveScreen()
+    return activeScreen
 end
 
-return frame;
+return screen;
