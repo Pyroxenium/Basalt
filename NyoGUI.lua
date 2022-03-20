@@ -157,12 +157,12 @@ frame = object:new()
 function frame:new(name,scrn)
     local parent = scrn~=nil and scrn or term.native()
     local w, h = parent.getSize()
-    local newElement = {name=name, parent = parent, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, textAlign="left",focusedObject={}}
+    local newElement = {name=name, parent = parent,zIndex=20, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, textAlign="left",focusedObject={}, isMoveable = true}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 --------
-
+ 
 --object methods
 function object:show()
     if not(self.draw)then
@@ -263,7 +263,7 @@ function object:relativeToAbsolutePosition(x,y) -- relative position
         x,y = self.frame:relativeToAbsolutePosition(x,y)
         x = x-1; y = y-1
     end
-    return x,y
+    return x, y
 end
 
 function object:getAnchorPosition(x,y)
@@ -282,11 +282,11 @@ function object:isFocusedElement()
     return self == self.frame.focusedObject
 end
 
-function object:clickEvent(typ,x,y) -- internal class, dont use unless you know what you do
+function object:clickEvent(event,typ,x,y) -- internal class, dont use unless you know what you do
 local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
     if(vx<=x)and(vx+self.w>x)and(vy<=y)and(vy+self.h>y)then
         if(self.clickFunc~=nil)then
-            self.clickFunc(self,typ)
+            self.clickFunc(self,event,typ,x,y)
         end
         if(self.frame~=nil)then self.frame:setFocusedElement(self) end
         return true
@@ -445,6 +445,9 @@ end
 
 function frame:drawObject() 
     if(self.draw)then
+        if(self.drag)and(self.frame==nil)then
+            self.parent.clear()
+        end
         object.drawObject(self)
         self.fWindow.clear()
         if(self.barActive)then
@@ -484,20 +487,37 @@ function frame:drawObject()
     end
 end
 
-function frame:clickEvent(typ,x,y)
-    if(object.clickEvent(self,typ,x,y))then
-        local fx,fy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+function frame:clickEvent(event,typ,x,y)
+    local fx,fy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+    if(self.drag)and(self.draw)then        
+        if(event=="mouse_drag")then
+            local parentX=1;parentY=1
+            if(self.frame~=nil)then
+                parentX,parentY = self.frame:getAnchorPosition(self.frame:relativeToAbsolutePosition())
+            end
+            self:setPosition(x+self.xToRem-(parentX-1),y-(parentY-1))
+        end
+        if(event=="mouse_up")then
+            self.drag = false
+        end
+        return true
+    end
+    if(object.clickEvent(self,event,typ,x,y))then
         if(x>fx+self.w-1)or(y>fy+self.h-1)then return end
         for a,b in pairs(self.objects)do
             for _,v in pairs(b)do
                 if(v.draw~=false)then
-                    if(v:clickEvent(typ,x,y))then
+                    if(v:clickEvent(event,typ,x,y))then
                         return true
                     end
                 end
             end
         end
         self:loseFocusedElement()
+        if(x>=fx)and(x<=fx+self.w)and(y==fy)and(event=="mouse_click")then
+            self.drag = true
+            self.xToRem = fx-x
+        end
     end
     return false
 end
@@ -525,6 +545,11 @@ function frame:loseFocusedElement()
         self.focusedObject:loseFocusEvent()
     end
     self.focusedObject = {}
+end
+
+function frame:setMoveable(mv)
+    self.isMoveable = mv
+    return self;
 end
 --Frames end
 
@@ -605,8 +630,8 @@ function checkbox:drawObject()
     end
 end
 
-function checkbox:clickEvent(typ,x,y)
-    if(object.clickEvent(self,typ,x,y))then
+function checkbox:clickEvent(event,typ,x,y)
+    if(object.clickEvent(self,event,typ,x,y))then
         self.checked = not self.checked
         self.changed = true
         return true
@@ -658,8 +683,8 @@ function frame:addInput(name)
     end
 end
 
-function input:clickEvent(typ,x,y)
-    if(object.clickEvent(self,typ,x,y))then
+function input:clickEvent(event,typ,x,y)
+    if(object.clickEvent(self,event,typ,x,y))then
         local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
         self.frame.inputActive = true
         self.frame.activeInput = self
@@ -774,8 +799,8 @@ function dropdown:getSelection()
     return self.selected
 end
 
-function dropdown:clickEvent(typ,x,y)
-    object.clickEvent(self,typ,x,y)
+function dropdown:clickEvent(event,typ,x,y)
+    object.clickEvent(self,event,typ,x,y)
         if(self:isFocusedElement())then
             if(#self.elements>0)then
                 local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
@@ -839,8 +864,8 @@ function list:drawObject()
     end
 end
 
-function list:clickEvent(typ,x,y)
-    object.clickEvent(self,typ,x,y)
+function list:clickEvent(event,typ,x,y)
+    object.clickEvent(self,event,typ,x,y)
     if(#self.elements>0)then
         local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
         local index = 0
@@ -874,8 +899,8 @@ end
 
 
 
-local function handleMouseEvent(typ,x,y)
-    activeScreen:clickEvent(typ,x,y)
+local function handleMouseEvent(event,typ,x,y)
+    activeScreen:clickEvent(event,typ,x,y)
 end
 
 local function handleKeyboardEvent(event, key)
@@ -945,10 +970,17 @@ end
 
 function screen.startUpdate()
     handleChangedObjectsEvent()
-    while true do
+    screen.updater = true
+    while screen.updater do
         local event, p1,p2,p3 = os.pullEvent()
         if(event=="mouse_click")then
-            handleMouseEvent(p1,p2,p3)
+            activeScreen:clickEvent(event,p1,p2,p3)
+        end
+        if(event=="mouse_drag")then
+            activeScreen:clickEvent(event,p1,p2,p3)
+        end
+        if(event=="mouse_up")then
+            activeScreen:clickEvent(event,p1,p2,p3)
         end
         if(event=="timer")then
             checkTimer(p1)
@@ -958,6 +990,10 @@ function screen.startUpdate()
         end
         handleChangedObjectsEvent()
     end
+end
+
+function screen.stopUpdate()
+    screen.updater = false
 end
 
 
