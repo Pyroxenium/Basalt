@@ -146,7 +146,14 @@ end
 
 checkbox = object:new()
 function checkbox:new()
-    local newElement = {__type = "Checkbox",symbol="x",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black}
+    local newElement = {__type = "Checkbox",symbol="\42",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black}
+    setmetatable(newElement, {__index = self})
+    return newElement
+end
+
+radio = object:new()
+function radio:new()
+    local newElement = {__type = "Radio",symbol="\7",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black, selected = "", elements={}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -190,7 +197,7 @@ frame = object:new()
 function frame:new(name,scrn)
     local parent = scrn~=nil and scrn or term.native()
     local w, h = parent.getSize()
-    local newElement = {name=name, parent = parent,zIndex=20, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = true}
+    local newElement = {name=name, parent = parent,zIndex=1, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = false}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -314,21 +321,25 @@ function object:getAnchorPosition(x,y)
     if(x==nil)then x = self.x end
     if(y==nil)then y = self.y end
     if(self.hanchor=="right")then
-        x = self.frame.w-x+1
+        x = self.frame.w-x-self.w+2
     end
     if(self.vanchor=="bottom")then
-        y = self.frame.h-y
+        y = self.frame.h-y-self.h+2
     end
     return x, y
 end
 
 function object:isFocusedElement()
-    return self == self.frame.focusedObject
+    if(self.frame~=nil)then
+        return self == self.frame.focusedObject
+    end
+    return false
 end
 
-function object:clickEvent(event,typ,x,y) -- internal class, dont use unless you know what you do
+function object:mouseEvent(event,typ,x,y) -- internal class, dont use unless you know what you do
 local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
     if(vx<=x)and(vx+self.w>x)and(vy<=y)and(vy+self.h>y)then
+        if(self.frame~=nil)then self.frame:setFocusedElement(self) end
         if(event=="mouse_click")then
             if(self.clickFunc~=nil)then
                 self.clickFunc(self,typ,x,y)
@@ -342,10 +353,13 @@ local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
                 self.dragFunc(self,typ,x,y)
             end
         end
-        if(self.frame~=nil)then self.frame:setFocusedElement(self) end
         return true
     end
     return false
+end
+
+function object:keyEvent(event,typ) -- internal class, dont use unless you know what you do
+
 end
 
 function object:loseFocusEvent()   
@@ -458,21 +472,19 @@ end
 
 function frame:getObject(name)
     if(self.objects~=nil)then
-        for k,v in pairs(self.objects)do
-            if(v[name]~=nil)then
-                return v[name]
+        for _,b in pairs(self.objects)do
+            for _,v in pairs(b)do
+                if(v.name==name)then
+                    return v
+                end
             end
         end
     end
 end
 
-function frame:getFocusedObject()
-    return self.focusedObject
-end
-
 function frame:addObject(obj) --Z index not working need bugfix
     if(self.objects[obj.zIndex]==nil)then
-        for x=1,#self.objZKeys+1 do
+        for x=0,#self.objZKeys do
             if(self.objZKeys[x]~=nil)then
                 if(obj.zIndex >self.objZKeys[x])then
                     table.insert(self.objZKeys,x,obj.zIndex)
@@ -494,37 +506,28 @@ function frame:addObject(obj) --Z index not working need bugfix
         end
         self.objects = cache
     end
-    self.objects[obj.zIndex][obj.name] =  obj
+    table.insert(self.objects[obj.zIndex],obj)
 end
 
 function frame:drawObject() 
+    object.drawObject(self)
     if(self.draw)then
         if(self.drag)and(self.frame==nil)then
             self.parent.clear()
         end
-        object.drawObject(self)
         self.fWindow.clear()
         if(self.barActive)then
-            local text = string.sub(self.title, 1, self.w)
-            local n = self.w-string.len(text)
-            if(self.horizontalTextAlign=="left")then
-                text = text..string.rep(" ", n)
-            end
-            if(self.horizontalTextAlign=="right")then
-                text = string.rep(" ", n)..text
-            end
-            if(self.horizontalTextAlign=="center")then
-                text = string.rep(" ", math.floor(n/2))..text..string.rep(" ", math.floor(n/2))
-                text = text..(string.len(text) < self.w and " " or "")
-            end
             self.fWindow.setBackgroundColor(self.titlebgcolor)
             self.fWindow.setTextColor(self.titlefgcolor)
             self.fWindow.setCursorPos(1,1)
-            self.fWindow.write(text)
+            self.fWindow.write(getTextHorizontalAlign(self.title,self.w,self.horizontalTextAligns))
         end
-
-        for a,b in pairs(self.objects)do
-            for k,v in pairs(b)do  
+        local keys = {}
+        for k in pairs(self.objects)do
+            table.insert(keys,k)
+        end
+        for _,b in rpairs(keys)do
+            for k,v in pairs(self.objects[b])do  
                 if(v.draw~=nil)then  
                     v:drawObject()
                 end
@@ -533,6 +536,7 @@ function frame:drawObject()
 
         if(self.inputActive)then
             self.fWindow.setCursorPos(self.cursorX, self.cursorY)
+            self.fWindow.setCursorBlink(true)
         end
         self.fWindow.setBackgroundColor(self.bgcolor)
         self.fWindow.setTextColor(self.fgcolor)
@@ -541,11 +545,11 @@ function frame:drawObject()
     end
 end
 
-function frame:clickEvent(event,typ,x,y)
+function frame:mouseEvent(event,typ,x,y)
     local fx,fy = self:getAnchorPosition(self:relativeToAbsolutePosition())
     if(self.drag)and(self.draw)then        
         if(event=="mouse_drag")then
-            local parentX=1;parentY=1
+            local parentX=1;local parentY=1
             if(self.frame~=nil)then
                 parentX,parentY = self.frame:getAnchorPosition(self.frame:relativeToAbsolutePosition())
             end
@@ -556,29 +560,68 @@ function frame:clickEvent(event,typ,x,y)
         end
         return true
     end
-    if(object.clickEvent(self,event,typ,x,y))then
+
+    if(object.mouseEvent(self,event,typ,x,y))then
         if(x>fx+self.w-1)or(y>fy+self.h-1)then return end
-        local keys = {}
+            local keys = {}
             for k in pairs(self.objects)do
                 table.insert(keys,k)
             end
-            for _,b in rpairs(keys)do
-                for _,v in pairs(self.objects[b])do
-                    if(v.draw~=false)then
-                        if(v:clickEvent(event,typ,x,y))then
+            for _,b in pairs(keys)do
+                for _,v in rpairs(self.objects[b])do
+                    if(v.draw~=false)then                
+                        if(v:mouseEvent(event,typ,x,y))then
                             return true
                         end
                     end
                 end
             end
-        self:loseFocusedElement()
-        if(x>=fx)and(x<=fx+self.w)and(y==fy)and(event=="mouse_click")then
-            self.drag = true
-            self.xToRem = fx-x
+        if(self.isMoveable)then
+            if(x>=fx)and(x<=fx+self.w)and(y==fy)and(event=="mouse_click")then
+                self.drag = true
+                self.xToRem = fx-x
+            end
         end
     end
     if(fx<=x)and(fx+self.w>x)and(fy<=y)and(fy+self.h>y)then
+        self:removeFocusedElement()
         return true
+    end
+    return false
+end
+
+function frame:keyEvent(event,key)
+    for _,b in pairs(self.objects)do
+        for _,v in pairs(b)do
+            if(v.draw~=false)then
+                if(v:keyEvent(event,key))then
+                    return true
+                end
+            end
+        end
+    end
+    if(self.inputActive)then
+        if(self.activeInput.draw)then
+            if(event=="key")then
+                if(key==259)then
+                    self.activeInput:setText(string.sub(self.activeInput.text,1,string.len(self.activeInput.text)-1))
+                end
+                if(key==257)then -- on enter
+                    if(self.inputActive)then
+                        self.inputActive = false
+                        self.fWindow.setCursorBlink(false)
+                    end
+                end
+            end
+            if(event=="char")then
+                self.activeInput:setText(self.activeInput.text..key)
+            end
+            self.cursorX = self.activeInput.x+(string.len(self.activeInput.text) < self.activeInput.w and string.len(self.activeInput.text) or self.activeInput.w-1)
+            self.cursorY = self.activeInput.y
+            if(self.activeInput.changeFunc~=nil)then
+                self.activeInput.changeFunc(self.activeInput)
+            end
+        end
     end
     return false
 end
@@ -601,12 +644,35 @@ function frame:setFocusedElement(obj)
     end
 end
 
-function frame:loseFocusedElement()
+function frame:removeFocusedElement()
     if(self.focusedObject.name~=nil)then
         self.focusedObject:loseFocusEvent()
     end
     self.focusedObject = {}
 end
+
+function frame:getFocusedElement()
+    return self.focusedObject
+end
+
+function frame:loseFocusEvent()
+    object.loseFocusEvent(self)
+    self.inputActive = false
+    self.fWindow.setCursorBlink(false)
+end
+
+function frame:getFocusEvent()
+local frameList = {}
+    for k,v in pairs(self.frame.objects[self.zIndex])do
+        if(self~=v)then
+            table.insert(frameList,v)
+        end
+    end
+    table.insert(frameList,self)
+    self.frame.objects[self.zIndex] = frameList
+    self.changed = true
+end
+
 
 function frame:setMoveable(mv)
     self.isMoveable = mv
@@ -691,15 +757,107 @@ function checkbox:drawObject()
     end
 end
 
-function checkbox:clickEvent(event,typ,x,y)
-    if(object.clickEvent(self,event,typ,x,y))then
-        self.checked = not self.checked
-        self.changed = true
+function checkbox:mouseEvent(event,typ,x,y)
+    if(object.mouseEvent(self,event,typ,x,y))then
+        if(event=="mouse_click")then
+            self.checked = not self.checked
+            self.changed = true
+        end
         return true
     end
     return false
 end
 --Checkbox end
+
+--Radio object
+function frame:addRadio(name)
+    if(self:getObject(name) == nil)then
+        local obj = radio:new()
+        obj.name = name;obj.frame=self;
+        obj.bgcolor = self.bgcolor
+        obj.fgcolor = self.fgcolor
+        self:addObject(obj)
+        return obj;
+    else
+        return nil, "id "..name.." already exists";
+    end
+end
+
+function radio:setSymbol(symbol)
+    self.symbol = string.sub(symbol,1,1)
+    self.changed = true
+    return self
+end
+
+function radio:drawObject()
+    object.drawObject(self) -- Base class
+    if(self.draw)then
+        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
+        self.frame.fWindow.setBackgroundColor(self.bgcolor)
+        self.frame.fWindow.setTextColor(self.fgcolor)
+        if(self.checked)then
+            self.frame.fWindow.write(self.symbol)
+        else
+            self.frame.fWindow.write(" ")
+        end
+        self.changed = false
+    end
+end
+
+function radio:addElement(text,x,y,bgcolor,fgcolor)
+    if(x==nil)or(y==nil)then
+        table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),x=0,y=#self.elements})
+    else
+        table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),x=x,y=y})
+    end
+    if(#self.elements==1)then
+        self.selected = self.elements[1]
+    end
+    return self
+end
+
+function radio:mouseEvent(event,typ,x,y)
+    object.mouseEvent(self,event,typ,x,y)
+    if(#self.elements>0)then
+        local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+        for _,v in pairs(self.elements)do
+            if(dx<=x)and(dx+v.x+string.len(v.text)+1>x)and(dy+v.y==y)then
+                self.selected = v
+                self.changed = true
+                if(self.changeFunc~=nil)then
+                    self.changeFunc(self)
+                end
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function radio:drawObject()
+    object.drawObject(self) -- Base class
+    if(self.draw)then
+        if(#self.elements>0)then
+            for _,v in ipairs(self.elements)do
+                local objx, objy = self:getAnchorPosition()
+                self.frame.fWindow.setBackgroundColor(v.bgcolor)
+                self.frame.fWindow.setTextColor(v.fgcolor)
+                self.frame.fWindow.setCursorPos(objx+v.x,objy+v.y)
+                if(v==self.selected)then
+                    self.frame.fWindow.write(self.symbol..v.text)
+                else
+                    self.frame.fWindow.write(" "..v.text)
+                end
+            end
+        end
+        self.changed = false
+    end
+end
+
+function radio:getSelection()
+    return self.selected
+end
+--Radio end
 
 --Label object
 function frame:addLabel(name)
@@ -744,14 +902,13 @@ function frame:addInput(name)
     end
 end
 
-function input:clickEvent(event,typ,x,y)
-    if(object.clickEvent(self,event,typ,x,y))then
-        local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+function input:mouseEvent(event,typ,x,y)
+    if(object.mouseEvent(self,event,typ,x,y))then
         self.frame.inputActive = true
         self.frame.activeInput = self
-        self.frame.fWindow.setCursorPos(vx+(string.len(self.text) < self.w and string.len(self.text) or self.w),vy)
-        self.frame.cursorX = vx+(string.len(self.text) < self.w and string.len(self.text) or self.w)
-        self.frame.cursorY = vy
+        self.frame.fWindow.setCursorPos(self.x+(string.len(self.text) < self.w-1 and string.len(self.text) or self.w-1),self.y)
+        self.frame.cursorX = self.x+(string.len(self.text) < self.w-1 and string.len(self.text) or self.w-1)
+        self.frame.cursorY = self.y
         self.frame.fWindow.setCursorBlink(true)
         return true
     end
@@ -848,6 +1005,7 @@ function dropdown:drawObject()
         self.frame.fWindow.write(getTextHorizontalAlign(self.selected.text, self.w, self.horizontalTextAlign))
 
         if(self:isFocusedElement())then
+            print("asd")
             if(#self.elements>0)then
                 local index = 1
                 for _,v in ipairs(self.elements)do
@@ -868,29 +1026,29 @@ function dropdown:getSelection()
     return self.selected
 end
 
-function dropdown:clickEvent(event,typ,x,y)
-    object.clickEvent(self,event,typ,x,y)
-        if(self:isFocusedElement())then
-            if(#self.elements>0)then
-                local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
-                local index = 1
-                for _,b in pairs(self.elements)do
-                    if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
-                        self.selected = b
-                        if(self.changeFunc~=nil)then
-                            self.changeFunc(self)
-                        end
-                        activeScreen:loseFocusedElement()
-                        return true
+function dropdown:mouseEvent(event,typ,x,y)
+    object.mouseEvent(self,event,typ,x,y)
+    if(self:isFocusedElement())then
+        if(#self.elements>0)then
+            local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+            local index = 1
+            for _,b in pairs(self.elements)do
+                if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
+                    self.selected = b
+                    if(self.changeFunc~=nil)then
+                        self.changeFunc(self)
                     end
-                    index = index+1
+                    self.frame:removeFocusedElement()
+                    return true
                 end
-                if not((dx<=x)and(dx+self.w>x)and(dy<=y)and(dy+self.h>y))then
-                    activeScreen:loseFocusedElement()
-                end
-                return true
+                index = index+1
             end
+            if not((dx<=x)and(dx+self.w>x)and(dy<=y)and(dy+self.h>y))then
+                self.frame:removeFocusedElement()
+            end
+            return true
         end
+    end
     return false
 end
 
@@ -933,21 +1091,23 @@ function list:drawObject()
     end
 end
 
-function list:clickEvent(event,typ,x,y)
-    object.clickEvent(self,event,typ,x,y)
-    if(#self.elements>0)then
-        local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
-        local index = 0
-        for _,v in pairs(self.elements)do
-            if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
-                self.selected = v
-                self.changed = true
-                if(self.changeFunc~=nil)then
-                    self.changeFunc(self)
+function list:mouseEvent(event,typ,x,y)
+    object.mouseEvent(self,event,typ,x,y)
+    if(event=="mouse_click")then
+        if(#self.elements>0)then
+            local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+            local index = 0
+            for _,v in pairs(self.elements)do
+                if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
+                    self.selected = v
+                    self.changed = true
+                    if(self.changeFunc~=nil)then
+                        self.changeFunc(self)
+                    end
+                    return true
                 end
-                return true
+                index = index+1
             end
-            index = index+1
         end
     end
     return false
@@ -963,32 +1123,6 @@ function list:addElement(text,bgcolor,fgcolor)
         self.selected = self.elements[1]
     end
     return self
-end
-
-local function handleKeyboardEvent(event, key)
-    if(activeScreen.inputActive)then
-        if(activeScreen.activeInput.draw)then
-            if(event=="key")then
-                if(key==259)then
-                    activeScreen.activeInput:setText(string.sub(activeScreen.activeInput.text,1,string.len(activeScreen.activeInput.text)-1))
-                end
-                if(key==257)then
-                    if(activeScreen.inputActive)then
-                        activeScreen.inputActive = false
-                        activeScreen.fWindow.setCursorBlink(false)
-                    end
-                end
-            end
-            if(event=="char")then
-                activeScreen.activeInput:setText(activeScreen.activeInput.text..key)
-            end
-            activeScreen.cursorX = activeScreen.activeInput.x+(string.len(activeScreen.activeInput.text) < activeScreen.activeInput.w and string.len(activeScreen.activeInput.text) or activeScreen.activeInput.w-1)
-            activeScreen.cursorY = activeScreen.activeInput.y
-            if(activeScreen.activeInput.changeFunc~=nil)then
-                activeScreen.activeInput.changeFunc(activeScreen.activeInput)
-            end
-        end
-    end
 end
 
 local function checkTimer(timeObject)
@@ -1036,19 +1170,19 @@ function screen.startUpdate()
     while screen.updater do
         local event, p1,p2,p3 = os.pullEvent()
         if(event=="mouse_click")then
-            activeScreen:clickEvent(event,p1,p2,p3)
+            activeScreen:mouseEvent(event,p1,p2,p3)
         end
         if(event=="mouse_drag")then
-            activeScreen:clickEvent(event,p1,p2,p3)
+            activeScreen:mouseEvent(event,p1,p2,p3)
         end
         if(event=="mouse_up")then
-            activeScreen:clickEvent(event,p1,p2,p3)
+            activeScreen:mouseEvent(event,p1,p2,p3)
         end
         if(event=="timer")then
             checkTimer(p1)
         end
         if(event=="char")or(event=="key")then
-            handleKeyboardEvent(event,p1)
+            activeScreen:keyEvent(event,p1)
         end
         handleChangedObjectsEvent()
     end
