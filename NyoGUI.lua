@@ -46,17 +46,37 @@ local function rpairs(t)
 	end, t, #t + 1
 end
 
-local function reverseTable(t)
-local newT = {}
-local keys = {}
+local function copyVar(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[copyVar(orig_key)] = copyVar(orig_value)
+        end
+        setmetatable(copy, copyVar(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
 
-    for k,v in pairs(t)do
-        table.insert(keys,k)
+local function callAll(tab,...)
+    if(tab~=nil)then
+        if(#tab>0)then
+            for k,v in pairs(tab)do
+                v(type(...)=="table" and table.unpack(...) or ...)
+            end
+        end
     end
-    for k,v in rpairs(keys)do
-        newT[v] = t[v]
+end
+
+local function tableCount(tab)
+local n = 0
+    for _,v in pairs(tab)do
+        n = n+1
     end
-    return newT
+    return n
 end
 
 --------------
@@ -132,7 +152,16 @@ end
 --Object Constructors:
 --(base class for every element/object even frames)
 function object:new()
-    local newElement = {__type = "Object",name="",zIndex=1,drawCalls=0,x=1,y=1,w=1,h=1,textAlign="left",draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,text="",hanchor="left",vanchor="top"}
+    local newElement = {__type = "Object",name="",links={},zIndex=1,drawCalls=0,x=1,y=1,w=1,h=1,textAlign="left",draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,text="",hanchor="left",vanchor="top"}
+    setmetatable(newElement, {__index = self})
+    return newElement
+end
+
+function object:copy(obj)
+local newElement = {}
+    for k,v in pairs(obj)do
+        newElement[k] = v
+    end
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -146,14 +175,14 @@ end
 
 checkbox = object:new()
 function checkbox:new()
-    local newElement = {__type = "Checkbox",symbol="\42",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black}
+    local newElement = {__type = "Checkbox",symbol="\42",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black, value = false}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 radio = object:new()
 function radio:new()
-    local newElement = {__type = "Radio",symbol="\7",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black, selected = "", elements={}}
+    local newElement = {__type = "Radio",symbol="\7",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black, value = "", elements={}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -167,7 +196,7 @@ end
 
 input = object:new()
 function input:new()
-    local newElement = {__type = "Input",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5}
+    local newElement = {__type = "Input",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5, value = ""}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -181,23 +210,29 @@ end
 
 dropdown = object:new()
 function dropdown:new()
-    local newElement = {__type = "Dropdown",zIndex=10,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",elements={},selected={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
+    local newElement = {__type = "Dropdown",zIndex=10,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",elements={},value={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 list = object:new()
 function list:new()
-    local newElement = {__type = "List",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",elements={},selected={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
+    local newElement = {__type = "List",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",elements={},value={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 frame = object:new()
-function frame:new(name,scrn)
-    local parent = scrn~=nil and scrn or term.native()
+function frame:new(name,scrn,frameObj)
+    local parent = scrn~=nil and scrn or term.current()
     local w, h = parent.getSize()
-    local newElement = {name=name, parent = parent,zIndex=1, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = false}
+    local newElement = {}
+    if(frameObj~=nil)then
+        newElement = object:copy(frameObj)
+        newElement.fWindow = window.create(parent,1,1,frameObj.w,frameObj.h)
+    else
+        newElement = {__type = "Frame",name=name, parent = parent,zIndex=1, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = false}
+    end
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -205,19 +240,28 @@ end
  
 --object methods
 function object:show()
-    if not(self.draw)then
-        self.draw = true
-        self.changed = true
-    end
+    self.draw = true
+    self.changed = true
     return self
 end
 
 function object:hide()
+    self.draw = false
+    self.changed = true
+    return self
+end
+
+function object:changeVisibility()
     if(self.draw)then
-        self.draw = false
-        self.changed = true
+        self:hide()
+    else
+        self:show()
     end
     return self
+end
+
+function object:isVisible()
+    return self.draw
 end
 
 function object:getName()
@@ -243,29 +287,53 @@ function object:setForeground(color)
     return self
 end
 
+--Object Events:-----
 function object:onClick(func)
-    self.clickFunc = func
+    if(self.clickFunc==nil)then self.clickFunc = {} end
+    table.insert(self.clickFunc,func)
     return self
 end
 
 function object:onMouseUp(func)
-    self.upFunc = func
+    if(self.upFunc==nil)then self.upFunc = {} end
+    table.insert(self.upFunc,func)
     return self
 end
 
 function object:onMouseDrag(func)
-    self.dragFunc = func
-    return self
-end
-
-function object:setText(text)
-    self.text = text
-    self.changed = true
+    if(self.dragFunc==nil)then self.dragFunc = {} end
+    table.insert(self.dragFunc,func)
     return self
 end
 
 function object:onChange(func)
-    self.changeFunc = func
+    if(self.changeFunc==nil)then self.changeFunc = {} end
+    table.insert(self.changeFunc,func)
+    return self
+end
+
+function object:onKeyClick(func)
+    if(self.keyEventFunc==nil)then self.keyEventFunc = {} end
+    table.insert(self.keyEventFunc,func)
+    return self
+end
+
+function object:onLoseFocus(func)
+    if(self.loseFocusEventFunc==nil)then self.loseFocusEventFunc = {} end
+    table.insert(self.loseFocusEventFunc,func)
+    return self
+end
+
+function object:onGetFocus(func)
+    if(self.getFocusEventFunc==nil)then self.getFocusEventFunc = {} end
+    table.insert(self.getFocusEventFunc,func)
+    return self
+end
+--------------------
+
+function object:setText(text)
+    self.text = text
+    self.changed = true
     return self
 end
 
@@ -274,6 +342,51 @@ function object:setSize(w,h)
     self.h = tonumber(h)
     self.changed = true
     return self
+end
+
+function object:getHeight()
+    return self.h
+end
+
+function object:getWidth()
+    return self.w
+end
+
+function object:linkTo(obj)
+    if(obj.__type==self.__type)then
+        obj.links[self.name] = self
+    end
+    return self
+end
+
+function object:link(obj)
+    if(obj.__type==self.__type)then
+        self.links[obj.name] = obj
+    end
+    return self
+end
+
+function object:isLinkedTo(obj)
+    return (obj[self.name] ~= nil)
+end
+
+function object:isLinked(obj)
+    return (self[obj.name] ~= nil)
+end
+
+function object:setValue(val)
+    self.value = val
+    self.changed = true
+    for _,v in pairs(self.links)do
+        v.value = val
+        v.changed = true
+    end
+    callAll(self.onChangeFunc,self)
+    return self
+end
+
+function object:getValue()
+    return self.value;
 end
 
 function object:setTextAlign(halign,valign)
@@ -289,23 +402,41 @@ function object:drawObject()
     end
 end
 
-function object:setAnchor(ank1,ank2)
-    if(ank1=="right")or(ank1=="left")then
-        self.hanchor = ank1
+function object:setAnchor(...)
+    if(type(...)=="string")then
+            if(...=="right")or(...=="left")then
+                self.hanchor = ...
+            end
+            if(...=="top")or(...=="bottom")then
+                self.vanchor = ...
+            end
     end
-    if(ank2=="top")or(ank2=="bottom")then
-        self.vanchor = ank2
+    if(type(...)=="table")then
+        for _,v in pairs(...)do
+        if(v=="right")or(v=="left")then
+            self.hanchor = v
+        end
+        if(v=="top")or(v=="bottom")then
+            self.vanchor = v
+        end
     end
-    if(ank1=="top")or(ank1=="bottom")then
-        self.vanchor = ank1
-    end
-    if(ank2=="right")or(ank2=="left")then
-        self.hanchor = ank2
-    end
+end
     return self
 end
 
 function object:relativeToAbsolutePosition(x,y) -- relative position
+    if(x==nil)then x = self.x end
+    if(y==nil)then y = self.y end
+
+    if(self.frame~=nil)then
+        local fx,fy = self.frame:relativeToAbsolutePosition()
+        x=fx+x-1
+        y=fy+y-1
+    end
+    return x, y
+end
+
+function object:relativeToAbsolutePositionOLD(x,y) -- relative position
     if(x==nil)then x = 0 end
     if(y==nil)then y = 0 end
 
@@ -337,20 +468,20 @@ function object:isFocusedElement()
 end
 
 function object:mouseEvent(event,typ,x,y) -- internal class, dont use unless you know what you do
-local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+local vx,vy = self:relativeToAbsolutePosition(self:getAnchorPosition())
     if(vx<=x)and(vx+self.w>x)and(vy<=y)and(vy+self.h>y)then
         if(self.frame~=nil)then self.frame:setFocusedElement(self) end
         if(event=="mouse_click")then
             if(self.clickFunc~=nil)then
-                self.clickFunc(self,typ,x,y)
+                callAll(self.clickFunc,self,typ,x,y)
             end
         elseif(event=="mouse_up")then
             if(self.upFunc~=nil)then
-                self.upFunc(self,typ,x,y)
+                callAll(self.upFunc,self,typ,x,y)
             end
         elseif(event=="mouse_drag")then
             if(self.dragFunc~=nil)then
-                self.dragFunc(self,typ,x,y)
+                callAll(self.dragFunc,self,typ,x,y)
             end
         end
         return true
@@ -359,14 +490,28 @@ local vx,vy = self:getAnchorPosition(self:relativeToAbsolutePosition())
 end
 
 function object:keyEvent(event,typ) -- internal class, dont use unless you know what you do
+    if(self.keyEventFunc~=nil)then
+        callAll(self.keyEventFunc,self,typ)
+    end
+end
 
+function object:setFocus()    
+    if(self.frame~=nil)then
+        self.frame:setFocusedElement(self)
+    end
+    return self
 end
 
 function object:loseFocusEvent()   
-
+    if(self.loseFocusEventFunc~=nil)then
+        callAll(self.loseFocusEventFunc,self)
+    end
 end
 
 function object:getFocusEvent()    
+    if(self.getFocusEventFunc~=nil)then
+        callAll(self.getFocusEventFunc,self)
+    end
 end
 
 function object:setZIndex(index)
@@ -376,7 +521,7 @@ end
 --object end
 
 --Frame object
-screen.new = function(name, scrn)
+screen.new = function(name, scrn) -- this is also just a frame, but its a level 0 frame and doesn't inherit
 local obj = frame:new(name,scrn)
     if(screens[name] == nil)then
         screens[name] = obj
@@ -393,28 +538,50 @@ screen.remove = function(name)
     screens[name] = nil
 end
 
-function frame:addFrame(name)
-    if(self:getObject(name) == nil)then
-        local obj = frame:new(name,self.fWindow)
-        obj.name = name;obj.frame=self;
+function frame:addFrame(frameObj) -- with this you also create frames, but it needs to have a parent frame
+    if(self:getObject(frameObj) == nil)then
+        local obj
+        if(type(frameObj)=="string")then
+            obj = frame:new(frameObj,self.fWindow)
+        elseif(type(frameObj)=="table")and(frameObj.__type=="Frame")then
+            obj = frame:new(frameObj.name,self.fWindow,frameObj)
+        end
+        obj.frame=self;
         self:addObject(obj)
         return obj;
     else
-        return nil, "id "..name.." already exists";
+        return nil, "id "..frameObj.." already exists";
     end
 end
 
-function frame:showBar()
+function frame:setParentFrame(parent) -- if you want to change the parent of a frame, even level 0 frames can have a parent (they will be 'converted' *habschi*)
+    if(parent.__type=="Frame")and(parent~=self.frame)then
+        if(self.frame~=nil)then
+            self.frame:removeObject(self)
+        end
+        self.parent = parent.fWindow
+        self.frame = parent
+        self.fWindow.setVisible(false)
+        self.fWindow = window.create(parent.fWindow,self.x,self.y,self.w,self.h)
+        self.frame:addObject(self)
+        if(self.draw)then 
+            self:show() 
+        end
+    end
+    return self
+end
+
+function frame:showBar() -- shows top bar
     self.barActive = true
     return self
 end
 
-function frame:hideBar()
+function frame:hideBar() -- hides top bar
     self.barActive = false
     return self
 end
 
-function frame:setTitle(title,fgcolor,bgcolor)
+function frame:setTitle(title,fgcolor,bgcolor) -- changed the title in your top bar
     self.title=title
     if(fgcolor~=nil)then self.titlefgcolor = fgcolor end
     if(bgcolor~=nil)then  self.titlebgcolor = bgcolor end
@@ -422,36 +589,37 @@ function frame:setTitle(title,fgcolor,bgcolor)
     return self
 end
 
-function frame:setTextAlign(align)
+function frame:setTextAlign(align) -- changes title align
     self.horizontalTextAlign = align
     self.changed = true
     return self
 end
 
-function frame:setSize(width, height)
+function frame:setSize(width, height) -- frame size
     object.setSize(self,width,height)
     self.fWindow.reposition(self.x,self.y,width,height)
     return self
 end
 
-function frame:setPosition(x,y)
+function frame:setPosition(x,y) -- pos
     object.setPosition(self,x,y)
     self.fWindow.reposition(x,y)
     return self
 end
 
-function frame:show()
+function frame:show() -- you need to call to be able to see the frame
     object.show(self)
     self.fWindow.setBackgroundColor(self.bgcolor)
     self.fWindow.setTextColor(self.fgcolor)
     self.fWindow.setVisible(true)
+    self.fWindow.redraw()
     if(self.frame == nil)then
         activeScreen = self
     end
     return self
 end
 
-function frame:hide()
+function frame:hide() -- hides the frame (does not remove setted values)
     object.hide(self)
     self.fWindow.setVisible(false)
     self.fWindow.redraw()
@@ -459,7 +627,7 @@ function frame:hide()
     return self
 end
 
-function frame:close()
+function frame:remove() -- removes the frame completly
     if(self.frame~=nil)then
         object.hide(self)
     end
@@ -470,7 +638,7 @@ function frame:close()
     self.parent.clear()
 end
 
-function frame:getObject(name)
+function frame:getObject(name) -- you can find objects by their name
     if(self.objects~=nil)then
         for _,b in pairs(self.objects)do
             for _,v in pairs(b)do
@@ -482,7 +650,20 @@ function frame:getObject(name)
     end
 end
 
-function frame:addObject(obj) --Z index not working need bugfix
+function frame:removeObject(obj) -- you can remove objects by their name
+    if(self.objects~=nil)then
+        for a,b in pairs(self.objects)do
+            for k,v in pairs(b)do
+                if(v==obj)then
+                    table.remove(self.objects[a],k)
+                    return;
+                end
+            end
+        end
+    end
+end
+
+function frame:addObject(obj) -- you can add a object manually, normaly you shouldn't use this function, it get called internally
     if(self.objects[obj.zIndex]==nil)then
         for x=0,#self.objZKeys do
             if(self.objZKeys[x]~=nil)then
@@ -509,7 +690,7 @@ function frame:addObject(obj) --Z index not working need bugfix
     table.insert(self.objects[obj.zIndex],obj)
 end
 
-function frame:drawObject() 
+function frame:drawObject()  -- this draws the frame, you dont need that function, it get called internally
     object.drawObject(self)
     if(self.draw)then
         if(self.drag)and(self.frame==nil)then
@@ -520,7 +701,7 @@ function frame:drawObject()
             self.fWindow.setBackgroundColor(self.titlebgcolor)
             self.fWindow.setTextColor(self.titlefgcolor)
             self.fWindow.setCursorPos(1,1)
-            self.fWindow.write(getTextHorizontalAlign(self.title,self.w,self.horizontalTextAligns))
+            self.fWindow.write(getTextHorizontalAlign(self.title,self.w,self.horizontalTextAlign))
         end
         local keys = {}
         for k in pairs(self.objects)do
@@ -545,13 +726,13 @@ function frame:drawObject()
     end
 end
 
-function frame:mouseEvent(event,typ,x,y)
-    local fx,fy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+function frame:mouseEvent(event,typ,x,y) -- internal mouse event, should make it local but as lazy i am..
+    local fx,fy = self:relativeToAbsolutePosition(self:getAnchorPosition())
     if(self.drag)and(self.draw)then        
         if(event=="mouse_drag")then
             local parentX=1;local parentY=1
             if(self.frame~=nil)then
-                parentX,parentY = self.frame:getAnchorPosition(self.frame:relativeToAbsolutePosition())
+                parentX,parentY = self.frame:relativeToAbsolutePosition(self.frame:getAnchorPosition())
             end
             self:setPosition(x+self.xToRem-(parentX-1),y-(parentY-1))
         end
@@ -590,7 +771,7 @@ function frame:mouseEvent(event,typ,x,y)
     return false
 end
 
-function frame:keyEvent(event,key)
+function frame:keyEvent(event,key)-- internal key event, should make it local but as lazy i am..
     for _,b in pairs(self.objects)do
         for _,v in pairs(b)do
             if(v.draw~=false)then
@@ -604,7 +785,7 @@ function frame:keyEvent(event,key)
         if(self.activeInput.draw)then
             if(event=="key")then
                 if(key==259)then
-                    self.activeInput:setText(string.sub(self.activeInput.text,1,string.len(self.activeInput.text)-1))
+                    self.activeInput:setValue(string.sub(self.activeInput.value,1,string.len(self.activeInput.value)-1))
                 end
                 if(key==257)then -- on enter
                     if(self.inputActive)then
@@ -614,10 +795,11 @@ function frame:keyEvent(event,key)
                 end
             end
             if(event=="char")then
-                self.activeInput:setText(self.activeInput.text..key)
+                self.activeInput:setValue(self.activeInput.value..key)
             end
-            self.cursorX = self.activeInput.x+(string.len(self.activeInput.text) < self.activeInput.w and string.len(self.activeInput.text) or self.activeInput.w-1)
-            self.cursorY = self.activeInput.y
+            local anchX,anchY = self.activeInput:getAnchorPosition()
+            self.cursorX = anchX+(string.len(self.activeInput.value) < self.activeInput.w and string.len(self.activeInput.value) or self.activeInput.w-1)
+            self.cursorY = anchY
             if(self.activeInput.changeFunc~=nil)then
                 self.activeInput.changeFunc(self.activeInput)
             end
@@ -626,13 +808,13 @@ function frame:keyEvent(event,key)
     return false
 end
 
-function frame:changeZIndexOfObj(obj, zindex)
+function frame:changeZIndexOfObj(obj, zindex)-- this function is not working right now
     self.objects[obj.zIndex][obj.name] =  nil
     obj.zIndex = zindex
     self:addObject(obj)
 end
 
-function frame:setFocusedElement(obj)
+function frame:setFocusedElement(obj)-- you can set the focus of an element in a frame
     if(self:getObject(obj.name)~=nil)then
         if(self.focusedObject~=obj)then
             if(self.focusedObject.name~=nil)then
@@ -644,24 +826,24 @@ function frame:setFocusedElement(obj)
     end
 end
 
-function frame:removeFocusedElement()
+function frame:removeFocusedElement()-- and here you can remove the focus
     if(self.focusedObject.name~=nil)then
         self.focusedObject:loseFocusEvent()
     end
     self.focusedObject = {}
 end
 
-function frame:getFocusedElement()
+function frame:getFocusedElement()--gets the current focused element
     return self.focusedObject
 end
 
-function frame:loseFocusEvent()
+function frame:loseFocusEvent()--event which gets fired when the frame lost the focus in this case i remove the cursor blink from the active input object
     object.loseFocusEvent(self)
     self.inputActive = false
     self.fWindow.setCursorBlink(false)
 end
 
-function frame:getFocusEvent()
+function frame:getFocusEvent()--event which gets fired when the frame gets the focus
 local frameList = {}
     for k,v in pairs(self.frame.objects[self.zIndex])do
         if(self~=v)then
@@ -674,7 +856,7 @@ local frameList = {}
 end
 
 
-function frame:setMoveable(mv)
+function frame:setMoveable(mv)--you can make the frame moveable (Todo: i want to make all objects moveable, so i can create a ingame gui editor MUHUHHUH)
     self.isMoveable = mv
     return self;
 end
@@ -682,7 +864,7 @@ end
 
 
 --Timer object
-function frame:addTimer(name)
+function frame:addTimer(name)--adds the timer object
     if(self:getObject(name) == nil)then
         local obj = timer:new()
         obj.name = name;obj.frame=self;
@@ -693,8 +875,9 @@ function frame:addTimer(name)
     end
 end
 
-function timer:setTime(timer, repeats)
+function timer:setTime(timer, repeats)--tobecontinued
     self.timer = timer
+    if(repeats==nil)then repeats = -1 end
     if(repeats>0)then
         self.repeats = repeats
     else
@@ -748,7 +931,7 @@ function checkbox:drawObject()
         self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
-        if(self.checked)then
+        if(self.value)then
             self.frame.fWindow.write(self.symbol)
         else
             self.frame.fWindow.write(" ")
@@ -757,14 +940,15 @@ function checkbox:drawObject()
     end
 end
 
-function checkbox:mouseEvent(event,typ,x,y)
-    if(object.mouseEvent(self,event,typ,x,y))then
+function checkbox:mouseEvent(event,typ,x,y) -- we have to switch the order of object.mouseEvent with checkbox:mouseEvent, because the value should be changed before we call user click events
+    local vx,vy = self:relativeToAbsolutePosition(self:getAnchorPosition())
+    if(vx<=x)and(vx+self.w>x)and(vy<=y)and(vy+self.h>y)then
         if(event=="mouse_click")then
-            self.checked = not self.checked
+            self:setValue(not self.value)
             self.changed = true
         end
-        return true
     end
+    if(object.mouseEvent(self,event,typ,x,y))then return true end
     return false
 end
 --Checkbox end
@@ -789,21 +973,6 @@ function radio:setSymbol(symbol)
     return self
 end
 
-function radio:drawObject()
-    object.drawObject(self) -- Base class
-    if(self.draw)then
-        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
-        self.frame.fWindow.setBackgroundColor(self.bgcolor)
-        self.frame.fWindow.setTextColor(self.fgcolor)
-        if(self.checked)then
-            self.frame.fWindow.write(self.symbol)
-        else
-            self.frame.fWindow.write(" ")
-        end
-        self.changed = false
-    end
-end
-
 function radio:addElement(text,x,y,bgcolor,fgcolor)
     if(x==nil)or(y==nil)then
         table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),x=0,y=#self.elements})
@@ -811,23 +980,24 @@ function radio:addElement(text,x,y,bgcolor,fgcolor)
         table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),x=x,y=y})
     end
     if(#self.elements==1)then
-        self.selected = self.elements[1]
+        self:setValue(self.elements[1])
     end
     return self
 end
 
 function radio:mouseEvent(event,typ,x,y)
-    object.mouseEvent(self,event,typ,x,y)
-    if(#self.elements>0)then
-        local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
-        for _,v in pairs(self.elements)do
-            if(dx<=x)and(dx+v.x+string.len(v.text)+1>x)and(dy+v.y==y)then
-                self.selected = v
-                self.changed = true
-                if(self.changeFunc~=nil)then
-                    self.changeFunc(self)
+    if(object.mouseEvent(self,event,typ,x,y))then
+        if(#self.elements>0)then
+            local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
+            for _,v in pairs(self.elements)do
+                if(dx<=x)and(dx+v.x+string.len(v.text)+1>x)and(dy+v.y==y)then
+                    self:setValue(v)
+                    self.changed = true
+                    if(self.changeFunc~=nil)then
+                        self.changeFunc(self)
+                    end
+                    return true
                 end
-                return true
             end
         end
     end
@@ -843,7 +1013,7 @@ function radio:drawObject()
                 self.frame.fWindow.setBackgroundColor(v.bgcolor)
                 self.frame.fWindow.setTextColor(v.fgcolor)
                 self.frame.fWindow.setCursorPos(objx+v.x,objy+v.y)
-                if(v==self.selected)then
+                if(v==self.value)then
                     self.frame.fWindow.write(self.symbol..v.text)
                 else
                     self.frame.fWindow.write(" "..v.text)
@@ -852,10 +1022,6 @@ function radio:drawObject()
         end
         self.changed = false
     end
-end
-
-function radio:getSelection()
-    return self.selected
 end
 --Radio end
 
@@ -904,11 +1070,12 @@ end
 
 function input:mouseEvent(event,typ,x,y)
     if(object.mouseEvent(self,event,typ,x,y))then
+        local anchX,anchY = self:getAnchorPosition()
         self.frame.inputActive = true
         self.frame.activeInput = self
-        self.frame.fWindow.setCursorPos(self.x+(string.len(self.text) < self.w-1 and string.len(self.text) or self.w-1),self.y)
-        self.frame.cursorX = self.x+(string.len(self.text) < self.w-1 and string.len(self.text) or self.w-1)
-        self.frame.cursorY = self.y
+        self.frame.fWindow.setCursorPos(anchX+(string.len(self.value) < self.w-1 and string.len(self.value) or self.w-1),anchY)
+        self.frame.cursorX = anchX+(string.len(self.value) < self.w-1 and string.len(self.value) or self.w-1)
+        self.frame.cursorY = anchY
         self.frame.fWindow.setCursorBlink(true)
         return true
     end
@@ -919,10 +1086,10 @@ function input:drawObject()
     object.drawObject(self) -- Base class
     local text = ""
     if(self.draw)then
-        if(string.len(self.text)>=self.w)then
-            text = string.sub(self.text, string.len(self.text)-self.w+2, string.len(self.text))
+        if(string.len(self.value)>=self.w)then
+            text = string.sub(self.value, string.len(self.value)-self.w+2, string.len(self.value))
         else
-            text = self.text
+            text = self.value
         end
         local n = self.w-string.len(text)
         text = text..string.rep(" ", n)
@@ -991,7 +1158,7 @@ end
 function dropdown:addElement(text,bgcolor,fgcolor)
     table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor)})
     if(#self.elements==1)then
-        self.selected = self.elements[1]
+        self:setValue(self.elements[1])
     end
     return self
 end
@@ -1000,9 +1167,9 @@ function dropdown:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
         self.frame.fWindow.setCursorPos(self:getAnchorPosition())
-        self.frame.fWindow.setBackgroundColor(self.selected.bgcolor)
-        self.frame.fWindow.setTextColor(self.selected.fgcolor)
-        self.frame.fWindow.write(getTextHorizontalAlign(self.selected.text, self.w, self.horizontalTextAlign))
+        self.frame.fWindow.setBackgroundColor(self.value.bgcolor)
+        self.frame.fWindow.setTextColor(self.value.fgcolor)
+        self.frame.fWindow.write(getTextHorizontalAlign(self.value.text, self.w, self.horizontalTextAlign))
 
         if(self:isFocusedElement())then
             print("asd")
@@ -1022,19 +1189,15 @@ function dropdown:drawObject()
     end
 end
 
-function dropdown:getSelection()
-    return self.selected
-end
-
 function dropdown:mouseEvent(event,typ,x,y)
     object.mouseEvent(self,event,typ,x,y)
     if(self:isFocusedElement())then
         if(#self.elements>0)then
-            local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+            local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
             local index = 1
             for _,b in pairs(self.elements)do
                 if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
-                    self.selected = b
+                    self:setValue(b)
                     if(self.changeFunc~=nil)then
                         self.changeFunc(self)
                     end
@@ -1070,7 +1233,7 @@ function list:drawObject()
         self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
-        self.frame.fWindow.write(getTextHorizontalAlign(self.selected.text, self.w, self.horizontalTextAlign))
+        self.frame.fWindow.write(getTextHorizontalAlign(self.value.text, self.w, self.horizontalTextAlign))
 
         if(#self.elements>0)then
             local index = 0
@@ -1079,7 +1242,7 @@ function list:drawObject()
                 self.frame.fWindow.setBackgroundColor(v.bgcolor)
                 self.frame.fWindow.setTextColor(v.fgcolor)
                 self.frame.fWindow.setCursorPos(objx,objy+index)
-                if(v==self.selected)then
+                if(v==self.value)then
                     self.frame.fWindow.write(">"..getTextHorizontalAlign(v.text, self.w, self.horizontalTextAlign))
                 else
                     self.frame.fWindow.write(" "..getTextHorizontalAlign(v.text, self.w, self.horizontalTextAlign))
@@ -1095,11 +1258,11 @@ function list:mouseEvent(event,typ,x,y)
     object.mouseEvent(self,event,typ,x,y)
     if(event=="mouse_click")then
         if(#self.elements>0)then
-            local dx,dy = self:getAnchorPosition(self:relativeToAbsolutePosition())
+            local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
             local index = 0
             for _,v in pairs(self.elements)do
                 if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
-                    self.selected = v
+                    self:setValue(v)
                     self.changed = true
                     if(self.changeFunc~=nil)then
                         self.changeFunc(self)
@@ -1113,14 +1276,10 @@ function list:mouseEvent(event,typ,x,y)
     return false
 end
 
-function list:getSelection()
-    return self.selected
-end
-
 function list:addElement(text,bgcolor,fgcolor)
     table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor)})
     if(#self.elements==1)then
-        self.selected = self.elements[1]
+        self:setValue(self.elements[1])
     end
     return self
 end
@@ -1169,6 +1328,8 @@ function screen.startUpdate()
     screen.updater = true
     while screen.updater do
         local event, p1,p2,p3 = os.pullEvent()
+        activeScreen.changed = true
+
         if(event=="mouse_click")then
             activeScreen:mouseEvent(event,p1,p2,p3)
         end
