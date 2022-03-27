@@ -10,6 +10,7 @@ local activeScreen
 local screen = {}
 local screens = {}
 local animations = {}
+local keyModifier = {}
 
 --Utility Functions:
 local function getTextHorizontalAlign(text, w, textAlign)
@@ -217,7 +218,14 @@ end
 
 list = object:new()
 function list:new()
-    local newElement = {__type = "List",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",elements={},value={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
+    local newElement = {__type = "List",index=1,zIndex=5,symbol=">",bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",elements={},value={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
+    setmetatable(newElement, {__index = self})
+    return newElement
+end
+
+textfield = object:new()
+function textfield:new()
+    local newElement = {__type = "Textfield",hIndex=1,wIndex=1,textX=1,textY=1,zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,h=2,value="",curCharOffset=0,lines={""}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -294,7 +302,7 @@ function object:onClick(func)
     return self
 end
 
-function object:onMouseUp(func)
+function object:onClickUp(func)
     if(self.upFunc==nil)then self.upFunc = {} end
     table.insert(self.upFunc,func)
     return self
@@ -381,7 +389,7 @@ function object:setValue(val)
         v.value = val
         v.changed = true
     end
-    callAll(self.onChangeFunc,self)
+    callAll(self.changeFunc,self)
     return self
 end
 
@@ -581,6 +589,19 @@ function frame:hideBar() -- hides top bar
     return self
 end
 
+function frame:isModifierActive(key)
+    if(key==340)or(key=="shift")then
+        return keyModifier[340]
+    end
+    if(key==341)or(key=="ctrl")then
+        return keyModifier[341]
+    end
+    if(key==342)or(key=="alt")then
+        return keyModifier[342]
+    end
+    return keyModifier[key]
+end
+
 function frame:setTitle(title,fgcolor,bgcolor) -- changed the title in your top bar
     self.title=title
     if(fgcolor~=nil)then self.titlefgcolor = fgcolor end
@@ -690,7 +711,7 @@ function frame:addObject(obj) -- you can add a object manually, normaly you shou
     table.insert(self.objects[obj.zIndex],obj)
 end
 
-function frame:drawObject()  -- this draws the frame, you dont need that function, it get called internally
+function frame:drawObject()  -- this draws the frame, you dont need that function, it gets called internally
     object.drawObject(self)
     if(self.draw)then
         if(self.drag)and(self.frame==nil)then
@@ -714,10 +735,9 @@ function frame:drawObject()  -- this draws the frame, you dont need that functio
                 end
             end
         end
-
-        if(self.inputActive)then
-            self.fWindow.setCursorPos(self.cursorX, self.cursorY)
-            self.fWindow.setCursorBlink(true)
+        if(self.focusedObject.cursorX~=nil)and(self.focusedObject.cursorY~=nil)then        
+            self.fWindow.setCursorPos(self.focusedObject.cursorX, self.focusedObject.cursorY)
+            --self.fWindow.setCursorBlink(true)
         end
         self.fWindow.setBackgroundColor(self.bgcolor)
         self.fWindow.setTextColor(self.fgcolor)
@@ -778,30 +798,6 @@ function frame:keyEvent(event,key)-- internal key event, should make it local bu
                 if(v:keyEvent(event,key))then
                     return true
                 end
-            end
-        end
-    end
-    if(self.inputActive)then
-        if(self.activeInput.draw)then
-            if(event=="key")then
-                if(key==259)then
-                    self.activeInput:setValue(string.sub(self.activeInput.value,1,string.len(self.activeInput.value)-1))
-                end
-                if(key==257)then -- on enter
-                    if(self.inputActive)then
-                        self.inputActive = false
-                        self.fWindow.setCursorBlink(false)
-                    end
-                end
-            end
-            if(event=="char")then
-                self.activeInput:setValue(self.activeInput.value..key)
-            end
-            local anchX,anchY = self.activeInput:getAnchorPosition()
-            self.cursorX = anchX+(string.len(self.activeInput.value) < self.activeInput.w and string.len(self.activeInput.value) or self.activeInput.w-1)
-            self.cursorY = anchY
-            if(self.activeInput.changeFunc~=nil)then
-                self.activeInput.changeFunc(self.activeInput)
             end
         end
     end
@@ -1071,15 +1067,40 @@ end
 function input:mouseEvent(event,typ,x,y)
     if(object.mouseEvent(self,event,typ,x,y))then
         local anchX,anchY = self:getAnchorPosition()
-        self.frame.inputActive = true
-        self.frame.activeInput = self
         self.frame.fWindow.setCursorPos(anchX+(string.len(self.value) < self.w-1 and string.len(self.value) or self.w-1),anchY)
-        self.frame.cursorX = anchX+(string.len(self.value) < self.w-1 and string.len(self.value) or self.w-1)
-        self.frame.cursorY = anchY
+        self.cursorX = anchX+(string.len(self.value) < self.w-1 and string.len(self.value) or self.w-1)
+        self.cursorY = anchY
         self.frame.fWindow.setCursorBlink(true)
         return true
     end
     return false
+end
+
+function input:keyEvent(event,key)
+    if(self:isFocusedElement())then
+        if(self.draw)then
+            if(event=="key")then
+                if(key==259)then
+                    self:setValue(string.sub(self.value,1,string.len(self.value)-1))
+                end
+                if(key==257)then -- on enter
+                    if(self.inputActive)then
+                        self.inputActive = false
+                        self.fWindow.setCursorBlink(false)
+                    end
+                end
+            end
+            if(event=="char")then
+                self:setValue(self.value..key)
+            end
+            local anchX,anchY = self:getAnchorPosition()
+            self.cursorX = anchX+(string.len(self.value) < self.w and string.len(self.value) or self.w-1)
+            self.cursorY = anchY
+            if(self.changeFunc~=nil)then
+                self.changeFunc(self.acveInput)
+            end
+        end
+    end
 end
 
 function input:drawObject()
@@ -1097,14 +1118,13 @@ function input:drawObject()
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(text)
+
         self.changed = false
     end
 end
 
-
 function input:getFocusEvent()
     object.getFocusEvent(self)
-    self.frame.fWindow.setCursorPos(self:getAnchorPosition())
     self.frame.fWindow.setCursorBlink(true)
 end
 
@@ -1230,24 +1250,20 @@ end
 function list:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
-        self.frame.fWindow.setCursorPos(self:getAnchorPosition())
-        self.frame.fWindow.setBackgroundColor(self.bgcolor)
-        self.frame.fWindow.setTextColor(self.fgcolor)
-        self.frame.fWindow.write(getTextHorizontalAlign(self.value.text, self.w, self.horizontalTextAlign))
+        for index=0,self.h-1 do
+            self.frame.fWindow.setCursorPos(self:getAnchorPosition(self.x,self.y+index))
+            self.frame.fWindow.setBackgroundColor(self.bgcolor)
 
-        if(#self.elements>0)then
-            local index = 0
-            for _,v in ipairs(self.elements)do
-                local objx, objy = self:getAnchorPosition()
-                self.frame.fWindow.setBackgroundColor(v.bgcolor)
-                self.frame.fWindow.setTextColor(v.fgcolor)
-                self.frame.fWindow.setCursorPos(objx,objy+index)
-                if(v==self.value)then
-                    self.frame.fWindow.write(">"..getTextHorizontalAlign(v.text, self.w, self.horizontalTextAlign))
+            if(self.elements[index+self.index]~=nil)then
+                self.frame.fWindow.setBackgroundColor(self.elements[index+self.index].bgcolor)
+                self.frame.fWindow.setTextColor(self.elements[index+self.index].fgcolor)
+                if(self.elements[index+self.index]==self.value)then
+                    self.frame.fWindow.write(self.symbol..getTextHorizontalAlign(self.elements[index+self.index].text, self.w-string.len(self.symbol), self.horizontalTextAlign))
                 else
-                    self.frame.fWindow.write(" "..getTextHorizontalAlign(v.text, self.w, self.horizontalTextAlign))
+                    self.frame.fWindow.write(string.rep(" ", string.len(self.symbol))..getTextHorizontalAlign(self.elements[index+self.index].text, self.w-string.len(self.symbol), self.horizontalTextAlign))
                 end
-                index = index+1
+            else
+                self.frame.fWindow.write(getTextHorizontalAlign(" ", self.w, self.horizontalTextAlign))
             end
         end
         self.changed = false
@@ -1255,34 +1271,269 @@ function list:drawObject()
 end
 
 function list:mouseEvent(event,typ,x,y)
-    object.mouseEvent(self,event,typ,x,y)
-    if(event=="mouse_click")then
-        if(#self.elements>0)then
-            local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
-            local index = 0
-            for _,v in pairs(self.elements)do
-                if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
-                    self:setValue(v)
-                    self.changed = true
-                    if(self.changeFunc~=nil)then
-                        self.changeFunc(self)
+    if(object.mouseEvent(self,event,typ,x,y))then
+        if(event=="mouse_click")or(event=="mouse_drag")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
+            if(#self.elements>0)then
+                local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
+                for index=0,self.h do
+                    if(self.elements[index+self.index]~=nil)then
+                        if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
+                            self:setValue(self.elements[index+self.index])
+                            self.changed = true
+                            return true
+                        end
                     end
-                    return true
                 end
-                index = index+1
             end
+        end
+        if(event=="mouse_scroll")then
+            self.index = self.index+typ
+            if(self.index<1)then self.index = 1 end
+            if(typ==1)then if(#self.elements>self.h)then if(self.index>#self.elements-self.h)then self.index = #self.elements-self.h end else self.index = self.index-1 end end
+            self.changed = true
+            return true
         end
     end
     return false
 end
 
-function list:addElement(text,bgcolor,fgcolor)
-    table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor)})
+function list:addElement(text,bgcolor,fgcolor,...)
+    table.insert(self.elements,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),vars=...})
     if(#self.elements==1)then
         self:setValue(self.elements[1])
     end
     return self
 end
+
+function list:removeElement(element)
+    if(type(element)=="table")then
+        for k,v in pairs(self.elements)do
+            if(v==element)then
+                table.remove(self.elements,k)
+                break;
+            end
+        end
+    end
+    return self
+end
+
+function list:setSymbol(symbol)
+    self.symbol = string.sub(symbol,1,1)
+    self.changed = true
+    return self
+end
+
+function frame:addTextfield(name)
+    if(self:getObject(name) == nil)then
+        local obj = textfield:new()
+        obj.name = name;obj.frame=self;
+        self:addObject(obj)
+        return obj;
+    else
+        return nil, "id "..name.." already exists";
+    end
+end
+
+function textfield:keyEvent(event,key)
+    if(self:isFocusedElement())then
+        if(self.draw)then
+            local anchX,anchY = self:getAnchorPosition()
+            if(event=="key")then
+                if(key==259)then -- on backspace
+                    if(self.lines[self.textY]=="")then
+                        if(self.textY>1)then
+                            table.remove(self.lines,self.textY)
+                            self.textX = self.lines[self.textY-1]:len()+1
+                            self.wIndex = self.textX-self.w+1
+                            if(self.wIndex<1)then self.wIndex = 1 end
+                            self.textY = self.textY-1
+                        end
+                    elseif(self.textX<=1)then
+                        if(self.textY>1)then
+                            self.textX = self.lines[self.textY-1]:len()+1
+                            self.wIndex = self.textX-self.w+1
+                            if(self.wIndex<1)then self.wIndex = 1 end
+                            self.lines[self.textY-1] = self.lines[self.textY-1]..self.lines[self.textY]
+                            table.remove(self.lines,self.textY)
+                            self.textY = self.textY-1
+                        end
+                    else
+                        self.lines[self.textY] = self.lines[self.textY]:sub(1,self.textX-2)..self.lines[self.textY]:sub(self.textX,self.lines[self.textY]:len())
+                        if(self.textX>1)then self.textX = self.textX-1 end
+                        if(self.wIndex>1)then
+                            if(self.textX<self.wIndex)then
+                                self.wIndex = self.wIndex-1
+                            end
+                        end
+                    end
+                    if(self.textY<self.hIndex)then
+                        self.hIndex = self.hIndex-1
+                    end
+                end
+                if(key==257)then -- on enter
+                    table.insert(self.lines,self.textY+1,self.lines[self.textY]:sub(self.textX,self.lines[self.textY]:len()))
+                    self.lines[self.textY] = self.lines[self.textY]:sub(1,self.textX-1)
+
+                    self.textY = self.textY+1
+                    self.textX = 1
+                    self.wIndex = 1
+                    if(self.textY-self.hIndex>=self.h)then
+                        self.hIndex = self.hIndex+1
+                    end
+                end
+                if(key==258)then -- on tab
+
+                    --self.lines[self.textY] = self.lines[self.textY]..string.rep(" ",self.w-(self.w-self.lines[self.textY]:len()))
+                end
+                if(key==265)then -- arrow up
+                    if(self.textY>1)then
+                        self.textY = self.textY-1
+                        if(self.textX>self.lines[self.textY]:len()+1)then self.textX = self.lines[self.textY]:len()+1 end
+                        if(self.wIndex>1)then
+                            if(self.textX<self.wIndex)then
+                                self.wIndex = self.textX-self.w+1                                
+                                if(self.wIndex<1)then self.wIndex = 1 end
+                            end
+                        end
+                        if(self.hIndex>1)then
+                            if(self.textY<self.hIndex)then
+                                self.hIndex = self.hIndex-1
+                            end
+                        end
+                    end
+                end
+                if(key==264)then -- arrow down
+                    if(self.textY<#self.lines)then
+                        self.textY = self.textY+1
+                        if(self.textX>self.lines[self.textY]:len()+1)then self.textX = self.lines[self.textY]:len()+1 end
+
+                        if(self.textY>=self.hIndex+self.h)then
+                            self.hIndex = self.hIndex+1
+                        end
+                    end
+                end
+                if(key==262)then -- arrow right
+                    self.textX = self.textX+1
+                    if(self.textY<#self.lines)then
+                        if(self.textX>self.lines[self.textY]:len()+1)then
+                            self.textX = 1
+                            self.textY = self.textY+1
+                        end
+                    elseif(self.textX > self.lines[self.textY]:len())then
+                        self.textX = self.lines[self.textY]:len()+1
+                    end
+                    if(self.textX<1)then self.textX = 1 end
+                    if(self.textX<self.wIndex)or(self.textX>=self.w+self.wIndex)then
+                        self.wIndex = self.textX-self.w+1
+                    end 
+                    if(self.wIndex<1)then self.wIndex = 1 end 
+
+                end
+                if(key==263)then -- arrow left
+                    self.textX = self.textX-1
+                    if(self.textX>=1)then
+                        if(self.textX<self.wIndex)or(self.textX>=self.w+self.wIndex)then
+                            self.wIndex = self.textX+1
+                        end  
+                    end
+                    if(self.textY>1)then
+                        if(self.textX<1)then
+                            self.textY = self.textY-1
+                            self.textX = self.lines[self.textY]:len()+1
+                            self.wIndex = self.textX-self.w+1
+                        end
+                    end
+                    if(self.textX<1)then self.textX = 1 end     
+                    if(self.wIndex<1)then self.wIndex = 1 end 
+                end
+            end
+            if(event=="char")then
+                self.lines[self.textY] = self.lines[self.textY]:sub(1,self.textX-1)..key..self.lines[self.textY]:sub(self.textX,self.lines[self.textY]:len())
+                self.textX = self.textX+1
+                if(self.textX>=self.w+self.wIndex)then self.wIndex = self.wIndex+1 end
+            end
+            self.cursorX = anchX+(self.textX <= self.lines[self.textY]:len() and self.textX-1 or self.lines[self.textY]:len())-(self.wIndex-1)
+            if(self.cursorX>self.x+self.w-1)then self.cursorX = self.x+self.w-1 end
+            self.cursorY = anchY+(self.textY-self.hIndex < self.h and self.textY-self.hIndex or self.textY-self.hIndex-1)
+            if(self.changeFunc~=nil)then
+                callAll(self.changeFunc)
+            end
+        end
+    end
+end
+
+function textfield:mouseEvent(event,typ,x,y)
+    if(object.mouseEvent(self,event,typ,x,y))then
+        if(event=="mouse_click")then
+            local anchX,anchY = self:getAnchorPosition()
+            local absX,absY = self:relativeToAbsolutePosition(self:getAnchorPosition())
+            if(self.lines[y-absY+self.hIndex]~=nil)then
+                self.textX = x-absX+self.wIndex
+                self.textY = y-absY+self.hIndex
+                if(self.textX>self.lines[self.textY]:len())then
+                    self.textX = self.lines[self.textY]:len()+1
+                end
+                if(self.textX<self.wIndex)then
+                    self.wIndex = self.textX-1
+                    if(self.wIndex<1)then self.wIndex = 1 end
+                end
+                debug(self.wIndex)
+                self.cursorX = anchX+self.textX-self.wIndex
+                self.cursorY = anchY+self.textY-self.hIndex
+                self.frame.fWindow.setCursorBlink(true)
+                self.changed = true
+            end
+
+        end
+        if(event=="mouse_scroll")then -- buggggy
+            self.hIndex = self.hIndex+typ
+            if(self.hIndex<1)then self.hIndex = 1 end
+            if(self.hIndex>=#self.lines-self.h)then self.hIndex = #self.lines-self.h end
+            self.changed = true
+        end
+        return true
+    end
+    return false
+end
+
+function textfield:drawObject()
+    object.drawObject(self) -- Base class
+    if(self.draw)then
+        for index=0,self.h-1 do
+            self.frame.fWindow.setBackgroundColor(self.bgcolor)
+            self.frame.fWindow.setTextColor(self.fgcolor)
+            local text = ""
+            if(self.lines[index+self.hIndex]~=nil)then 
+                text = self.lines[index+self.hIndex]
+            end
+            text = text:sub(self.wIndex, self.w+self.wIndex-1)      
+            local n = self.w-text:len()
+            if(n<0)then n = 0 end
+            text = text..string.rep(" ", n)
+
+            self.frame.fWindow.setCursorPos(self:getAnchorPosition(self.x,self.y+index))
+            self.frame.fWindow.write(text)
+        end
+        if(self.cursorX==nil)or(self.cursorX<self.x)or(self.cursorX>self.x+self.w)then self.cursorX = self.x end
+        if(self.cursorY==nil)or(self.cursorY<self.y)or(self.cursorY>self.y+self.h)then self.cursorY = self.y end
+        self.frame.fWindow.setCursorPos(self.cursorX,self.cursorY)
+
+        self.changed = false
+    end
+end
+
+
+function textfield:getFocusEvent()
+    object.getFocusEvent(self)
+    self.frame.fWindow.setCursorPos(1,1)
+    self.frame.fWindow.setCursorBlink(true)
+end
+
+function textfield:loseFocusEvent()
+    object.loseFocusEvent(self)
+    self.frame.fWindow.setCursorBlink(false)
+end
+
 
 local function checkTimer(timeObject)
     for a,b in pairs(activeScreen.objects)do
@@ -1323,29 +1574,39 @@ local function handleChangedObjectsEvent()
     end
 end
 
-function screen.startUpdate()
-    handleChangedObjectsEvent()
-    screen.updater = true
-    while screen.updater do
-        local event, p1,p2,p3 = os.pullEvent()
-        activeScreen.changed = true
 
-        if(event=="mouse_click")then
-            activeScreen:mouseEvent(event,p1,p2,p3)
-        end
-        if(event=="mouse_drag")then
-            activeScreen:mouseEvent(event,p1,p2,p3)
-        end
-        if(event=="mouse_up")then
-            activeScreen:mouseEvent(event,p1,p2,p3)
-        end
-        if(event=="timer")then
-            checkTimer(p1)
-        end
-        if(event=="char")or(event=="key")then
-            activeScreen:keyEvent(event,p1)
-        end
+
+function screen.startUpdate()
+    if not(screen.updater)then
         handleChangedObjectsEvent()
+        screen.updater = true
+        while screen.updater do
+            local event, p1,p2,p3,p4 = os.pullEvent()
+            activeScreen.changed = true
+            if(event=="mouse_click")then
+                activeScreen:mouseEvent(event,p1,p2,p3)
+            end
+            if(event=="mouse_scroll")then
+                activeScreen:mouseEvent(event,p1,p2,p3)
+            end
+            if(event=="mouse_drag")then
+                activeScreen:mouseEvent(event,p1,p2,p3)
+            end
+            if(event=="mouse_up")then
+                activeScreen:mouseEvent(event,p1,p2,p3)
+            end
+            if(event=="timer")then
+                checkTimer(p1)
+            end
+            if(event=="char")or(event=="key")then
+                activeScreen:keyEvent(event,p1)
+                keyModifier[p1] = true
+            end
+            if(event=="key_up")then
+                keyModifier[p1] = false
+            end
+            handleChangedObjectsEvent()
+        end
     end
 end
 
