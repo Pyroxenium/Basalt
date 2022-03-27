@@ -1,4 +1,4 @@
 # NyoGUI
 A GUI Framework for Computercraft
 
-WIP
+check my wiki for information
