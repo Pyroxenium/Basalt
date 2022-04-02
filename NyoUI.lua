@@ -1,8 +1,3 @@
--- Shad's GUI free for everyone to use
-local debugger = true
-
-
-
 animation = {__type = "Animation", name = ""}
 animation.__index = animation
 
@@ -14,6 +9,8 @@ local activeFrame
 local _frames = {}
 local animations = {}
 local keyModifier = {}
+local parentTerminal = term.current()
+
 
 --Utility Functions:
 local function getTextHorizontalAlign(text, w, textAlign)
@@ -148,7 +145,7 @@ end
 --Object Constructors:
 --(base class for every element/object even frames)
 function object:new()
-    local newElement = {__type = "Object",name="",links={},zIndex=1,drawCalls=0,x=1,y=1,w=1,h=1,textAlign="left",draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,text="",hanchor="left",vanchor="top"}
+    local newElement = {__type = "Object",name="",links={},zIndex=1,drawCalls=0,x=1,y=1,w=1,h=1,draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,hanchor="left",vanchor="top"}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -192,14 +189,14 @@ end
 
 input = object:new()
 function input:new()
-    local newElement = {__type = "Input",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5, value = ""}
+    local newElement = {__type = "Input",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5, value = "", iType = "text"}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 button = object:new()
 function button:new()
-    local newElement = {__type = "Button",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",verticalTextAlign="center"}
+    local newElement = {__type = "Button",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",verticalTextAlign="center",value=""}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -213,21 +210,28 @@ end
 
 list = object:new()
 function list:new()
-    local newElement = {__type = "List",index=1,colorIndex=1,textColorIndex=1,zIndex=5,itemColors={colors.lightGray},itemTextColors={colors.black},symbol=">",bgcolor=colors.lightGray,fgcolor=colors.black,w=5,horizontalTextAlign="center",items={},value={text=""}}
+    local newElement = {__type = "List",index=1,colorIndex=1,textColorIndex=1,zIndex=5,itemColors={colors.lightGray},itemTextColors={colors.black},symbol=">",bgcolor=colors.lightGray,fgcolor=colors.black,w=8,h=5,horizontalTextAlign="center",items={},value={text=""}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 textfield = object:new()
 function textfield:new()
-    local newElement = {__type = "Textfield",hIndex=1,wIndex=1,textX=1,textY=1,zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,h=2,value="",lines={""}}
+    local newElement = {__type = "Textfield",hIndex=1,wIndex=1,textX=1,textY=1,zIndex=5,bgcolor=colors.gray,fgcolor=colors.black,w=10,h=4,value="",lines={""}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 scrollbar = object:new()
 function scrollbar:new()
-    local newElement = {__type = "Scrollbar",value=1,zIndex=5,bgcolor=colors.gray,fgcolor=colors.black,w=5,h=2,barType="vertical", symbolColor=colors.lightGray, symbol = " "}
+    local newElement = {__type = "Scrollbar",value=1,zIndex=5,bgcolor=colors.gray,fgcolor=colors.black,w=5,h=1,barType="vertical", symbolColor=colors.lightGray, symbol = " "}
+    setmetatable(newElement, {__index = self})
+    return newElement
+end
+
+program = object:new()
+function program:new()
+    local newElement = {__type = "Program",value="",zIndex=5,bgcolor=colors.black,fgcolor=colors.white,w=12,h=6}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -241,7 +245,7 @@ function frame:new(name,scrn,frameObj)
         newElement = object:copy(frameObj)
         newElement.fWindow = window.create(parent,1,1,frameObj.w,frameObj.h)
     else
-        newElement = {__type = "Frame",name=name, parent = parent,zIndex=1, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = false}
+        newElement = {__type = "Frame",name=name, parent = parent,zIndex=1, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = false,cursorBlink=false}
     end
     setmetatable(newElement, {__index = self})
     return newElement
@@ -322,7 +326,7 @@ function object:onChange(func)
     return self
 end
 
-function object:onKeyClick(func)
+function object:onKey(func)
     if(self.keyEventFunc==nil)then self.keyEventFunc = {} end
     table.insert(self.keyEventFunc,func)
     return self
@@ -340,12 +344,6 @@ function object:onGetFocus(func)
     return self
 end
 --------------------
-
-function object:setText(text)
-    self.text = text
-    self.changed = true
-    return self
-end
 
 function object:setSize(w,h)
     self.w = tonumber(w)
@@ -396,9 +394,6 @@ function object:setValue(val)
 end
 
 function object:getValue()
-    if(tonumber(self.value)~=nil)then
-        return tonumber(self.value)
-    end
     return self.value;
 end
 
@@ -454,18 +449,6 @@ function object:relativeToAbsolutePosition(x,y) -- relative position
     return x, y
 end
 
-function object:relativeToAbsolutePositionOLD(x,y) -- relative position
-    if(x==nil)then x = 0 end
-    if(y==nil)then y = 0 end
-
-    x = x+self.x;y=y+self.y
-    if(self.frame~=nil)then
-        x,y = self.frame:relativeToAbsolutePosition(x,y)
-        x = x-1; y = y-1
-    end
-    return x, y
-end
-
 function object:getAnchorPosition(x,y)
     if(x==nil)then x = self.x end
     if(y==nil)then y = self.y end
@@ -478,7 +461,7 @@ function object:getAnchorPosition(x,y)
     return x, y
 end
 
-function object:isFocusedElement()
+function object:isFocusedObject()
     if(self.frame~=nil)then
         return self == self.frame.focusedObject
     end
@@ -505,6 +488,10 @@ local vx,vy = self:relativeToAbsolutePosition(self:getAnchorPosition())
         return true
     end
     return false
+end
+
+function object:eventListener(event,p1,p2,p3,p4)
+    
 end
 
 function object:keyEvent(event,typ) -- internal class, dont use unless you know what you do
@@ -555,7 +542,7 @@ end
 
 --Frame object
 NyoUI.createFrame = function(name, scrn) -- this is also just a frame, but its a level 0 frame
-local obj = frame:new(name,scrn)
+local obj = frame:new(name,scrn or parentTerminal)
     if(_frames[name] == nil)then
         _frames[name] = obj
         obj.fWindow.setVisible(false)
@@ -605,6 +592,7 @@ end
 
 function frame:showBar(active) -- shows the top bar
     self.barActive = active ~= nil and active or true
+    self.changed = true
     return self
 end
 
@@ -743,6 +731,7 @@ function frame:drawObject()  -- this draws the frame, you dont need that functio
             self.fWindow.setCursorPos(1,1)
             self.fWindow.write(getTextHorizontalAlign(self.title,self.w,self.horizontalTextAlign))
         end
+
         local keys = {}
         for k in pairs(self.objects)do
             table.insert(keys,k)
@@ -754,15 +743,38 @@ function frame:drawObject()  -- this draws the frame, you dont need that functio
                 end
             end
         end
+
         if(self.focusedObject.cursorX~=nil)and(self.focusedObject.cursorY~=nil)then        
             self.fWindow.setCursorPos(self.focusedObject.cursorX, self.focusedObject.cursorY)
-            --self.fWindow.setCursorBlink(true)
         end
+
+        if(self.focusedObject.__type=="Program")then
+            if not(self.focusedObject.process:isDead())then
+                term.redirect(self.focusedObject.pWindow)
+                self.focusedObject.pWindow.restoreCursor()
+            end
+        else
+            self.fWindow.setTextColor(self.cursorColor or self.fgcolor)
+            self.fWindow.setCursorBlink(self.cursorBlink)
+        end
+        if(self.focusedObject.__type=="Frame")then
+            term.redirect(self.focusedObject.fWindow)
+            self.focusedObject.fWindow.restoreCursor()
+        end
+
         self.fWindow.setBackgroundColor(self.bgcolor)
         self.fWindow.setTextColor(self.fgcolor)
         self.fWindow.setVisible(true)
         self.fWindow.redraw()
     end
+end
+
+function frame:setCursorBlink(bool,color)
+    if(self.frame~=nil)then
+        --self.frame:setCursorBlink(bool)
+    end
+    self.cursorBlink = bool
+    self.cursorColor = color
 end
 
 function frame:mouseEvent(event,typ,x,y) -- internal mouse event, should make it local but as lazy as i am..
@@ -789,6 +801,18 @@ function frame:mouseEvent(event,typ,x,y) -- internal mouse event, should make it
             for k in pairs(self.objects)do
                 table.insert(keys,k)
             end
+
+            for _,b in pairs(keys)do
+                for _,v in rpairs(self.objects[b])do
+                    if(v.draw~=false)then                
+                        if(v.__type=="Frame")then
+                            v:removeFocusedElement()
+                        end
+                    end
+                end
+            end
+
+
             for _,b in pairs(keys)do
                 for _,v in rpairs(self.objects[b])do
                     if(v.draw~=false)then                
@@ -810,6 +834,40 @@ function frame:mouseEvent(event,typ,x,y) -- internal mouse event, should make it
         return true
     end
     return false
+end
+
+function frame:eventListener(event,p1,p2,p3,p4)
+    local keys = {}
+    local terminatingprogram = false
+    for k in pairs(self.objects)do
+        table.insert(keys,k)
+    end
+    for _,b in pairs(keys)do
+        for _,v in rpairs(self.objects[b])do
+            if(v.draw~=false)then       
+                v:eventListener(event,p1,p2,p3,p4)
+
+                if(v:isFocusedObject()and(v.__type=="Program"))then
+                    terminatingprogram = true
+                end
+            end
+        end
+    end
+    --if(event=="terminate")then NyoUI.debug(terminatingprogram) end -- kack buggy
+    if(event=="terminate")and(terminatingprogram == false)then 
+        if(self.terminatedTime==nil)then self.terminatedTime = 0 end
+        if(self.terminatedTime+5<=os.clock())then
+            --if("asd"=="b")then
+                NyoUI.stopUpdate()
+                for k,v in pairs(_frames)do
+                    v:hide()
+                end
+                term.redirect(parentTerminal)
+                term.setCursorPos(1,1)
+                term.clear()
+            --end
+        end
+    end
 end
 
 function frame:keyEvent(event,key)-- internal key event, should make it local but as lazy i am..
@@ -857,7 +915,7 @@ end
 
 function frame:loseFocusEvent()--event which gets fired when the frame lost the focus in this case i remove the cursor blink from the active input object
     object.loseFocusEvent(self)
-    self.inputActive = false
+    self.cursorBlink = false
     self.fWindow.setCursorBlink(false)
 end
 
@@ -991,14 +1049,30 @@ function radio:setSymbol(symbol)
     return self
 end
 
-function radio:addItem(text,x,y,bgcolor,fgcolor)
+function radio:addItem(text,x,y,bgcolor,fgcolor,...)
     if(x==nil)or(y==nil)then
-        table.insert(self.items,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),x=0,y=#self.items})
+        table.insert(self.items,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),x=0,y=#self.items,vars=table.pack(...)})
     else
-        table.insert(self.items,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),x=x,y=y})
+        table.insert(self.items,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),x=x,y=y,vars=table.pack(...)})
     end
     if(#self.items==1)then
         self:setValue(self.items[1])
+    end
+    return self
+end
+
+function radio:removeItem(item)
+    if(type(item)=="table")then
+        for k,v in pairs(self.items)do
+            if(v==item)then
+                table.remove(self.items,k)
+                break;
+            end
+        end
+    elseif(type(item)=="number")then
+        if(self.items[item]~=nil)then
+            table.remove(self.items,item)
+        end
     end
     return self
 end
@@ -1069,7 +1143,7 @@ function label:drawObject()
         self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
-        self.frame.fWindow.write(self.value)
+        self.frame.fWindow.write(self.value:sub(1,self.w))
         self.changed = false
     end
 end
@@ -1086,6 +1160,12 @@ function frame:addInput(name)
     end
 end
 
+function input:setInputType(typ)
+    self.iType = typ
+    self.changed = true
+    return self
+end
+
 function input:mouseEvent(event,typ,x,y)
         if(object.mouseEvent(self,event,typ,x,y))then
             local anchX,anchY = self:getAnchorPosition()
@@ -1098,8 +1178,20 @@ function input:mouseEvent(event,typ,x,y)
     return false
 end
 
+function input:getValue()
+    if(self.iType=="number")then
+        if(tonumber(self.value)~=nil)then
+            return tonumber(self.value)
+        else
+            self:setValue(0)
+            return 0
+        end
+    end
+    return self.value
+end
+
 function input:keyEvent(event,key)
-    if(self:isFocusedElement())then
+    if(self:isFocusedObject())then
         if(self.draw)then
             if(event=="key")then
                 if(key==259)then
@@ -1113,7 +1205,17 @@ function input:keyEvent(event,key)
                 end
             end
             if(event=="char")then
-                self:setValue(self.value..key)
+                if(self.iType=="number")then 
+                    local cache = self.value
+                    if (key==".")or(tonumber(key)~=nil)then
+                        self:setValue(self.value..key)
+                    end
+                    if(tonumber(self.value)==nil)then
+                        self:setValue(cache)
+                    end
+                else
+                    self:setValue(self.value..key)
+                end
             end
             local anchX,anchY = self:getAnchorPosition()
             self.cursorX = anchX+(string.len(self.value) < self.w and string.len(self.value) or self.w-1)
@@ -1131,8 +1233,18 @@ function input:drawObject()
     if(self.draw)then
         if(string.len(self.value)>=self.w)then
             text = string.sub(self.value, string.len(self.value)-self.w+2, string.len(self.value))
+            if(self.iType=="password")then
+                text = string.sub(string.rep("*",self.value:len()), string.len(self.value)-self.w+2, string.len(self.value))
+            else
+                text = string.sub(self.value, string.len(self.value)-self.w+2, string.len(self.value))
+            end
         else
-            text = self.value
+            if(self.iType=="password")then
+                text = string.rep("*",self.value:len())
+            else
+                text = self.value
+            end
+
         end
         local n = self.w-string.len(text)
         text = text..string.rep(" ", n)
@@ -1147,13 +1259,17 @@ end
 
 function input:getFocusEvent()
     object.getFocusEvent(self)
-    self.frame.fWindow.setCursorPos(1,1)
-    self.frame.fWindow.setCursorBlink(true)
+    self.frame:setCursorBlink(true,self.fgcolor)
 end
 
 function input:loseFocusEvent()
     object.loseFocusEvent(self)
-    self.frame.fWindow.setCursorBlink(false)
+    if(self.iType=="number")then
+        if(tonumber(self.value)==nil)then
+            self:setValue(0)
+        end
+    end
+    self.frame:setCursorBlink(false)
 end
 
 function frame:addButton(name)
@@ -1177,7 +1293,7 @@ function button:drawObject()
         for line=0,self.h-1 do
             self.frame.fWindow.setCursorPos(x,y+line)
             if(line==yOffset)then
-                self.frame.fWindow.write(getTextHorizontalAlign(self.text, self.w, self.horizontalTextAlign))
+                self.frame.fWindow.write(getTextHorizontalAlign(self.value, self.w, self.horizontalTextAlign))
             else
                 self.frame.fWindow.write(string.rep(" ", self.w))
             end
@@ -1186,6 +1302,9 @@ function button:drawObject()
     end
 end
 
+function button:setText(text)
+    return self:setValue(text)
+end
 function frame:addDropdown(name)
     if(self:getObject(name) == nil)then
         local obj = dropdown:new()
@@ -1197,11 +1316,53 @@ function frame:addDropdown(name)
     end
 end
 
-function dropdown:addItem(text,bgcolor,fgcolor)
-    table.insert(self.items,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor)})
+function dropdown:addItem(text,bgcolor,fgcolor,...)
+    table.insert(self.items,{text=text,bgcolor=(bgcolor ~= nil and bgcolor or self.bgcolor),fgcolor=(fgcolor ~= nil and fgcolor or self.fgcolor),vars=...})
     if(#self.items==1)then
         self:setValue(self.items[1])
     end
+    return self
+end
+
+function dropdown:removeItem(item)
+    if(type(item)=="table")then
+        for k,v in pairs(self.items)do
+            if(v==item)then
+                table.remove(self.items,k)
+                break;
+            end
+        end
+    elseif(type(item)=="number")then
+        if(self.items[item]~=nil)then
+            table.remove(self.items,item)
+        end
+    end
+    return self
+end
+
+function dropdown:setActiveItemBackground(color)
+    self.activeItemBackground = color
+    self.changed = true
+    return self
+end
+
+function dropdown:setActiveItemForeground(color)
+    self.activeItemForeground = color
+    self.changed = true
+    return self
+end
+
+function dropdown:setItemColors(...)
+    self.itemColors = table.pack(...)
+    self.itemColorIndex = 1
+    self.changed = true
+    return self
+end
+
+function dropdown:setItemTextColors(...)
+    self.itemTextColors = table.pack(...)
+    self.itemTextColorIndex = 1
+    self.changed = true
     return self
 end
 
@@ -1213,12 +1374,40 @@ function dropdown:drawObject()
         self.frame.fWindow.setTextColor(self.value.fgcolor)
         self.frame.fWindow.write(getTextHorizontalAlign(self.value.text, self.w, self.horizontalTextAlign))
 
-        if(self:isFocusedElement())then
+        if(self:isFocusedObject())then
             if(#self.items>0)then
+                self.itemColorIndex = 1
+                self.itemTextColorIndex = 1
                 local index = 1
                 for _,v in ipairs(self.items)do
                     local objx, objy = self:getAnchorPosition()
                     self.frame.fWindow.setBackgroundColor(v.bgcolor)
+                    if(self.itemColors~=nil)then
+                        if(#self.itemColors>0)then
+                            self.frame.fWindow.setBackgroundColor(self.itemColors[self.itemColorIndex])
+                            self.itemColorIndex = self.itemColorIndex + 1
+                            if(self.itemColorIndex>#self.itemColors)then
+                                self.itemColorIndex = 1
+                            end
+                        end
+                    end
+                    if(self.itemTextColors~=nil)then
+                        if(#self.itemTextColors>0)then
+                            self.frame.fWindow.setTextColor(self.itemTextColors[self.itemTextColorIndex])
+                            self.itemTextColorIndex = self.itemTextColorIndex + 1
+                            if(self.itemTextColorIndex>#self.itemTextColors)then
+                                self.itemTextColorIndex = 1
+                            end
+                        end
+                    end
+                    if(v==self.value)then
+                        if(self.activeItemBackground~=nil)then
+                            self.frame.fWindow.setBackgroundColor(self.activeItemBackground)
+                        end
+                        if(self.activeItemForeground~=nil)then
+                            self.frame.fWindow.setTextColor(self.activeItemForeground)
+                        end
+                    end
                     self.frame.fWindow.setTextColor(v.fgcolor)
                     self.frame.fWindow.setCursorPos(objx,objy+index)
                     self.frame.fWindow.write(getTextHorizontalAlign(v.text, self.w, self.horizontalTextAlign))
@@ -1232,7 +1421,7 @@ end
 
 function dropdown:mouseEvent(event,typ,x,y)
     object.mouseEvent(self,event,typ,x,y)
-    if(self:isFocusedElement())then
+    if(self:isFocusedObject())then
         if(#self.items>0)then
             local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
             local index = 1
@@ -1382,17 +1571,17 @@ function list:setIndex(index)
     return self
 end
 
-function list:removeItem(element)
-    if(type(element)=="table")then
+function list:removeItem(item)
+    if(type(item)=="table")then
         for k,v in pairs(self.items)do
-            if(v==element)then
+            if(v==item)then
                 table.remove(self.items,k)
                 break;
             end
         end
-    elseif(type(element)=="number")then
-        if(self.items[element]~=nil)then
-            table.remove(self.items,element)
+    elseif(type(item)=="number")then
+        if(self.items[item]~=nil)then
+            table.remove(self.items,item)
         end
     end
 
@@ -1432,7 +1621,7 @@ function frame:addTextfield(name)
 end
 
 function textfield:keyEvent(event,key)
-    if(self:isFocusedElement())then
+    if(self:isFocusedObject())then
         if(self.draw)then
             local anchX,anchY = self:getAnchorPosition()
             if(event=="key")then
@@ -1576,7 +1765,7 @@ function textfield:mouseEvent(event,typ,x,y)
                 end
                 self.cursorX = anchX+self.textX-self.wIndex
                 self.cursorY = anchY+self.textY-self.hIndex
-                self.frame.fWindow.setCursorBlink(true)
+                self.frame:setCursorBlink(true)
                 self.changed = true
             end
         end
@@ -1621,13 +1810,12 @@ end
 
 function textfield:getFocusEvent()
     object.getFocusEvent(self)
-    self.frame.fWindow.setCursorPos(1,1)
-    self.frame.fWindow.setCursorBlink(true)
+    self.frame:setCursorBlink(true)
 end
 
 function textfield:loseFocusEvent()
     object.loseFocusEvent(self)
-    self.frame.fWindow.setCursorBlink(false)
+    self.frame:setCursorBlink(false)
 end
 
 
@@ -1750,10 +1938,164 @@ function scrollbar:setBarType(typ)
     return self
 end
 
+local processes = {}
+local process = {}
+local processId = 0
 
+function process:new(path,window,...)
+    local args = table.pack( ... )
+    local newP = setmetatable({path=path},{__index = self})
+    newP.window = window
+    newP.processId = processId
+    newP.coroutine = coroutine.create(function()
+        os.run({NyoUI=NyoUI}, path, table.unpack(args))
+    end)
+    processes[processId] = newP
+    processId = processId + 1
+    return newP
+end
 
+function process:resume(event, ...)
+    term.redirect(self.window)
+    local ok, result = coroutine.resume( self.coroutine, event, ... )
+    self.window = term.current()
+    if ok then
+        self.filter = result
+    else
+        NyoUI.debug( result )
+    end
+end
 
+function process:isDead()
+    if(self.coroutine~=nil)then
+        if(coroutine.status(self.coroutine)=="dead")then
+            table.remove(processes, self.processId)
+            return true
+        end
+    else
+        return true
+    end
+    return false
+end
 
+function process:getStatus()
+    if(self.coroutine~=nil)then
+        return coroutine.status(self.coroutine)
+    end
+    return nil
+end
+
+function process:start()
+    coroutine.resume(self.coroutine)
+end
+
+function frame:addProgram(name)
+    if(self:getObject(name) == nil)then
+        local obj = program:new()
+        obj.name = name;obj.frame=self;
+        obj.pWindow = window.create(self.fWindow,obj.x,obj.y,obj.w,obj.h)
+        self:addObject(obj)
+        return obj;
+    else
+        return nil, "id "..name.." already exists";
+    end
+end
+
+function program:show()
+    object.show(self)
+    self.pWindow.setBackgroundColor(self.bgcolor)
+    self.pWindow.setTextColor(self.fgcolor)
+    self.pWindow.setVisible(true)
+    return self
+end
+
+function program:hide()
+    object.hide(self)
+    self.pWindow.setVisible(false)
+    return self
+end
+
+function program:setPosition(x,y)
+    object.setPosition(self,x,y)
+    self.pWindow.reposition(self.x, self.y)
+    return self
+end
+
+function program:setSize(w,h)
+    object.setSize(self,w,h)
+    self.pWindow.reposition(self.x, self.y, self.w, self.h)
+    return self
+end
+
+function program:getStatus()
+    return process:getStatus()
+end
+
+function program:drawObject()
+    object.drawObject(self) -- Base class
+    if(self.draw)then
+        self.pWindow.redraw()
+        self.changed = false
+    end
+end
+
+function program:execute(path,...)
+    self.process = process:new(path, self.pWindow, ...)
+    self.process:resume()
+    return self
+end
+
+function program:stop()
+    if(self.process~=nil)then
+        if not(self.process:isDead())then
+            self.process:resume("terminate")
+            if(self.process:isDead())then
+                self.pWindow.setCursorBlink(false)
+            end
+        end
+    end
+    return self
+end
+
+function program:mouseEvent(event,typ,x,y)
+    if(object.mouseEvent(self,event,typ,x,y))then
+        if(self.process==nil)then return false end
+        if not(self.process:isDead())then
+            local absX,absY = self:relativeToAbsolutePosition(self:getAnchorPosition())
+            self.process:resume(event, typ, x-absX+1, y-absY+1)
+        end
+        return true
+    end
+end
+
+function program:keyEvent(event,key)    
+    if(self:isFocusedObject())then
+        if(self.process==nil)then return false end
+        if not(self.process:isDead())then
+            object.keyEvent(event,key)
+            if(self.draw)then
+                self.process:resume(event, key)
+            end
+        end
+    end
+end
+
+function program:eventListener(event,p1,p2,p3,p4)
+    object.eventListener(self,event,p1,p2,p3,p4)
+    if(self.process==nil)then return end
+    if not(self.process:isDead())then
+        if(event~="mouse_click")and(event~="mouse_up")and(event~="mouse_scroll")and(event~="mouse_drag")and(event~="key_up")and(event~="key")and(event~="char")and(event~="terminate")then
+            self.process:resume(event,p1,p2,p3,p4)
+        end
+        if(event=="terminate")and(self:isFocusedObject())then
+            self.frame.terminatedTime = os.clock()
+            self.process:resume(event)
+            self.pWindow.clear()
+            self.pWindow.setCursorPos(1,1)
+            self.pWindow.setCursorBlink(false)
+        end
+    end
+end
 
 local function checkTimer(timeObject)
     for a,b in pairs(activeFrame.objects)do
@@ -1806,7 +2148,8 @@ function NyoUI.startUpdate()
         handleChangedObjectsEvent()
         NyoUI.updater = true
         while NyoUI.updater do
-            local event, p1,p2,p3,p4 = os.pullEvent()
+            local event, p1,p2,p3,p4 = os.pullEventRaw()
+            activeFrame:eventListener(event,p1,p2,p3,p4)
             if(event=="mouse_click")then
                 activeFrame:mouseEvent(event,p1,p2,p3)
             end
