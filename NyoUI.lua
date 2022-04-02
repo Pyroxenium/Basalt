@@ -7,7 +7,7 @@ local object = {} -- Base class for all UI elements
 
 local activeFrame
 local _frames = {}
-local animations = {}
+local animationQueue = {}
 local keyModifier = {}
 local parentTerminal = term.current()
 
@@ -71,76 +71,6 @@ local function callAll(tab,...)
         end
     end
 end
-
---------------
---Animation System
-animation.new = function(name)
-    local newElement = {name=name,animations={},nextWaitTimer=0,index=1,infiniteloop=false}
-    setmetatable(newElement, animation)
-    table.insert(animations, newElement)
-    return newElement
-end
-
-function animation:addAnimation(func)
-    table.insert(self.animations, {f=func,t=self.nextWaitTimer})
-    self.nextWaitTimer = 0
-    return self
-end
-
-function animation:wait(timer)
-    self.nextWaitTimer = timer
-    return self
-end
-
-function animation:onPlay() -- internal function, don't use it unless you know what you do!
-    if(self.playing)then
-        self.animations[self.index].f(self)
-        self.index = self.index+1
-
-        if(self.animations[self.index]~=nil)then
-            if(self.animations[self.index].t>0)then
-                self.timeObj = os.startTimer(self.animations[self.index].t)
-            else
-                self:onPlay()
-            end
-        else
-            if(self.infiniteloop)then
-                self.index = 1
-                if(self.animations[self.index].t>0)then
-                    self.timeObj = os.startTimer(self.animations[self.index].t)
-                else
-                    self:onPlay()
-                end
-            end
-        end
-    end
-end
-
-function animation:play(infiniteloop)
-    if(infiniteloop~=nil)then self.infiniteloop=infiniteloop end
-    self.playing = true
-    if(self.animations[self.index]~=nil)then
-        if(self.animations[self.index].t>0)then
-            self.timeObj = os.startTimer(self.animations[self.index].t)
-        else
-            self:onPlay()
-        end
-    end
-    return self
-end
-
-function animation:cancel()
-    os.cancelTimer(self.timeObj)
-    self.playing = false
-    self.infiniteloop = false
-    self.index = 0
-    return self
-end
------------
-
-
-
-
 
 --Object Constructors:
 --(base class for every element/object even frames)
@@ -236,6 +166,13 @@ function program:new()
     return newElement
 end
 
+animation = object:new()
+function animation:new()
+    local newElement = {__type = "Animation",animations={},nextWaitTimer=0,index=1,infiniteloop=false}
+    setmetatable(newElement, {__index = self})
+    return newElement
+end
+
 frame = object:new()
 function frame:new(name,scrn,frameObj)
     local parent = scrn~=nil and scrn or term.current()
@@ -282,9 +219,14 @@ function object:getName()
     return self.name
 end
 
-function object:setPosition(x,y)
-    self.x = tonumber(x)
-    self.y = tonumber(y)
+function object:setPosition(x,y,typ)
+    if(typ=="r")or(typ=="relative")then
+        self.x = self.x+tonumber(x)
+        self.y = self.y+tonumber(y)
+    else
+        self.x = tonumber(x)
+        self.y = tonumber(y)
+    end
     self.changed = true
     return self
 end
@@ -364,12 +306,11 @@ function object:linkTo(obj)
     obj:link(self)
     return self
 end
-local a = 0
+
 function object:link(obj) -- does not work correctly needs a fix dsfgsdfgfsdg
     if(obj.__type==self.__type)then
         self.links[obj.name] = obj
     end
-    a = a+1
     return self
 end
 
@@ -629,9 +570,9 @@ function frame:setSize(width, height) -- frame size
     return self
 end
 
-function frame:setPosition(x,y) -- pos
-    object.setPosition(self,x,y)
-    self.fWindow.reposition(x,y)
+function frame:setPosition(x,y,typ) -- pos
+    object.setPosition(self,x,y,typ)
+    self.fWindow.reposition(self.x,self.y)
     return self
 end
 
@@ -2015,8 +1956,8 @@ function program:hide()
     return self
 end
 
-function program:setPosition(x,y)
-    object.setPosition(self,x,y)
+function program:setPosition(x,y,typ)
+    object.setPosition(self,x,y,typ)
     self.pWindow.reposition(self.x, self.y)
     return self
 end
@@ -2097,6 +2038,81 @@ function program:eventListener(event,p1,p2,p3,p4)
     end
 end
 
+--------------
+--Animation System
+function frame:addAnimation(name)
+    if(self:getObject(name) == nil)then
+        local obj = animation:new()
+        obj.name = name;obj.frame=self;
+        self:addObject(obj)
+        return obj;
+    else
+        return nil, "id "..name.." already exists";
+    end
+    return nil
+end
+
+function animation:add(func)
+    table.insert(self.animations, {f=func,t=self.nextWaitTimer})
+    self.nextWaitTimer = 0
+    return self
+end
+
+function animation:wait(timer)
+    self.nextWaitTimer = timer
+    return self
+end
+
+function animation:onPlay() -- internal function, don't use it unless you know what you do!
+    if(self.playing)then
+        self.animations[self.index].f(self)
+        self.index = self.index+1
+
+        if(self.animations[self.index]~=nil)then
+            if(self.animations[self.index].t>0)then
+                self.timeObj = os.startTimer(self.animations[self.index].t)
+            else
+                self:onPlay()
+            end
+        else
+            if(self.infiniteloop)then
+                self.index = 1
+                if(self.animations[self.index].t>0)then
+                    self.timeObj = os.startTimer(self.animations[self.index].t)
+                else
+                    self:onPlay()
+                end
+            else
+                self.playing = false
+                self.index = 1
+            end
+        end
+    end
+end
+
+function animation:play(infiniteloop)
+    if(infiniteloop~=nil)then self.infiniteloop=infiniteloop end
+    self.playing = true
+    if(self.animations[self.index]~=nil)then
+        if(self.animations[self.index].t>0)then
+            self.timeObj = os.startTimer(self.animations[self.index].t)
+        else
+            self:onPlay()
+        end
+    end
+    return self
+end
+
+function animation:cancel()
+    os.cancelTimer(self.timeObj)
+    self.playing = false
+    self.infiniteloop = false
+    self.index = 1
+    return self
+end
+-----------
+
+
 local function checkTimer(timeObject)
     for a,b in pairs(activeFrame.objects)do
         for k,v in pairs(b)do  
@@ -2109,16 +2125,15 @@ local function checkTimer(timeObject)
                     end
                 end
             end
-        end
-    end
-    if(#animations>0)then
-        for k,v in pairs(animations)do
-            if(v.timeObj==timeObject)then
-                v:onPlay()
+            if(v.__type=="Animation")and(v.playing)then 
+                if(v.timeObj == timeObject)then
+                    v:onPlay()
+                end
             end
         end
     end
 end
+
 
 local function handleChangedObjectsEvent()
     local changed = activeFrame.changed
