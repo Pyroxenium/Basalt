@@ -1,7 +1,7 @@
 # NyoUI
 A GUI Framework for Computercraft
 
-check my wiki for information
+check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information
 
 Todo:<br>
 -improve correct focus on frames (sometimes still wrong)<br>
