@@ -11,8 +11,8 @@ Todo:<br>
 -add scrollbars to frames, lists and textfields<br>
 -change scrollbar so it changes it's size based of maxIndex AND add smaller lines<br>
 -change dropdown to create a frame with a list in it with much more changability instead of the current shit<br>
--add the possiblity to disable objects (they shouldn't react to incomming events)
--have to rework the entire drawing system
+-add the possiblity to disable objects (they shouldn't react to incomming events)<br>
+-have to rework the entire drawing system<br>
 
 
     MIT License
