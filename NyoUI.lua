@@ -72,10 +72,19 @@ local function callAll(tab,...)
     end
 end
 
+local function sign(v)
+	return (v >= 0 and 1) or -1
+end
+
+local function round(v, bracket)
+	bracket = bracket or 1
+	return math.floor(v/bracket + sign(v) * 0.5) * bracket
+end
+
 --Object Constructors:
 --(base class for every element/object even frames)
 function object:new()
-    local newElement = {__type = "Object",name="",links={},zIndex=1,drawCalls=0,x=1,y=1,w=1,h=1,draw=false,changed=true,bgcolor=colors.black,fgcolor=colors.white,hanchor="left",vanchor="top"}
+    local newElement = {__type = "Object",name="",links={},zIndex=1,drawCalls=0,x=1,y=1,xOriginal=1,yOriginal=1,w=1,h=1,draw=false,bgcolor=colors.black,fgcolor=colors.white,hanchor="left",vanchor="top",ignYOffset=false,ignXOffset=false}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -105,7 +114,7 @@ end
 
 radio = object:new()
 function radio:new()
-    local newElement = {__type = "Radio",symbol="\7",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black, value = "", items={}}
+    local newElement = {__type = "Radio",symbol="\7",symbolFGColor=colors.black,symbolBGColor=colors.gray,zIndex=5,bgcolor=colors.gray,fgcolor=colors.black, value = "", items={}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -119,42 +128,49 @@ end
 
 input = object:new()
 function input:new()
-    local newElement = {__type = "Input",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5, value = "", iType = "text"}
+    local newElement = {__type = "Input",zIndex=5,bgcolor=colors.gray,fgcolor=colors.black,w=10, value = "", iType = "text"}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 button = object:new()
 function button:new()
-    local newElement = {__type = "Button",zIndex=5,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",verticalTextAlign="center",value=""}
+    local newElement = {__type = "Button",zIndex=5,bgcolor=colors.gray,fgcolor=colors.black,w=8,horizontalTextAlign="center",verticalTextAlign="center",value=""}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 dropdown = object:new()
 function dropdown:new()
-    local newElement = {__type = "Dropdown",zIndex=10,bgcolor=colors.lightBlue,fgcolor=colors.black,w=5,horizontalTextAlign="center",items={},value={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
+    local newElement = {__type = "Dropdown",zIndex=9,bgcolor=colors.gray,fgcolor=colors.black,w=10,horizontalTextAlign="center",items={},value={text="",fgcolor=colors.black,bgcolor=colors.lightBlue}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 list = object:new()
 function list:new()
-    local newElement = {__type = "List",index=1,colorIndex=1,textColorIndex=1,zIndex=5,itemColors={colors.lightGray},itemTextColors={colors.black},symbol=">",bgcolor=colors.lightGray,fgcolor=colors.black,w=8,h=5,horizontalTextAlign="center",items={},value={text=""}}
+    local newElement = {__type = "List",index=1,colorIndex=1,textColorIndex=1,zIndex=5,activeItemBackground=colors.black,activeItemForeground=colors.lightGray,itemColors={colors.gray},itemTextColors={colors.black},symbol="",bgcolor=colors.gray,fgcolor=colors.black,w=15,h=6,horizontalTextAlign="center",items={},value={text=""}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 textfield = object:new()
 function textfield:new()
-    local newElement = {__type = "Textfield",hIndex=1,wIndex=1,textX=1,textY=1,zIndex=5,bgcolor=colors.gray,fgcolor=colors.black,w=10,h=4,value="",lines={""}}
+    local newElement = {__type = "Textfield",hIndex=1,wIndex=1,textX=1,textY=1,zIndex=5,bgcolor=colors.gray,fgcolor=colors.black,w=20,h=6,value="",lines={""}}
     setmetatable(newElement, {__index = self})
     return newElement
 end
 
 scrollbar = object:new()
 function scrollbar:new()
-    local newElement = {__type = "Scrollbar",value=1,zIndex=5,bgcolor=colors.gray,fgcolor=colors.black,w=5,h=1,barType="vertical", symbolColor=colors.lightGray, symbol = " "}
+    local newElement = {__type = "Scrollbar",index=1,value=1,zIndex=10,bgcolor=colors.gray,fgcolor=colors.black,w=8,h=1,barType="vertical", symbolColor=colors.black, symbol = " ", symbolSize = 1, bgSymbol = "\127"}
+    setmetatable(newElement, {__index = self})
+    return newElement
+end
+
+slider = object:new()
+function slider:new()
+    local newElement = {__type = "Slider",value=1,zIndex=5,bgcolor=colors.lightGray,fgcolor=colors.gray,w=5,h=1,barType="horizontal", symbolColor=colors.black, symbol = " ", bgSymbol = "\140"}
     setmetatable(newElement, {__index = self})
     return newElement
 end
@@ -182,7 +198,7 @@ function frame:new(name,scrn,frameObj)
         newElement = object:copy(frameObj)
         newElement.fWindow = window.create(parent,1,1,frameObj.w,frameObj.h)
     else
-        newElement = {__type = "Frame",name=name, parent = parent,zIndex=1, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.black, fgcolor=colors.white,barActive = false, title="New Frame", titlebgcolor = colors.lightBlue, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = false,cursorBlink=false}
+        newElement = {__type = "Frame",name=name, parent = parent,zIndex=10, xOffset=0, yOffset=0, fWindow = window.create(parent,1,1,w,h),x=1,y=1,w=w,h=h, objects={},objZKeys={},bgcolor = colors.lightGray, fgcolor=colors.black,barActive = false, title="New Frame", titlebgcolor = colors.gray, titlefgcolor = colors.black, horizontalTextAlign="left",focusedObject={}, isMoveable = false,cursorBlink=false}
     end
     setmetatable(newElement, {__index = self})
     return newElement
@@ -192,13 +208,13 @@ end
 --object methods
 function object:show()
     self.draw = true
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function object:hide()
     self.draw = false
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -221,25 +237,29 @@ end
 
 function object:setPosition(x,y,typ)
     if(typ=="r")or(typ=="relative")then
-        self.x = self.x+tonumber(x)
-        self.y = self.y+tonumber(y)
+        self.x = self.xOriginal+tonumber(x)
+        self.y = self.yOriginal+tonumber(y)
+        self.xOriginal = self.xOriginal+tonumber(x)
+        self.yOriginal = self.yOriginal+tonumber(y)
     else
         self.x = tonumber(x)
         self.y = tonumber(y)
+        self.xOriginal = tonumber(x)
+        self.yOriginal = tonumber(y)
     end
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function object:setBackground(color)
     self.bgcolor = color
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function object:setForeground(color)
     self.fgcolor = color
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -290,7 +310,7 @@ end
 function object:setSize(w,h)
     self.w = tonumber(w)
     self.h = tonumber(h)
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -324,10 +344,10 @@ end
 
 function object:setValue(val)
     self.value = val
-    self.changed = true
+    self:updateVisuals()
     for _,v in pairs(self.links)do
         v.value = val
-        v.changed = true
+        v:updateVisuals()
     end
 
     callAll(self.changeFunc,self,self.args)
@@ -346,14 +366,48 @@ end
 function object:setTextAlign(halign,valign)
     self.horizontalTextAlign = halign
     if(valign~=nil)then self.verticalTextAlign = valign end
-    self.changed = true
+    self:updateVisuals()
     return self
+end
+
+function object:updateVisuals()
+    if(self.frame~=nil)then
+        self.frame:updateVisuals()
+    end
+    self.changed = true
 end
 
 function object:drawObject()
     if(self.draw)then
         self.drawCalls = self.drawCalls + 1
+        if(self.frame~=nil)then
+            if not(self.ignXOffset)then 
+                if(self.hanchor=="right")then
+                    self.x = self.xOriginal + self.frame.xOffset 
+                else
+                    self.x = self.xOriginal - self.frame.xOffset 
+                end
+            end
+            if not(self.ignYOffset)then 
+                if(self.vanchor=="bottom")then
+                    self.y = self.yOriginal + self.frame.yOffset  
+                else
+                    self.y = self.yOriginal - self.frame.yOffset  
+                end
+            end
+            if(self.__type=="Frame")then
+                self.fWindow.reposition(self.x,self.y)
+            end
+        end
+        return true
     end
+    return false
+end
+
+function object:ignoreScroll(vertical,horizontal)
+    self.ignYOffset = vertical
+    self.ignXOffset = horizontal
+    return self
 end
 
 function object:setAnchor(...)
@@ -415,15 +469,15 @@ local vx,vy = self:relativeToAbsolutePosition(self:getAnchorPosition())
         if(self.frame~=nil)then self.frame:setFocusedElement(self) end
         if(event=="mouse_click")then
             if(self.clickFunc~=nil)then
-                callAll(self.clickFunc,self,typ,x,y)
+                callAll(self.clickFunc,self,event,typ,x,y)
             end
         elseif(event=="mouse_up")then
             if(self.upFunc~=nil)then
-                callAll(self.upFunc,self,typ,x,y)
+                callAll(self.upFunc,self,event,typ,x,y)
             end
         elseif(event=="mouse_drag")then
             if(self.dragFunc~=nil)then
-                callAll(self.dragFunc,self,typ,x,y)
+                callAll(self.dragFunc,self,event,typ,x,y)
             end
         end
         return true
@@ -461,7 +515,7 @@ function object:getFocusEvent()
 end
 
 function object:setZIndex(index)
-    self.frame:changeZIndexOfObj(self,index)
+    self.frame:changeZIndexOfObject(self,index)
     return self
 end
 
@@ -533,7 +587,7 @@ end
 
 function frame:showBar(active) -- shows the top bar
     self.barActive = active ~= nil and active or true
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -554,19 +608,31 @@ function frame:setTitle(title,fgcolor,bgcolor) -- changed the title in your top 
     self.title=title
     if(fgcolor~=nil)then self.titlefgcolor = fgcolor end
     if(bgcolor~=nil)then  self.titlebgcolor = bgcolor end
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function frame:setTitleAlign(align) -- changes title align
     self.horizontalTextAlign = align
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function frame:setSize(width, height) -- frame size
     object.setSize(self,width,height)
     self.fWindow.reposition(self.x,self.y,width,height)
+    return self
+end
+
+function frame:setXOffset(offset) -- frame x offset
+    self.xOffset = offset
+    self:updateVisuals()
+    return self
+end
+
+function frame:setYOffset(offset) -- frame y offset
+    self.yOffset = offset
+    self:updateVisuals()
     return self
 end
 
@@ -600,7 +666,7 @@ function frame:remove() -- removes the frame completly
     if(self.frame~=nil)then
         object.hide(self)
     end
-    self.changed = true
+    self:updateVisuals()
     self.draw = false
     self.fWindow.setVisible(false)
     _frames[self.name] = nil
@@ -619,7 +685,7 @@ function frame:getObject(name) -- you can find objects by their name
     end
 end
 
-function frame:removeObject(obj) -- you can remove objects by their name
+function frame:removeObject(obj) -- you can remove objects
     if(self.objects~=nil)then
         for a,b in pairs(self.objects)do
             for k,v in pairs(b)do
@@ -632,11 +698,11 @@ function frame:removeObject(obj) -- you can remove objects by their name
     end
 end
 
-function frame:addObject(obj) -- you can add a object manually, normaly you shouldn't use this function, it get called internally
+function frame:addObject(obj) -- you can add a object manually, normaly you shouldn't use this function, it gets called internally
     if(self.objects[obj.zIndex]==nil)then
-        for x=0,#self.objZKeys do
+        for x=0,#self.objZKeys+1 do
             if(self.objZKeys[x]~=nil)then
-                if(obj.zIndex >self.objZKeys[x])then
+                if(obj.zIndex > self.objZKeys[x])then
                     table.insert(self.objZKeys,x,obj.zIndex)
                 end       
             else
@@ -646,76 +712,58 @@ function frame:addObject(obj) -- you can add a object manually, normaly you shou
         if(#self.objZKeys<=0)then
             table.insert(self.objZKeys,obj.zIndex)
         end
-        local cache = {}
-        for k,v in pairs(self.objZKeys)do
-            if(self.objects[v]~=nil)then
-                cache[v] = self.objects[v]
-            else
-                cache[v] = {}
-            end
-        end
-        self.objects = cache
+        self.objects[obj.zIndex] = {}
     end
     table.insert(self.objects[obj.zIndex],obj)
 end
 
 function frame:drawObject()  -- this draws the frame, you dont need that function, it gets called internally
-    object.drawObject(self)
-    if(self.draw)then
-        if(self.drag)and(self.frame==nil)then
-            self.parent.clear()
-        end
-        self.fWindow.clear()
-        if(self.barActive)then
-            self.fWindow.setBackgroundColor(self.titlebgcolor)
-            self.fWindow.setTextColor(self.titlefgcolor)
-            self.fWindow.setCursorPos(1,1)
-            self.fWindow.write(getTextHorizontalAlign(self.title,self.w,self.horizontalTextAlign))
-        end
+    if(object.drawObject(self))then
+        if(self.draw)then
+            if(self.drag)and(self.frame==nil)then
+                self.parent.clear()
+            end
+            self.fWindow.clear()
+            if(self.barActive)then
+                self.fWindow.setBackgroundColor(self.titlebgcolor)
+                self.fWindow.setTextColor(self.titlefgcolor)
+                self.fWindow.setCursorPos(1,1)
+                self.fWindow.write(getTextHorizontalAlign(self.title,self.w,self.horizontalTextAlign))
+            end
 
-        local keys = {}
-        for k in pairs(self.objects)do
-            table.insert(keys,k)
-        end
-        for _,b in rpairs(keys)do
-            for k,v in pairs(self.objects[b])do  
-                if(v.draw~=nil)then  
-                    v:drawObject()
+            for _,b in rpairs(self.objZKeys)do
+                for k,v in pairs(self.objects[b])do  
+                    if(v.draw~=nil)then  
+                        v:drawObject()
+                    end
                 end
             end
-        end
 
-        if(self.focusedObject.cursorX~=nil)and(self.focusedObject.cursorY~=nil)then        
-            self.fWindow.setCursorPos(self.focusedObject.cursorX, self.focusedObject.cursorY)
-        end
-
-        if(self.focusedObject.__type=="Program")then
-            if not(self.focusedObject.process:isDead())then
-                term.redirect(self.focusedObject.pWindow)
-                self.focusedObject.pWindow.restoreCursor()
-            end
-        else
+                    --term.redirect(self.fWindow)
+            self.fWindow.setBackgroundColor(self.bgcolor)
             self.fWindow.setTextColor(self.cursorColor or self.fgcolor)
-            self.fWindow.setCursorBlink(self.cursorBlink)
-        end
-        if(self.focusedObject.__type=="Frame")then
-            term.redirect(self.focusedObject.fWindow)
-            self.focusedObject.fWindow.restoreCursor()
-        end
+            self.fWindow.setVisible(true)
+            self.fWindow.redraw()
 
-        self.fWindow.setBackgroundColor(self.bgcolor)
-        self.fWindow.setTextColor(self.fgcolor)
-        self.fWindow.setVisible(true)
-        self.fWindow.redraw()
-    end
-end
+            if(self.focusedObject.cursorX~=nil)and(self.focusedObject.cursorY~=nil)then        
+                self.fWindow.setCursorPos(self.focusedObject.cursorX, self.focusedObject.cursorY)
+            end
 
-function frame:setCursorBlink(bool,color)
-    if(self.frame~=nil)then
-        --self.frame:setCursorBlink(bool)
+            if(self.focusedObject.__type=="Program")then
+                if not(self.focusedObject.process:isDead())then
+                    self.cursorColor = self.focusedObject.pWindow.getTextColor()
+                    term.redirect(self.focusedObject.pWindow)
+                    self.focusedObject.pWindow.restoreCursor()
+                end
+            else
+                self.fWindow.setCursorBlink(self.cursorBlink)
+            end
+            if(self.focusedObject.__type=="Frame")then
+                term.redirect(self.focusedObject.fWindow)
+                self.focusedObject.fWindow.restoreCursor()
+            end
+        end
     end
-    self.cursorBlink = bool
-    self.cursorColor = color
 end
 
 function frame:mouseEvent(event,typ,x,y) -- internal mouse event, should make it local but as lazy as i am..
@@ -726,7 +774,7 @@ function frame:mouseEvent(event,typ,x,y) -- internal mouse event, should make it
             if(self.frame~=nil)then
                 parentX,parentY = self.frame:relativeToAbsolutePosition(self.frame:getAnchorPosition())
             end
-            self:setPosition(x+self.xToRem-(parentX-1),y-(parentY-1))
+            self:setPosition(x+self.xToRem-(parentX-1)+self.frame.xOffset,y-(parentY-1)+self.frame.yOffset)
         end
         if(event=="mouse_up")then
             self.drag = false
@@ -738,12 +786,7 @@ function frame:mouseEvent(event,typ,x,y) -- internal mouse event, should make it
 
         if(x>fx+self.w-1)or(y>fy+self.h-1)then return end
 
-            local keys = {}
-            for k in pairs(self.objects)do
-                table.insert(keys,k)
-            end
-
-            for _,b in pairs(keys)do
+            for _,b in pairs(self.objZKeys)do
                 for _,v in rpairs(self.objects[b])do
                     if(v.draw~=false)then                
                         if(v.__type=="Frame")then
@@ -753,8 +796,7 @@ function frame:mouseEvent(event,typ,x,y) -- internal mouse event, should make it
                 end
             end
 
-
-            for _,b in pairs(keys)do
+            for _,b in pairs(self.objZKeys)do
                 for _,v in rpairs(self.objects[b])do
                     if(v.draw~=false)then                
                         if(v:mouseEvent(event,typ,x,y))then
@@ -824,8 +866,119 @@ function frame:keyEvent(event,key)-- internal key event, should make it local bu
     return false
 end
 
-function frame:changeZIndexOfObj(obj, zindex)-- this function is not working right now
-    self.objects[obj.zIndex][obj.name] =  nil
+function frame:onScrollEvent(scrollbar)
+    if(scrollbar.name == self.name.."__generatedVScrollbar")then
+        self.yOffset = round((scrollbar.index-1) * scrollbar:getLowestValue())
+        if(self.yOffset<0)then self.yOffset = 0 end
+    end
+    if(scrollbar.name == self.name.."__generatedHScrollbar")then
+        self.xOffset = round((scrollbar.index-1) * scrollbar:getLowestValue())
+        if(self.xOffset<0)then self.xOffset = 0 end
+    end
+end
+
+function frame:createScrollbar(typ, val)
+    if(typ=="horizontal")then
+        if(self.horizontalScrollbar==nil)then
+            self.horizontalScrollbar = self:addScrollbar(self.name.."__generatedHScrollbar"):setAnchor("bottom"):setSize(self.w,1):setBarType("horizontal")
+            self.horizontalScrollbar:onChange(function(self) self.frame.onScrollEvent(self.frame,self.frame.horizontalScrollbar) end)
+            self.horizontalScrollbar:setZIndex(15)
+            self.maxXOffset = val or 10
+            self.horizontalScrollbar:ignoreScroll(true,true):setSymbolSize(self.w-self.maxXOffset >= 1 and self.w-self.maxXOffset or 1 )
+            if(self.verticalScrollBar~=nil)and(self.verticalScrollBar.name==self.name.."__generatedVScrollbar")then
+                self.horizontalScrollbar:setSize(self.w-1,1)
+            end
+        end
+    else
+        if(self.verticalScrollBar==nil)then
+            self.verticalScrollBar = self:addScrollbar(self.name.."__generatedVScrollbar"):setAnchor("right"):setSize(1,self.h)
+            self.verticalScrollBar:onChange(function(self) self.frame.onScrollEvent(self.frame,self.frame.verticalScrollBar) end)
+            self.verticalScrollBar:setZIndex(15)
+            self.maxYOffset = val or 10
+            self.verticalScrollBar:setMaxValue(self.maxYOffset)
+            self.verticalScrollBar:ignoreScroll(true,true):setSymbolSize(self.h-self.maxYOffset >= 1 and self.h-self.maxYOffset or 1 )
+            if(self.horizontalScrollbar~=nil)and(self.horizontalScrollbar.name==self.name.."__generatedHScrollbar")then
+                self.horizontalScrollbar:setSize(self.w-1,1)
+            end
+        end
+    end
+    return self
+end
+
+function frame:setMaxOffset(typ, val)
+    if(typ=="horizontal")then 
+        if(self.horizontalScrollbar==nil)then
+            self.maxXOffset = val or 10
+            self.horizontalScrollbar:setSymbolSize(self.w-self.maxXOffset >= 1 and self.w-self.maxXOffset or 1 )
+        end
+    end
+    if(typ=="vertical")then 
+        if(self.verticalScrollBar==nil)then
+            self.maxYOffset = val or 10
+            self.verticalScrollBar:setSymbolSize(self.h-self.maxYOffset >= 1 and self.h-self.maxYOffset or 1 )
+        end
+    end
+    return self
+end
+
+function frame:showScrollbar(typ)
+    if(typ=="horizontal")then
+        self.horizontalScrollbar:show()
+    else
+        self.verticalScrollBar:show()
+    end
+    return self
+end
+
+function frame:setCustomScrollbar(typ,bar)
+    if(bar~=nil)then
+        if(typ=="horizontal")then
+            if(self.horizontalScrollbar~=nil)and(self.horizontalScrollbar.name==self.name.."__generatedHScrollbar")then
+                self:removeObject(self.horizontalScrollbar)
+            end 
+            self.horizontalScrollbar = bar
+        else
+            if(self.verticalScrollBar~=nil)and(self.verticalScrollBar.name==self.name.."__generatedVScrollbar")then
+                self:removeObject(self.verticalScrollBar)
+            end 
+            self.verticalScrollBar = bar
+        end
+    end
+    return self
+end
+
+function frame:getScrollbar(typ)
+    if(typ=="horizontal")then
+        return self.horizontalScrollbar
+    else
+        return self.verticalScrollBar
+    end
+end
+
+function frame:hideScrollbar(typ)
+    if(typ=="horizontal")then
+        if(self.horizontalScrollbar~=nil)then
+            self.horizontalScrollbar:hide()
+        end
+    else
+        if(self.verticalScrollBar~=nil)then
+            self.verticalScrollBar:hide()
+        end
+    end
+    return self
+end
+
+function frame:setCursorBlink(bool,color)
+    if(self.frame~=nil)then
+        --self.frame:setCursorBlink(bool)
+    end
+    self.cursorBlink = bool
+    self.cursorColor = color or self.fgcolor
+    return self
+end
+
+function frame:changeZIndexOfObject(obj, zindex)
+    self:removeObject(obj)
     obj.zIndex = zindex
     self:addObject(obj)
 end
@@ -869,7 +1022,6 @@ local frameList = {}
     end
     table.insert(frameList,self)
     self.frame.objects[self.zIndex] = frameList
-    self.changed = true
 end
 
 
@@ -938,7 +1090,7 @@ end
 
 function checkbox:setSymbol(symbol)
     self.symbol = string.sub(symbol,1,1)
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -953,7 +1105,6 @@ function checkbox:drawObject()
         else
             self.frame.fWindow.write(" ")
         end
-        self.changed = false
     end
 end
 
@@ -962,7 +1113,6 @@ function checkbox:mouseEvent(event,typ,x,y) -- we have to switch the order of ob
     if(vx<=x)and(vx+self.w>x)and(vy<=y)and(vy+self.h>y)then
         if(event=="mouse_click")then
             self:setValue(not self.value)
-            self.changed = true
         end
     end
     if(object.mouseEvent(self,event,typ,x,y))then return true end
@@ -977,6 +1127,8 @@ function frame:addRadio(name)
         obj.name = name;obj.frame=self;
         obj.bgcolor = self.bgcolor
         obj.fgcolor = self.fgcolor
+        obj.symbolBGColor = self.bgcolor
+        obj.symbolFGColor = self.fgcolor
         self:addObject(obj)
         return obj;
     else
@@ -986,7 +1138,19 @@ end
 
 function radio:setSymbol(symbol)
     self.symbol = string.sub(symbol,1,1)
-    self.changed = true
+    self:updateVisuals()
+    return self
+end
+
+function radio:setSymbolForegroundColor(color)
+    self.symbolFGColor = color
+    self:updateVisuals()
+    return self
+end
+
+function radio:setSymbolBackgroundColor(color)
+    self.symbolBGColor = color
+    self:updateVisuals()
     return self
 end
 
@@ -1019,21 +1183,29 @@ function radio:removeItem(item)
 end
 
 function radio:mouseEvent(event,typ,x,y)
-    if(object.mouseEvent(self,event,typ,x,y))then
         if(#self.items>0)then
             local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
             for _,v in pairs(self.items)do
                 if(dx<=x)and(dx+v.x+string.len(v.text)+1>x)and(dy+v.y==y)then
-                    self:setValue(v)
-                    self.changed = true
-                    if(self.changeFunc~=nil)then
-                        self.changeFunc(self)
+                    if(event=="mouse_click")and(typ==1)then self:setValue(v) end
+                    if(self.frame~=nil)then self.frame:setFocusedElement(self) end
+                    if(event=="mouse_click")then
+                        if(self.clickFunc~=nil)then
+                            callAll(self.clickFunc,self,event,typ,x,y)
+                        end
+                    elseif(event=="mouse_up")then
+                        if(self.upFunc~=nil)then
+                            callAll(self.upFunc,self,event,typ,x,y)
+                        end
+                    elseif(event=="mouse_drag")then
+                        if(self.dragFunc~=nil)then
+                            callAll(self.dragFunc,self,event,typ,x,y)
+                        end
                     end
                     return true
                 end
             end
         end
-    end
     return false
 end
 
@@ -1047,13 +1219,22 @@ function radio:drawObject()
                 self.frame.fWindow.setTextColor(v.fgcolor)
                 self.frame.fWindow.setCursorPos(objx+v.x,objy+v.y)
                 if(v==self.value)then
-                    self.frame.fWindow.write(self.symbol..v.text)
+                    if(self.symbolBGColor~=nil)then self.frame.fWindow.setBackgroundColor(self.symbolBGColor) end
+                    if(self.symbolFGColor~=nil)then self.frame.fWindow.setTextColor(self.symbolFGColor) end
+                    self.frame.fWindow.write(self.symbol)
+                    if(self.symbolBGColor~=nil)then self.frame.fWindow.setBackgroundColor(v.bgcolor) end
+                    if(self.symbolFGColor~=nil)then self.frame.fWindow.setTextColor(v.fgcolor) end
+                    self.frame.fWindow.write(v.text)
                 else
-                    self.frame.fWindow.write(" "..v.text)
+                    if(self.symbolBGColor~=nil)then self.frame.fWindow.setBackgroundColor(self.symbolBGColor) end
+                    if(self.symbolFGColor~=nil)then self.frame.fWindow.setTextColor(self.symbolFGColor) end
+                    self.frame.fWindow.write(" ")
+                    if(self.symbolBGColor~=nil)then self.frame.fWindow.setBackgroundColor(v.bgcolor) end
+                    if(self.symbolFGColor~=nil)then self.frame.fWindow.setTextColor(v.fgcolor) end
+                    self.frame.fWindow.write(v.text)
                 end
             end
         end
-        self.changed = false
     end
 end
 --Radio end
@@ -1084,8 +1265,7 @@ function label:drawObject()
         self.frame.fWindow.setCursorPos(self:getAnchorPosition())
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
-        self.frame.fWindow.write(self.value:sub(1,self.w))
-        self.changed = false
+        self.frame.fWindow.write(tostring(self.value):sub(1,self.w))
     end
 end
 --Label end
@@ -1103,7 +1283,7 @@ end
 
 function input:setInputType(typ)
     self.iType = typ
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -1193,8 +1373,6 @@ function input:drawObject()
         self.frame.fWindow.setBackgroundColor(self.bgcolor)
         self.frame.fWindow.setTextColor(self.fgcolor)
         self.frame.fWindow.write(text)
-
-        self.changed = false
     end
 end
 
@@ -1239,7 +1417,6 @@ function button:drawObject()
                 self.frame.fWindow.write(string.rep(" ", self.w))
             end
         end
-        self.changed = false
     end
 end
 
@@ -1283,27 +1460,27 @@ end
 
 function dropdown:setActiveItemBackground(color)
     self.activeItemBackground = color
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function dropdown:setActiveItemForeground(color)
     self.activeItemForeground = color
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function dropdown:setItemColors(...)
     self.itemColors = table.pack(...)
     self.itemColorIndex = 1
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function dropdown:setItemTextColors(...)
     self.itemTextColors = table.pack(...)
     self.itemTextColorIndex = 1
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -1356,32 +1533,31 @@ function dropdown:drawObject()
                 end
             end
         end
-        self.changed = false
     end
 end
 
 function dropdown:mouseEvent(event,typ,x,y)
     object.mouseEvent(self,event,typ,x,y)
     if(self:isFocusedObject())then
-        if(#self.items>0)then
-            local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
-            local index = 1
-            for _,b in pairs(self.items)do
-                if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
-                    self:setValue(b)
-                    if(self.changeFunc~=nil)then
-                        self.changeFunc(self)
+            if(#self.items>0)then
+                local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
+                local index = 1
+                for _,b in pairs(self.items)do
+                    if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
+                        if(event=="mouse_click")and(typ==1)then self:setValue(b) end
+                        if(self.changeFunc~=nil)then
+                            self.changeFunc(self)
+                        end
+                        self.frame:removeFocusedElement()
+                        return true
                     end
-                    self.frame:removeFocusedElement()
-                    return true
+                    index = index+1
                 end
-                index = index+1
+                if not((dx<=x)and(dx+self.w>x)and(dy<=y)and(dy+self.h>y))then
+                    self.frame:removeFocusedElement()
+                end
+                return true
             end
-            if not((dx<=x)and(dx+self.w>x)and(dy<=y)and(dy+self.h>y))then
-                self.frame:removeFocusedElement()
-            end
-            return true
-        end
     end
     return false
 end
@@ -1427,21 +1603,22 @@ function list:drawObject()
                 self.frame.fWindow.write(getTextHorizontalAlign(" ", self.w, self.horizontalTextAlign))
             end
         end
-        self.changed = false
     end
 end
 
 function list:mouseEvent(event,typ,x,y)
     if(object.mouseEvent(self,event,typ,x,y))then
         if(event=="mouse_click")or(event=="mouse_drag")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
-            if(#self.items>0)then
-                local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
-                for index=0,self.h do
-                    if(self.items[index+self.index]~=nil)then
-                        if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
-                            self:setValue(self.items[index+self.index])
-                            self.changed = true
-                            return true
+            if(typ==1)then
+                if(#self.items>0)then
+                    local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
+                    for index=0,self.h do
+                        if(self.items[index+self.index]~=nil)then
+                            if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
+                                self:setValue(self.items[index+self.index])
+                                self:updateVisuals()
+                                return true
+                            end
                         end
                     end
                 end
@@ -1459,7 +1636,7 @@ function list:mouseEvent(event,typ,x,y)
                     self.index = self.index-1 
                 end 
             end
-            self.changed = true
+            self:updateVisuals()
             return true
         end
     end
@@ -1496,19 +1673,19 @@ end
 
 function list:setItemColors(...)
     self.itemColors = table.pack(...)
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function list:setItemTextColors(...)
     self.itemTextColors = table.pack(...)
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function list:setIndex(index)
     self.index = index
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -1534,19 +1711,19 @@ end
 
 function list:setSymbol(symbol)
     self.symbol = string.sub(symbol,1,1)
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function list:setActiveItemBackground(color)
     self.activeItemBackground = color
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
 function list:setActiveItemForeground(color)
     self.activeItemForeground = color
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
@@ -1707,7 +1884,7 @@ function textfield:mouseEvent(event,typ,x,y)
                 self.cursorX = anchX+self.textX-self.wIndex
                 self.cursorY = anchY+self.textY-self.hIndex
                 self.frame:setCursorBlink(true)
-                self.changed = true
+                self:updateVisuals()
             end
         end
         
@@ -1715,7 +1892,7 @@ function textfield:mouseEvent(event,typ,x,y)
             self.hIndex = self.hIndex+typ
             if(self.hIndex<1)then self.hIndex = 1 end
             if(self.hIndex>=#self.lines-self.h)then self.hIndex = #self.lines-self.h end
-            self.changed = true
+            self:updateVisuals()
         end
         return true
     end
@@ -1743,8 +1920,6 @@ function textfield:drawObject()
         if(self.cursorX==nil)or(self.cursorX<self.x)or(self.cursorX>self.x+self.w)then self.cursorX = self.x end
         if(self.cursorY==nil)or(self.cursorY<self.y)or(self.cursorY>self.y+self.h)then self.cursorY = self.y end
         self.frame.fWindow.setCursorPos(self.cursorX,self.cursorY)
-
-        self.changed = false
     end
 end
 
@@ -1787,7 +1962,184 @@ function scrollbar:setSize(w,h)
     return self
 end
 
+function scrollbar:getIndex()
+    return self.index
+end
+
+function scrollbar:setIndex(index)
+    self.index = index
+    if(self.index<1)then self.index = 1 end
+    if(self.index>(self.barType=="vertical" and self.h or self.w)-(self.symbolSize-1))then self.index = (self.barType=="vertical" and self.h or self.w)-(self.symbolSize-1) end
+    self:setValue(self.index-1 * (self.maxValue/((self.barType=="vertical" and self.h or self.w)-(self.symbolSize-1)))-(self.maxValue/((self.barType=="vertical" and self.h or self.w)-(self.symbolSize-1))))
+    return self
+end
+
 function scrollbar:drawObject()
+    object.drawObject(self) -- Base class
+    if(self.draw)then
+        local x,y = self:getAnchorPosition()
+            self.frame.fWindow.setBackgroundColor(self.bgcolor)
+            self.frame.fWindow.setTextColor(self.fgcolor)
+        if(self.barType=="vertical")then
+            for curIndex=1,self.h do
+                self.frame.fWindow.setCursorPos(x,y+curIndex-1)
+                if(self.index==curIndex)then
+                    for curIndexOffset=0,self.symbolSize-1 do
+                        self.frame.fWindow.setCursorPos(x,y+curIndex-1+curIndexOffset)
+                        self.frame.fWindow.setBackgroundColor(self.symbolColor)
+                        self.frame.fWindow.write(string.rep(self.symbol,self.w))
+                        self.frame.fWindow.setBackgroundColor(self.bgcolor)
+                    end
+                else
+                    if(curIndex<self.index)or(curIndex>self.index-1+self.symbolSize)then
+                        self.frame.fWindow.write(string.rep(self.bgSymbol,self.w))
+                    end
+                end
+            end
+        end
+        if(self.barType=="horizontal")then
+            for curIndex=1,self.h do
+                self.frame.fWindow.setCursorPos(x,y+curIndex-1)
+                self.frame.fWindow.write(string.rep(self.bgSymbol,self.w-(self.w-(self.index-1))))
+                self.frame.fWindow.setBackgroundColor(self.symbolColor)
+                self.frame.fWindow.write(string.rep(self.symbol,self.symbolSize))
+                self.frame.fWindow.setBackgroundColor(self.bgcolor)
+                self.frame.fWindow.write(string.rep(self.bgSymbol,self.w-(self.index+(self.symbolSize-1))))
+            end
+        end
+    end
+end
+
+function scrollbar:mouseEvent(event,typ,x,y)
+    if(object.mouseEvent(self,event,typ,x,y))then
+        if(event=="mouse_click")or(event=="mouse_drag")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
+            local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
+            if(self.barType=="vertical")then
+                for index=0,self.h-1 do
+                    if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
+                        if(index <= self.h-self.symbolSize)then
+                            self.index = index+1
+                        else
+                            self.index = self.h-(self.symbolSize-1)
+                        end
+                        self:setValue(self.index-1 * (self.maxValue/(self.h-(self.symbolSize-1)))-(self.maxValue/(self.h-(self.symbolSize-1))))
+                        self:updateVisuals()
+                    end
+                end
+            end
+            if(self.barType=="horizontal")then
+                for index=0,self.w-1 do
+                    if(dx+index==x)and(dy<=y)and(dy+self.y>y)then
+                        if(index <= self.w-self.symbolSize)then
+                            self.index = index+1
+                        else
+                            self.index = self.w-(self.symbolSize-1)
+                        end
+                        self:setValue(self.index-1 * (self.maxValue/(self.w-(self.symbolSize-1)))-(self.maxValue/(self.w-(self.symbolSize-1))))
+                        self:updateVisuals()
+                    end
+                end
+            end
+        end
+        if(event=="mouse_scroll")then
+            self.index = self.index+typ
+            if(self.index<1)then self.index = 1 end
+            if(self.index>(self.barType=="vertical" and self.h or self.w)-(self.symbolSize-1))then self.index = (self.barType=="vertical" and self.h or self.w)-(self.symbolSize-1) end
+
+            self:setValue(self.index-1 * (self.maxValue/((self.barType=="vertical" and self.h or self.w)-(self.symbolSize-1)))-(self.maxValue/((self.barType=="vertical" and self.h or self.w)-(self.symbolSize-1))))
+            self:updateVisuals()
+        end
+        return true
+    end
+end
+
+function scrollbar:setSymbol(symbol)
+    self.symbol = string.sub(symbol,1,1)
+    self:updateVisuals()
+    return self
+end
+
+function scrollbar:setSymbolSize(size)
+    self.symbolSize = tonumber(size) or 1
+    if(self.barType=="vertical")then
+        self:setValue(self.index-1 * (self.maxValue/(self.h-(self.symbolSize-1)))-(self.maxValue/(self.h-(self.symbolSize-1))))
+    elseif(self.barType=="horizontal")then
+        self:setValue(self.index-1 * (self.maxValue/(self.w-(self.symbolSize-1)))-(self.maxValue/(self.w-(self.symbolSize-1))))
+    end
+    self:updateVisuals()
+    return self
+end
+
+function scrollbar:setBackgroundSymbol(symbol)
+    self.bgSymbol = string.sub(symbol,1,1)
+    self:updateVisuals()
+    return self
+end
+
+function scrollbar:setMaxValue(val)
+    self.maxValue = val
+    if(self.barType=="vertical")then
+        self:setValue(self.index-1 * (self.maxValue/(self.h-(self.symbolSize-1)))-(self.maxValue/(self.h-(self.symbolSize-1))))
+    elseif(self.barType=="horizontal")then
+        self:setValue(self.index-1 * (self.maxValue/(self.w-(self.symbolSize-1)))-(self.maxValue/(self.w-(self.symbolSize-1))))
+    end
+    self:updateVisuals()
+    return self
+end
+
+function scrollbar:getLowestValue()
+    if(self.barType=="vertical")then
+        return self.maxValue/(self.h-(self.symbolSize-1))
+    elseif(self.barType=="horizontal")then
+        return self.maxValue/(self.w-(self.symbolSize-1))
+    end
+    return self
+end
+
+function scrollbar:setSymbolColor(color)
+    self.symbolColor = color
+    self:updateVisuals()
+    return self
+end
+
+function scrollbar:setBarType(typ)
+    self.barType = typ:lower()
+    self:updateVisuals()
+    return self
+end
+
+function scrollbar:setBarSize(typ)
+    self.barSize = typ:lower()
+    self:updateVisuals()
+    return self
+end
+
+function frame:addSlider(name)
+    if(self:getObject(name) == nil)then
+        local obj = slider:new()
+        obj.name = name;obj.frame=self;
+        obj.maxValue = obj.h
+        obj.value = obj.maxValue/obj.h
+        self:addObject(obj)
+        return obj;
+    else
+        return nil, "id "..name.." already exists";
+    end
+end
+
+function slider:setSize(w,h)
+    object.setSize(self,w,h)
+    if(self.barType=="vertical")then
+        self.maxValue = self.h
+        self.value = self.maxValue/self.h
+    elseif(self.barType=="horizontal")then
+        self.maxValue = self.w
+        self.value = self.maxValue/self.w
+    end
+    return self
+end
+
+function slider:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
         local x,y = self:getAnchorPosition()
@@ -1801,25 +2153,24 @@ function scrollbar:drawObject()
                     self.frame.fWindow.write(string.rep(self.symbol,self.w))
                     self.frame.fWindow.setBackgroundColor(self.bgcolor)
                 else
-                    self.frame.fWindow.write(string.rep(" ",self.w))
+                    self.frame.fWindow.write(string.rep(self.bgSymbol,self.w))
                 end
             end
         end
         if(self.barType=="horizontal")then
             for curPos=0,self.h-1 do
                 self.frame.fWindow.setCursorPos(x,y+curPos)
-                self.frame.fWindow.write(string.rep(" ",(self.value/(self.maxValue/self.w))-1))
+                self.frame.fWindow.write(string.rep(self.bgSymbol,(self.value/(self.maxValue/self.w))-1))
                 self.frame.fWindow.setBackgroundColor(self.symbolColor)
                 self.frame.fWindow.write(self.symbol)
                 self.frame.fWindow.setBackgroundColor(self.bgcolor)
-                self.frame.fWindow.write(string.rep(" ",self.maxValue/(self.maxValue/self.w)-(self.value/(self.maxValue/self.w))))
+                self.frame.fWindow.write(string.rep(self.bgSymbol,self.maxValue/(self.maxValue/self.w)-(self.value/(self.maxValue/self.w))))
             end
         end
-        self.changed = false
     end
 end
 
-function scrollbar:mouseEvent(event,typ,x,y)
+function slider:mouseEvent(event,typ,x,y)
     if(object.mouseEvent(self,event,typ,x,y))then
         if(event=="mouse_click")or(event=="mouse_drag")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
             local dx,dy = self:relativeToAbsolutePosition(self:getAnchorPosition())
@@ -1827,7 +2178,7 @@ function scrollbar:mouseEvent(event,typ,x,y)
                 for index=0,self.h-1 do
                     if(dx<=x)and(dx+self.w>x)and(dy+index==y)then
                         self:setValue(self.maxValue/self.h*(index+1))
-                        self.changed = true
+                        self:updateVisuals()
                     end
                 end
             end
@@ -1835,14 +2186,14 @@ function scrollbar:mouseEvent(event,typ,x,y)
                 for index=0,self.w-1 do
                     if(dx+index==x)and(dy<=y)and(dy+self.y>y)then
                         self:setValue(self.maxValue/self.w*(index+1))
-                        self.changed = true
+                        self:updateVisuals()
                     end
                 end
             end
         end
         if(event=="mouse_scroll")then
             self:setValue(self.value + (self.maxValue/(self.barType=="vertical" and self.h or self.w))*typ)
-            self.changed = true
+            self:updateVisuals()
         end
         if(self.value>self.maxValue)then self:setValue(self.maxValue) end
         if(self.value<self.maxValue/(self.barType=="vertical" and self.h or self.w))then self:setValue(self.maxValue/(self.barType=="vertical" and self.h or self.w)) end
@@ -1850,32 +2201,44 @@ function scrollbar:mouseEvent(event,typ,x,y)
     end
 end
 
-function scrollbar:setSymbol(symbol)
+function slider:setSymbol(symbol)
     self.symbol = string.sub(symbol,1,1)
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
-function scrollbar:setMaxValue(val)
+function slider:setBackgroundSymbol(symbol)
+    self.bgSymbol = string.sub(symbol,1,1)
+    self:updateVisuals()
+    return self
+end
+
+function slider:setMaxValue(val)
     self.maxValue = val
     if(self.barType=="vertical")then
         self:setValue(self.maxValue/self.h)
     elseif(self.barType=="horizontal")then
         self:setValue(self.maxValue/self.w)
     end
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
-function scrollbar:setSymbolColor(color)
+function slider:setSymbolColor(color)
     self.symbolColor = color
-    self.changed = true
+    self:updateVisuals()
     return self
 end
 
-function scrollbar:setBarType(typ)
+function slider:setBarType(typ)
     self.barType = typ:lower()
-    self.changed = true
+    self:updateVisuals()
+    return self
+end
+
+function slider:setBarSize(typ)
+    self.barSize = typ:lower()
+    self:updateVisuals()
     return self
 end
 
@@ -1976,7 +2339,6 @@ function program:drawObject()
     object.drawObject(self) -- Base class
     if(self.draw)then
         self.pWindow.redraw()
-        self.changed = false
     end
 end
 
@@ -2093,6 +2455,7 @@ end
 function animation:play(infiniteloop)
     if(infiniteloop~=nil)then self.infiniteloop=infiniteloop end
     self.playing = true
+    self.index = 1
     if(self.animations[self.index]~=nil)then
         if(self.animations[self.index].t>0)then
             self.timeObj = os.startTimer(self.animations[self.index].t)
@@ -2135,32 +2498,30 @@ local function checkTimer(timeObject)
 end
 
 
-local function handleChangedObjectsEvent()
-    local changed = activeFrame.changed
-    for a,b in pairs(activeFrame.objects)do
-        for k,v in pairs(b)do
-            if(v.changed)then
+local function handleObjectDrawing()
+local changed = false
+    for k,v in pairs(activeFrame.objects)do
+        for a,b in pairs(v)do
+            if(b.changed)then
                 changed = true
             end
         end
     end
     if(changed)then
-        if(activeFrame.draw)then
-            activeFrame:drawObject()
-        end
+        activeFrame:drawObject()
     end
 end
 
 if(NyoUI.debugger)then
     NyoUI.debugFrame = NyoUI.createFrame("NyoUIDebuggingFrame"):showBar():setBackground(colors.lightGray):setTitle("Debug",colors.black,colors.gray)
     NyoUI.debugList = NyoUI.debugFrame:addList("debugList"):setSize(NyoUI.debugFrame.w - 2, NyoUI.debugFrame.h - 3):setPosition(2,3):setSymbol(""):setBackground(colors.gray):setItemColors(colors.gray):setTextAlign("left"):show()
-    NyoUI.debugFrame:addButton("back"):setAnchor("right"):setSize(1,1):setText("\42"):onClick(function() NyoUI.oldFrame:show() end):setBackground(colors.red):show()
-    NyoUI.debugLabel = NyoUI.debugFrame:addLabel("debugLabel"):onClick(function() NyoUI.oldFrame = activeFrame NyoUI.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):show()
+    NyoUI.debugFrame:addButton("back"):setAnchor("right"):setSize(1,1):setText("\22"):onClick(function() NyoUI.oldFrame:show() end):setBackground(colors.red):show()
+    NyoUI.debugLabel = NyoUI.debugFrame:addLabel("debugLabel"):onClick(function() NyoUI.oldFrame = activeFrame NyoUI.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):ignoreScroll(true,true):show()
 end
 
 function NyoUI.startUpdate()
     if not(NyoUI.updater)then
-        handleChangedObjectsEvent()
+        handleObjectDrawing()
         NyoUI.updater = true
         while NyoUI.updater do
             local event, p1,p2,p3,p4 = os.pullEventRaw()
@@ -2187,7 +2548,7 @@ function NyoUI.startUpdate()
             if(event=="key_up")then
                 keyModifier[p1] = false
             end
-            handleChangedObjectsEvent()
+            handleObjectDrawing()
         end
     end
 end
@@ -2200,7 +2561,9 @@ if(NyoUI.debugger)then
     function NyoUI.debug(...)
         local args = {...}
         if(activeFrame.name~="NyoUIDebuggingFrame")then
-            NyoUI.debugLabel:setParent(activeFrame)
+            if(activeFrame~=NyoUI.debugLabel.frame)then
+                NyoUI.debugLabel:setParent(activeFrame)
+            end
         end
         local str = ""
         for k,v in pairs(args)do
