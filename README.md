@@ -1,5 +1,4 @@
-# NyoUI
-A GUI Framework for Computercraft
+# Basalt - a GUI Framework for Computercraft
 
 check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information
 
