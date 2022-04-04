@@ -1,6 +1,7 @@
 # Basalt - a GUI Framework for Computercraft
 
-check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information
+check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information<br>
+if you wanna message me: NyoriE#8206 on discord
 
 Todo:<br>
 -improve correct focus on frames (sometimes still wrong)<br>
