@@ -23,6 +23,7 @@ local theme = {
 
 local basalt = {debugger=true}
 local activeFrame
+local frames = {}
 
 local animationQueue = {}
 local keyModifier = {}
@@ -1122,9 +1123,7 @@ local function Program(name)
             if(curProcess~=nil)then
                 if not(curProcess:isDead())then
                     if not(paused)then
-                        for _,v in pairs(queuedEvent)do
-                            curProcess:resume(v.event, table.unpack(v.args))
-                        end
+                        self:injectEvents(queuedEvent)
                         queuedEvent = {}
                     end
                 end
@@ -1136,15 +1135,32 @@ local function Program(name)
             return paused
         end;
 
-        injectEvent = function(self, event, ign, p1, p2, p3, p4)
+        injectEvent = function(self, event, p1, p2, p3, p4, ign)
             if(curProcess~=nil)then
                 if not(curProcess:isDead())then
-                    if not(paused)or(ign)then
+                    if (paused==false)or(ign)then
+                        basalt.debug(event, p1)
                         curProcess:resume(event,p1,p2,p3,p4)
                     else
                         table.insert(queuedEvent, {event=event, args = {p1,p2,p3,p4}})
                     end
                 end
+            end
+            return self
+        end;
+
+        getQueuedEvents = function(self)
+            return queuedEvent
+        end;
+
+        updateQueuedEvents = function(self, events)
+            queuedEvent = events or queuedEvent
+            return self
+        end;
+
+        injectEvents = function(self, events)
+            for _,v in pairs(events)do
+                curProcess:resume(v.event, table.unpack(v.args))
             end
             return self
         end;
@@ -1359,6 +1375,11 @@ local function Input(name) -- Input
     base.bgcolor = theme.InputBG
     base.fgcolor = theme.InputFG
 
+    local defaultText = ""
+    local defaultBGCol
+    local defaultFGCol
+    local showingText = defaultText
+
     local object = {
 
         getType = function(self)
@@ -1368,6 +1389,18 @@ local function Input(name) -- Input
         setInputType = function(self, iType)
             if(iType=="password")or(iType=="number")or(iType=="text")then
                 inputType = iType
+            end
+            return self
+        end;
+
+        setDefaultText = function(self, text, fCol, bCol)
+            defaultText = text
+            defaultBGCol = bCol or defaultBGCol
+            defaultFGCol = fCol or defaultFGCol
+            if(self:isFocused())then
+                showingText = ""
+            else
+                showingText = defaultText
             end
             return self
         end;
@@ -1391,6 +1424,7 @@ local function Input(name) -- Input
                 local obx, oby = self:getAnchorPosition()
                 local cursorX = obx+(self:getValue():len() < self.w and self:getValue():len() or self.w-1)
                 local cursorY = oby
+                showingText = ""
                 if(self.parent~=nil)then
                     self.parent:setCursor(true, cursorX, cursorY, self.fgcolor)
                 end
@@ -1401,6 +1435,7 @@ local function Input(name) -- Input
             base.loseFocusHandler(self)
             if(self.parent~=nil)then
                 self.parent:setCursor(false)
+                showingText = defaultText
             end
         end;
 
@@ -1468,7 +1503,10 @@ local function Input(name) -- Input
                                     text = text:sub(text:len()-self.w+2, text:len())
                                 end
                             end
-                            self.parent:writeText(obx, oby+(n-1), text, self.bgcolor, self.fgcolor)
+                            local bCol = self.bgcolor
+                            local fCol = self.fgcolor
+                            if(text:len()<=0)then text = showingText bCol = defaultBGCol or bCol fCol = defaultFGCol or fCol end
+                            self.parent:writeText(obx, oby+(n-1), text:sub(1,self.w), bCol, fCol)
                         end
                     end
                 end
@@ -2923,7 +2961,9 @@ local function Frame(name,parent) -- Frame
         end;
     }
     setmetatable(object, base)
-
+    if(parent==nil)then
+        table.insert(frames, object)
+    end
     return object
 end
 
@@ -2940,7 +2980,9 @@ function basalt.update(isActive)
         if(event=="mouse_up")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
         if(event=="mouse_scroll")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
         if(event=="key")or(event=="char")then activeFrame:keyHandler(event,p1,p2,p3,p4) end
-        activeFrame:eventHandler(event, p1, p2, p3, p4)
+        for _,v in pairs(frames)do
+            v:eventHandler(event, p1, p2, p3, p4)
+        end
         if(updaterActive)then
             activeFrame:draw()
             drawHelper.update()
@@ -2953,7 +2995,11 @@ function basalt.stop()
 end
 
 function basalt.getFrame(name)
-    
+    for k,v in pairs(frames)do
+        if(v.name==name)then
+            return v
+        end
+    end
 end
 
 function basalt.getActiveFrame()
@@ -2973,15 +3019,21 @@ function basalt.createFrame(name)
     return frame
 end
 
-function basalt.removeFrame()
-    
+function basalt.removeFrame(name)
+    for k,v in pairs(frames)do
+        if(v.name==name)then
+            frames[k] = nil
+            return true
+        end
+    end
+    return false
 end
 
 if(basalt.debugger)then
     basalt.debugFrame = basalt.createFrame("basaltDebuggingFrame"):showBar():setBackground(colors.lightGray):setBar("Debug",colors.black,colors.gray)
-    --basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.w - 2, basalt.debugFrame.h - 3):setPosition(2,3):setSymbol(""):setTextAlign("left"):show()
-    --basalt.debugFrame:addButton("back"):setAnchor("right"):setSize(1,1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
-    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() --[[basalt.oldFrame = activeFrame basalt.debugFrame:show()]] end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):show()
+    basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.w - 2, basalt.debugFrame.h - 3):setPosition(2,3):show()
+    basalt.debugFrame:addButton("back"):setAnchor("right"):setSize(1,1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
+    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = activeFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):show()
 end
 
 
