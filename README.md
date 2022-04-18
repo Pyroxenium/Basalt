@@ -1,4 +1,4 @@
-# Basalt - a GUI Framework for Computercraft
+# Basalt - a UI Framework for Computercraft
 
 WORK IN PROGRESS
 
