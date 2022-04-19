@@ -344,11 +344,16 @@ local function Object(name) -- Base object
             return self
         end;
 
+        remove = function(self)
+            if(self.parent~=nil)then
+                self.parent:removeObject(self)
+            end
+            return self
+        end;
+
         setParent = function(self, frame)
             if(frame.getType~=nil and frame:getType()=="Frame")then
-                if(self.parent~=nil)then
-                    self.parent:removeObject(self)
-                end
+                self:remove()
                 frame:addObject(self)
                 if(self.draw)then 
                     self:show() 
@@ -1159,8 +1164,12 @@ local function Program(name)
         end;
 
         injectEvents = function(self, events)
-            for _,v in pairs(events)do
-                curProcess:resume(v.event, table.unpack(v.args))
+            if(curProcess~=nil)then
+                if not(curProcess:isDead())then
+                    for _,v in pairs(events)do
+                        curProcess:resume(v.event, table.unpack(v.args))
+                    end
+                end
             end
             return self
         end;
@@ -1375,6 +1384,9 @@ local function Input(name) -- Input
     base.bgcolor = theme.InputBG
     base.fgcolor = theme.InputFG
 
+    local textX = 1
+    local wIndex = 1
+
     local defaultText = ""
     local defaultBGCol
     local defaultFGCol
@@ -1422,11 +1434,9 @@ local function Input(name) -- Input
             base.getFocusHandler(self)
             if(self.parent~=nil)then
                 local obx, oby = self:getAnchorPosition()
-                local cursorX = obx+(self:getValue():len() < self.w and self:getValue():len() or self.w-1)
-                local cursorY = oby
                 showingText = ""
                 if(self.parent~=nil)then
-                    self.parent:setCursor(true, cursorX, cursorY, self.fgcolor)
+                    self.parent:setCursor(true, obx+textX-wIndex, oby, self.fgcolor)
                 end
             end
         end;
@@ -1442,36 +1452,74 @@ local function Input(name) -- Input
         keyHandler = function(self, event, key)
             if(base.keyHandler(self, event, key))then
                 if(event=="key")then
-                    if(key==259)then
-                        self:setValue(self:getValue():sub(1,self:getValue():len()-1))
+                    if(key==259)then -- on backspace
+                        local text = self:getValue()
+                        if(textX>1)then
+                            self:setValue(text:sub(1,textX-2)..text:sub(textX,text:len()))
+                            if(textX>1)then textX = textX-1 end
+                            if(wIndex>1)then
+                                if(textX<wIndex)then
+                                    wIndex = wIndex-1
+                                end
+                            end
+                        end
                     end
                     if(key==257)then -- on enter
                         if(self.parent~=nil)then
                             --self.parent:removeFocus(self)
                         end
                     end
+                    if(key==262)then -- right arrow
+                        local tLength = self:getValue():len()
+                        textX = textX+1
+
+                        if(textX > tLength)then
+                            textX = tLength+1
+                        end
+                        if(textX<1)then textX = 1 end
+                        if(textX<wIndex)or(textX>=self.w+wIndex)then
+                            wIndex = textX-self.w+1
+                        end 
+                        if(wIndex<1)then wIndex = 1 end
+                    end
+
+                    if(key==263)then -- left arrow
+                        textX = textX-1
+                        if(textX>=1)then
+                            if(textX<wIndex)or(textX>=self.w+wIndex)then
+                                wIndex = textX
+                            end  
+                        end
+                        if(textX<1)then textX = 1 end 
+                        if(wIndex<1)then wIndex = 1 end                     
+                    end
                 end
 
                 if(event=="char")then
                     if(self:getValue():len() < inputLimit or inputLimit <= 0)then
+                        local text = self:getValue()
                         if(inputType=="number")then 
-                            local cache = self:getValue()
+                            local cache = text
                             if (key==".")or(tonumber(key)~=nil)then
-                                self:setValue(self:getValue()..key)
+                                self:setValue(text..key)
                             end
                             if(tonumber(self:getValue())==nil)then
                                 self:setValue(cache)
                             end
                         else
-                            self:setValue(self:getValue()..key)
+                            self:setValue(text:sub(1,textX-1)..key..text:sub(textX,text:len()))
                         end
+                        textX = textX + 1
+                        if(textX>=self.w+wIndex)then wIndex = wIndex+1 end
                     end
                 end
                 local obx,oby = self:getAnchorPosition()
-                local cursorX = obx+(self:getValue():len() < self.w and self:getValue():len() or self.w-1)
-                local cursorY = oby
+
+                local cursorX = (textX <= self:getValue():len() and textX-1 or self:getValue():len())-(wIndex-1)
+
+                if(cursorX>self.x+self.w-1)then cursorX = self.x+self.w-1 end
                 if(self.parent~=nil)then
-                    self.parent:setCursor(true, cursorX, cursorY, self.fgcolor)
+                    self.parent:setCursor(true, obx+cursorX, oby, self.fgcolor)
                 end
             end
         end;
@@ -1506,7 +1554,18 @@ local function Input(name) -- Input
                             local bCol = self.bgcolor
                             local fCol = self.fgcolor
                             if(text:len()<=0)then text = showingText bCol = defaultBGCol or bCol fCol = defaultFGCol or fCol end
-                            self.parent:writeText(obx, oby+(n-1), text:sub(1,self.w), bCol, fCol)
+
+                            local text = showingText
+                            if(self:getValue()~="")then 
+                                text = self:getValue()
+                            end
+                            text = text:sub(wIndex, self.w+wIndex-1)      
+                            local space = self.w-text:len()
+                            if(space<0)then space = 0 end
+                            text = text..string.rep(" ", space)
+                            self.parent:setText(obx, oby+n-1, text)
+                            self.parent:writeText(obx, oby+(n-1), text, bCol, fCol)
+
                         end
                     end
                 end
@@ -1818,6 +1877,10 @@ local function List(name)
             return list[index]
         end;
 
+        getItemCount = function(self)
+            return #list
+        end;
+
         editItem = function(self, index, text, bgCol, fgCol)
             table.remove(list, index)
             table.insert(list, index, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor})
@@ -1939,6 +2002,10 @@ local function Dropdown(name)
 
         getItem = function(self, index)
             return list[index]
+        end;
+
+        getItemCount = function(self)
+            return #list
         end;
 
         editItem = function(self, index, text, bgCol, fgCol)
@@ -2079,6 +2146,10 @@ local function Radio(name)
 
         getItem = function(self, index)
             return list[index]
+        end;
+
+        getItemCount = function(self)
+            return #list
         end;
 
         editItem = function(self, index, text, x, y, bgCol, fgCol)
@@ -3050,8 +3121,8 @@ if(basalt.debugger)then
             str = str..tostring(v)..(#args~=k and ", " or "")
         end
         basalt.debugLabel:setText("[Debug] "..str)
-       -- basalt.debugList:addItem(str)
-        --if(#basalt.debugList.items>basalt.debugList.h)then basalt.debugList:removeItem(1) end
+        basalt.debugList:addItem(str)
+        if(#basalt.debugList:getItemCount()>basalt.debugList.h)then basalt.debugList:removeItem(1) end
 
         basalt.debugLabel:show()
     end
