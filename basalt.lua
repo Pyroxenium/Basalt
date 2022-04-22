@@ -303,6 +303,7 @@ local function Object(name) -- Base object
     local hanchor = "left"
     local vanchor = "top"
     local ignOffset = false
+    local isVisible = false
 
     local visualsChanged = true
 
@@ -313,16 +314,24 @@ local function Object(name) -- Base object
         y = 1,
         w = 1,
         h = 1,
-        visible = false,
         bgcolor = colors.black,
         fgcolor = colors.white,
         name = name or "Object",
         parent = nil,
 
         show = function(self)
-            self.visible = true
+            isVisible = true
             visualsChanged = true
             return self
+        end;
+
+        hide = function(self)
+            isVisible = false
+            return self
+        end;
+
+        isVisible = function(self)
+            return isVisible
         end;
 
         getZIndex = function(self)
@@ -331,6 +340,10 @@ local function Object(name) -- Base object
 
         setZIndex = function(self, index)
             zIndex = index
+            if(self.parent~=nil)then
+                self.parent:removeObject(self)
+                self.parent:addObject(self)
+            end
             return self
         end;
 
@@ -338,10 +351,8 @@ local function Object(name) -- Base object
             return typ
         end;
 
-        hide = function(self)
-            self.visible = false
-            visualsChanged = true
-            return self
+        getName = function(self)
+            return self.name
         end;
 
         remove = function(self)
@@ -407,11 +418,11 @@ local function Object(name) -- Base object
         end;
 
         getVisibility = function(self)
-            return self.visible
+            return isVisible
         end;
 
-        setVisibility = function(self, isVisible)
-            self.visible = isVisible or not self.visible
+        setVisibility = function(self, _isVisible)
+            isVisible = _isVisible or not isVisible
             visualsChanged = true
             return self
         end;
@@ -451,7 +462,7 @@ local function Object(name) -- Base object
         end;
 
         draw = function(self)
-            if(self.visible)then
+            if(isVisible)then
                 return true
             end
             return false
@@ -573,7 +584,7 @@ local function Object(name) -- Base object
 
         mouseHandler = function(self, event, button, x, y)
             local objX,objY = self:calcRelToAbsPosition(self:getAnchorPosition())
-            if(objX<=x)and(objX+self.w>x)and(objY<=y)and(objY+self.h>y)then
+            if(objX<=x)and(objX+self.w>x)and(objY<=y)and(objY+self.h>y)and(isVisible)then
                 if(self.parent~=nil)then self.parent:setFocus(self) end
                 eventSystem:sendEvent(event, self, event, button, x, y)
                 return true
@@ -697,10 +708,9 @@ local function Program(name)
                 emptyColorLines[nColor] = sHex:rep(w)
             end
         end
-        ----    
-        createEmptyLines()
     
         local function recreateWindowArray() 
+            createEmptyLines()
             local emptyText = emptySpaceLine
             local emptyFG = emptyColorLines[colors.white]
             local emptyBG = emptyColorLines[colors.black]
@@ -943,6 +953,7 @@ local function Program(name)
                     setText(_x, _y + (n-1), symbol:rep(_w))       
                 end
             end;
+
             writeText = function (_x, _y, text, bgCol, fgCol)
                 bgCol = bgCol or bgcolor
                 fgCol = fgCol or fgcolor
@@ -1391,6 +1402,7 @@ local function Input(name) -- Input
     local defaultBGCol
     local defaultFGCol
     local showingText = defaultText
+    local internalValueChange = false
 
     local object = {
 
@@ -1419,6 +1431,19 @@ local function Input(name) -- Input
 
         getInputType = function(self)
             return inputType
+        end;
+
+        setValue = function(self, val)
+            base.setValue(self, tostring(val))
+            if not(internalValueChange)then
+                textX = tostring(val):len()+1
+            end
+            return self
+        end;
+
+        getValue = function(self)
+            local val = base.getValue(self)
+            return inputType == "number" and tonumber(val) or val
         end;
 
         setInputLimit = function(self, limit)
@@ -1451,9 +1476,10 @@ local function Input(name) -- Input
 
         keyHandler = function(self, event, key)
             if(base.keyHandler(self, event, key))then
+                internalValueChange = true
                 if(event=="key")then
                     if(key==259)then -- on backspace
-                        local text = self:getValue()
+                        local text = tostring(base.getValue())
                         if(textX>1)then
                             self:setValue(text:sub(1,textX-2)..text:sub(textX,text:len()))
                             if(textX>1)then textX = textX-1 end
@@ -1470,7 +1496,7 @@ local function Input(name) -- Input
                         end
                     end
                     if(key==262)then -- right arrow
-                        local tLength = self:getValue():len()
+                        local tLength = tostring(base.getValue()):len()
                         textX = textX+1
 
                         if(textX > tLength)then
@@ -1488,39 +1514,41 @@ local function Input(name) -- Input
                         if(textX>=1)then
                             if(textX<wIndex)or(textX>=self.w+wIndex)then
                                 wIndex = textX
-                            end  
+                            end
                         end
-                        if(textX<1)then textX = 1 end 
-                        if(wIndex<1)then wIndex = 1 end                     
+                        if(textX<1)then textX = 1 end
+                        if(wIndex<1)then wIndex = 1 end
                     end
                 end
 
                 if(event=="char")then
-                    if(self:getValue():len() < inputLimit or inputLimit <= 0)then
-                        local text = self:getValue()
-                        if(inputType=="number")then 
+                    local text = base.getValue()
+                    if(text:len() < inputLimit or inputLimit <= 0)then
+                        if(inputType=="number")then
                             local cache = text
                             if (key==".")or(tonumber(key)~=nil)then
-                                self:setValue(text..key)
+                                self:setValue(text:sub(1,textX-1)..key..text:sub(textX,text:len()))
+                                textX = textX + 1
                             end
-                            if(tonumber(self:getValue())==nil)then
+                            if(tonumber(base.getValue())==nil)then
                                 self:setValue(cache)
                             end
                         else
                             self:setValue(text:sub(1,textX-1)..key..text:sub(textX,text:len()))
+                            textX = textX + 1
                         end
-                        textX = textX + 1
                         if(textX>=self.w+wIndex)then wIndex = wIndex+1 end
                     end
                 end
                 local obx,oby = self:getAnchorPosition()
-
-                local cursorX = (textX <= self:getValue():len() and textX-1 or self:getValue():len())-(wIndex-1)
+                local val = tostring(base.getValue())
+                local cursorX = (textX <= val:len() and textX-1 or val:len())-(wIndex-1)
 
                 if(cursorX>self.x+self.w-1)then cursorX = self.x+self.w-1 end
                 if(self.parent~=nil)then
                     self.parent:setCursor(true, obx+cursorX, oby, self.fgcolor)
                 end
+                internalValueChange = false
             end
         end;
 
@@ -1543,7 +1571,8 @@ local function Input(name) -- Input
                     self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
                     for n=1,self.h do
                         if(n==verticalAlign)then
-                            local text = inputType == "password" and ("*"):rep(self:getValue():len()) or self:getValue()
+                            local val = tostring(base.getValue())
+                            local text = inputType == "password" and ("*"):rep(val:len()) or val
                             if(text:len()>=self.w)then
                                 if(inputType=="password")then
                                     text = ("*"):rep(text:len()):sub(text:len()-self.w+2, text:len())
@@ -1556,8 +1585,8 @@ local function Input(name) -- Input
                             if(text:len()<=0)then text = showingText bCol = defaultBGCol or bCol fCol = defaultFGCol or fCol end
 
                             local text = showingText
-                            if(self:getValue()~="")then 
-                                text = self:getValue()
+                            if(val~="")then 
+                                text = val
                             end
                             text = text:sub(wIndex, self.w+wIndex-1)      
                             local space = self.w-text:len()
@@ -2251,7 +2280,9 @@ local function Timer(name)
         end;
 
         cancel = function(self)
-            os.cancelTimer(timerObj)
+            if(timerObj~=nil)then
+                os.cancelTimer(timerObj)
+            end
             return self
         end;
 
@@ -2489,6 +2520,7 @@ local function Scrollbar(name)
     base.bgcolor = colors.lightGray
     base.fgcolor = colors.gray
     base:setValue(1)
+    base:setZIndex(2)
 
     local barType = "vertical"
     local symbol = " "
@@ -2637,40 +2669,49 @@ local function Frame(name,parent) -- Frame
         base.w, base.h = termW, termH
         base.bgcolor = theme.basaltBG
         base.fgcolor = theme.basaltFG
-        base:ignoreOffset(true)
     end
 
+    local function getObject(name)
+        for k,v in pairs(objects)do
+            for a,b in pairs(v)do
+                if(b.name == name)then
+                    return v
+                end
+            end
+        end
+    end
 
     local function addObject(obj)
-        local index = obj:getZIndex()
-        if(objects[index]==nil)then
-            for x=0,#objZIndex+1 do
+        local zIndex = obj:getZIndex()
+        if(getObject(obj.name)~=nil)then return nil end
+        if(objects[zIndex]==nil)then
+            for x=1,#objZIndex+1 do
                 if(objZIndex[x]~=nil)then
-                    if(index > objZIndex[x])then
-                        table.insert(objZIndex,x,index)
-                    end       
+                    if(zIndex == objZIndex[x])then break end
+                    if(zIndex > objZIndex[x])then
+                        table.insert(objZIndex,x,zIndex)
+                        break
+                    end
                 else
-                    table.insert(objZIndex,x,index)
-                end     
+                    table.insert(objZIndex,zIndex)
+                end
             end
             if(#objZIndex<=0)then
-                table.insert(objZIndex,index)
+                table.insert(objZIndex,zIndex)
             end
-            objects[index] = {}
+            objects[zIndex] = {}
         end
         obj.parent = object
-        table.insert(objects[index],obj)
+        table.insert(objects[zIndex],obj)
         return obj
     end
 
     local function removeObject(obj)
-        if(objects~=nil)then
-            for a,b in pairs(objects)do
-                for k,v in pairs(b)do
-                    if(v==obj)then
-                        table.remove(objects[a],k)
-                        return;
-                    end
+        for a,b in pairs(objects)do
+            for k,v in pairs(b)do
+                if(v==obj)then
+                    table.remove(objects[a],k)
+                    return;
                 end
             end
         end
@@ -2769,13 +2810,20 @@ local function Frame(name,parent) -- Frame
         getVisualChanged = function(self)
             local changed = base.getVisualChanged(self)
             for _,index in pairs(objZIndex)do
-                for _,v in pairs(objects[index])do
-                    if(v.getVisualChanged~=nil and v:getVisualChanged())then
-                        changed = true
+                if(objects[index]~=nil)then
+                    for _,v in pairs(objects[index])do
+                        if(v.getVisualChanged~=nil and v:getVisualChanged())then
+                            changed = true
+                        end
                     end
                 end
             end
             return changed
+        end;
+
+        loseFocusHandler = function(self)
+            base.loseFocusHandler(self)
+            self.drag = false
         end;
 
         getFocusHandler = function(self)
@@ -2800,9 +2848,11 @@ local function Frame(name,parent) -- Frame
         eventHandler = function(self, event, p1, p2, p3, p4)
             base.eventHandler(self, event, p1, p2, p3, p4)
             for _,index in pairs(objZIndex)do
-                for _,v in pairs(objects[index])do
-                    if(v.eventHandler~=nil)then
-                        v:eventHandler(event,p1, p2, p3, p4)
+                if(objects[index]~=nil)then
+                    for _,v in pairs(objects[index])do
+                        if(v.eventHandler~=nil)then
+                            v:eventHandler(event,p1, p2, p3, p4)
+                        end
                     end
                 end
             end
@@ -2817,7 +2867,7 @@ local function Frame(name,parent) -- Frame
             local xO, yO = self:getOffset()
             xO = xO < 0 and math.abs(xO) or -xO 
             yO = yO < 0 and math.abs(yO) or -yO 
-            if(self.drag)and(self.visible)then    
+            if(self.drag)then    
                 if(event=="mouse_drag")then
                     local parentX=1;local parentY=1
                     if(self.parent~=nil)then
@@ -2834,11 +2884,13 @@ local function Frame(name,parent) -- Frame
             if(base.mouseHandler(self,event,button,x,y))then
                 local fx,fy = self:calcRelToAbsPosition(self:getAnchorPosition())
                 for _,index in pairs(objZIndex)do
-                    for _,v in rpairs(objects[index])do
-                        if(v.mouseHandler~=nil)then
-                            if(v:mouseHandler(event,button,x+xO,y+yO))then
-                                return true         
-                            end   
+                    if(objects[index]~=nil)then
+                        for _,v in rpairs(objects[index])do
+                            if(v.mouseHandler~=nil)then
+                                if(v:mouseHandler(event,button,x+xO,y+yO))then
+                                    return true         
+                                end   
+                            end
                         end
                     end
                 end
@@ -2917,12 +2969,15 @@ local function Frame(name,parent) -- Frame
                     end
 
                     for _,index in rpairs(objZIndex)do
-                        for _,v in pairs(objects[index])do
-                            if(v.draw~=nil)then
-                                v:draw()
+                        if(objects[index]~=nil)then
+                            for _,v in pairs(objects[index])do
+                                if(v.draw~=nil)then
+                                    v:draw()
+                                end
                             end
                         end
                     end
+
                     if(cursorBlink)then
                         parentTerminal.setTextColor(cursorColor)
                         parentTerminal.setCursorPos(xCursor, yCursor)
@@ -2932,8 +2987,8 @@ local function Frame(name,parent) -- Frame
                             parentTerminal.setCursorBlink(cursorBlink)
                         end
                     end
+                    self:setVisualChanged(false)
                 end
-                self:setVisualChanged(false)
             end
         end;
 
@@ -3038,26 +3093,40 @@ local function Frame(name,parent) -- Frame
     return object
 end
 
+
 local updaterActive = false
-function basalt.update(isActive)
+local function basaltUpdateEvent(event, p1,p2,p3,p4)
+    if(event=="mouse_click")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
+    if(event=="mouse_drag")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
+    if(event=="mouse_up")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
+    if(event=="mouse_scroll")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
+    if(event=="key")or(event=="char")then activeFrame:keyHandler(event,p1,p2,p3,p4) end
+    for _,v in pairs(frames)do
+        v:eventHandler(event, p1, p2, p3, p4)
+    end
+    if(updaterActive)then
+        activeFrame:draw()
+        drawHelper.update()
+    end
+end
+
+function basalt.autoUpdate(isActive)
     parentTerminal.clear()
     updaterActive = isActive or true
     activeFrame:draw()
     drawHelper.update()
     while updaterActive do
         local event, p1,p2,p3,p4 = os.pullEventRaw() -- change to raw later
-        if(event=="mouse_click")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
-        if(event=="mouse_drag")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
-        if(event=="mouse_up")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
-        if(event=="mouse_scroll")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
-        if(event=="key")or(event=="char")then activeFrame:keyHandler(event,p1,p2,p3,p4) end
-        for _,v in pairs(frames)do
-            v:eventHandler(event, p1, p2, p3, p4)
-        end
-        if(updaterActive)then
-            activeFrame:draw()
-            drawHelper.update()
-        end
+        basaltUpdateEvent(event, p1,p2,p3,p4)
+    end
+end
+
+function basalt.update(event, p1, p2, p3, p4)
+    if(event~="nil")then
+        basaltUpdateEvent(event, p1,p2,p3,p4)
+    else
+        activeFrame:draw()
+        drawHelper.update()
     end
 end
 
@@ -3122,7 +3191,7 @@ if(basalt.debugger)then
         end
         basalt.debugLabel:setText("[Debug] "..str)
         basalt.debugList:addItem(str)
-        if(#basalt.debugList:getItemCount()>basalt.debugList.h)then basalt.debugList:removeItem(1) end
+        if(basalt.debugList:getItemCount()>basalt.debugList.h)then basalt.debugList:removeItem(1) end
 
         basalt.debugLabel:show()
     end
