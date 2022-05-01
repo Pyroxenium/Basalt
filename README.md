@@ -7,8 +7,6 @@ if you wanna message me: NyoriE#8206 on discord
 
 Todo:<br>
 -improve performance<br>
--moving a subframe in a subframe to the left gives a draw error<br>
--scrolling in list doesn't work correct<br>
 -scrolling in a menubar doesn't work correct<br>
 
     MIT License
