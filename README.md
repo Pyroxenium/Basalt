@@ -7,7 +7,8 @@ if you wanna message me: NyoriE#8206 on discord
 
 Todo:<br>
 -improve performance<br>
--scrolling in a menubar doesn't work correct<br>
+-scrolling in a menubar doesn't work correctly<br>
+-frames dont move correctly if anchor is bottom/right 
 
     MIT License
  
