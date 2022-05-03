@@ -25,7 +25,6 @@ local basalt = {debugger=true}
 local activeFrame
 local frames = {}
 
-local animationQueue = {}
 local keyModifier = {}
 local parentTerminal = term.current()
 
@@ -66,7 +65,7 @@ local function rpairs(t)
 	end, t, #t + 1
 end
 
-local tHex = { -- copy paste is a very important feature everyone should make use of
+local tHex = { -- copy paste is a very important feature
     [ colors.white ] = "0",
     [ colors.orange ] = "1",
     [ colors.magenta ] = "2",
@@ -123,34 +122,87 @@ local function basaltDrawHelper()
     recreateWindowArray()
 
     local function setText(x,y,text)
-        local gText = cacheT[y]
         if(y>=1)and(y<=h)then
-            if(x>=1)then
-                cacheT[y] = sub(gText:sub(1,x-1)..text..gText:sub(x+(text:len()),w),1, w)
-            else
-                cacheT[y] = sub(text:sub(math.abs(x) + 2, text:len())..gText:sub((text:len() - (math.abs(x))),w),1, w)
+            if(x+text:len()>0)and(x<=w)then
+                local oldCache = cacheT[y]
+                local newCache
+                local nEnd = x + #text - 1
+            
+                if(x < 1)then
+                    local startN = 1 - x + 1
+                    local endN = w - x + 1
+                    text = sub(text, startN, endN)
+                elseif(nEnd > w)then
+                    local endN = w - x + 1
+                    text = sub(text, 1, endN)
+                end
+
+                if(x > 1)then
+                    local endN = x - 1
+                    newCache = sub( oldCache, 1, endN )..text
+                else
+                    newCache = text
+                end
+                if nEnd < w then
+                    newCache = newCache .. sub(oldCache, nEnd + 1, w)
+                end
+                cacheT[y] = newCache
             end
         end
     end
 
     local function setBG(x,y,colorStr)
-        local gBG = cacheBG[y]
         if(y>=1)and(y<=h)then
-            if(x>=1)then
-                cacheBG[y] = sub(gBG:sub(1,x-1)..colorStr..gBG:sub(x+(colorStr:len()),w),1,w)
-            else
-                cacheBG[y] = sub(colorStr:sub(math.abs(x) + 2, colorStr:len())..gBG:sub((colorStr:len() - (math.abs(x))),w),1,w)
+            if(x+colorStr:len()>0)and(x<=w)then
+                local oldCache = cacheBG[y]
+                local newCache
+                local nEnd = x + #colorStr - 1
+                
+                if(x < 1)then
+                    colorStr = sub(colorStr, 1 - x + 1, w - x + 1)
+                elseif(nEnd > w)then
+                    colorStr = sub(colorStr, 1, w - x + 1)
+                end
+
+                if(x > 1)then
+                    newCache = sub( oldCache, 1, x - 1)..colorStr
+                else
+                    newCache = colorStr
+                end
+                if nEnd < w then
+                    newCache = newCache .. sub(oldCache, nEnd + 1, w)
+                end
+                cacheBG[y] = newCache
             end
         end
     end
 
     local function setFG(x,y,colorStr)
-        local gFG = cacheFG[y]
         if(y>=1)and(y<=h)then
-            if(x>=1)then
-                cacheFG[y] = sub(gFG:sub(1,x-1)..colorStr..gFG:sub(x+(colorStr:len()),w),1,w)
-            else
-                cacheFG[y] = sub(colorStr:sub(math.abs(x) + 2, colorStr:len())..gFG:sub((colorStr:len() - (math.abs(x))),w),1,w)
+            if(x+colorStr:len()>0)and(x<=w)then
+                local oldCache = cacheFG[y]
+                local newCache
+                local nEnd = x + #colorStr - 1
+                
+                if(x < 1)then
+                    local startN = 1 - x + 1
+                    local endN = w - x + 1
+                    colorStr = sub(colorStr, startN, endN)
+                elseif(nEnd > w)then
+                    local endN = w - x + 1
+                    colorStr = sub(colorStr, 1, endN)
+                end
+
+                if(x > 1)then
+                    local endN = x - 1
+                    newCache = sub( oldCache, 1, endN )..colorStr
+                else
+                    newCache = colorStr
+                end
+                if nEnd < w then
+                    newCache = newCache .. sub( oldCache, nEnd + 1, w )
+                end
+                cacheFG[y] = newCache
             end
         end
     end
@@ -327,6 +379,7 @@ local function Object(name) -- Base object
 
         hide = function(self)
             isVisible = false
+            visualsChanged = true
             return self
         end;
 
@@ -336,6 +389,12 @@ local function Object(name) -- Base object
 
         getZIndex = function(self)
             return zIndex;
+        end;
+
+        setFocus = function(self)
+            if(self.parent~=nil)then
+                self.parent:setFocusedObject(self)
+            end
         end;
 
         setZIndex = function(self, index)
@@ -469,28 +528,16 @@ local function Object(name) -- Base object
         end;
 
 
-        calcRelToAbsPosition = function(self, x,y) -- relative position
+        getAbsolutePosition = function(self, x,y) -- relative position
             if(x==nil)then x = self.x end
             if(y==nil)then y = self.y end
         
             if(self.parent~=nil)then
-                local fx,fy = self.parent:calcRelToAbsPosition()
+                local fx,fy = self.parent:getAbsolutePosition()
                 x=fx+x-1
                 y=fy+y-1
             end
             return x, y
-        end;
-
-        getOffset = function(self, x, y)
-            if(self.parent~=nil)and(ignOffset==false)then
-                return self.parent:getFrameOffset()
-            end
-            return 0, 0
-        end;
-
-        ignoreOffset = function(self, ignore)
-            ignOffset = ignore or true
-            return self
         end;
 
         getAnchorPosition = function(self,x, y, ignOff)
@@ -507,6 +554,18 @@ local function Object(name) -- Base object
                 return x, y
             end
             return x+xO, y+yO
+        end;
+
+        getOffset = function(self)
+            if(self.parent~=nil)and(ignOffset==false)then
+                return self.parent:getFrameOffset()
+            end
+            return 0, 0
+        end;
+
+        ignoreOffset = function(self, ignore)
+            ignOffset = ignore or true
+            return self
         end;
 
         setAnchor = function(self,...)
@@ -559,7 +618,7 @@ local function Object(name) -- Base object
 
         isFocused = function(self)
             if(self.parent~=nil)then
-                return self.parent:getFocus()==self
+                return self.parent:getFocusedObject()==self
             end
             return false
         end;
@@ -583,9 +642,9 @@ local function Object(name) -- Base object
         end;
 
         mouseHandler = function(self, event, button, x, y)
-            local objX,objY = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local objX,objY = self:getAbsolutePosition(self:getAnchorPosition())
             if(objX<=x)and(objX+self.w>x)and(objY<=y)and(objY+self.h>y)and(isVisible)then
-                if(self.parent~=nil)then self.parent:setFocus(self) end
+                if(self.parent~=nil)then self.parent:setFocusedObject(self) end
                 eventSystem:sendEvent(event, self, event, button, x, y)
                 return true
             end
@@ -660,10 +719,11 @@ local function Button(name) -- Button
                     local verticalAlign = getTextVerticalAlign(self.h, textVerticalAlign)
 
                     self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
+                    self.parent:drawForegroundBox(obx, oby, self.w, self.h, self.fgcolor)
                     self.parent:drawTextBox(obx, oby, self.w, self.h, " ")
                     for n=1,self.h do
                         if(n==verticalAlign)then
-                            self.parent:writeText(obx, oby+(n-1), getTextHorizontalAlign(self:getValue(), self.w, textHorizontalAlign), self.bgcolor, self.fgcolor)
+                            self.parent:setText(obx, oby+(n-1), getTextHorizontalAlign(self:getValue(), self.w, textHorizontalAlign))
                         end
                     end
                 end
@@ -1190,7 +1250,7 @@ local function Program(name)
                 if(curProcess==nil)then return false end
                 if not(curProcess:isDead())then
                     if not(paused)then
-                        local absX,absY = self:calcRelToAbsPosition(self:getAnchorPosition())
+                        local absX,absY = self:getAbsolutePosition(self:getAnchorPosition())
                         curProcess:resume(event, button, x-absX+1, y-absY+1)
                     end
                 end
@@ -1298,6 +1358,7 @@ local function Label(name) -- Label
             return typ
         end;
         setText = function(self,text)
+            text = tostring(text)
             base:setValue(text)
             if(autoWidth)then
                 self.w = text:len()
@@ -1443,7 +1504,7 @@ local function Input(name) -- Input
 
         getValue = function(self)
             local val = base.getValue(self)
-            return inputType == "number" and tonumber(val) or val
+            return inputType == "number" and tonumber(val)or val
         end;
 
         setInputLimit = function(self, limit)
@@ -1492,7 +1553,7 @@ local function Input(name) -- Input
                     end
                     if(key==257)then -- on enter
                         if(self.parent~=nil)then
-                            --self.parent:removeFocus(self)
+                            --self.parent:removeFocusedObject(self)
                         end
                     end
                     if(key==262)then -- right arrow
@@ -1806,7 +1867,7 @@ local function Textfield(name)
 
         mouseHandler = function(self, event, button, x, y)
             if(base.mouseHandler(self, event, button, x, y))then
-                local obx,oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+                local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx,anchy = self:getAnchorPosition()
                 if(event=="mouse_click")then
                     if(lines[y-oby+hIndex]~=nil)then
@@ -1883,18 +1944,28 @@ local function List(name)
     local selectionColorActive = true
     local align = "left"
     local yOffset = 0
+    local scrollable = true
 
     local object = {
         getType = function(self)
             return typ
         end;
 
-        addItem = function(self, text, bgCol, fgCol)
-            table.insert(list, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor})
+        addItem = function(self, text, bgCol, fgCol, ...)
+            table.insert(list, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
             if(#list==1)then
                 self:setValue(list[1])
             end
             return self
+        end;
+
+        setIndexOffset = function(self, yOff)
+            yOffset = yOff
+            return self
+        end;
+
+        getIndexOffset = function(self)
+            return yOffset
         end;
 
         removeItem = function(self, index)
@@ -1906,13 +1977,28 @@ local function List(name)
             return list[index]
         end;
 
+        getItemIndex = function(self)
+            local selected = self:getValue()
+            for k,v in pairs(list)do
+                if(v==selected)then
+                    return k
+                end
+            end
+        end;
+
+        clear = function(self)
+            list = {}
+            self:setValue({})
+            return self
+        end;
+
         getItemCount = function(self)
             return #list
         end;
 
-        editItem = function(self, index, text, bgCol, fgCol)
+        editItem = function(self, index, text, bgCol, fgCol, ...)
             table.remove(list, index)
-            table.insert(list, index, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor})
+            table.insert(list, index, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
             return self
         end;
 
@@ -1921,16 +2007,21 @@ local function List(name)
             return self
         end;
 
-        selectedItem = function(self, bgCol, fgCol, active)
+        setSelectedItem = function(self, bgCol, fgCol, active)
             itemSelectedBG = bgCol or self.bgcolor
             itemSelectedFG = fgCol or self.fgcolor
             selectionColorActive = active
             return self
         end;
 
+        setScrollable = function(self, scroll)
+            scrollable = scroll
+            return self
+        end;
+
         mouseHandler = function(self, event, button, x, y)
             if(base.mouseHandler(self, event, button, x, y))then
-                local obx,oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+                local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if(event=="mouse_click")or(event=="mouse_drag")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
                     if(button==1)then
                         if(#list>0)then
@@ -1945,16 +2036,17 @@ local function List(name)
                     end
                 end
 
-                if(event=="mouse_scroll")then
+                if(event=="mouse_scroll")and(scrollable)then
                     yOffset = yOffset+button
                     if(yOffset<0)then yOffset = 0 end
-                    if(button==1)then 
+                    if(button>=1)then 
                         if(#list>self.h)then 
                             if(yOffset>#list-self.h)then 
                                 yOffset = #list-self.h 
-                            end 
-                        else 
-                            yOffset = list-1 
+                            end
+                            if(yOffset>=#list)then yOffset = #list-1 end
+                        else
+                            yOffset = yOffset-1
                         end 
                     end
                 end
@@ -1978,6 +2070,182 @@ local function List(name)
                                 end
                             else
                                 self.parent:writeText(obx, oby+n-1, getTextHorizontalAlign(list[n+yOffset].text, self.w, align), list[n+yOffset].bgCol,list[n+yOffset].fgCol)
+                            end
+                        end
+                    end
+                end
+            end
+        end;
+    }
+
+    return setmetatable(object, base)
+end
+
+local function Menubar(name)
+    local base = Object(name)
+    local typ = "Menubar"
+
+    base.w = 30
+    base.h = 1
+    base.bgcolor = colors.gray
+    base.fgcolor = colors.lightGray
+    base:setZIndex(5)
+
+    local list = {}
+    local itemSelectedBG = theme.selectionBG
+    local itemSelectedFG = theme.selectionFG
+    local selectionColorActive = true
+    local align = "left"
+    local itemOffset = 0
+    local space = 2
+    local scrollable = false
+
+    local function maxScroll()
+        local mScroll = 0
+        local xPos = 1
+        for n=1,#list do
+            if(xPos + list[n].text:len() + space*2 > base.w)then
+                mScroll = mScroll + 1
+            end
+            xPos = xPos+list[n].text:len()+space*2
+
+        end
+        return mScroll
+    end
+
+    local object = {
+        getType = function(self)
+            return typ
+        end;
+        
+        addItem = function(self, text, bgCol, fgCol, ...)
+            table.insert(list, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
+            if(#list==1)then
+                self:setValue(list[1])
+            end
+            return self
+        end;
+
+        getItemIndex = function(self)
+            local selected = self:getValue()
+            for k,v in pairs(list)do
+                if(v==selected)then
+                    return k
+                end
+            end
+        end;
+
+        clear = function(self)
+            list = {}
+            self:setValue({})
+            return self
+        end;
+
+        setSpace = function(self, _space)
+            space = _space or space
+            return self
+        end;
+
+        setButtonOffset = function(self, offset)
+            itemOffset = offset or 0
+            if(itemOffset<0)then
+                itemOffset = 0
+            end
+
+            local mScroll = maxScroll()
+            if(itemOffset>mScroll)then
+                itemOffset = mScroll
+            end
+            return self
+        end;
+
+        setScrollable = function(self, scroll)
+            scrollable = scroll
+            return self
+        end;
+
+        removeItem = function(self, index)
+            table.remove(list, index)
+            return self
+        end;
+
+        getItem = function(self, index)
+            return list[index]
+        end;
+
+        getItemCount = function(self)
+            return #list
+        end;
+
+        editItem = function(self, index, text, bgCol, fgCol, ...)
+            table.remove(list, index)
+            table.insert(list, index, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
+            return self
+        end;
+
+        selectItem = function(self, index)
+            self:setValue(list[index] or {})
+            return self
+        end;
+
+        setSelectedItem = function(self, bgCol, fgCol, active)
+            itemSelectedBG = bgCol or self.bgcolor
+            itemSelectedFG = fgCol or self.fgcolor
+            selectionColorActive = active
+            return self
+        end;
+
+        mouseHandler = function(self, event, button, x, y)
+            if(base.mouseHandler(self,event,button,x,y))then
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                if(event=="mouse_click")then
+                    local xPos = 1
+                    for n=1+itemOffset,#list do
+                        if(list[n]~=nil)then
+                            if(xPos + list[n].text:len() + space*2 <= self.w)then
+                                if(obx + (xPos-1)<= x)and(obx + (xPos-1) + list[n].text:len() + space*2 > x)and(oby == y)then
+                                    self:setValue(list[n])
+                                end
+                                xPos = xPos+list[n].text:len()+space*2
+                            else
+                                break
+                            end
+                        end
+                    end
+                    
+                end
+                if(event=="mouse_scroll")and(scrollable)then
+                    itemOffset = itemOffset+button
+                    if(itemOffset<0)then
+                        itemOffset = 0
+                    end
+
+                    local mScroll = maxScroll()
+
+                    if(itemOffset>mScroll)then
+                        itemOffset = mScroll
+                    end
+                end
+            end
+        end;
+        
+        draw = function(self)
+            if(base.draw(self))then
+                if(self.parent~=nil)then
+                    local obx, oby = self:getAnchorPosition()
+                    self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
+                    local xPos = 1
+                    for n=1+itemOffset,#list do
+                        if(list[n]~=nil)then
+                            if(xPos + list[n].text:len() + space*2 <= self.w)then
+                                if(list[n]==self:getValue())then
+                                    self.parent:writeText(obx + (xPos-1), oby, getTextHorizontalAlign((" "):rep(space)..list[n].text..(" "):rep(space), list[n].text:len()+space*2, align), itemSelectedBG or list[n].bgCol, itemSelectedFG or list[n].fgCol)
+                                else
+                                    self.parent:writeText(obx + (xPos-1), oby, getTextHorizontalAlign((" "):rep(space)..list[n].text..(" "):rep(space), list[n].text:len()+space*2, align), list[n].bgCol, list[n].fgCol)
+                                end
+                                xPos = xPos+list[n].text:len()+space*2
+                            else
+                                break
                             end
                         end
                     end
@@ -2016,8 +2284,17 @@ local function Dropdown(name)
             return typ
         end;
 
-        addItem = function(self, text, bgCol, fgCol)
-            table.insert(list, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor})
+        setIndexOffset = function(self, yOff)
+            yOffset = yOff
+            return self
+        end;
+
+        getIndexOffset = function(self)
+            return yOffset
+        end;
+
+        addItem = function(self, text, bgCol, fgCol, ...)
+            table.insert(list, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
             if(#list==1)then
                 self:setValue(list[1])
             end
@@ -2033,13 +2310,28 @@ local function Dropdown(name)
             return list[index]
         end;
 
+        getItemIndex = function(self)
+            local selected = self:getValue()
+            for k,v in pairs(list)do
+                if(v==selected)then
+                    return k
+                end
+            end
+        end;
+
+        clear = function(self)
+            list = {}
+            self:setValue({})
+            return self
+        end;
+
         getItemCount = function(self)
             return #list
         end;
 
-        editItem = function(self, index, text, bgCol, fgCol)
+        editItem = function(self, index, text, bgCol, fgCol, ...)
             table.remove(list, index)
-            table.insert(list, index, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor})
+            table.insert(list, index, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
             return self
         end;
 
@@ -2048,7 +2340,7 @@ local function Dropdown(name)
             return self
         end;
 
-        selectedItem = function(self, bgCol, fgCol, active)
+        setSelectedItem = function(self, bgCol, fgCol, active)
             itemSelectedBG = bgCol or self.bgcolor
             itemSelectedFG = fgCol or self.fgcolor
             selectionColorActive = active
@@ -2062,7 +2354,7 @@ local function Dropdown(name)
 
         mouseHandler = function(self, event, button, x, y)
             if(state == 2)then
-                local obx,oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+                local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if(event=="mouse_click")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
                     if(button==1)then
                         if(#list>0)then
@@ -2160,8 +2452,8 @@ local function Radio(name)
             return typ
         end;
 
-        addItem = function(self,text, x, y,  bgCol, fgCol)
-            table.insert(list, {x=x or 1, y=y or 1, text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor})
+        addItem = function(self,text, x, y,  bgCol, fgCol, ...)
+            table.insert(list, {x=x or 1, y=y or 1, text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
             if(#list==1)then
                 self:setValue(list[1])
             end
@@ -2177,13 +2469,28 @@ local function Radio(name)
             return list[index]
         end;
 
+        getItemIndex = function(self)
+            local selected = self:getValue()
+            for k,v in pairs(list)do
+                if(v==selected)then
+                    return k
+                end
+            end
+        end;
+
+        clear = function(self)
+            list = {}
+            self:setValue({})
+            return self
+        end;
+
         getItemCount = function(self)
             return #list
         end;
 
-        editItem = function(self, index, text, x, y, bgCol, fgCol)
+        editItem = function(self, index, text, x, y, bgCol, fgCol, ...)
             table.remove(list, index)
-            table.insert(list, index, {x=x or 1, y=y or 1, text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor})
+            table.insert(list, index, {x=x or 1, y=y or 1, text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
             return self
         end;
 
@@ -2192,7 +2499,7 @@ local function Radio(name)
             return self
         end;
 
-        selectedItem = function(self, bgCol, fgCol, boxBG, boxFG, active)
+        setSelectedItem = function(self, bgCol, fgCol, boxBG, boxFG, active)
             itemSelectedBG = bgCol or itemSelectedBG
             itemSelectedFG = fgCol or itemSelectedFG
             boxSelectedBG = boxBG or boxSelectedBG
@@ -2202,14 +2509,14 @@ local function Radio(name)
         end;
 
         mouseHandler = function(self, event, button, x, y)
-            local obx,oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
             if(event=="mouse_click")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
                 if(button==1)then
                     if(#list>0)then
                         for _,v in pairs(list)do
                             if(obx+v.x-1<=x)and(obx+v.x-1+v.text:len()+2>=x)and(oby+v.y-1==y)then
                                 self:setValue(v)
-                                if(self.parent~=nil)then self.parent:setFocus(self) end
+                                if(self.parent~=nil)then self.parent:setFocusedObject(self) end
                                 --eventSystem:sendEvent(event, self, event, button, x, y)
                                 self:setVisualChanged()
                                 return true
@@ -2305,6 +2612,74 @@ local function Timer(name)
             end
         end;
     }
+    object.__index = object
+
+    return object
+end
+
+local function Thread(name)
+    local object
+    local typ = "Thread"
+
+    local func
+    local cRoutine
+    local isActive = false
+
+    object = {
+        name = name,
+        getType = function(self)
+            return typ
+        end;
+        getZIndex = function(self)
+            return 1
+        end;
+        getName = function(self)
+            return self.name
+        end;
+
+        start = function(self, f)
+            if(f==nil)then error("function is nil") end
+            func = f
+            cRoutine = coroutine.create(func)
+            isActive = true
+            local ok, result = coroutine.resume(cRoutine)
+            if not(ok)then
+                if(result~="Terminated")then
+                    error("Threaderror - "..result)
+                end
+            end
+            return self
+        end;
+
+        getStatus = function(self, f)
+            if(cRoutine~=nil)then
+                return coroutine.status(cRoutine)
+            end
+            return nil
+        end;
+
+        stop = function(self, f)
+            isActive = false
+            return self
+        end;
+
+        eventHandler = function(self, event, p1,p2,p3)
+            if(isActive)then
+                if(coroutine.status(cRoutine)~="dead")then
+                    local ok, result = coroutine.resume(cRoutine, event,p1,p2,p3)
+                    if not(ok)then
+                        if(result~="Terminated")then
+                            error("Threaderror - "..result)
+                        end
+                    end
+                else
+                    isActive = false
+                end
+            end
+        end;
+
+    }
+
     object.__index = object
 
     return object
@@ -2454,7 +2829,7 @@ local function Slider(name)
 
         mouseHandler = function(self, event, button, x, y)
             if(base.mouseHandler(self,event,button,x,y))then
-                local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if(barType=="horizontal")then
                     for _index=0,self.w-1 do
                         if(obx+_index==x)and(oby<=y)and(oby+self.h>y)then
@@ -2577,7 +2952,7 @@ local function Scrollbar(name)
 
         mouseHandler = function(self, event, button, x, y)
             if(base.mouseHandler(self,event,button,x,y))then
-                local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if((event=="mouse_click")or(event=="mouse_drag"))and(button==1)then
                     if(barType=="horizontal")then
                         for _index=0,self.w do
@@ -2604,6 +2979,7 @@ local function Scrollbar(name)
                     index = math.min(index, (barType=="vertical" and self.h or self.w)-(symbolSize-1))
                     self:setValue(maxValue/(barType=="vertical" and self.h or self.w)*index)
                 end
+                return true
             end
         end;
         
@@ -2633,14 +3009,11 @@ local function Scrollbar(name)
                     end
                 end
             end
-        end;
-        
+        end;        
     }
 
     return setmetatable(object, base)
 end
-
-
 
 
 local function Frame(name,parent) -- Frame
@@ -2729,7 +3102,7 @@ local function Frame(name,parent) -- Frame
             return typ
         end;
 
-        setFocus = function(self, obj)
+        setFocusedObject = function(self, obj)
             for _,index in pairs(objZIndex)do
                 for _,v in pairs(objects[index])do
                     if(v == obj)then
@@ -2752,13 +3125,13 @@ local function Frame(name,parent) -- Frame
             return xOffset, yOffset
         end;
 
-        removeFocus = function(self)
+        removeFocusedObject = function(self)
             if(focusedObject~=nil)then focusedObject:loseFocusHandler() end
             focusedObject = nil
             return self
         end;
 
-        getFocus = function(self)
+        getFocusedObject = function(self)
             return focusedObject
         end;
 
@@ -2771,7 +3144,7 @@ local function Frame(name,parent) -- Frame
         end;
 
         setCursor = function(self, _blink, _xCursor, _yCursor, color)
-            local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             cursorBlink = _blink or false
             if(_xCursor~=nil)then xCursor = obx+_xCursor-1 end
             if(_yCursor~=nil)then yCursor = oby+_yCursor-1 end
@@ -2823,7 +3196,6 @@ local function Frame(name,parent) -- Frame
 
         loseFocusHandler = function(self)
             base.loseFocusHandler(self)
-            self.drag = false
         end;
 
         getFocusHandler = function(self)
@@ -2867,11 +3239,11 @@ local function Frame(name,parent) -- Frame
             local xO, yO = self:getOffset()
             xO = xO < 0 and math.abs(xO) or -xO 
             yO = yO < 0 and math.abs(yO) or -yO 
-            if(self.drag)then    
+            if(self.drag)then
                 if(event=="mouse_drag")then
                     local parentX=1;local parentY=1
                     if(self.parent~=nil)then
-                        parentX,parentY = self.parent:calcRelToAbsPosition(self.parent:getAnchorPosition())
+                        parentX,parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
                     end
                     self:setPosition(x+self.xToRem-(parentX-1) + xO,y-(parentY-1) + yO)
                 end
@@ -2882,7 +3254,7 @@ local function Frame(name,parent) -- Frame
             end
 
             if(base.mouseHandler(self,event,button,x,y))then
-                local fx,fy = self:calcRelToAbsPosition(self:getAnchorPosition())
+                local fx,fy = self:getAbsolutePosition(self:getAnchorPosition())
                 for _,index in pairs(objZIndex)do
                     if(objects[index]~=nil)then
                         for _,v in rpairs(objects[index])do
@@ -2892,6 +3264,7 @@ local function Frame(name,parent) -- Frame
                                 end   
                             end
                         end
+                        if(focusedObject~=nil)then focusedObject:loseFocusHandler() end
                     end
                 end
 
@@ -2908,64 +3281,103 @@ local function Frame(name,parent) -- Frame
         end;
 
         setText = function(self, x, y, text)
-            local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if(y>=1)and(y<=self.h)then
-                drawHelper.setText(math.max(x+(obx-1),obx), oby+y-1, sub( text, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                if(self.parent~=nil)then
+                    self.parent:setText(math.max(x+(obx-1),obx)-(self.parent.x-1), oby+y-1-(self.parent.y-1), sub( text, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                else
+                    drawHelper.setText(math.max(x+(obx-1),obx), oby+y-1, sub( text, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                end
             end
         end;
 
         setBG = function(self, x, y, bgCol)
-            local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if(y>=1)and(y<=self.h)then
-                drawHelper.setBG(math.max(x+(obx-1),obx), oby+y-1, sub( bgCol, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                if(self.parent~=nil)then
+                    self.parent:setBG(math.max(x+(obx-1),obx)-(self.parent.x-1), oby+y-1-(self.parent.y-1), sub( bgCol, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                else
+                    drawHelper.setBG(math.max(x+(obx-1),obx), oby+y-1, sub( bgCol, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                end
             end
         end;
 
         setFG = function(self, x, y, fgCol)
-            local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if(y>=1)and(y<=self.h)then
-                drawHelper.setFG(math.max(x+(obx-1),obx), oby+y-1, sub( fgCol, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                if(self.parent~=nil)then
+                    self.parent:setFG(math.max(x+(obx-1),obx)-(self.parent.x-1), oby+y-1-(self.parent.y-1), sub( fgCol, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                else
+                    drawHelper.setFG(math.max(x+(obx-1),obx), oby+y-1, sub( fgCol, math.max(1 - x + 1, 1), self.w - x + 1 ))
+                end
             end
         end;
 
         writeText = function(self, x, y, text, bgCol, fgCol)
-            local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if(y>=1)and(y<=self.h)then
-                drawHelper.writeText(math.max(x+(obx-1),obx), oby+y-1, sub( text, math.max(1 - x + 1, 1), self.w - x + 1 ), bgCol, fgCol)
+                if(self.parent~=nil)then
+                    self.parent:writeText(math.max(x+(obx-1),obx)-(self.parent.x-1), oby+y-1-(self.parent.y-1), sub( text, math.max(1 - x + 1, 1), self.w - x + 1 ), bgCol, fgCol)
+                else
+                    drawHelper.writeText(math.max(x+(obx-1),obx), oby+y-1, sub( text, math.max(1 - x + 1, 1), self.w - x + 1 ), bgCol, fgCol)
+                end
             end
         end;
 
         drawBackgroundBox = function(self, x, y, w, h, bgCol)
-            local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             h = (y < 1 and (h+y > self.h and self.h or h+y-1) or (h+y > self.h and self.h-y+1 or h))
             w = (x < 1 and (w+x > self.w and self.w or w+x-1) or (w+x > self.w and self.w-x+1 or w))
-            drawHelper.drawBackgroundBox(math.max(x+(obx-1),obx), math.max(y+(oby-1),oby), w, h, bgCol)
+            if(self.parent~=nil)then
+                self.parent:drawBackgroundBox(math.max(x+(obx-1),obx)-(self.parent.x-1), math.max(y+(oby-1),oby)-(self.parent.y-1), w, h, bgCol)
+            else
+                drawHelper.drawBackgroundBox(math.max(x+(obx-1),obx), math.max(y+(oby-1),oby), w, h, bgCol)
+            end
         end;
 
         drawTextBox = function(self, x, y, w, h, symbol)
-            local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             h = (y < 1 and (h+y > self.h and self.h or h+y-1) or (h+y > self.h and self.h-y+1 or h))
             w = (x < 1 and (w+x > self.w and self.w or w+x-1) or (w+x > self.w and self.w-x+1 or w))
-            drawHelper.drawTextBox(math.max(x+(obx-1),obx), math.max(y+(oby-1),oby), w, h, symbol:sub(1,1))
+            if(self.parent~=nil)then
+                self.parent:drawTextBox(math.max(x+(obx-1),obx)-(self.parent.x-1), math.max(y+(oby-1),oby)-(self.parent.y-1), w, h, symbol:sub(1,1))
+            else
+                drawHelper.drawTextBox(math.max(x+(obx-1),obx), math.max(y+(oby-1),oby), w, h, symbol:sub(1,1))
+            end
         end;
 
         drawForegroundBox = function(self, x, y, w, h, fgCol)
-            local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
+            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             h = (y < 1 and (h+y > self.h and self.h or h+y-1) or (h+y > self.h and self.h-y+1 or h))
             w = (x < 1 and (w+x > self.w and self.w or w+x-1) or (w+x > self.w and self.w-x+1 or w))
-            drawHelper.drawForegroundBox(math.max(x+(obx-1),obx), math.max(y+(oby-1),oby), w, h, fgCol)
+            if(self.parent~=nil)then
+                self.parent:drawForegroundBox(math.max(x+(obx-1),obx)-(self.parent.x-1), math.max(y+(oby-1),oby)-(self.parent.y-1), w, h, fgCol)
+            else
+                drawHelper.drawForegroundBox(math.max(x+(obx-1),obx), math.max(y+(oby-1),oby), w, h, fgCol)
+            end
         end;
                 
         draw = function(self)
             if(self:getVisualChanged())then
                 if(base.draw(self))then
-                    local obx, oby = self:calcRelToAbsPosition(self:getAnchorPosition())
-                    drawHelper.drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
-                    drawHelper.drawForegroundBox(obx, oby, self.w, self.h, self.fgcolor)
-                    drawHelper.drawTextBox(obx, oby, self.w, self.h, " ")
+                    local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                    local anchx, anchy = self:getAnchorPosition()
+                    if(self.parent~=nil)then
+                        self.parent:drawBackgroundBox(anchx, anchy, self.w, self.h, self.bgcolor)
+                        self.parent:drawForegroundBox(anchx, anchy, self.w, self.h, self.fgcolor)
+                        self.parent:drawTextBox(anchx, anchy, self.w, self.h, " ")
+                    else
+                        drawHelper.drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
+                        drawHelper.drawForegroundBox(obx, oby, self.w, self.h, self.fgcolor)
+                        drawHelper.drawTextBox(obx, oby, self.w, self.h, " ")
+                    end
                     parentTerminal.setCursorBlink(false)
                     if(self.barActive)then
-                        drawHelper.writeText(obx, oby, getTextHorizontalAlign(self.barText, self.w, self.barTextAlign), self.barBackground, self.barTextcolor)
+                        if(self.parent~=nil)then
+                            self.parent:writeText(anchx, anchy, getTextHorizontalAlign(self.barText, self.w, self.barTextAlign), self.barBackground, self.barTextcolor)
+                        else
+                            drawHelper.writeText(obx, oby, getTextHorizontalAlign(self.barText, self.w, self.barTextAlign), self.barBackground, self.barTextcolor)
+                        end
                     end
 
                     for _,index in rpairs(objZIndex)do
@@ -3076,6 +3488,18 @@ local function Frame(name,parent) -- Frame
 
         addScrollbar = function(self, name)
             local obj = Scrollbar(name)
+            obj.name = name
+            return addObject(obj)
+        end;
+
+        addMenubar = function(self, name)
+            local obj = Menubar(name)
+            obj.name = name
+            return addObject(obj)
+        end;
+
+        addThread = function(self, name)
+            local obj = Thread(name)
             obj.name = name
             return addObject(obj)
         end;
