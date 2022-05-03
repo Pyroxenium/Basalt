@@ -1,6 +1,6 @@
 # Basalt - a UI Framework for Computercraft
 
-WORK IN PROGRESS
+Basalt is still under developement and you may find bugs!
 
 check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information<br>
 if you wanna message me: NyoriE#8206 on discord
