@@ -1,3 +1,5 @@
+-- current version 1
+
 local theme = {
     basaltBG = colors.lightGray, 
     basaltFG = colors.black, 
@@ -21,7 +23,7 @@ local theme = {
     selectionFG = colors.lightGray,
 }
 
-local basalt = {debugger=true}
+local basalt = {debugger=true, version=1}
 local activeFrame
 local frames = {}
 
@@ -245,7 +247,8 @@ local function basaltDrawHelper()
 
         update = function ()
             local xC, yC = terminal.getCursorPos()
-            local isBlinking = terminal.getCursorBlink() 
+            local isBlinking = false
+            if(terminal.getCursorBlink~=nil)then isBlinking = terminal.getCursorBlink() end
             terminal.setCursorBlink(false)
             for n=1, h do
                 terminal.setCursorPos(1, n)
@@ -1633,29 +1636,23 @@ local function Input(name) -- Input
                     for n=1,self.h do
                         if(n==verticalAlign)then
                             local val = tostring(base.getValue())
-                            local text = inputType == "password" and ("*"):rep(val:len()) or val
-                            if(text:len()>=self.w)then
-                                if(inputType=="password")then
-                                    text = ("*"):rep(text:len()):sub(text:len()-self.w+2, text:len())
-                                else
-                                    text = text:sub(text:len()-self.w+2, text:len())
-                                end
-                            end
                             local bCol = self.bgcolor
                             local fCol = self.fgcolor
-                            if(text:len()<=0)then text = showingText bCol = defaultBGCol or bCol fCol = defaultFGCol or fCol end
+                            local text
+                            if(val:len()<=0)then text = showingText bCol = defaultBGCol or bCol fCol = defaultFGCol or fCol end
 
-                            local text = showingText
-                            if(val~="")then 
+                            text = showingText
+                            if(val~="")then
                                 text = val
                             end
-                            text = text:sub(wIndex, self.w+wIndex-1)      
+                            text = text:sub(wIndex, self.w+wIndex-1)
                             local space = self.w-text:len()
                             if(space<0)then space = 0 end
+                            if(inputType=="password")and(val~="")then
+                                text = string.rep("*", text:len())
+                            end
                             text = text..string.rep(" ", space)
-                            self.parent:setText(obx, oby+n-1, text)
                             self.parent:writeText(obx, oby+(n-1), text, bCol, fCol)
-
                         end
                     end
                 end
@@ -1910,6 +1907,7 @@ local function Textfield(name)
                 if(self.parent~=nil)then
                     local obx, oby = self:getAnchorPosition()
                     self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
+                    self.parent:drawForegroundBox(obx, oby, self.w, self.h, self.fgcolor)
                     for n=1, self.h do
                         local text = ""
                         if(lines[n+hIndex-1]~=nil)then 
