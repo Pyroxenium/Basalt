@@ -10,6 +10,7 @@ Todo:<br>
 -scrolling in a menubar doesn't work correctly<br>
 -frames dont move correctly if anchor is bottom/right <br>
 -click event and lose focus event order is not correct<br>
+-improve event system<br>
 
     MIT License
  
