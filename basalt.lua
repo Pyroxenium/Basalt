@@ -398,6 +398,7 @@ local function Object(name) -- Base object
             if(self.parent~=nil)then
                 self.parent:setFocusedObject(self)
             end
+            return self
         end;
 
         setZIndex = function(self, index)
@@ -531,12 +532,12 @@ local function Object(name) -- Base object
         end;
 
 
-        getAbsolutePosition = function(self, x,y) -- relative position
+        getAbsolutePosition = function(self, x,y) -- relative position to absolute position
             if(x==nil)then x = self.x end
             if(y==nil)then y = self.y end
         
             if(self.parent~=nil)then
-                local fx,fy = self.parent:getAbsolutePosition()
+                local fx,fy = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
                 x=fx+x-1
                 y=fy+y-1
             end
@@ -1353,6 +1354,8 @@ local function Label(name) -- Label
     local base = Object(name)
     local typ = "Label"
 
+    base:setZIndex(3)
+
     local autoWidth = true
     base:setValue("")
 
@@ -1384,6 +1387,70 @@ local function Label(name) -- Label
             end
         end;
 
+    }
+
+    return setmetatable(object, base)
+end
+
+local function Pane(name) -- Pane
+    local base = Object(name)
+    local typ = "Pane"
+
+
+    local object = {
+        getType = function(self)
+            return typ
+        end;
+
+        draw = function(self)
+            if(base.draw(self))then
+                if(self.parent~=nil)then
+                    local obx, oby = self:getAnchorPosition()
+                    self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
+                    self.parent:drawForegroundBox(obx, oby, self.w, self.h, self.fgcolor)
+                end
+            end
+        end;
+
+    }
+
+    return setmetatable(object, base)
+end
+
+local function Image(name) -- Pane
+    local base = Object(name)
+    local typ = "Image"
+    base:setZIndex(2)
+    local image
+
+    local object = {
+        getType = function(self)
+            return typ
+        end;
+
+        loadImage = function(self, path)
+            image = paintutils.loadImage(path)
+            return self
+        end;
+
+        draw = function(self)
+            if(base.draw(self))then
+                if(self.parent~=nil)then
+                    if(image~=nil)then
+                        local obx, oby = self:getAnchorPosition()
+
+                        for yPos=1,math.min(#image, self.h) do
+                            local line = image[yPos]
+                            for xPos=1,math.min(#line, self.w) do
+                                if line[xPos] > 0 then
+                                    self.parent:drawBackgroundBox(obx + xPos - 1, oby + yPos - 1, 1, 1, line[xPos])
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end;
     }
 
     return setmetatable(object, base)
@@ -3498,6 +3565,18 @@ local function Frame(name,parent) -- Frame
 
         addThread = function(self, name)
             local obj = Thread(name)
+            obj.name = name
+            return addObject(obj)
+        end;
+
+        addPane = function(self, name)
+            local obj = Pane(name)
+            obj.name = name
+            return addObject(obj)
+        end;
+
+        addImage = function(self, name)
+            local obj = Image(name)
             obj.name = name
             return addObject(obj)
         end;
