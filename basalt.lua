@@ -620,6 +620,17 @@ local function Object(name) -- Base object
             return self
         end;
 
+        onBackgroundKey = function(self, func)
+            self:registerEvent("background_key", func)
+            self:registerEvent("background_char", func)
+            return self
+        end;
+
+        onBackgroundKeyUp = function(self, func)
+            self:registerEvent("background_key_up", func)
+            return self
+        end;
+
         isFocused = function(self)
             if(self.parent~=nil)then
                 return self.parent:getFocusedObject()==self
@@ -661,6 +672,10 @@ local function Object(name) -- Base object
                 return true
             end
             return false
+        end;
+
+        backgroundKeyHandler = function(self, event, key)
+            eventSystem:sendEvent("background_"..event, self, event, key)
         end;
 
         valueChangedHandler = function(self)
@@ -3282,6 +3297,19 @@ local function Frame(name,parent) -- Frame
             return false
         end;
 
+        backgroundKeyHandler = function(self, event, key)
+            base.backgroundKeyHandler(self, event, key)
+            for _,index in pairs(objZIndex)do
+                if(objects[index]~=nil)then
+                    for _,v in pairs(objects[index])do
+                        if(v.backgroundKeyHandler~=nil)then
+                            v:backgroundKeyHandler(event,key)
+                        end
+                    end
+                end
+            end
+        end;
+
         eventHandler = function(self, event, p1, p2, p3, p4)
             base.eventHandler(self, event, p1, p2, p3, p4)
             for _,index in pairs(objZIndex)do
@@ -3601,7 +3629,7 @@ local function basaltUpdateEvent(event, p1,p2,p3,p4)
     if(event=="mouse_drag")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
     if(event=="mouse_up")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
     if(event=="mouse_scroll")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
-    if(event=="key")or(event=="char")then activeFrame:keyHandler(event,p1,p2,p3,p4) end
+    if(event=="key")or(event=="char")then activeFrame:keyHandler(event,p1) activeFrame:backgroundKeyHandler(event,p1) end
     for _,v in pairs(frames)do
         v:eventHandler(event, p1, p2, p3, p4)
     end
