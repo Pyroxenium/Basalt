@@ -11,6 +11,7 @@ Todo:<br>
 -frames dont move correctly if anchor is bottom/right <br>
 -click event and lose focus event order is not correct<br>
 -improve event system<br>
+-add info to image and pane object, and onBackgroundKey
 
     MIT License
  
