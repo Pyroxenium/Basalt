@@ -12,6 +12,7 @@ Todo:<br>
 -click event and lose focus event order is not correct<br>
 -improve event system<br>
 -add info to image and pane object, and onBackgroundKey
+- frame with a program wich is scrolled does not get correct mouse events
 
     MIT License
  
