@@ -6,12 +6,12 @@ check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information<br>
 if you wanna message me: NyoriE#8206 on discord
 
 Todo:<br>
--improve performance<br>
--scrolling in a menubar doesn't work correctly<br>
--frames dont move correctly if anchor is bottom/right <br>
--click event and lose focus event order is not correct<br>
--improve event system<br>
--add info to image and pane object, and onBackgroundKey
+- improve performance<br>
+- scrolling in a menubar doesn't work correctly<br>
+- frames dont move correctly if anchor is bottom/right <br>
+- click event and lose focus event order is not correct<br>
+- improve event system<br>
+- add info to image and pane object, and onBackgroundKey
 - frame with a program wich is scrolled does not get correct mouse events
 
     MIT License
