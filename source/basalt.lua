@@ -1270,7 +1270,7 @@ local function Program(name)
                 if(curProcess==nil)then return false end
                 if not(curProcess:isDead())then
                     if not(paused)then
-                        local absX,absY = self:getAbsolutePosition(self:getAnchorPosition())
+                        local absX,absY = self:getAbsolutePosition(self:getAnchorPosition(nil,nil,true))
                         curProcess:resume(event, button, x-absX+1, y-absY+1)
                     end
                 end
@@ -1438,6 +1438,10 @@ local function Image(name) -- Pane
     local typ = "Image"
     base:setZIndex(2)
     local image
+
+    local function shrink()
+
+    end
 
     local object = {
         getType = function(self)
@@ -1625,7 +1629,7 @@ local function Input(name) -- Input
             if(base.keyHandler(self, event, key))then
                 internalValueChange = true
                 if(event=="key")then
-                    if(key==259)then -- on backspace
+                    if(key==keys.backspace)then -- on backspace
                         local text = tostring(base.getValue())
                         if(textX>1)then
                             self:setValue(text:sub(1,textX-2)..text:sub(textX,text:len()))
@@ -1637,12 +1641,12 @@ local function Input(name) -- Input
                             end
                         end
                     end
-                    if(key==257)then -- on enter
+                    if(key==keys.enter)then -- on enter
                         if(self.parent~=nil)then
                             --self.parent:removeFocusedObject(self)
                         end
                     end
-                    if(key==262)then -- right arrow
+                    if(key==keys.right)then -- right arrow
                         local tLength = tostring(base.getValue()):len()
                         textX = textX+1
 
@@ -1656,7 +1660,7 @@ local function Input(name) -- Input
                         if(wIndex<1)then wIndex = 1 end
                     end
 
-                    if(key==263)then -- left arrow
+                    if(key==keys.left)then -- left arrow
                         textX = textX-1
                         if(textX>=1)then
                             if(textX<wIndex)or(textX>=self.w+wIndex)then
@@ -1821,7 +1825,7 @@ local function Textfield(name)
             if(base.keyHandler(self, event, key))then
                 local obx,oby = self:getAnchorPosition()
                 if(event=="key")then
-                    if(key==259)then -- on backspace
+                    if(key==keys.backspace)then -- on backspace
                         if(lines[textY]=="")then
                             if(textY>1)then
                                 table.remove(lines,textY)
@@ -1854,7 +1858,7 @@ local function Textfield(name)
                         self:setValue("")
                     end
 
-                    if(key==257)then -- on enter
+                    if(key==keys.enter)then -- on enter
                         table.insert(lines,textY+1,lines[textY]:sub(textX,lines[textY]:len()))
                         lines[textY] = lines[textY]:sub(1,textX-1)    
                         textY = textY+1
@@ -1866,7 +1870,7 @@ local function Textfield(name)
                         self:setValue("")
                     end
 
-                    if(key==265)then -- arrow up
+                    if(key==keys.up)then -- arrow up
                         if(textY>1)then
                             textY = textY-1
                             if(textX>lines[textY]:len()+1)then textX = lines[textY]:len()+1 end
@@ -1883,7 +1887,7 @@ local function Textfield(name)
                             end
                         end
                     end
-                    if(key==264)then -- arrow down
+                    if(key==keys.down)then -- arrow down
                         if(textY<#lines)then
                             textY = textY+1
                             if(textX>lines[textY]:len()+1)then textX = lines[textY]:len()+1 end
@@ -1893,7 +1897,7 @@ local function Textfield(name)
                             end
                         end
                     end
-                    if(key==262)then -- arrow right
+                    if(key==keys.right)then -- arrow right
                         textX = textX+1
                         if(textY<#lines)then
                             if(textX>lines[textY]:len()+1)then
@@ -1910,7 +1914,7 @@ local function Textfield(name)
                         if(wIndex<1)then wIndex = 1 end 
     
                     end
-                    if(key==263)then -- arrow left
+                    if(key==keys.left)then -- arrow left
                         textX = textX-1
                         if(textX>=1)then
                             if(textX<wIndex)or(textX>=self.w+wIndex)then
@@ -2482,11 +2486,13 @@ local function Dropdown(name)
                 if(self.parent~=nil)then
                     self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
                     if(#list>=1)then
-                        if(self:getValue().text~=nil)then
-                            if(state==1)then
-                                self.parent:writeText(obx, oby, getTextHorizontalAlign(self:getValue().text, self.w, align):sub(1,self.w-1)..closedSymbol, self.bgcolor, self.fgcolor)
-                            else
-                                self.parent:writeText(obx, oby, getTextHorizontalAlign(self:getValue().text, self.w, align):sub(1,self.w-1)..openedSymbol, self.bgcolor, self.fgcolor)
+                        if(self:getValue()~=nil)then
+                            if(self:getValue().text~=nil)then
+                                if(state==1)then
+                                    self.parent:writeText(obx, oby, getTextHorizontalAlign(self:getValue().text, self.w, align):sub(1,self.w-1)..closedSymbol, self.bgcolor, self.fgcolor)
+                                else
+                                    self.parent:writeText(obx, oby, getTextHorizontalAlign(self:getValue().text, self.w, align):sub(1,self.w-1)..openedSymbol, self.bgcolor, self.fgcolor)
+                                end
                             end
                         end
                         if(state==2)then
@@ -3167,10 +3173,11 @@ local function Frame(name,parent) -- Frame
             for k,v in pairs(b)do
                 if(v==obj)then
                     table.remove(objects[a],k)
-                    return;
+                    return true;
                 end
             end
         end
+        return false
     end
 
     object = {
