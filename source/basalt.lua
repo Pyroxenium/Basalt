@@ -437,9 +437,11 @@ local function Object(name) -- Base object
         end;
 
         setValue = function(self, _value)
-            value = _value
-            visualsChanged = true
-            self:valueChangedHandler()
+            if(value~=_value)then
+                value = _value
+                visualsChanged = true
+                self:valueChangedHandler()
+            end
             return self
         end; 
 
@@ -656,7 +658,7 @@ local function Object(name) -- Base object
             return eventSystem:removeEvent(event, index)
         end;
 
-        mouseHandler = function(self, event, button, x, y)
+        mouseClickHandler = function(self, event, button, x, y)
             local objX,objY = self:getAbsolutePosition(self:getAnchorPosition())
             if(objX<=x)and(objX+self.w>x)and(objY<=y)and(objY+self.h>y)and(isVisible)then
                 if(self.parent~=nil)then self.parent:setFocusedObject(self) end
@@ -734,7 +736,7 @@ local function Button(name) -- Button
         draw = function(self)
             if(base.draw(self))then
                 if(self.parent~=nil)then
-                    local obx, oby = self:getAnchorPosition(self.x,self.y)
+                    local obx, oby = self:getAnchorPosition()
                     local verticalAlign = getTextVerticalAlign(self.h, textVerticalAlign)
 
                     self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
@@ -1263,8 +1265,8 @@ local function Program(name)
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if(base.mouseHandler(self,event,button,x,y))then
+        mouseClickHandler = function(self, event, button, x, y)
+            if(base.mouseClickHandler(self,event,button,x,y))then
                 if(curProcess==nil)then return false end
                 if not(curProcess:isDead())then
                     if not(paused)then
@@ -1488,8 +1490,8 @@ local function Checkbox(name) -- Checkbox
             return typ
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if(base.mouseHandler(self, event, button, x, y))then
+        mouseClickHandler = function(self, event, button, x, y)
+            if(base.mouseClickHandler(self, event, button, x, y))then
                 if(event == "mouse_click")and(button == 1)then
                     if(self:getValue()~=true)and(self:getValue()~=false)then
                         self:setValue(false)
@@ -1697,8 +1699,8 @@ local function Input(name) -- Input
             end
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if(base.mouseHandler(self, event, button, x, y))then
+        mouseClickHandler = function(self, event, button, x, y)
+            if(base.mouseClickHandler(self, event, button, x, y))then
                 if(event == "mouse_click")and(button == 1)then
                     
                 end
@@ -1943,8 +1945,8 @@ local function Textfield(name)
             end
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if(base.mouseHandler(self, event, button, x, y))then
+        mouseClickHandler = function(self, event, button, x, y)
+            if(base.mouseClickHandler(self, event, button, x, y))then
                 local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx,anchy = self:getAnchorPosition()
                 if(event=="mouse_click")then
@@ -2098,9 +2100,9 @@ local function List(name)
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if(base.mouseHandler(self, event, button, x, y))then
-                local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
+        mouseClickHandler = function(self, event, button, x, y)
+            local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
+            if(obx<=x)and(obx+self.w>x)and(oby<=y)and(oby+self.h>y)and(self:isVisible())then
                 if(event=="mouse_click")or(event=="mouse_drag")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
                     if(button==1)then
                         if(#list>0)then
@@ -2108,6 +2110,7 @@ local function List(name)
                                 if(list[n+yOffset]~=nil)then
                                     if(obx<=x)and(obx+self.w>x)and(oby+n-1==y)then
                                         self:setValue(list[n+yOffset])
+                                        self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n+yOffset])
                                     end
                                 end
                             end
@@ -2274,16 +2277,18 @@ local function Menubar(name)
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if(base.mouseHandler(self,event,button,x,y))then
-                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+        mouseClickHandler = function(self, event, button, x, y)
+            local objX,objY = self:getAbsolutePosition(self:getAnchorPosition())
+            if(objX<=x)and(objX+self.w>x)and(objY<=y)and(objY+self.h>y)and(self:isVisible())then
+                if(self.parent~=nil)then self.parent:setFocusedObject(self) end
                 if(event=="mouse_click")then
                     local xPos = 1
                     for n=1+itemOffset,#list do
                         if(list[n]~=nil)then
                             if(xPos + list[n].text:len() + space*2 <= self.w)then
-                                if(obx + (xPos-1)<= x)and(obx + (xPos-1) + list[n].text:len() + space*2 > x)and(oby == y)then
+                                if(objX + (xPos-1)<= x)and(objX + (xPos-1) + list[n].text:len() + space*2 > x)and(objY == y)then
                                     self:setValue(list[n])
+                                    self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n])
                                 end
                                 xPos = xPos+list[n].text:len()+space*2
                             else
@@ -2305,7 +2310,9 @@ local function Menubar(name)
                         itemOffset = mScroll
                     end
                 end
+                return true
             end
+            return false
         end;
         
         draw = function(self)
@@ -2374,9 +2381,6 @@ local function Dropdown(name)
 
         addItem = function(self, text, bgCol, fgCol, ...)
             table.insert(list, {text=text, bgCol = bgCol or self.bgcolor, fgCol = fgCol or self.fgcolor, args={...}})
-            if(#list==1)then
-                self:setValue(list[1])
-            end
             return self
         end;
 
@@ -2431,7 +2435,7 @@ local function Dropdown(name)
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
+        mouseClickHandler = function(self, event, button, x, y)
             if(state == 2)then
                 local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if(event=="mouse_click")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
@@ -2465,7 +2469,7 @@ local function Dropdown(name)
                 end
                 self:setVisualChanged()
             end
-            if(base.mouseHandler(self, event, button, x, y))then
+            if(base.mouseClickHandler(self, event, button, x, y))then
                 state = 2
             else
                 state = 1
@@ -2587,7 +2591,7 @@ local function Radio(name)
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
+        mouseClickHandler = function(self, event, button, x, y)
             local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
             if(event=="mouse_click")then -- remove mouse_drag if i want to make objects moveable uwuwuwuw
                 if(button==1)then
@@ -2906,8 +2910,8 @@ local function Slider(name)
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if(base.mouseHandler(self,event,button,x,y))then
+        mouseClickHandler = function(self, event, button, x, y)
+            if(base.mouseClickHandler(self,event,button,x,y))then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if(barType=="horizontal")then
                     for _index=0,self.w-1 do
@@ -3029,8 +3033,8 @@ local function Scrollbar(name)
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if(base.mouseHandler(self,event,button,x,y))then
+        mouseClickHandler = function(self, event, button, x, y)
+            if(base.mouseClickHandler(self,event,button,x,y))then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if((event=="mouse_click")or(event=="mouse_drag"))and(button==1)then
                     if(barType=="horizontal")then
@@ -3327,7 +3331,7 @@ local function Frame(name,parent) -- Frame
             end
         end;
 
-        mouseHandler = function(self, event, button, x, y)
+        mouseClickHandler = function(self, event, button, x, y)
             local xO, yO = self:getOffset()
             xO = xO < 0 and math.abs(xO) or -xO 
             yO = yO < 0 and math.abs(yO) or -yO 
@@ -3345,14 +3349,14 @@ local function Frame(name,parent) -- Frame
                 return true
             end
 
-            if(base.mouseHandler(self,event,button,x,y))then
+            if(base.mouseClickHandler(self,event,button,x,y))then
                 local fx,fy = self:getAbsolutePosition(self:getAnchorPosition())
                 for _,index in pairs(objZIndex)do
                     if(objects[index]~=nil)then
                         for _,v in rpairs(objects[index])do
-                            if(v.mouseHandler~=nil)then
-                                if(v:mouseHandler(event,button,x+xO,y+yO))then
-                                    return true         
+                            if(v.mouseClickHandler~=nil)then
+                                if(v:mouseClickHandler(event,button,x+xO,y+yO))then
+                                    return true      
                                 end   
                             end
                         end
@@ -3503,6 +3507,10 @@ local function Frame(name,parent) -- Frame
             return removeObject(obj)
         end;
 
+        getObject = function(self, obj)
+            return getObject(obj)
+        end;
+
         addButton = function(self, name)
             local obj = Button(name)
             obj.name = name
@@ -3623,10 +3631,10 @@ end
 
 local updaterActive = false
 local function basaltUpdateEvent(event, p1,p2,p3,p4)
-    if(event=="mouse_click")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
-    if(event=="mouse_drag")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
-    if(event=="mouse_up")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
-    if(event=="mouse_scroll")then activeFrame:mouseHandler(event,p1,p2,p3,p4) end
+    if(event=="mouse_click")then activeFrame:mouseClickHandler(event,p1,p2,p3,p4) end
+    if(event=="mouse_drag")then activeFrame:mouseClickHandler(event,p1,p2,p3,p4) end
+    if(event=="mouse_up")then activeFrame:mouseClickHandler(event,p1,p2,p3,p4) end
+    if(event=="mouse_scroll")then activeFrame:mouseClickHandler(event,p1,p2,p3,p4) end
     if(event=="key")or(event=="char")then activeFrame:keyHandler(event,p1) activeFrame:backgroundKeyHandler(event,p1) end
     for _,v in pairs(frames)do
         v:eventHandler(event, p1, p2, p3, p4)
@@ -3698,9 +3706,9 @@ end
 
 if(basalt.debugger)then
     basalt.debugFrame = basalt.createFrame("basaltDebuggingFrame"):showBar():setBackground(colors.lightGray):setBar("Debug",colors.black,colors.gray)
-    basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.w - 2, basalt.debugFrame.h - 3):setPosition(2,3):show()
+    basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.w - 2, basalt.debugFrame.h - 3):setPosition(2,3):setScrollable(true):show()
     basalt.debugFrame:addButton("back"):setAnchor("right"):setSize(1,1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
-    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = activeFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):show()
+    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = activeFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):setZIndex(20):show()
 end
 
 
@@ -3718,8 +3726,8 @@ if(basalt.debugger)then
         end
         basalt.debugLabel:setText("[Debug] "..str)
         basalt.debugList:addItem(str)
-        if(basalt.debugList:getItemCount()>basalt.debugList.h)then basalt.debugList:removeItem(1) end
-
+        if(basalt.debugList:getItemCount()>50)then basalt.debugList:removeItem(1) end
+        basalt.debugList:setValue(basalt.debugList:getItem(basalt.debugList:getItemCount()))
         basalt.debugLabel:show()
     end
 end
