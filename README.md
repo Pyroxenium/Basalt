@@ -12,8 +12,7 @@ Todo:<br>
 - Fix click event and lose focus event order<br>
 - Improve event system<br>
 - Add info to image and pane object, and onBackgroundKey
-- Fix mouse events 
-- Frame with a program which is scrolled does not get correct mouse events
+- Fix mouse events for frames with a program
 
     MIT License
  
