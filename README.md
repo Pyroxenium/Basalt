@@ -1,18 +1,19 @@
-# Basalt - a UI Framework for Computercraft
+# Basalt - A UI Framework for Computercraft
 
 Basalt is still under developement and you may find bugs!
 
-check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information<br>
-if you wanna message me: NyoriE#8206 on discord
+Check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information<br>
+If you have questions, feel free to message me: NyoriE#8206 on discord
 
 Todo:<br>
-- improve performance<br>
-- scrolling in a menubar doesn't work correctly<br>
-- frames dont move correctly if anchor is bottom/right <br>
-- click event and lose focus event order is not correct<br>
-- improve event system<br>
-- add info to image and pane object, and onBackgroundKey
-- frame with a program wich is scrolled does not get correct mouse events
+- Improve performance<br>
+- Fix menubar scroll functionality<br>
+- Fix frames moving incorrectly when anchor is bottom/right<br>
+- Fix click event and lose focus event order<br>
+- Improve event system<br>
+- Add info to image and pane object, and onBackgroundKey
+- Fix mouse events 
+- Frame with a program which is scrolled does not get correct mouse events
 
     MIT License
  
