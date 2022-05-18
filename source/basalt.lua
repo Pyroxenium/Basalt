@@ -650,12 +650,16 @@ local function Object(name) -- Base object
             return self
         end;
 
-        registerEvent = function(self,event, func)
+        registerEvent = function(self, event, func)
             return eventSystem:registerEvent(event, func)
         end;
 
-        removeEvent = function(self,event, index)
+        removeEvent = function(self, event, index)
             return eventSystem:removeEvent(event, index)
+        end;
+
+        sendEvent = function(self, event, ...)
+            return eventSystem:sendEvent(event, self, ...)
         end;
 
         mouseClickHandler = function(self, event, button, x, y)
@@ -1423,7 +1427,7 @@ local function Pane(name) -- Pane
                 if(self.parent~=nil)then
                     local obx, oby = self:getAnchorPosition()
                     self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
-                    self.parent:drawForegroundBox(obx, oby, self.w, self.h, self.fgcolor)
+                    self.parent:drawForegroundBox(obx, oby, self.w, self.h, self.bgcolor)
                 end
             end
         end;
@@ -1438,9 +1442,105 @@ local function Image(name) -- Pane
     local typ = "Image"
     base:setZIndex(2)
     local image
+    local shrinkedImage
+    local imageGotShrinked = false
 
     local function shrink()
 
+        -- shrinkSystem is copy pasted (and slightly changed) from blittle by Bomb Bloke: http://www.computercraft.info/forums2/index.php?/topic/25354-cc-176-blittle-api/
+    local relations = {[0] = {8, 4, 3, 6, 5}, {4, 14, 8, 7}, {6, 10, 8, 7}, {9, 11, 8, 0}, {1, 14, 8, 0}, {13, 12, 8, 0}, {2, 10, 8, 0}, {15, 8, 10, 11, 12, 14},
+    {0, 7, 1, 9, 2, 13}, {3, 11, 8, 7}, {2, 6, 7, 15}, {9, 3, 7, 15}, {13, 5, 7, 15}, {5, 12, 8, 7}, {1, 4, 7, 15}, {7, 10, 11, 12, 14}}
+
+local colourNum, exponents, colourChar = {}, {}, {}
+for i = 0, 15 do exponents[2^i] = i end
+do
+    local hex = "0123456789abcdef"
+    for i = 1, 16 do
+        colourNum[hex:sub(i, i)] = i - 1
+        colourNum[i - 1] = hex:sub(i, i)
+        colourChar[hex:sub(i, i)] = 2 ^ (i - 1)
+        colourChar[2 ^ (i - 1)] = hex:sub(i, i)
+        
+        local thisRel = relations[i - 1]
+        for i = 1, #thisRel do thisRel[i] = 2 ^ thisRel[i] end
+    end
+end
+
+local function getBestColourMatch(usage)
+    local lastCol = relations[exponents[usage[#usage][1]]]
+
+    for j = 1, #lastCol do
+        local thisRelation = lastCol[j]
+        for i = 1, #usage - 1 do if usage[i][1] == thisRelation then return i end end
+    end
+    
+    return 1
+end
+
+local function colsToChar(pattern, totals)
+    if not totals then
+        local newPattern = {}
+        totals = {}
+        for i = 1, 6 do
+            local thisVal = pattern[i]
+            local thisTot = totals[thisVal]
+            totals[thisVal], newPattern[i] = thisTot and (thisTot + 1) or 1, thisVal
+        end
+        pattern = newPattern
+    end
+    
+    local usage = {}
+    for key, value in pairs(totals) do usage[#usage + 1] = {key, value} end
+    
+    if #usage > 1 then
+        -- Reduce the chunk to two colours:
+        while #usage > 2 do
+            table.sort(usage, function (a, b) return a[2] > b[2] end)
+            local matchToInd, usageLen = getBestColourMatch(usage), #usage
+            local matchFrom, matchTo = usage[usageLen][1], usage[matchToInd][1]
+            for i = 1, 6 do if pattern[i] == matchFrom then
+                pattern[i] = matchTo
+                usage[matchToInd][2] = usage[matchToInd][2] + 1
+            end end
+            usage[usageLen] = nil
+        end
+ 
+        -- Convert to character. Adapted from oli414's function:
+        -- http://www.computercraft.info/forums2/index.php?/topic/25340-cc-176-easy-drawing-characters/
+        local data = 128
+        for i = 1, #pattern - 1 do if pattern[i] ~= pattern[6] then data = data + 2^(i-1) end end
+        return string.char(data), colourChar[usage[1][1] == pattern[6] and usage[2][1] or usage[1][1]], colourChar[pattern[6]]
+    else
+        -- Solid colour character:
+        return "\128", colourChar[pattern[1]], colourChar[pattern[1]]
+    end
+end
+
+        local results, width, height, bgCol = {{}, {}, {}}, 0, #image + #image % 3, base.bgcolor or colors.black
+        for i = 1, #image do if #image[i] > width then width = #image[i] end end
+        
+        for y = 0, height - 1, 3 do
+            local cRow, tRow, bRow, counter = {}, {}, {}, 1
+            
+            for x = 0, width - 1, 2 do
+                -- Grab a 2x3 chunk:
+                local pattern, totals = {}, {}
+                
+                for yy = 1, 3 do for xx = 1, 2 do
+                    pattern[#pattern + 1] = (image[y + yy] and image[y + yy][x + xx]) and (image[y + yy][x + xx] == 0 and bgCol or image[y + yy][x + xx]) or bgCol
+                    totals[pattern[#pattern]] = totals[pattern[#pattern]] and (totals[pattern[#pattern]] + 1) or 1
+                end end
+                
+                cRow[counter], tRow[counter], bRow[counter] = colsToChar(pattern, totals)
+                counter = counter + 1
+            end
+            
+            results[1][#results[1] + 1], results[2][#results[2] + 1], results[3][#results[3] + 1] = table.concat(cRow), table.concat(tRow), table.concat(bRow)
+        end
+        
+        results.width, results.height = #results[1][1], #results[1]
+        
+        shrinkedImage = results
     end
 
     local object = {
@@ -1450,6 +1550,19 @@ local function Image(name) -- Pane
 
         loadImage = function(self, path)
             image = paintutils.loadImage(path)
+            imageGotShrinked = false
+            return self
+        end;
+
+        loadBlittleImage = function(self, path)
+            --image = paintutils.loadImage(path)
+            imageGotShrinked = true
+            return self
+        end;
+
+        shrinkImage = function(self)
+            shrink()
+            imageGotShrinked = true
             return self
         end;
 
@@ -1458,12 +1571,27 @@ local function Image(name) -- Pane
                 if(self.parent~=nil)then
                     if(image~=nil)then
                         local obx, oby = self:getAnchorPosition()
-
-                        for yPos=1,math.min(#image, self.h) do
-                            local line = image[yPos]
-                            for xPos=1,math.min(#line, self.w) do
-                                if line[xPos] > 0 then
-                                    self.parent:drawBackgroundBox(obx + xPos - 1, oby + yPos - 1, 1, 1, line[xPos])
+                        if(imageGotShrinked)then -- this is copy pasted (and slightly changed) from blittle by Bomb Bloke: http://www.computercraft.info/forums2/index.php?/topic/25354-cc-176-blittle-api/
+                            local t, tC, bC = shrinkedImage[1], shrinkedImage[2], shrinkedImage[3]
+                            for i = 1, shrinkedImage.height do
+                                local tI = t[i]
+                                if type(tI) == "string" then
+                                    self.parent:setText(obx, oby + i - 1, tI)
+                                    self.parent:setFG(obx, oby + i - 1, tC[i])
+                                    self.parent:setBG(obx, oby + i - 1, bC[i])
+                                elseif type(tI) == "table" then
+                                    self.parent:setText(obx, oby + i - 1, tI[2])
+                                    self.parent:setFG(obx, oby + i - 1, tC[i])
+                                    self.parent:setBG(obx, oby + i - 1, bC[i])
+                                end
+                            end
+                        else
+                            for yPos=1,math.min(#image, self.h) do
+                                local line = image[yPos]
+                                for xPos=1,math.min(#line, self.w) do
+                                    if line[xPos] > 0 then
+                                        self.parent:drawBackgroundBox(obx + xPos - 1, oby + yPos - 1, 1, 1, line[xPos])
+                                    end
                                 end
                             end
                         end
@@ -1523,6 +1651,105 @@ local function Checkbox(name) -- Checkbox
                                 self.parent:writeText(obx, oby+(n-1), getTextHorizontalAlign(" ", self.w, "center"), self.bgcolor, self.fgcolor)
                             end
                         end
+                    end
+                end
+            end
+        end;
+
+    }
+
+    return setmetatable(object, base)
+end
+
+local function Progressbar(name) -- Checkbox
+    local base = Object(name)
+    local typ = "Progressbar"
+
+    local progress = 0
+
+    base:setZIndex(5)
+    base:setValue(false)
+    base.w = 25
+    base.h = 1
+    base.bgcolor = theme.CheckboxBG
+    base.fgcolor = theme.CheckboxFG
+
+    local activeBarColor = colors.black
+    local activeBarSymbol = ""
+    local activeBarSymbolCol = colors.white
+    local bgBarSymbol = ""
+    local direction = 0
+
+    local object = {
+
+        getType = function(self)
+            return typ
+        end;
+
+        setDirection = function(self, dir)
+            direction = dir
+            return self
+        end;
+
+        setProgressBar = function(self, color, symbol, symbolcolor)
+            activeBarColor = color or activeBarColor
+            activeBarSymbol = symbol or activeBarSymbol
+            activeBarSymbolCol = symbolcolor or activeBarSymbolCol
+            return self
+        end;
+
+        setBackgroundSymbol = function(self, symbol)
+            bgBarSymbol = symbol:sub(1,1)
+            return self
+        end;
+
+        setProgress = function(self, value)
+            if(value>=0)and(value<=100)and(progress~=value)then
+                progress = value
+                self:setValue(progress)
+                if(progress==100)then
+                    self:progressDoneHandler()
+                end
+            end
+            return self
+        end;
+
+        getProgress = function(self)
+            return progress
+        end;
+
+        onProgressDone = function(self, f)
+            self:registerEvent("progress_done", f)
+            return self
+        end;
+
+        progressDoneHandler = function(self)
+            self:sendEvent("progress_done")
+        end;
+
+        draw = function(self)
+            if(base.draw(self))then    
+                if(self.parent~=nil)then   
+                    local obx, oby = self:getAnchorPosition()
+                    self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
+                    self.parent:drawForegroundBox(obx, oby, self.w, self.h, self.fgcolor)
+                    self.parent:drawTextBox(obx, oby, self.w, self.h, bgBarSymbol)
+                    if(direction==1)then
+                        self.parent:drawBackgroundBox(obx, oby, self.w, self.h/100*progress, activeBarColor)
+                        self.parent:drawForegroundBox(obx, oby, self.w, self.h/100*progress, activeBarSymbolCol)
+                        self.parent:drawTextBox(obx, oby, self.w, self.h/100*progress, activeBarSymbol)
+                    elseif(direction==2)then
+                        self.parent:drawBackgroundBox(obx, oby+math.ceil(self.h-self.h/100*progress), self.w, self.h/100*progress, activeBarColor)
+                        self.parent:drawForegroundBox(obx, oby+math.ceil(self.h-self.h/100*progress), self.w, self.h/100*progress, activeBarSymbolCol)
+                        self.parent:drawTextBox(obx, oby+math.ceil(self.h-self.h/100*progress), self.w, self.h/100*progress, activeBarSymbol)
+                    elseif(direction==3)then
+                        self.parent:drawBackgroundBox(obx+math.ceil(self.w-self.w/100*progress), oby, self.w/100*progress, self.h, activeBarColor)
+                        self.parent:drawForegroundBox(obx+math.ceil(self.w-self.w/100*progress), oby, self.w/100*progress, self.h, activeBarSymbolCol)
+                        self.parent:drawTextBox(obx+math.ceil(self.w-self.w/100*progress), oby, self.w/100*progress, self.h, activeBarSymbol)
+                    else
+                        self.parent:drawBackgroundBox(obx, oby, self.w/100*progress, self.h, activeBarColor)
+                        self.parent:drawForegroundBox(obx, oby, self.w/100*progress, self.h, activeBarSymbolCol)
+                        self.parent:drawTextBox(obx, oby, self.w/100*progress, self.h, activeBarSymbol)
                     end
                 end
             end
@@ -1756,8 +1983,7 @@ local function Textfield(name)
     local hIndex, wIndex, textX, textY = 1, 1, 1, 1
     
     local lines = {""}
-    local selection = {}
-    local selectionColor = colors.lightBlue
+    local keyWords = {[colors.purple] = {"break"}}
 
     base.w = 20
     base.h = 8
@@ -1790,6 +2016,10 @@ local function Textfield(name)
                 table.insert(lines, text)
             end
             return self
+        end;
+
+        addKeyword = function(self, keyword, color)
+
         end;
 
         removeLine = function(self, index)
@@ -1856,6 +2086,17 @@ local function Textfield(name)
                             hIndex = hIndex-1
                         end
                         self:setValue("")
+                    end
+
+                    if(key==keys.delete)then -- on delete
+                        if(textX>lines[textY]:len())then
+                            if(lines[textY+1]~=nil)then
+                                lines[textY] = lines[textY]..lines[textY+1]
+                                table.remove(lines, textY+1)
+                            end
+                        else
+                            lines[textY] = lines[textY]:sub(1,textX-1)..lines[textY]:sub(textX+1,lines[textY]:len())
+                        end
                     end
 
                     if(key==keys.enter)then -- on enter
@@ -1954,6 +2195,22 @@ local function Textfield(name)
                 local obx,oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx,anchy = self:getAnchorPosition()
                 if(event=="mouse_click")then
+                    if(lines[y-oby+hIndex]~=nil)then
+                        textX = x-obx+wIndex
+                        textY = y-oby+hIndex
+                        if(textX>lines[textY]:len())then
+                            textX = lines[textY]:len()+1
+                        end
+                        if(textX<wIndex)then
+                            wIndex = textX-1
+                            if(wIndex<1)then wIndex = 1 end
+                        end
+                        if(self.parent~=nil)then
+                            self.parent:setCursor(true, anchx+textX-wIndex, anchy+textY-hIndex)
+                        end
+                    end
+                end
+                if(event=="mouse_drag")then
                     if(lines[y-oby+hIndex]~=nil)then
                         textX = x-obx+wIndex
                         textY = y-oby+hIndex
@@ -2170,6 +2427,7 @@ end
 local function Menubar(name)
     local base = Object(name)
     local typ = "Menubar"
+    local object = {}
 
     base.w = 30
     base.h = 1
@@ -2190,8 +2448,8 @@ local function Menubar(name)
         local mScroll = 0
         local xPos = 1
         for n=1,#list do
-            if(xPos + list[n].text:len() + space*2 > base.w)then
-                mScroll = mScroll + 1
+            if(xPos + list[n].text:len() + space*2 > object.w)then
+                mScroll = mScroll + list[n].text:len() + space*2
             end
             xPos = xPos+list[n].text:len()+space*2
 
@@ -2199,7 +2457,7 @@ local function Menubar(name)
         return mScroll
     end
 
-    local object = {
+    object = {
         getType = function(self)
             return typ
         end;
@@ -2324,18 +2582,23 @@ local function Menubar(name)
                 if(self.parent~=nil)then
                     local obx, oby = self:getAnchorPosition()
                     self.parent:drawBackgroundBox(obx, oby, self.w, self.h, self.bgcolor)
-                    local xPos = 1
-                    for n=1+itemOffset,#list do
-                        if(list[n]~=nil)then
-                            if(xPos + list[n].text:len() + space*2 <= self.w)then
-                                if(list[n]==self:getValue())then
-                                    self.parent:writeText(obx + (xPos-1), oby, getTextHorizontalAlign((" "):rep(space)..list[n].text..(" "):rep(space), list[n].text:len()+space*2, align), itemSelectedBG or list[n].bgCol, itemSelectedFG or list[n].fgCol)
-                                else
-                                    self.parent:writeText(obx + (xPos-1), oby, getTextHorizontalAlign((" "):rep(space)..list[n].text..(" "):rep(space), list[n].text:len()+space*2, align), list[n].bgCol, list[n].fgCol)
-                                end
-                                xPos = xPos+list[n].text:len()+space*2
+                    local xPos = 0
+                    for k,v in pairs(list)do
+                        if(xPos + v.text:len() + space*2 <= self.w)then
+                            if(v==self:getValue())then
+                                self.parent:writeText(obx + (xPos-1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space)..v.text..(" "):rep(space), v.text:len()+space*2, align), itemSelectedBG or v.bgCol, itemSelectedFG or v.fgCol)
                             else
-                                break
+                                self.parent:writeText(obx + (xPos-1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space)..v.text..(" "):rep(space), v.text:len()+space*2, align), v.bgCol, v.fgCol)
+                            end
+                            xPos = xPos+v.text:len()+space*2
+                        else
+                            if(xPos<self.w+itemOffset)then
+                                if(v==self:getValue())then
+                                    self.parent:writeText(obx + (xPos-1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space)..v.text..(" "):rep(space), v.text:len()+space*2, align):sub(1,self.w+itemOffset-xPos), itemSelectedBG or v.bgCol, itemSelectedFG or v.fgCol)
+                                else
+                                    self.parent:writeText(obx + (xPos-1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space)..v.text..(" "):rep(space), v.text:len()+space*2, align):sub(1,self.w+itemOffset-xPos), v.bgCol, v.fgCol)
+                                end
+                                xPos = xPos+v.text:len()+space*2
                             end
                         end
                     end
@@ -3104,6 +3367,50 @@ local function Scrollbar(name)
     return setmetatable(object, base)
 end
 
+local function Switch(name)
+    local base = Object(name)
+    local typ = "Switch"
+
+    base.w = 3
+    base.h = 1
+    base.bgcolor = colors.lightGray
+    base.fgcolor = colors.gray
+    base:setValue(false)
+    base:setZIndex(5)
+
+    
+    
+    local object = {
+        getType = function(self)
+            return typ
+        end;
+
+
+
+        mouseClickHandler = function(self, event, button, x, y)
+            if(base.mouseClickHandler(self,event,button,x,y))then
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                if((event=="mouse_click")or(event=="mouse_drag"))and(button==1)then
+                   
+
+                end
+                return true
+            end
+        end;
+        
+        draw = function(self)
+            if(base.draw(self))then
+                if(self.parent~=nil)then
+                    local obx, oby = self:getAnchorPosition()
+                    
+                end
+            end
+        end;    
+    }
+
+    return setmetatable(object, base)
+end
+
 
 local function Frame(name,parent) -- Frame
     local base = Object(name)
@@ -3618,6 +3925,12 @@ local function Frame(name,parent) -- Frame
 
         addImage = function(self, name)
             local obj = Image(name)
+            obj.name = name
+            return addObject(obj)
+        end;
+
+        addProgressbar = function(self, name)
+            local obj = Progressbar(name)
             obj.name = name
             return addObject(obj)
         end;
