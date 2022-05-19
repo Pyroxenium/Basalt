@@ -12,7 +12,6 @@ local requiredFiles = {
     "lib/eventSystem.lua",
     "lib/process.lua",
     "lib/utils.lua",
-
 }
 
 local basalt = ""
