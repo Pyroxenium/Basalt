@@ -62,11 +62,6 @@ local file = fs.open(fs.combine(absoluteFilePath, "mainBottom.lua"), "r")
 basalt = basalt..file.readAll().."\n"
 file.close()
 
-if(args[1]=="minify")then
-    basalt = "a" -- have to work on
-end
-
-
 local b = fs.open(fs.combine(absoluteFilePath, "basalt.lua"), "w")
 b.write(basalt)
 b.close()
