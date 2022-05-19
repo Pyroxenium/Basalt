@@ -20,7 +20,7 @@ local function Thread(name)
 
         start = function(self, f)
             if (f == nil) then
-                error("function is nil")
+                error("Function provided to thread is nil")
             end
             func = f
             cRoutine = coroutine.create(func)
@@ -28,7 +28,7 @@ local function Thread(name)
             local ok, result = coroutine.resume(cRoutine)
             if not (ok) then
                 if (result ~= "Terminated") then
-                    error("Threaderror - " .. result)
+                    error("Thread Error Occurred - " .. result)
                 end
             end
             return self
@@ -52,7 +52,7 @@ local function Thread(name)
                     local ok, result = coroutine.resume(cRoutine, event, p1, p2, p3)
                     if not (ok) then
                         if (result ~= "Terminated") then
-                            error("Threaderror - " .. result)
+                            error("Thread Error Occurred - " .. result)
                         end
                     end
                 else
