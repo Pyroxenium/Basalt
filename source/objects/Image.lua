@@ -146,7 +146,7 @@ local function Image(name)
             return self
         end;
 
-        shrinkImage = function(self)
+        shrink = function(self)
             shrink()
             imageGotShrinked = true
             return self

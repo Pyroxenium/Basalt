@@ -7,7 +7,6 @@ local requiredFiles = {
     "Frame.lua",
     "Object.lua",
     "defaultTheme.lua",
-    "minify.lua",
     "lib/drawHelper.lua",
     "lib/eventSystem.lua",
     "lib/process.lua",

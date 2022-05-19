@@ -21,8 +21,8 @@ local function Label(name)
             return self
         end;
 
-        setSize = function(self, width, h)
-            self.width, self.height = width, h
+        setSize = function(self, width, height)
+            self.width, self.height = width, height
             autoWidth = false
             return self
         end;
@@ -31,7 +31,9 @@ local function Label(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:writeText(obx, oby, self:getValue(), self.bgColor, self.fgColor)
+                    self.parent:setBackground(obx, oby, self.width, self.height, self.bgColor)
+                    self.parent:setForeground(obx, oby, self.width, self.height, self.fgColor)
+                    self.parent:writeText(obx, oby, self:getValue():sub(1, self.width), self.bgColor, self.fgColor)
                 end
             end
         end;
