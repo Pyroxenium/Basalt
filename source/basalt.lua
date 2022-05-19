@@ -732,7 +732,7 @@ local function Button(name)
 
     base:setValue("Button")
     base:setZIndex(5)
-    base.weight = 8
+    base.width = 8
     base.bgColor = theme.ButtonBG
     base.fgColor = theme.ButtonFG
 
@@ -1186,9 +1186,9 @@ local function Program(name)
         return basaltwindow
     end
 
-    base.weight = 30
+    base.width = 30
     base.height = 12
-    local pWindow = createBasaltWindow(1, 1, base.weight, base.height)
+    local pWindow = createBasaltWindow(1, 1, base.width, base.height)
     local curProcess
     local paused = false
     local queuedEvent = {}
