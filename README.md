@@ -1,7 +1,7 @@
 # Basalt - A UI Framework for Computercraft
 
 ## Important Notice
-#### Basalt has moved! We are now located at [Pyroxenium](https://github.com/Pyroxenium), please make sure to update your previous github links, as they are now out of date. We apologize for any inconvenience.
+#### Basalt has moved! We are now located at [Pyroxenium](https://github.com/Pyroxenium), please make sure to update your previous GitHub links, as they are now out of date. We apologize for any inconvenience.
 
 Basalt is still under developement and you may find bugs!
 
