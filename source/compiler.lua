@@ -11,7 +11,6 @@ local requiredFiles = {
     "lib/eventSystem.lua",
     "lib/process.lua",
     "lib/utils.lua",
-
 }
 
 local basalt = ""
@@ -45,11 +44,13 @@ basalt = basalt..file.readAll().."\n"
 file.close()
 
 for _,v in pairs(objects)do
-    local path = fs.combine(fs.combine(absoluteFilePath, "objects"), v)
-    if not(fs.isDir(path))then
-        local file = fs.open(path, "r")
-        basalt = basalt..file.readAll().."\n"
-        file.close()
+    if(v~="example.lua")then
+        local path = fs.combine(fs.combine(absoluteFilePath, "objects"), v)
+        if not(fs.isDir(path))then
+            local file = fs.open(path, "r")
+            basalt = basalt..file.readAll().."\n"
+            file.close()
+        end
     end
 end
 
