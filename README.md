@@ -1,8 +1,13 @@
-# Basalt - A UI Framework for Computercraft
+# Basalt - A UI Framework for CC:Tweaked
+
+## Important Notice
+#### Basalt has moved! We are now located at [Pyroxenium](https://github.com/Pyroxenium), please make sure to update your previous GitHub links, as they are now out of date. We apologize for any inconvenience.
 
 Basalt is still under developement and you may find bugs!
 
-Check out my [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information<br>
+## Information
+
+Check out the [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information<br>
 If you have questions, feel free to message me: NyoriE#8206 on discord
 
 Todo:<br>
