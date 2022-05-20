@@ -7,7 +7,7 @@ Basalt is still under developement and you may find bugs!
 
 ## Information
 
-Check out the [wiki](https://github.com/NoryiE/NyoUI/wiki/) for information<br>
+Check out the [wiki](https://github.com/Pyroxenium/Basalt/wiki) for information<br>
 If you have questions, feel free to message me: NyoriE#8206 on discord
 
 Todo:<br>
