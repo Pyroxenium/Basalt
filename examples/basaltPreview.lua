@@ -1,7 +1,7 @@
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
 if not(fs.exists(filePath))then
-shell.run("wget https://raw.githubusercontent.com/NoryiE/Basalt/master/basalt-minified.lua "..filePath)
+shell.run("wget https://raw.githubusercontent.com/NoryiE/Basalt/master/basalt.lua "..filePath)
 end
 local basalt = dofile("basalt.lua") -- here you can change the variablename in any variablename you want default: basalt
 
