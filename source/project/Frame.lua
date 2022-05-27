@@ -78,15 +78,12 @@ local function Frame(name, parent)
         return false
     end
 
-    ---@class Frame
     object = {
         barActive = false,
         barBackground = colors.gray,
         barTextcolor = colors.black,
         barText = "New Frame",
         barTextAlign = "left",
-        isMovable = false,
-        ---@deprecated deprecated in favor of Frame#isMovable
         isMoveable = false,
 
         getType = function(self)
@@ -152,18 +149,12 @@ local function Frame(name, parent)
             return self
         end;
 
-        setMovable = function(self, movable)
-            self.isMovable = movable or not self.isMovable
-            self:setVisualChanged()
-            return self;
-        end;
-
-        ---@deprecated deprecated in favor of @see Frame#setMovable
         setMoveable = function(self, moveable)
             self.isMoveable = moveable or not self.isMoveable
             self:setVisualChanged()
             return self;
         end;
+
 
         showBar = function(self, showIt)
             self.barActive = showIt or not self.barActive

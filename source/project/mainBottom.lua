@@ -32,7 +32,11 @@ function basalt.autoUpdate(isActive)
     drawHelper.update()
     while updaterActive do
         local event, p1, p2, p3, p4 = os.pullEventRaw() -- change to raw later
-        basaltUpdateEvent(event, p1, p2, p3, p4)
+        local ok, err = pcall(basaltUpdateEvent(event, p1, p2, p3, p4))
+        if not(ok)then
+            parentTerminal.clear()
+            error(err)
+        end
     end
 end
 
