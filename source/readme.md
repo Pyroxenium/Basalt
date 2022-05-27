@@ -6,7 +6,7 @@ My goal is to make basalt for end users very very easy to use, this is why i wan
 
 ## Project
 
-The project folder is the actual source code of basalt. Objects are in project/objects and librariess are in project/lib
+The project folder is the actual source code of basalt. Objects are in project/objects and libraries are in project/lib
 
 ## compiler.lua
 
