@@ -168,10 +168,9 @@ local function basaltDrawHelper()
                 terminal.setCursorPos(1, n)
                 terminal.blit(cacheT[n], cacheFG[n], cacheBG[n])
             end
+            terminal.setBackgroundColor(colors.black)
             terminal.setCursorBlink(isBlinking)
             terminal.setCursorPos(xC, yC)
-            terminal.setBackgroundColor(colors.black)
-            terminal.setTextColor(colors.red)
         end;
 
         setTerm = function(newTerm)
