@@ -8,6 +8,9 @@ local function Label(name)
     local autoWidth = true
     base:setValue("")
 
+    local textHorizontalAlign = "left"
+    local textVerticalAlign = "top"
+
     local object = {
         getType = function(self)
             return objectType
@@ -21,9 +24,17 @@ local function Label(name)
             return self
         end;
 
+        setTextAlign = function(self, hor, vert)
+            textHorizontalAlign = hor or textHorizontalAlign
+            textVerticalAlign = vert or textVerticalAlign
+            self:setVisualChanged()
+            return self
+        end;
+
         setSize = function(self, width, height)
-            self.width, self.height = width, height
+            base.setSize(self, width, height)
             autoWidth = false
+            self:setVisualChanged()
             return self
         end;
 
@@ -31,9 +42,15 @@ local function Label(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:setBackground(obx, oby, self.width, self.height, self.bgColor)
-                    self.parent:setForeground(obx, oby, self.width, self.height, self.fgColor)
-                    self.parent:writeText(obx, oby, self:getValue():sub(1, self.width), self.bgColor, self.fgColor)
+                    local verticalAlign = getTextVerticalAlign(self.height, textVerticalAlign)
+                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
+                    self.parent:drawTextBox(obx, oby, self.width, self.height, " ")
+                    for n = 1, self.height do
+                        if (n == verticalAlign) then
+                            self.parent:writeText(obx, oby + (n - 1), getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign), self.bgColor, self.fgColor)
+                        end
+                    end
                 end
             end
         end;

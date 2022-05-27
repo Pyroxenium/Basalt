@@ -32,11 +32,7 @@ function basalt.autoUpdate(isActive)
     drawHelper.update()
     while updaterActive do
         local event, p1, p2, p3, p4 = os.pullEventRaw() -- change to raw later
-        local ok, err = pcall(basaltUpdateEvent(event, p1, p2, p3, p4))
-        if not(ok)then
-            parentTerminal.clear()
-            error(err)
-        end
+        basaltUpdateEvent(event, p1, p2, p3, p4)
     end
 end
 
@@ -91,13 +87,8 @@ end
 if (basalt.debugger) then
     basalt.debugFrame = basalt.createFrame("basaltDebuggingFrame"):showBar():setBackground(colors.lightGray):setBar("Debug", colors.black, colors.gray)
     basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.width - 2, basalt.debugFrame.height - 3):setPosition(2, 3):setScrollable(true):show()
-    basalt.debugFrame:addButton("back"):setAnchor("right"):setSize(1, 1):setText("\22"):onClick(function()
-        basalt.oldFrame:show()
-    end)  :setBackground(colors.red):show()
-    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function()
-        basalt.oldFrame = activeFrame
-        basalt.debugFrame:show()
-    end)                      :setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):setZIndex(20):show()
+    basalt.debugFrame:addButton("back"):setAnchor("right"):setSize(1, 1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
+    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = activeFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):setZIndex(20):show()
 end
 
 if (basalt.debugger) then

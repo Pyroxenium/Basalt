@@ -23,6 +23,7 @@ local function getTextVerticalAlign(h, textAlign)
     if (textAlign == "bottom") then
         offset = h
     end
+    if(offset<1)then offset=1 end
     return offset
 end
 
