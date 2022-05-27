@@ -3,7 +3,7 @@ local filePath = "basalt.lua" --here you can change the file path default: basal
 if not(fs.exists(filePath))then
 shell.run("wget https://raw.githubusercontent.com/NoryiE/Basalt/master/basalt.lua "..filePath)
 end
-local basalt = dofile("lib/basalt.lua") -- here you can change the variablename in any variablename you want default: basalt
+local basalt = dofile("basalt.lua") -- here you can change the variablename in any variablename you want default: basalt
 
 local w, h = term.getSize()
 
