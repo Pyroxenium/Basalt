@@ -1802,7 +1802,7 @@ local function Label(name)
     base.fgColor = colors.white
     base.bgcolor = colors.black
 
-    local autoWidth = true
+    local autoSize = true
     base:setValue("")
 
     local textHorizontalAlign = "left"
@@ -1816,7 +1816,7 @@ local function Label(name)
         setText = function(self, text)
             text = tostring(text)
             base:setValue(text)
-            if (autoWidth) then
+            if (autoSize) then
                 self.width = text:len()
             end
             return self
@@ -1842,7 +1842,7 @@ local function Label(name)
 
         setSize = function(self, width, height)
             base.setSize(self, width, height)
-            autoWidth = false
+            autoSize = false
             self:setVisualChanged()
             return self
         end;
@@ -1863,6 +1863,10 @@ local function Label(name)
                         end
                     else
                         local tData = makeText(fontsize, self:getValue(), self.fgColor, self.bgColor)
+                        if(autoSize)then
+                            self.height = #tData[1]-1
+                            self.width = #tData[1][1]
+                        end
                         for n = 1, self.height do
                             if (n == verticalAlign) then
                                 local oX, oY = self.parent:getSize()
