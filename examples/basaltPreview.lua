@@ -1,7 +1,7 @@
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
 if not(fs.exists(filePath))then
-shell.run("pastebin run ESs1mg7P")
+shell.run("wget https://raw.githubusercontent.com/NoryiE/Basalt/master/basalt.lua "..filePath)
 end
 local basalt = dofile("basalt.lua") -- here you can change the variablename in any variablename you want default: basalt
 
@@ -53,8 +53,15 @@ objFrame:addLabel("radio1Label"):setPosition(37,10):setText("Radio 1"):show()
 objFrame:addLabel("radio2Label"):setPosition(37,12):setText("Radio 2"):show()
 objFrame:addLabel("radio3Label"):setPosition(37,14):setText("Radio 3"):show()
 
-objFrame:addScrollbar("exampleScrollbar"):setPosition(objFrame:getWidth(),1):setMaxValue(objFrame:getHeight()):setSize(1,objFrame:getHeight()):setSymbolSize(3):ignoreOffset():onChange(function(self) objFrame:setOffset(0, (self:getValue()-1)) end):show():setZIndex(15)
+objFrame:addScrollbar("exampleScrollbar"):setPosition(objFrame:getWidth(),1):setMaxValue(objFrame:getHeight()):setSize(1,objFrame:getHeight()):setSymbolSize(3):ignoreOffset():onChange(function(self) objFrame:setOffset(0, (self:getValue()-1)) end):setAnchor("right"):show():setZIndex(15)
+local prog = objFrame:addProgressbar("exampleProgressbar"):setAnchor("bottom"):setSize(30, 3):setBackground(colors.gray):setPosition(2,3):onProgressDone(function()
+basalt.debug("Progress done!")
+end):show()
 
+
+local timer = objFrame:addTimer("exampleTimer"):setTime(1, -1):onCall(function()
+    prog:setProgress(prog:getProgress()+2)
+end):start()
 
 --Program Frame:
 local programCount = 1
