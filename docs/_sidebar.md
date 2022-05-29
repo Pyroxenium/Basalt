@@ -1,2 +1,4 @@
-- [Home](/)
-- [Getting Started](/gettingStarted)
+- Home
+    - [Home](/)
+    - [Getting Started](/home/gettingStarted)
+    - [Installer](/home/installer)
