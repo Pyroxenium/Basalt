@@ -156,7 +156,11 @@ local function Object(name)
         end;
 
         getWidth = function(self)
-            return self.w
+            return self.width
+        end;
+
+        getSize = function(self)
+            return self.width, self.height
         end;
 
         setBackground = function(self, color)
