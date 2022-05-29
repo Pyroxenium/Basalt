@@ -4,7 +4,7 @@ local function Example(name) -- you can call this function how you want, doesn't
 
      -- here you could set some default values, but its not necessary, it doesn't matter if you call the functions or change the values directly, maybe i should change that
      --i guess its better if you call functions base:setBackground, base:setSize and so on.
-    base.width = 3
+    base.width = 12
     base.height = 1
     base.bgColor = colors.lightGray
     base.fgColor = colors.gray
@@ -31,8 +31,8 @@ local function Example(name) -- you can call this function how you want, doesn't
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    --self.parent:setBackground(obx, oby, self.width, self.height, self.bgColor) -- changes the background color of that object
-                    --self.parent:setForeground(obx, oby, self.width, self.height, self.fgColor) -- changes the foreground (textcolor) color of that object
+                    --self.parent:drawBackgroundbox(obx, oby, self.width, self.height, self.bgColor) -- changes the background color of that object
+                    --self.parent:drawForegroundbox(obx, oby, self.width, self.height, self.fgColor) -- changes the foreground (textcolor) color of that object
                     --self.parent:writeText(obx, oby, "Some Text", self.bgColor, self.fgColor) -- writes something on the screen, also able to change its bgcolor and fgcolor
 
                     --the draw functions always gets called after something got visually changed. I am always redrawing the entire screen, but only if something has changed.
