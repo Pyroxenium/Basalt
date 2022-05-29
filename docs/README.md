@@ -3,7 +3,7 @@
 
 Here you can find information about how to use Basalt as well as examples of functional Basalt code. The aim of Basalt is to improve user interaction through visual display.
 
-On the right side of this page you can find a Wiki Navigation, where you can find a more detailed list of Basalt's features
+On the left side of this page you can find a Wiki Navigation, where you can find a more detailed list of Basalt's features
 
 ## About Basalt
 
