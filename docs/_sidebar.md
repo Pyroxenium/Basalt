@@ -1,0 +1,2 @@
+- [Home](/)
+- [Getting Started](/gettingStarted)
