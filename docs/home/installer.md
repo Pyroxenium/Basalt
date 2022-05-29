@@ -1,3 +1,5 @@
+# Installer
+
 This is just a script which helps you to install basalt.lua, if it's not already on the computer. Means, you create your program (which requires basalt) and add this on the top of your program. Now, everytime you execute your program it checks if basalt.lua exists or not.
 
 ## Visual Installer

@@ -1,3 +1,5 @@
+# Getting Started!
+
 Basalt aims to be a relatively small, easy to use framework.
 
 Accordingly, we have provided an installation script.
