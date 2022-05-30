@@ -1,6 +1,6 @@
 Radios are objects where you can create endless entrys the user can click on a button and it opens a "list" where the user can choose a entry
 
-Here is a example of how to create a standard radio:
+Here is an example of how to create a standard radio:
 
 ````lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
@@ -8,7 +8,7 @@ local aRadio = mainFrame:addRadio("myFirstRadio"):show()
 ````
 
 Here are all possible functions available for radios: <br>
-Remember radio inherits from [object](https://github.com/NoryiE/basalt/wiki/Object):
+Remember Radio inherits from [Object](objects/Object.md)
 
 ## addItem
 Adds a item to the radio

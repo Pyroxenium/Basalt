@@ -5,7 +5,7 @@ Here is a example of how to create a standard scrollbar:
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aScrollbar = mainFrame:addScrollbar("myFirstScrollbar"):show()
 ````
-Here are all possible functions available for scrollbars. Remember scrollbar inherit from [object](https://github.com/NoryiE/Basalt/wiki/Object):
+Here are all possible functions available for scrollbars. Remember Scrollbar inherits from [Object](objects/Object.md)
 
 ## setSymbol
 Changes the symbol

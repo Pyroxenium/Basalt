@@ -9,7 +9,7 @@ local aList = mainFrame:addList("myFirstList"):show()
 
 This will create a default list with the size 8 width and 5 height on position 1 1 (relative to its parent frame), the default background is colors.lightGray, the default text color is colors.black and the default zIndex is 5. The default horizontal text align is "center", default symbol is ">"
 
-Here are all possible functions available for lists. Remember list inherit from [object](https://github.com/NoryiE/basalt/wiki/Object):
+Here are all possible functions available for lists. Remember List inherits from [Object](objects/Object.md)
 
 ## addItem
 Adds a item into the list

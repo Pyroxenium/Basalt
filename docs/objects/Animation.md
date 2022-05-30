@@ -1,4 +1,4 @@
-With animations you can create a beautiful experience for users while interacting with objects.<br>
+With animations, you can create a beautiful experience for users while interacting with objects.<br>
 For now the animation class is very basic, i will expand it in the future, but i have to say already now you can do almost everything you can imagine!
 
 Right now animation is a class which makes use of the timer event<br>
