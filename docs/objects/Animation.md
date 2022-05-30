@@ -15,12 +15,12 @@ Adds a new function to an animation
 
 #### Usage:
 * This will set the button position to 3,3, waits 1 second, then sets position to 4,4, waits 2 seconds, and then sets the position to 5,5
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local testButton = mainFrame:addButton("myTestButton"):show()
 local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setPosition(3,3) end):wait(1):add(function() testButton:setPosition(1,1,"r") end):wait(2):add(function() testButton:setPosition(1,1,"r") end)
 aAnimation:play()
-````
+```
 
 ## wait
 Sets a wait timer for the next function after the previous function got executed, no wait timer calls the next function immediately
