@@ -248,7 +248,7 @@ local function Textfield(name)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx, anchy = self:getAnchorPosition()
-                if (event == "mouse_click") then
+                if (event == "mouse_click")or(event=="monitor_touch") then
                     if (lines[y - oby + hIndex] ~= nil) then
                         textX = x - obx + wIndex
                         textY = y - oby + hIndex

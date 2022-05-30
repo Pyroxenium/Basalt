@@ -39,6 +39,10 @@ local function Dropdown(name)
             return self
         end;
 
+        getAll = function(self)
+            return list
+        end;
+
         removeItem = function(self, index)
             table.remove(list, index)
             return self
@@ -93,16 +97,14 @@ local function Dropdown(name)
         mouseClickHandler = function(self, event, button, x, y)
             if (state == 2) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if (event == "mouse_click") then
-                    -- remove mouse_drag if i want to make objects moveable uwuwuwuw
-                    if (button == 1) then
-                        if (#list > 0) then
-                            for n = 1, dropdownH do
-                                if (list[n + yOffset] ~= nil) then
-                                    if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
-                                        self:setValue(list[n + yOffset])
-                                        return true
-                                    end
+                if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
+
+                    if (#list > 0) then
+                        for n = 1, dropdownH do
+                            if (list[n + yOffset] ~= nil) then
+                                if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
+                                    self:setValue(list[n + yOffset])
+                                    return true
                                 end
                             end
                         end

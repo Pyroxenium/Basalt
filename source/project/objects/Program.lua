@@ -601,7 +601,7 @@ local function Program(name)
             end
             if not (curProcess:isDead()) then
                 if not (paused) then
-                    if (event ~= "mouse_click") and (event ~= "mouse_up") and (event ~= "mouse_scroll") and (event ~= "mouse_drag") and (event ~= "key_up") and (event ~= "key") and (event ~= "char") and (event ~= "terminate") then
+                    if (event ~= "mouse_click") and (event ~= "monitor_touch") and (event ~= "mouse_up") and (event ~= "mouse_scroll") and (event ~= "mouse_drag") and (event ~= "key_up") and (event ~= "key") and (event ~= "char") and (event ~= "terminate") then
                         curProcess:resume(event, p1, p2, p3, p4)
                     end
                     if (self:isFocused()) then
@@ -618,7 +618,7 @@ local function Program(name)
                         end
                     end
                 else
-                    if (event ~= "mouse_click") and (event ~= "mouse_up") and (event ~= "mouse_scroll") and (event ~= "mouse_drag") and (event ~= "key_up") and (event ~= "key") and (event ~= "char") and (event ~= "terminate") then
+                    if (event ~= "mouse_click") and (event ~= "monitor_touch") and (event ~= "mouse_up") and (event ~= "mouse_scroll") and (event ~= "mouse_drag") and (event ~= "key_up") and (event ~= "key") and (event ~= "char") and (event ~= "terminate") then
                         table.insert(queuedEvent, { event = event, args = { p1, p2, p3, p4 } })
                     end
                 end

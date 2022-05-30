@@ -123,9 +123,9 @@ local function Object(name)
 
         setPosition = function(self, xPos, yPos, rel)
             if (rel) then
-                self.x, self.y = self.x + xPos, self.y + yPos
+                self.x, self.y = math.floor(self.x + xPos), math.floor(self.y + yPos)
             else
-                self.x, self.y = xPos, yPos
+                self.x, self.y = math.floor(xPos), math.floor(yPos)
             end
             visualsChanged = true
             return self
@@ -264,6 +264,7 @@ local function Object(name)
 
         onClick = function(self, func)
             self:registerEvent("mouse_click", func)
+            self:registerEvent("monitor_touch", func)
             return self
         end;
 

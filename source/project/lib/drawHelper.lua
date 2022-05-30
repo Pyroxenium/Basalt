@@ -1,5 +1,5 @@
-local function basaltDrawHelper()
-    local terminal = parentTerminal
+local function basaltDrawHelper(drawTerm)
+    local terminal = drawTerm
     local width, height = terminal.getSize()
     local cacheT = {}
     local cacheBG = {}
@@ -179,4 +179,3 @@ local function basaltDrawHelper()
     }
     return drawHelper
 end
-local drawHelper = basaltDrawHelper()

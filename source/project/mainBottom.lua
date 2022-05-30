@@ -2,26 +2,24 @@ local updaterActive = false
 local function basaltUpdateEvent(event, p1, p2, p3, p4)
     if (event == "mouse_click") then
         activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    end
-    if (event == "mouse_drag") then
+    elseif (event == "mouse_drag") then
         activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    end
-    if (event == "mouse_up") then
+    elseif (event == "mouse_up") then
         activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    end
-    if (event == "mouse_scroll") then
+    elseif (event == "mouse_scroll") then
         activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    end
-    if (event == "key") or (event == "char") then
+    elseif (event == "monitor_touch") then
+        activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
+    elseif (event == "key") or (event == "char") then
         activeFrame:keyHandler(event, p1)
         activeFrame:backgroundKeyHandler(event, p1)
     end
+    
     for _, value in pairs(frames) do
         value:eventHandler(event, p1, p2, p3, p4)
     end
     if (updaterActive) then
         activeFrame:draw()
-        drawHelper.update()
     end
 end
 
@@ -29,7 +27,6 @@ function basalt.autoUpdate(isActive)
     parentTerminal.clear()
     updaterActive = isActive or true
     activeFrame:draw()
-    drawHelper.update()
     while updaterActive do
         local event, p1, p2, p3, p4 = os.pullEventRaw() -- change to raw later
         basaltUpdateEvent(event, p1, p2, p3, p4)
@@ -41,7 +38,6 @@ function basalt.update(event, p1, p2, p3, p4)
         basaltUpdateEvent(event, p1, p2, p3, p4)
     else
         activeFrame:draw()
-        drawHelper.update()
     end
 end
 
@@ -70,8 +66,7 @@ function basalt.setActiveFrame(frame)
 end
 
 function basalt.createFrame(name)
-    local frame = Frame(name)
-    return frame
+    return Frame(name)
 end
 
 function basalt.removeFrame(name)

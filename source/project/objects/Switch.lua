@@ -18,7 +18,7 @@ local function Switch(name)
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if ((event == "mouse_click") or (event == "mouse_drag")) and (button == 1) then
+                if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
 
 
                 end
