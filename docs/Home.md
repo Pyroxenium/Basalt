@@ -4,9 +4,6 @@ _Note: The Basalt Wiki is a work in progress. Please treat Wiki errors the same 
 
 Here you can find information about how to use Basalt as well as examples of functional Basalt code. The aim of Basalt is to improve user interaction through visual display.
 
-On the right side of this page you can find a Wiki Navigation, where you can find a more detailed list of Basalt's features
-<br><br>
-
 ## About Basalt
 
 Basalt is intended to be an easy-to-understand UI Framework designed for CC:Tweaked (AKA Computer Craft: Tweaked) - a popular minecraft mod. For more information about CC:Tweaked, checkout the project's <a href="https://tweaked.cc/">home page</a>.
