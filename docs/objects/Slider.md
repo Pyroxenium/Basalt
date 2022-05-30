@@ -1,9 +1,7 @@
-# Slider
-
 With sliders you can add a object where the user can change a number value.<br><br>
 
 Here are all possible functions available for sliders: <br>
-Remember slider also inherits from [object](/objects/Object)
+Remember slider also inherits from [object](https://github.com/NoryiE/Basalt/wiki/Object)
 
 ## setSymbol
 this will change the foreground symbol
@@ -40,3 +38,5 @@ local aSlider = mainFrame:addSlider("myFirstSlider"):setBarType("vertical"):show
 ````
 **parameters:** string value ("vertical", "horizontal"<br>
 **returns:** self<br>
+
+

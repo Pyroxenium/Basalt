@@ -1,5 +1,3 @@
-# Textfield
-
 Textfields are objects, where the user can write something on multiple lines. it act's like the default edit script (without coloring)<br>
 Here is a example of how to create a default textfield:
 
@@ -10,7 +8,7 @@ local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 
 This will create a default textfield with the size 10 width and 4 height on position 1 1 (relative to its parent frame), the default background is colors.gray, the default text color is colors.black and the default zIndex is 5.
 
-A list of all possible functions available for textfields. Remember textfield inherits from [object](/objects/Object):
+A list of all possible functions available for textfields. Remember textfield inherits from [object](https://github.com/NoryiE/NyoUI/wiki/Object):
 
 
 ## getLines

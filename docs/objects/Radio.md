@@ -1,5 +1,3 @@
-# Radio
-
 Radios are objects where you can create endless entrys the user can click on a button and it opens a "list" where the user can choose a entry
 
 Here is a example of how to create a standard radio:
@@ -10,7 +8,7 @@ local aRadio = mainFrame:addRadio("myFirstRadio"):show()
 ````
 
 Here are all possible functions available for radios: <br>
-Remember radio inherits from [object](/objects/Object):
+Remember radio inherits from [object](https://github.com/NoryiE/basalt/wiki/Object):
 
 ## addItem
 Adds a item to the radio

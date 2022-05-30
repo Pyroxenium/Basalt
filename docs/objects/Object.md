@@ -1,5 +1,3 @@
-# Objects
-
 This is the base class of all visual objects. This means, if you create a button, label, frame or something else visual (no timers, threads or animations) the following list can be used:
 
 ## show
@@ -13,7 +11,7 @@ button:show()
 **returns:** self<br>
 
 ## hide
-hides the object
+hides the object 
 ````lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local button = mainFrame:addButton("myFirstButton"):setText("Close"):onClick(function() mainFrame:hide() end)
@@ -56,7 +54,7 @@ local mainFrame = basalt.createFrame("myFirstFrame"):setSize(15,5)
 **parameters:** number width, number length<br>
 **returns:** self<br>
 
-## setFocus
+## setFocus    
 sets the object to be the focused object.
 If you click on a object, it's normaly automatically the focused object. As example, if you :show() a frame and you want this particular frame to be in
 the foreground, you have to use :setFocus()

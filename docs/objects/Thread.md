@@ -1,5 +1,3 @@
-# Thread
-
 Threads are "functions" you can execute simultaneously. Ofc the reality is, i am just using coroutine for that. But it works pretty good AND is very easy to use.
 <br>
 Here is a list of all available functions for threads: <br>
@@ -25,7 +23,7 @@ gets the thread status
 ````lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aThread = mainFrame:addThread("myFirstThread"):show()
-basalt.debug(aThread:getStatus()) -- returns "running", "normal", "suspended" or "dead"
+basalt.debug(aThread:getStatus()) -- returns "running", "normal", "suspended" or "dead" 
 ````
 **parameters:** -<br>
 **returns:** string "running" - if its running, "normal" - is active but not running (waiting for a event), "suspended" - is suspended<br>

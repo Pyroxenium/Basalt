@@ -1,8 +1,6 @@
-# Executing your own logic
-
 You question yourself how you can execute your own logic while basalt is also active? There are multiple ways of doing that:
 
-## Number 1:
+## Method 1:
 Using parallel.waitForAll
 
 ````lua
@@ -22,7 +20,7 @@ parallel.waitForAll(basalt.autoUpdate, yourCustomHandler) -- here it will handle
 ````
 You can read [here](http://www.computercraft.info/wiki/Parallel_(API)) what exactly parallel.waitForAll() does
 
-## Number 2:
+## Method 2:
 Using threads
 
 ````lua
@@ -41,7 +39,7 @@ end
 thread:start(yourCustomHandler) -- this will create a coroutine and starts the coroutine, os.sleep does the rest, so you just have to call start once.
 ````
 
-## Number 3:
+## Method 3:
 Using timers
 
 ````lua
@@ -55,3 +53,4 @@ local function yourCustomHandler()
     -- add your logic here
 end
 timer:onCall(yourCustomHandler):setTime(1, -1):start() -- this will call your function every second until you :cancel() the timer
+````
