@@ -1,5 +1,3 @@
-# Animation
-
 With animations you can create a beautiful experience for users while interacting with objects.<br>
 For now the animation class is very basic, i will expand it in the future, but i have to say already now you can do almost everything you can imagine!
 
@@ -37,7 +35,7 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local testButton = mainFrame:addButton("myTestButton"):show()
 local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setBackground(colors.black) end):wait(1):add(function() testButton:setBackground(colors.gray) end):wait(1):add(function() testButton:setBackground(colors.lightGray) end)
 
-aAnimation:play() -- changes the background color of that button from black to gray and then to lightGray
+aAnimation:play() -- changes the background color of that button from black to gray and then to lightGray 
 ````
 **parameters:** [endlessloop] - bool if it should loop forever - will change that to loopcount in the future<br>
 **returns:** self<br>

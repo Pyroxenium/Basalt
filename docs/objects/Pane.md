@@ -1,11 +1,9 @@
-# Pane
-
 Panes are very simple sizeable background objects.
 
 The following list is only available to panes: <br>
-Remember pane also inherits from [object](/objects/Object):
+Remember pane also inherits from [object](https://github.com/NoryiE/basalt/wiki/Object):
 
-Pane doesn't have any custom functionallity. If you want to change the color/position or size, just check out the [object](/objects/Object) wikipage.
+Pane doesn't have any custom functionallity. If you want to change the color/position or size, just check out the [object](https://github.com/NoryiE/basalt/wiki/Object) wikipage.
 
 ## Example:
 

@@ -1,10 +1,8 @@
-# Image
-
 The image object is for adding more advanced backgrounds.
 It also provides a :shrink() function, where you can shrink the images to smaller ones. This functionallity is fully provided by the blittle library created by Bomb Bloke. I did not ask for permission to add it into the framework. If the creator wants me to remove the blittle part, just text me on discord!
 
 Here are all possible functions available for image:<be>
-Remember image inherits from [object](/objects/Object):
+Remember image inherits from [object](https://github.com/NoryiE/NyoUI/wiki/Object):
 
 
 ## loadImage
@@ -35,3 +33,4 @@ local aImage = mainFrame:addImage("myFirstImage"):loadBlittleImage("randomImage.
 ````
 **Arguments:** -<br>
 **returns:** self<br>
+

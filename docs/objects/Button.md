@@ -1,9 +1,7 @@
-# Button
-
 Buttons are objects, which execute function by clicking on them
 
 The following list is only available to buttons: <br>
-Remember button also inherits from [object](/objects/Object):
+Remember button also inherits from [object](https://github.com/NoryiE/basalt/wiki/Object):
 
 ## setText
 Sets the displayed button text
@@ -14,7 +12,7 @@ local aButton = mainFrame:addButton("myFirstButton"):setText("Click"):show() -- 
 **Arguments:** string text<br>
 **returns:** self<br>
 
-## Examples
+# Examples
 Add a onClick event:
 ````lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
@@ -23,3 +21,4 @@ if(event=="mouse_click")and(button==1)then
 basalt.debug("Left mousebutton got clicked!")
 end
 end):show()
+````

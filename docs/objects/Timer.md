@@ -1,5 +1,3 @@
-# Timer
-
 With timers you can call delayed functions.
 <br>
 Here is a list of all available functions for timers: <br>

@@ -1,16 +1,14 @@
-# Program
-
 With a program object you are able to open programs like shell or worm or any custom program you've made. There is only 1 thing you have to remember: the program needs at least one os.sleep() or coroutine.yield() somewhere.
 <br>
 Here is a list of all available functions for programs: <br>
-Remember program inherits from [object](/objects/Object):
+Remember program inherits from [object](https://github.com/NoryiE/NyoUI/wiki/Object):
 
 ## getStatus
 returns the current status
 ````lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):show()
-basalt.debug(aProgram:getStatus()) -- returns "running", "normal", "suspended" or "dead"
+basalt.debug(aProgram:getStatus()) -- returns "running", "normal", "suspended" or "dead" 
 ````
 **parameters:**-<br>
 **returns:** string "running" - if its running, "normal" - is active but not running (waiting for a event), "suspended" - is suspended or not started, "dead" - has finished or stopped with an error<br>
@@ -102,3 +100,4 @@ local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/sh
 ````
 **parameters:** table queuedEvents<br>
 **returns:** self<br>
+

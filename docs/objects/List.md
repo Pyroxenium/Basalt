@@ -1,5 +1,3 @@
-# List
-
 Lists are objects where you can create endless entrys and the user can choose one of them
 
 Here is a example of how to create a standard list:
@@ -11,10 +9,10 @@ local aList = mainFrame:addList("myFirstList"):show()
 
 This will create a default list with the size 8 width and 5 height on position 1 1 (relative to its parent frame), the default background is colors.lightGray, the default text color is colors.black and the default zIndex is 5. The default horizontal text align is "center", default symbol is ">"
 
-Here are all possible functions available for lists. Remember list inherit from [object](/objects/Object):
+Here are all possible functions available for lists. Remember list inherit from [object](https://github.com/NoryiE/basalt/wiki/Object):
 
 ## addItem
-Adds a item to the list
+Adds a item into the list
 
 ````lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
