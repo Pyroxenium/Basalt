@@ -10,7 +10,7 @@ local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
 ````
 
 Here are all possible functions available for dropdowns: <br>
-Remember dropdown inherits from [object](/Object):
+Remember dropdown inherits from [object](/objects/Object):
 
 ## addItem
 Adds a item to the dropdown

@@ -10,7 +10,7 @@ local aRadio = mainFrame:addRadio("myFirstRadio"):show()
 ````
 
 Here are all possible functions available for radios: <br>
-Remember radio inherits from [object](/Object):
+Remember radio inherits from [object](/objects/Object):
 
 ## addItem
 Adds a item to the radio

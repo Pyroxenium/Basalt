@@ -10,7 +10,7 @@ local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 
 This will create a default textfield with the size 10 width and 4 height on position 1 1 (relative to its parent frame), the default background is colors.gray, the default text color is colors.black and the default zIndex is 5.
 
-A list of all possible functions available for textfields. Remember textfield inherits from [object](/Object):
+A list of all possible functions available for textfields. Remember textfield inherits from [object](/objects/Object):
 
 
 ## getLines

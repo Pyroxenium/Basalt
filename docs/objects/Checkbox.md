@@ -3,7 +3,7 @@
 With checkbox, the user can set a bool to true or false
 
 Here are all possible functions available for checkbox:<be>
- Remember checkbox inherits from [object](/Object):
+ Remember checkbox inherits from [object](/objects/Object):
 
 
 Create a onChange event:

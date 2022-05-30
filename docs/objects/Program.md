@@ -3,7 +3,7 @@
 With a program object you are able to open programs like shell or worm or any custom program you've made. There is only 1 thing you have to remember: the program needs at least one os.sleep() or coroutine.yield() somewhere.
 <br>
 Here is a list of all available functions for programs: <br>
-Remember program inherits from [object](/Object):
+Remember program inherits from [object](/objects/Object):
 
 ## getStatus
 returns the current status

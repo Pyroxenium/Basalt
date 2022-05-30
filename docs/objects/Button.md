@@ -3,7 +3,7 @@
 Buttons are objects, which execute function by clicking on them
 
 The following list is only available to buttons: <br>
-Remember button also inherits from [object](/Object):
+Remember button also inherits from [object](/objects/Object):
 
 ## setText
 Sets the displayed button text
