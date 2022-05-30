@@ -3,7 +3,7 @@
 With checkbox, the user can set a bool to true or false
 
 Here are all possible functions available for checkbox:<be>
- Remember checkbox inherits from [object](https://github.com/NoryiE/NyoUI/wiki/Object):
+ Remember checkbox inherits from [object](/Object):
 
 
 Create a onChange event:

@@ -3,7 +3,7 @@
 Buttons are objects, which execute function by clicking on them
 
 The following list is only available to buttons: <br>
-Remember button also inherits from [object](https://github.com/NoryiE/basalt/wiki/Object):
+Remember button also inherits from [object](/Object):
 
 ## setText
 Sets the displayed button text

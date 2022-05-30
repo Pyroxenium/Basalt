@@ -3,7 +3,7 @@
 With sliders you can add a object where the user can change a number value.<br><br>
 
 Here are all possible functions available for sliders: <br>
-Remember slider also inherits from [object](https://github.com/NoryiE/Basalt/wiki/Object)
+Remember slider also inherits from [object](/Object)
 
 ## setSymbol
 this will change the foreground symbol

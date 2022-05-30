@@ -10,7 +10,7 @@ local aScrollbar = mainFrame:addScrollbar("myFirstScrollbar"):show()
 
 This will create a default label with a size 5 width and 1 height on position 1 1 (relative to its parent frame), the default background is colors.gray, the default text color is colors.black. the default bar type is vertical, the default symbol is " " and the default symbol color is colors.lightGray. The default zIndex is 5.
 
-Here are all possible functions available for scrollbars. Remember scrollbar inherit from [object](https://github.com/NoryiE/Basalt/wiki/Object):
+Here are all possible functions available for scrollbars. Remember scrollbar inherit from [object](/Object):
 
 ## setSymbol
 Changes the symbol
