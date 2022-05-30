@@ -1,3 +1,5 @@
+# Changing button colors
+
 Here i want to explain to you how you would create a button with the default color gray, and as long as the user is clicking on the button it will change its color to black (the default frame-background is lightGray).
 
 To make this possible the button needs 1 onClick event, 1 onClickUp event and 1 onLoseFocus event.
