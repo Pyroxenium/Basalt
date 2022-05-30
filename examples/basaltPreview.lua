@@ -1,11 +1,12 @@
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
 if not(fs.exists(filePath))then
-shell.run("wget https://raw.githubusercontent.com/NoryiE/Basalt/master/basalt.lua "..filePath)
+shell.run("wget https://raw.githubusercontent.com/Pyroxenium/Basalt/master/basalt.lua "..filePath)
 end
 local basalt = dofile("basalt.lua") -- here you can change the variablename in any variablename you want default: basalt
 
 local w, h = term.getSize()
+
 
 local main = basalt.createFrame("mainFrame"):show()
 local objFrame = main:addFrame("objectFrame"):setPosition(1,2):setBackground(colors.lightGray):setSize(w, h-1):show()
