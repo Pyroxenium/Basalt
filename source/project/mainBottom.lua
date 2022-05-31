@@ -14,7 +14,15 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
         activeFrame:keyHandler(event, p1)
         activeFrame:backgroundKeyHandler(event, p1)
     end
-    
+
+    if(event == "key")then
+        keyActive[p1] = true
+    end
+
+    if(event == "key_up")then
+        keyActive[p1] = false
+    end
+
     for _, value in pairs(frames) do
         value:eventHandler(event, p1, p2, p3, p4)
     end
@@ -43,6 +51,11 @@ end
 
 function basalt.stop()
     updaterActive = false
+end
+
+function basalt.isKeyDown(key)
+    if(keyActive[key]==nil)then return false end
+    return keyActive[key];
 end
 
 function basalt.getFrame(name)

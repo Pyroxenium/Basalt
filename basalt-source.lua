@@ -1,7 +1,7 @@
 local basalt = { debugger = true, version = 1 } 
 local activeFrame 
 local frames = {} 
-local keyModifier = {} 
+local keyActive = {} 
 local parentTerminal = term.current()
 
 local sub = string.sub
@@ -140,12 +140,11 @@ local function generateFontSize(size,yeld)
     return true
 end
 
-generateFontSize(3,false)
-
 local function makeText(nSize, sString, nFC, nBC, bBlit)
     if not type(sString) == "string" then error("Not a String",3) end --this should never happend with expects in place.
     local cFC = type(nFC) == "string" and nFC:sub(1, 1) or tHex[nFC] or error("Wrong Front Color",3)
     local cBC = type(nBC) == "string" and nBC:sub(1, 1) or tHex[nBC] or error("Wrong Back Color",3)
+    if(fonts[nSize]==nil)then generateFontSize(3,false) end
     local font = fonts[nSize] or error("Wrong font size selected",3)
     if sString == "" then return {{""}, {""}, {""}} end
     
@@ -3302,6 +3301,35 @@ local function Slider(name)
             return self
         end;
 
+        setValue = function(self, val)
+            index = math.floor(val / maxValue)
+            if (barType == "horizontal") then
+                if(index<1)then index = 1
+                elseif(index>self.width)then index = self.width end
+                base.setValue(self, maxValue / self.width * (index))
+            elseif (barType == "vertical") then
+                if(index<1)then index = 1
+                elseif(index>self.height)then index = self.height end
+                base.setValue(self, maxValue / self.height * (index))
+            end
+            return self
+        end;
+
+        setIndex = function(self, _index)
+            if (barType == "horizontal") then
+                if(_index>=1)and(_index<=self.width)then
+                    index = _index
+                    base.setValue(self, maxValue / self.width * (index))
+                end
+            elseif(barType == "vertical") then
+                if(_index>=1)and(_index<=self.height)then
+                    index = _index
+                    base.setValue(self, maxValue / self.height * (index))
+                end
+            end
+            return self
+        end;
+
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
@@ -3309,7 +3337,7 @@ local function Slider(name)
                     for _index = 0, self.width - 1 do
                         if (obx + _index == x) and (oby <= y) and (oby + self.height > y) then
                             index = _index + 1
-                            self:setValue(maxValue / self.width * (index))
+                            base.setValue(self, maxValue / self.width * (index))
                             self:setVisualChanged()
                         end
                     end
@@ -3318,7 +3346,7 @@ local function Slider(name)
                     for _index = 0, self.height - 1 do
                         if (oby + _index == y) and (obx <= x) and (obx + self.width > x) then
                             index = _index + 1
-                            self:setValue(maxValue / self.height * (index))
+                            base.setValue(self, maxValue / self.height * (index))
                             self:setVisualChanged()
                         end
                     end
@@ -4291,6 +4319,9 @@ local function Frame(name, parent)
         draw = function(self)
             if (self:getVisualChanged()) then
                 if (base.draw(self)) then
+                    for _,v in pairs(monitors)do
+                        v.frame:draw()
+                    end
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                     local anchx, anchy = self:getAnchorPosition()
                     if (self.parent ~= nil) then
@@ -4331,9 +4362,6 @@ local function Frame(name, parent)
                         end
                     end
                     self:setVisualChanged(false)
-                end
-                for _,v in pairs(monitors)do
-                    v.frame:draw()
                 end
                 drawHelper.update()
             end
@@ -4489,7 +4517,15 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
         activeFrame:keyHandler(event, p1)
         activeFrame:backgroundKeyHandler(event, p1)
     end
-    
+
+    if(event == "key")then
+        keyActive[p1] = true
+    end
+
+    if(event == "key_up")then
+        keyActive[p1] = false
+    end
+
     for _, value in pairs(frames) do
         value:eventHandler(event, p1, p2, p3, p4)
     end
@@ -4518,6 +4554,11 @@ end
 
 function basalt.stop()
     updaterActive = false
+end
+
+function basalt.isKeyDown(key)
+    if(keyActive[key]==nil)then return false end
+    return keyActive[key];
 end
 
 function basalt.getFrame(name)

@@ -419,6 +419,9 @@ local function Frame(name, parent)
         draw = function(self)
             if (self:getVisualChanged()) then
                 if (base.draw(self)) then
+                    for _,v in pairs(monitors)do
+                        v.frame:draw()
+                    end
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                     local anchx, anchy = self:getAnchorPosition()
                     if (self.parent ~= nil) then
@@ -459,9 +462,6 @@ local function Frame(name, parent)
                         end
                     end
                     self:setVisualChanged(false)
-                end
-                for _,v in pairs(monitors)do
-                    v.frame:draw()
                 end
                 drawHelper.update()
             end

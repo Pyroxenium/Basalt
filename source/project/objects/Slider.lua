@@ -42,6 +42,35 @@ local function Slider(name)
             return self
         end;
 
+        setValue = function(self, val)
+            index = math.floor(val / maxValue)
+            if (barType == "horizontal") then
+                if(index<1)then index = 1
+                elseif(index>self.width)then index = self.width end
+                base.setValue(self, maxValue / self.width * (index))
+            elseif (barType == "vertical") then
+                if(index<1)then index = 1
+                elseif(index>self.height)then index = self.height end
+                base.setValue(self, maxValue / self.height * (index))
+            end
+            return self
+        end;
+
+        setIndex = function(self, _index)
+            if (barType == "horizontal") then
+                if(_index>=1)and(_index<=self.width)then
+                    index = _index
+                    base.setValue(self, maxValue / self.width * (index))
+                end
+            elseif(barType == "vertical") then
+                if(_index>=1)and(_index<=self.height)then
+                    index = _index
+                    base.setValue(self, maxValue / self.height * (index))
+                end
+            end
+            return self
+        end;
+
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
@@ -49,7 +78,7 @@ local function Slider(name)
                     for _index = 0, self.width - 1 do
                         if (obx + _index == x) and (oby <= y) and (oby + self.height > y) then
                             index = _index + 1
-                            self:setValue(maxValue / self.width * (index))
+                            base.setValue(self, maxValue / self.width * (index))
                             self:setVisualChanged()
                         end
                     end
@@ -58,7 +87,7 @@ local function Slider(name)
                     for _index = 0, self.height - 1 do
                         if (oby + _index == y) and (obx <= x) and (obx + self.width > x) then
                             index = _index + 1
-                            self:setValue(maxValue / self.height * (index))
+                            base.setValue(self, maxValue / self.height * (index))
                             self:setVisualChanged()
                         end
                     end
