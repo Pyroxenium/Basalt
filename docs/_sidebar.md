@@ -23,7 +23,8 @@
     - [Text Field](objects/Textfield)
     - [Thread](objects/Thread)
     - [Timer](objects/Timer)
-
+- Events
+    - [Mouse Events](objects/mouseEvents.md)
 - Tips & Tricks
     - [Component Logic](tips/logic)
     - [Changing Button Color](tips/buttons)
