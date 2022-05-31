@@ -1,5 +1,3 @@
-Basalt is managing all the things.
-
 To start using Basalt you have to do the following line of code:
 
 `local basalt = dofile("basalt.lua")`
