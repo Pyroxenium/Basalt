@@ -28,6 +28,10 @@ local function Radio(name)
             return self
         end;
 
+        getAll = function(self)
+            return list
+        end;
+
         removeItem = function(self, index)
             table.remove(list, index)
             return self
@@ -78,20 +82,17 @@ local function Radio(name)
 
         mouseClickHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-            if (event == "mouse_click") then
-                -- remove mouse_drag if i want to make objects moveable uwuwuwuw
-                if (button == 1) then
-                    if (#list > 0) then
-                        for _, value in pairs(list) do
-                            if (obx + value.x - 1 <= x) and (obx + value.x - 1 + value.text:len() + 2 >= x) and (oby + value.y - 1 == y) then
-                                self:setValue(value)
-                                if (self.parent ~= nil) then
-                                    self.parent:setFocusedObject(self)
-                                end
-                                --eventSystem:sendEvent(event, self, event, button, x, y)
-                                self:setVisualChanged()
-                                return true
+            if ((event == "mouse_click")and(button==1))or(event=="monitor_touch") then
+                if (#list > 0) then
+                    for _, value in pairs(list) do
+                        if (obx + value.x - 1 <= x) and (obx + value.x - 1 + value.text:len() + 2 >= x) and (oby + value.y - 1 == y) then
+                            self:setValue(value)
+                            if (self.parent ~= nil) then
+                                self.parent:setFocusedObject(self)
                             end
+                            --eventSystem:sendEvent(event, self, event, button, x, y)
+                            self:setVisualChanged()
+                            return true
                         end
                     end
                 end

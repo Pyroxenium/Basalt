@@ -44,6 +44,10 @@ local function Menubar(name)
             return self
         end;
 
+        getAll = function(self)
+            return list
+        end;
+
         getItemIndex = function(self)
             local selected = self:getValue()
             for key, value in pairs(list) do
@@ -119,7 +123,7 @@ local function Menubar(name)
                 if (self.parent ~= nil) then
                     self.parent:setFocusedObject(self)
                 end
-                if (event == "mouse_click") then
+                if (event == "mouse_click") or (event == "monitor_touch") then
                     local xPos = 1
                     for n = 1 + itemOffset, #list do
                         if (list[n] ~= nil) then

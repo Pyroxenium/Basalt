@@ -88,6 +88,36 @@ Toggles the frame's upper bar
 local mainFrame = myFrame:setBar("Hello World!"):showBar()
 ````
 
+## addMonitor
+adds a monitor to the active main frame.
+#### Parameters: 
+1. `string` The monitor name ("right", "left",... "monitor_1", "monitor_2",...)
+#### Returns:
+1. `frame` returns a frame which you can use like normal frames
+#### Usage:
+* Adds a monitor to the mainFrame. Only as long as this frame is also the active Frame, the monitor will be shown.
+````lua
+local mainFrame = basalt.createFrame("mainFrame"):show()
+local monitor1 = mainFrame:addMonitor("right"):show()
+
+monitor1:setBar("Monitor 1"):showBar()
+````
+
+## setMonitorScale
+changes the monitor scale (almost the same as setTextScale())
+#### Parameters: 
+1. `number` Possible values are: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 (1 is the same as 0.5 by setTextScale, and 10 is the same as 5)
+#### Returns:
+1. `monitor` The monitor being used
+#### Usage:
+* Changes the monitor scale to 2
+````lua
+local mainFrame = basalt.createFrame("mainFrame"):show()
+local monitor1 = mainFrame:addMonitor("right"):setMonitorScale(2):show()
+
+monitor1:setBar("Monitor 1"):showBar()
+````
+
 ## ~~isModifierActive~~ 
 ### _Disabled, this function is a WIP_
 Returns true if the user is currently holding the respective key down

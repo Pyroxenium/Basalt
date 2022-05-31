@@ -46,6 +46,10 @@ local function List(name)
             return list[index]
         end;
 
+        getAll = function(self)
+            return list
+        end;
+
         getItemIndex = function(self)
             local selected = self:getValue()
             for key, value in pairs(list) do
@@ -91,16 +95,13 @@ local function List(name)
         mouseClickHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (obx <= x) and (obx + self.width > x) and (oby <= y) and (oby + self.height > y) and (self:isVisible()) then
-                if (event == "mouse_click") or (event == "mouse_drag") then
-                    -- remove mouse_drag if i want to make objects moveable uwuwuwuw
-                    if (button == 1) then
-                        if (#list > 0) then
-                            for n = 1, self.height do
-                                if (list[n + yOffset] ~= nil) then
-                                    if (obx <= x) and (obx + self.width > x) and (oby + n - 1 == y) then
-                                        self:setValue(list[n + yOffset])
-                                        self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n + yOffset])
-                                    end
+                if (((event == "mouse_click") or (event == "mouse_drag"))and(button==1))or(event=="monitor_touch") then
+                    if (#list > 0) then
+                        for n = 1, self.height do
+                            if (list[n + yOffset] ~= nil) then
+                                if (obx <= x) and (obx + self.width > x) and (oby + n - 1 == y) then
+                                    self:setValue(list[n + yOffset])
+                                    self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n + yOffset])
                                 end
                             end
                         end

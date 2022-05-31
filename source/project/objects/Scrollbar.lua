@@ -64,7 +64,7 @@ local function Scrollbar(name)
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if ((event == "mouse_click") or (event == "mouse_drag")) and (button == 1) then
+                if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
                     if (barType == "horizontal") then
                         for _index = 0, self.width do
                             if (obx + _index == x) and (oby <= y) and (oby + self.height > y) then

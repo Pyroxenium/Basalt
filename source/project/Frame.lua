@@ -6,7 +6,14 @@ local function Frame(name, parent)
     local objZIndex = {}
     local object = {}
     local focusedObject
+    local termObject = parentTerminal
+
+    local monitors = {}
+    local isMonitor = false
+
     base:setZIndex(10)
+
+    local drawHelper = basaltDrawHelper(termObject)
 
     local cursorBlink = false
     local xCursor = 1
@@ -21,8 +28,7 @@ local function Frame(name, parent)
         base.bgColor = theme.FrameBG
         base.fgColor = theme.FrameFG
     else
-        local termW, termH = parentTerminal.getSize()
-        base.width, base.height = termW, termH
+        base.width, base.height = termObject.getSize()
         base.bgColor = theme.basaltBG
         base.fgColor = theme.basaltFG
     end
@@ -129,7 +135,7 @@ local function Frame(name, parent)
 
         show = function(self)
             base:show()
-            if (self.parent == nil) then
+            if (self.parent == nil)and not(isMonitor) then
                 activeFrame = self
             end
             return self
@@ -156,6 +162,29 @@ local function Frame(name, parent)
         end;
 
 
+        addMonitor = function(self, mon)
+            local screen = peripheral.wrap(mon)
+            monitors[mon] = {monitor=mon, frame=basalt.createFrame(self:getName().."_monitor_"..mon)}
+            monitors[mon].frame:setDisplay(screen):setFrameAsMonitor()
+            monitors[mon].frame:setSize(screen:getSize())
+            return monitors[mon].frame
+        end;
+
+        setMonitorScale = function(self, scale, fullSize) -- 1,2,3,4,5,6,7,8,9,10
+            if(isMonitor)then
+                termObject.setTextScale(scale*0.5)
+                if(fullSize)then
+                    self:setSize(termObject:getSize())
+                end
+            end
+            return self, isMonitor
+        end;
+
+        setFrameAsMonitor = function(self, isMon)
+            isMonitor = isMon or true
+            return self
+        end;
+
         showBar = function(self, showIt)
             self.barActive = showIt or not self.barActive
             self:setVisualChanged()
@@ -174,6 +203,16 @@ local function Frame(name, parent)
             self.barTextAlign = align or "left"
             self:setVisualChanged()
             return self
+        end;
+
+        setDisplay = function(self, drawTerm)
+            termObject = drawTerm
+            drawHelper = basaltDrawHelper(termObject)
+            return self
+        end;
+
+        getDisplay = function(self)
+            return termObject
         end;
 
         getVisualChanged = function(self)
@@ -238,8 +277,8 @@ local function Frame(name, parent)
                 end
             end
             if (event == "terminate") then
-                parentTerminal.clear()
-                parentTerminal.setCursorPos(1, 1)
+                termObject.clear()
+                termObject.setCursorPos(1, 1)
                 basalt.stop()
             end
         end;
@@ -265,14 +304,22 @@ local function Frame(name, parent)
 
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
-                for _, index in pairs(objZIndex) do
-                    if (objects[index] ~= nil) then
-                        for _, value in rpairs(objects[index]) do
-                            if (value.mouseClickHandler ~= nil) then
-                                if (value:mouseClickHandler(event, button, x + xO, y + yO)) then
-                                    return true
+                if(event~="monitor_touch") or (isMonitor)then
+                    for _, index in pairs(objZIndex) do
+                        if (objects[index] ~= nil) then
+                            for _, value in rpairs(objects[index]) do
+                                if (value.mouseClickHandler ~= nil) then
+                                    if (value:mouseClickHandler(event, button, x + xO, y + yO)) then
+                                        return true
+                                    end
                                 end
                             end
+                        end
+                    end
+                elseif not(isMonitor)then
+                    for _,v in pairs(monitors)do
+                        if(button==v.monitor)then
+                            v.frame:mouseClickHandler(event, button, x, y)
                         end
                     end
                 end
@@ -403,16 +450,20 @@ local function Frame(name, parent)
                     end
 
                     if (cursorBlink) then
-                        parentTerminal.setTextColor(cursorColor)
-                        parentTerminal.setCursorPos(xCursor, yCursor)
+                        termObject.setTextColor(cursorColor)
+                        termObject.setCursorPos(xCursor, yCursor)
                         if (self.parent ~= nil) then
-                            parentTerminal.setCursorBlink(self:isFocused())
+                            termObject.setCursorBlink(self:isFocused())
                         else
-                            parentTerminal.setCursorBlink(cursorBlink)
+                            termObject.setCursorBlink(cursorBlink)
                         end
                     end
                     self:setVisualChanged(false)
                 end
+                for _,v in pairs(monitors)do
+                    v.frame:draw()
+                end
+                drawHelper.update()
             end
         end;
 

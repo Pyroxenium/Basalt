@@ -144,7 +144,6 @@ generateFontSize(3,false)
 
 local function makeText(nSize, sString, nFC, nBC, bBlit)
     if not type(sString) == "string" then error("Not a String",3) end --this should never happend with expects in place.
-    print(tHex, nFC)
     local cFC = type(nFC) == "string" and nFC:sub(1, 1) or tHex[nFC] or error("Wrong Front Color",3)
     local cBC = type(nBC) == "string" and nBC:sub(1, 1) or tHex[nBC] or error("Wrong Back Color",3)
     local font = fonts[nSize] or error("Wrong font size selected",3)
@@ -184,8 +183,8 @@ local function makeText(nSize, sString, nFC, nBC, bBlit)
 
     return {tText, tFront, tBack}
 end
-local function basaltDrawHelper()
-    local terminal = parentTerminal
+local function basaltDrawHelper(drawTerm)
+    local terminal = drawTerm
     local width, height = terminal.getSize()
     local cacheT = {}
     local cacheBG = {}
@@ -365,7 +364,6 @@ local function basaltDrawHelper()
     }
     return drawHelper
 end
-local drawHelper = basaltDrawHelper()
 local function BasaltEvents()
 
     local events = {}
@@ -731,9 +729,9 @@ local function Object(name)
 
         setPosition = function(self, xPos, yPos, rel)
             if (rel) then
-                self.x, self.y = self.x + xPos, self.y + yPos
+                self.x, self.y = math.floor(self.x + xPos), math.floor(self.y + yPos)
             else
-                self.x, self.y = xPos, yPos
+                self.x, self.y = math.floor(xPos), math.floor(yPos)
             end
             visualsChanged = true
             return self
@@ -872,6 +870,7 @@ local function Object(name)
 
         onClick = function(self, func)
             self:registerEvent("mouse_click", func)
+            self:registerEvent("monitor_touch", func)
             return self
         end;
 
@@ -1150,7 +1149,7 @@ local function Checkbox(name)
 
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
-                if (event == "mouse_click") and (button == 1) then
+                if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
                     if (self:getValue() ~= true) and (self:getValue() ~= false) then
                         self:setValue(false)
                     else
@@ -1227,6 +1226,10 @@ local function Dropdown(name)
             return self
         end;
 
+        getAll = function(self)
+            return list
+        end;
+
         removeItem = function(self, index)
             table.remove(list, index)
             return self
@@ -1281,16 +1284,14 @@ local function Dropdown(name)
         mouseClickHandler = function(self, event, button, x, y)
             if (state == 2) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if (event == "mouse_click") then
-                    -- remove mouse_drag if i want to make objects moveable uwuwuwuw
-                    if (button == 1) then
-                        if (#list > 0) then
-                            for n = 1, dropdownH do
-                                if (list[n + yOffset] ~= nil) then
-                                    if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
-                                        self:setValue(list[n + yOffset])
-                                        return true
-                                    end
+                if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
+
+                    if (#list > 0) then
+                        for n = 1, dropdownH do
+                            if (list[n + yOffset] ~= nil) then
+                                if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
+                                    self:setValue(list[n + yOffset])
+                                    return true
                                 end
                             end
                         end
@@ -1938,6 +1939,10 @@ local function List(name)
             return list[index]
         end;
 
+        getAll = function(self)
+            return list
+        end;
+
         getItemIndex = function(self)
             local selected = self:getValue()
             for key, value in pairs(list) do
@@ -1983,16 +1988,13 @@ local function List(name)
         mouseClickHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (obx <= x) and (obx + self.width > x) and (oby <= y) and (oby + self.height > y) and (self:isVisible()) then
-                if (event == "mouse_click") or (event == "mouse_drag") then
-                    -- remove mouse_drag if i want to make objects moveable uwuwuwuw
-                    if (button == 1) then
-                        if (#list > 0) then
-                            for n = 1, self.height do
-                                if (list[n + yOffset] ~= nil) then
-                                    if (obx <= x) and (obx + self.width > x) and (oby + n - 1 == y) then
-                                        self:setValue(list[n + yOffset])
-                                        self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n + yOffset])
-                                    end
+                if (((event == "mouse_click") or (event == "mouse_drag"))and(button==1))or(event=="monitor_touch") then
+                    if (#list > 0) then
+                        for n = 1, self.height do
+                            if (list[n + yOffset] ~= nil) then
+                                if (obx <= x) and (obx + self.width > x) and (oby + n - 1 == y) then
+                                    self:setValue(list[n + yOffset])
+                                    self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n + yOffset])
                                 end
                             end
                         end
@@ -2093,6 +2095,10 @@ local function Menubar(name)
             return self
         end;
 
+        getAll = function(self)
+            return list
+        end;
+
         getItemIndex = function(self)
             local selected = self:getValue()
             for key, value in pairs(list) do
@@ -2168,7 +2174,7 @@ local function Menubar(name)
                 if (self.parent ~= nil) then
                     self.parent:setFocusedObject(self)
                 end
-                if (event == "mouse_click") then
+                if (event == "mouse_click") or (event == "monitor_touch") then
                     local xPos = 1
                     for n = 1 + itemOffset, #list do
                         if (list[n] ~= nil) then
@@ -2861,7 +2867,7 @@ local function Program(name)
             end
             if not (curProcess:isDead()) then
                 if not (paused) then
-                    if (event ~= "mouse_click") and (event ~= "mouse_up") and (event ~= "mouse_scroll") and (event ~= "mouse_drag") and (event ~= "key_up") and (event ~= "key") and (event ~= "char") and (event ~= "terminate") then
+                    if (event ~= "mouse_click") and (event ~= "monitor_touch") and (event ~= "mouse_up") and (event ~= "mouse_scroll") and (event ~= "mouse_drag") and (event ~= "key_up") and (event ~= "key") and (event ~= "char") and (event ~= "terminate") then
                         curProcess:resume(event, p1, p2, p3, p4)
                     end
                     if (self:isFocused()) then
@@ -2878,7 +2884,7 @@ local function Program(name)
                         end
                     end
                 else
-                    if (event ~= "mouse_click") and (event ~= "mouse_up") and (event ~= "mouse_scroll") and (event ~= "mouse_drag") and (event ~= "key_up") and (event ~= "key") and (event ~= "char") and (event ~= "terminate") then
+                    if (event ~= "mouse_click") and (event ~= "monitor_touch") and (event ~= "mouse_up") and (event ~= "mouse_scroll") and (event ~= "mouse_drag") and (event ~= "key_up") and (event ~= "key") and (event ~= "char") and (event ~= "terminate") then
                         table.insert(queuedEvent, { event = event, args = { p1, p2, p3, p4 } })
                     end
                 end
@@ -3029,6 +3035,10 @@ local function Radio(name)
             return self
         end;
 
+        getAll = function(self)
+            return list
+        end;
+
         removeItem = function(self, index)
             table.remove(list, index)
             return self
@@ -3079,20 +3089,17 @@ local function Radio(name)
 
         mouseClickHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-            if (event == "mouse_click") then
-                -- remove mouse_drag if i want to make objects moveable uwuwuwuw
-                if (button == 1) then
-                    if (#list > 0) then
-                        for _, value in pairs(list) do
-                            if (obx + value.x - 1 <= x) and (obx + value.x - 1 + value.text:len() + 2 >= x) and (oby + value.y - 1 == y) then
-                                self:setValue(value)
-                                if (self.parent ~= nil) then
-                                    self.parent:setFocusedObject(self)
-                                end
-                                --eventSystem:sendEvent(event, self, event, button, x, y)
-                                self:setVisualChanged()
-                                return true
+            if ((event == "mouse_click")and(button==1))or(event=="monitor_touch") then
+                if (#list > 0) then
+                    for _, value in pairs(list) do
+                        if (obx + value.x - 1 <= x) and (obx + value.x - 1 + value.text:len() + 2 >= x) and (oby + value.y - 1 == y) then
+                            self:setValue(value)
+                            if (self.parent ~= nil) then
+                                self.parent:setFocusedObject(self)
                             end
+                            --eventSystem:sendEvent(event, self, event, button, x, y)
+                            self:setVisualChanged()
+                            return true
                         end
                     end
                 end
@@ -3188,7 +3195,7 @@ local function Scrollbar(name)
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if ((event == "mouse_click") or (event == "mouse_drag")) and (button == 1) then
+                if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
                     if (barType == "horizontal") then
                         for _index = 0, self.width do
                             if (obx + _index == x) and (oby <= y) and (oby + self.height > y) then
@@ -3373,7 +3380,7 @@ local function Switch(name)
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if ((event == "mouse_click") or (event == "mouse_drag")) and (button == 1) then
+                if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
 
 
                 end
@@ -3643,7 +3650,7 @@ local function Textfield(name)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx, anchy = self:getAnchorPosition()
-                if (event == "mouse_click") then
+                if (event == "mouse_click")or(event=="monitor_touch") then
                     if (lines[y - oby + hIndex] ~= nil) then
                         textX = x - obx + wIndex
                         textY = y - oby + hIndex
@@ -3871,7 +3878,14 @@ local function Frame(name, parent)
     local objZIndex = {}
     local object = {}
     local focusedObject
+    local termObject = parentTerminal
+
+    local monitors = {}
+    local isMonitor = false
+
     base:setZIndex(10)
+
+    local drawHelper = basaltDrawHelper(termObject)
 
     local cursorBlink = false
     local xCursor = 1
@@ -3886,8 +3900,7 @@ local function Frame(name, parent)
         base.bgColor = theme.FrameBG
         base.fgColor = theme.FrameFG
     else
-        local termW, termH = parentTerminal.getSize()
-        base.width, base.height = termW, termH
+        base.width, base.height = termObject.getSize()
         base.bgColor = theme.basaltBG
         base.fgColor = theme.basaltFG
     end
@@ -3994,7 +4007,7 @@ local function Frame(name, parent)
 
         show = function(self)
             base:show()
-            if (self.parent == nil) then
+            if (self.parent == nil)and not(isMonitor) then
                 activeFrame = self
             end
             return self
@@ -4021,6 +4034,29 @@ local function Frame(name, parent)
         end;
 
 
+        addMonitor = function(self, mon)
+            local screen = peripheral.wrap(mon)
+            monitors[mon] = {monitor=mon, frame=basalt.createFrame(self:getName().."_monitor_"..mon)}
+            monitors[mon].frame:setDisplay(screen):setFrameAsMonitor()
+            monitors[mon].frame:setSize(screen:getSize())
+            return monitors[mon].frame
+        end;
+
+        setMonitorScale = function(self, scale, fullSize) -- 1,2,3,4,5,6,7,8,9,10
+            if(isMonitor)then
+                termObject.setTextScale(scale*0.5)
+                if(fullSize)then
+                    self:setSize(termObject:getSize())
+                end
+            end
+            return self, isMonitor
+        end;
+
+        setFrameAsMonitor = function(self, isMon)
+            isMonitor = isMon or true
+            return self
+        end;
+
         showBar = function(self, showIt)
             self.barActive = showIt or not self.barActive
             self:setVisualChanged()
@@ -4039,6 +4075,16 @@ local function Frame(name, parent)
             self.barTextAlign = align or "left"
             self:setVisualChanged()
             return self
+        end;
+
+        setDisplay = function(self, drawTerm)
+            termObject = drawTerm
+            drawHelper = basaltDrawHelper(termObject)
+            return self
+        end;
+
+        getDisplay = function(self)
+            return termObject
         end;
 
         getVisualChanged = function(self)
@@ -4103,8 +4149,8 @@ local function Frame(name, parent)
                 end
             end
             if (event == "terminate") then
-                parentTerminal.clear()
-                parentTerminal.setCursorPos(1, 1)
+                termObject.clear()
+                termObject.setCursorPos(1, 1)
                 basalt.stop()
             end
         end;
@@ -4130,14 +4176,22 @@ local function Frame(name, parent)
 
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
-                for _, index in pairs(objZIndex) do
-                    if (objects[index] ~= nil) then
-                        for _, value in rpairs(objects[index]) do
-                            if (value.mouseClickHandler ~= nil) then
-                                if (value:mouseClickHandler(event, button, x + xO, y + yO)) then
-                                    return true
+                if(event~="monitor_touch") or (isMonitor)then
+                    for _, index in pairs(objZIndex) do
+                        if (objects[index] ~= nil) then
+                            for _, value in rpairs(objects[index]) do
+                                if (value.mouseClickHandler ~= nil) then
+                                    if (value:mouseClickHandler(event, button, x + xO, y + yO)) then
+                                        return true
+                                    end
                                 end
                             end
+                        end
+                    end
+                elseif not(isMonitor)then
+                    for _,v in pairs(monitors)do
+                        if(button==v.monitor)then
+                            v.frame:mouseClickHandler(event, button, x, y)
                         end
                     end
                 end
@@ -4268,16 +4322,20 @@ local function Frame(name, parent)
                     end
 
                     if (cursorBlink) then
-                        parentTerminal.setTextColor(cursorColor)
-                        parentTerminal.setCursorPos(xCursor, yCursor)
+                        termObject.setTextColor(cursorColor)
+                        termObject.setCursorPos(xCursor, yCursor)
                         if (self.parent ~= nil) then
-                            parentTerminal.setCursorBlink(self:isFocused())
+                            termObject.setCursorBlink(self:isFocused())
                         else
-                            parentTerminal.setCursorBlink(cursorBlink)
+                            termObject.setCursorBlink(cursorBlink)
                         end
                     end
                     self:setVisualChanged(false)
                 end
+                for _,v in pairs(monitors)do
+                    v.frame:draw()
+                end
+                drawHelper.update()
             end
         end;
 
@@ -4419,26 +4477,24 @@ local updaterActive = false
 local function basaltUpdateEvent(event, p1, p2, p3, p4)
     if (event == "mouse_click") then
         activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    end
-    if (event == "mouse_drag") then
+    elseif (event == "mouse_drag") then
         activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    end
-    if (event == "mouse_up") then
+    elseif (event == "mouse_up") then
         activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    end
-    if (event == "mouse_scroll") then
+    elseif (event == "mouse_scroll") then
         activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    end
-    if (event == "key") or (event == "char") then
+    elseif (event == "monitor_touch") then
+        activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
+    elseif (event == "key") or (event == "char") then
         activeFrame:keyHandler(event, p1)
         activeFrame:backgroundKeyHandler(event, p1)
     end
+    
     for _, value in pairs(frames) do
         value:eventHandler(event, p1, p2, p3, p4)
     end
     if (updaterActive) then
         activeFrame:draw()
-        drawHelper.update()
     end
 end
 
@@ -4446,7 +4502,6 @@ function basalt.autoUpdate(isActive)
     parentTerminal.clear()
     updaterActive = isActive or true
     activeFrame:draw()
-    drawHelper.update()
     while updaterActive do
         local event, p1, p2, p3, p4 = os.pullEventRaw() -- change to raw later
         basaltUpdateEvent(event, p1, p2, p3, p4)
@@ -4458,7 +4513,6 @@ function basalt.update(event, p1, p2, p3, p4)
         basaltUpdateEvent(event, p1, p2, p3, p4)
     else
         activeFrame:draw()
-        drawHelper.update()
     end
 end
 
@@ -4487,8 +4541,7 @@ function basalt.setActiveFrame(frame)
 end
 
 function basalt.createFrame(name)
-    local frame = Frame(name)
-    return frame
+    return Frame(name)
 end
 
 function basalt.removeFrame(name)
