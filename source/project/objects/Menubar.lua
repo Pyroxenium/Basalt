@@ -145,7 +145,6 @@ local function Menubar(name)
                     if (itemOffset < 0) then
                         itemOffset = 0
                     end
-
                     local mScroll = maxScroll()
 
                     if (itemOffset > mScroll) then
