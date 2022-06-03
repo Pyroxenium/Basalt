@@ -38,7 +38,7 @@ end
 local sourceFileName = "basalt.lua"
 local sourceFile = io.open(buildPath .. sourceFileName, "w")
 
-
+print("Writing to " .. lfs.currentdir())
 
 sourceFile:write(compiledSource)
 sourceFile:close()
