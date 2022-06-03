@@ -88,7 +88,7 @@ achieve that:
 
 ```lua
 button:onClick(function()
-  if(basalt.isKeyDown(keys.LeftCtrl)then
+  if(basalt.isKeyDown(keys.leftCtrl)then
     basalt.debug("Ctrl is down!")
   else
     basalt.debug("Ctrl is up!")
@@ -96,3 +96,4 @@ button:onClick(function()
 end)
 ```
 
+Make sure to always use the available `keys` table: https://computercraft.info/wiki/Keys_(API)
