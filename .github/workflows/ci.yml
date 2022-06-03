@@ -43,7 +43,7 @@ jobs:
         run: luarocks install luafilesystem
 
       - name: compile-basalt
-        run: lua ${{ github.workspace }}/scripts/compiler.lua
+        run: cd ${{ github.workspace }} && lua scripts/compiler.lua
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
