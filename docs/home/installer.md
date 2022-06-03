@@ -51,12 +51,12 @@ if not(fs.exists(filePath))then
         local event, p1,p2,p3,p4 = os.pullEvent()
         if(event=="mouse_click")then
             if(p3==math.floor(h/2+2))and(p2>=w/2-8)and(p2<=w/2-2)then
-                shell.run("pastebin run ESs1mg7P "..filePath) -- this is an alternative to the wget command
+                shell.run("pastebin run ESs1mg7P "..filePath)
                 _installerWindow.setVisible(false)
                 term.clear()
                 break
             end
-            if(p3==h/2+2)and(p2<=w/2+9)and(p2>=w/2+4)then
+            if(p3==math.floor(h/2+2))and(p2<=w/2+9)and(p2>=w/2+4)then
                 _installerWindow.clear()
                 _installerWindow.setVisible(false)
                 term.setCursorPos(1,1)
@@ -70,4 +70,5 @@ if not(fs.exists(filePath))then
 end
 
 local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
+------------------------------
 ````
