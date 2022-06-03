@@ -23,7 +23,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@feature-compile-ci
+      - uses: actions/checkout@v3
       
       - name: start-message
         run: echo Starting compilation
@@ -32,7 +32,7 @@ jobs:
       - name: setup-lua
         uses: leafo/gh-actions-lua@v9
         with:
-          luaVersion: "5.1.0"
+          luaVersion: "5.1"
 
       - name: setup-luarocks
         uses: leafo/gh-actions-luarocks@v4
