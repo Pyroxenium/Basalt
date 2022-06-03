@@ -30,12 +30,12 @@ jobs:
 
       # Runs a set of commands using the runners shell
       - name: setup-lua
-      - uses: leafo/gh-actions-lua@v9
+        uses: leafo/gh-actions-lua@v9
         with:
           luaVersion: "5.1.0"
 
       - name: setup-luarocks
-      - uses: leafo/gh-actions-luarocks@v4
+        uses: leafo/gh-actions-luarocks@v4
         with:
           luarocksVersion: "3.9.0"
 
