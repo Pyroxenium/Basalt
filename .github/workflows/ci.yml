@@ -44,8 +44,10 @@ jobs:
 
       - name: compile-basalt
         run: cd ${{ github.workspace }} && lua scripts/compiler.lua
+      - name: dir-check
+        run:  pwd
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: Basalt-Artifact
-          path: ${{ github.workspace }}/build/basalt.lua
+          path: build/basalt.lua
