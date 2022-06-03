@@ -25,11 +25,10 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
 
-      - uses: actions/cache@v2
+      - name: Restore vcpkg cache
+        uses: lukka/run-vcpkg@v10
         with:
-          path: |
-            ${{ github.workspace}}/scripts/
-            ${{ github.workspace}}/build/
+          vcpkgGitCommitId: 314018fef43c7e3a52a3e46599313b70ace3977a
 
       - name: start-message
         run: echo Starting compilation
