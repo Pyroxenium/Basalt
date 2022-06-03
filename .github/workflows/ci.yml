@@ -49,5 +49,3 @@ jobs:
         with:
           name: Basalt-Artifact
           path: build/basalt.lua
-      - name: Cleanup
-        run: rm -rf ${{ github.workspace}}/build/
