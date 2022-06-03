@@ -15,7 +15,7 @@ local basalt = dofile(filePath) -- here you can change the variablename in any v
 
 ## Advanced Installer
 This is a visual version, it asks the user if he wants to install basalt.lua (if not found)<br>
-![](https://i.imgur.com/b4Ys7FB.png)
+![](https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/_media/installer.png)
 ````lua
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
