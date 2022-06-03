@@ -40,7 +40,6 @@ local basalt = io.open(sourcesPath .. basaltFileName, "w")
 local compiledSource = ""
 
 for _, file in ipairs(filesOrdered) do
-    print("Loading file ".. file)
     local currentSource = io.open(sourcesPath .. file, "r")
     compiledSource = compiledSource .. currentSource:read("*a") .. "\n"
 end
