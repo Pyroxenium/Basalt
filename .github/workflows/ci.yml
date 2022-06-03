@@ -24,7 +24,13 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
-      
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ${{ github.workspace }}/scripts/
+            ${{ github.workspace }}/build/
+
       - name: start-message
         run: echo Starting compilation
 
@@ -47,6 +53,7 @@ jobs:
       - name: dir-check
         run:  pwd
       - name: Upload artifact
+        run: cd ${{ github.workspace }}
         uses: actions/upload-artifact@v2
         with:
           name: Basalt-Artifact
