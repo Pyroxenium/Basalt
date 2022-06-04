@@ -28,4 +28,3 @@
 - Tips & Tricks
     - [Component Logic](tips/logic)
     - [Changing Button Color](tips/buttons)
-    - [Design Tips](tips/design.md)
