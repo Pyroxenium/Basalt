@@ -18,7 +18,7 @@ end
 
 parallel.waitForAll(basalt.autoUpdate, yourCustomHandler) -- here it will handle your function (yourCustomHandler) and basalts handlers at the time
 ````
-You can read [here](http://www.computercraft.info/wiki/Parallel_(API)) what exactly parallel.waitForAll() does
+You can read [here (tweaked.cc)](https://tweaked.cc/module/parallel.html) what exactly parallel.waitForAll() does
 
 ## Method 2:
 Using threads
