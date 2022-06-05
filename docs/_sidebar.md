@@ -3,7 +3,7 @@
     - [Quick Start](home/Quick-Start.md)
     - [Installer](home/installer)
 - Objects
--     - [Object](objects/Object)
+    - [Object](objects/Object)
     - [Basalt](objects/Basalt)
     - [Button](objects/Button)
     - [Checkbox](objects/Checkbox)
@@ -28,3 +28,4 @@
 - Tips & Tricks
     - [Component Logic](tips/logic)
     - [Changing Button Color](tips/buttons)
+    - [Advanced usage of Events](tips/events.md)
