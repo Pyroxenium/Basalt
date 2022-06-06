@@ -46,7 +46,7 @@ jobs:
         run: lua scripts/compiler.lua
 
       - name: dir-check
-        run: "pwd && ls -la && grep -R basalt.lua"
+        run: "pwd && ls -la && find -L basalt.lua"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
