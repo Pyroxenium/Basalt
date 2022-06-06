@@ -1,6 +1,6 @@
 local basalt = { debugger = true, version = 1 } 
 local activeFrame 
-local frames = {} 
+local frames = {}
 local keyActive = {} 
 local parentTerminal = term.current()
 
@@ -648,10 +648,6 @@ local function Object(name)
             return isVisible
         end;
 
-        getZIndex = function(self)
-            return zIndex;
-        end;
-
         setFocus = function(self)
             if (self.parent ~= nil) then
                 self.parent:setFocusedObject(self)
@@ -666,6 +662,10 @@ local function Object(name)
                 self.parent:addObject(self)
             end
             return self
+        end;
+
+        getZIndex = function(self)
+            return zIndex;
         end;
 
         getType = function(self)
@@ -713,6 +713,7 @@ local function Object(name)
 
         setVisualChanged = function(self, change)
             visualsChanged = change or true
+            if(change == nil)then visualsChanged = true end
             return self
         end;
 
@@ -1121,6 +1122,7 @@ local function Button(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
 
@@ -1177,6 +1179,7 @@ local function Checkbox(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
 
@@ -1204,7 +1207,7 @@ local function Dropdown(name)
     local dropdownH = 6
     local closedSymbol = "\16"
     local openedSymbol = "\31"
-    local state = 1
+    local isOpened = false
 
     local object = {
         getType = function(self)
@@ -1281,7 +1284,7 @@ local function Dropdown(name)
         end;
 
         mouseClickHandler = function(self, event, button, x, y)
-            if (state == 2) then
+            if (isOpened) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
 
@@ -1316,9 +1319,9 @@ local function Dropdown(name)
                 self:setVisualChanged()
             end
             if (base.mouseClickHandler(self, event, button, x, y)) then
-                state = 2
+                isOpened = true
             else
-                state = 1
+                isOpened = false
             end
         end;
 
@@ -1327,33 +1330,27 @@ local function Dropdown(name)
                 local obx, oby = self:getAnchorPosition()
                 if (self.parent ~= nil) then
                     self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                    if (#list >= 1) then
-                        if (self:getValue() ~= nil) then
-                            if (self:getValue().text ~= nil) then
-                                if (state == 1) then
-                                    self.parent:writeText(obx, oby, getTextHorizontalAlign(self:getValue().text, self.width, align):sub(1, self.width - 1) .. closedSymbol, self.bgColor, self.fgColor)
-                                else
-                                    self.parent:writeText(obx, oby, getTextHorizontalAlign(self:getValue().text, self.width, align):sub(1, self.width - 1) .. openedSymbol, self.bgColor, self.fgColor)
-                                end
-                            end
-                        end
-                        if (state == 2) then
-                            for n = 1, dropdownH do
-                                if (list[n + yOffset] ~= nil) then
-                                    if (list[n + yOffset] == self:getValue()) then
-                                        if (selectionColorActive) then
-                                            self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), itemSelectedBG, itemSelectedFG)
-                                        else
-                                            self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
-                                        end
+                    local val = self:getValue()
+                    local text = getTextHorizontalAlign((val~=nil and val.text or ""), self.width, align):sub(1, self.width - 1)  .. (isOpened and openedSymbol or closedSymbol)
+                    self.parent:writeText(obx, oby, text, self.bgColor, self.fgColor)
+
+                    if (isOpened) then
+                        for n = 1, dropdownH do
+                            if (list[n + yOffset] ~= nil) then
+                                if (list[n + yOffset] == val) then
+                                    if (selectionColorActive) then
+                                        self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), itemSelectedBG, itemSelectedFG)
                                     else
                                         self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
                                     end
+                                else
+                                    self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
                                 end
                             end
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -1546,6 +1543,7 @@ local function Image(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -1787,6 +1785,7 @@ local function Input(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -1883,6 +1882,7 @@ local function Label(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
 
@@ -2042,6 +2042,7 @@ local function List(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -2065,15 +2066,19 @@ local function Menubar(name)
     local selectionColorActive = true
     local align = "left"
     local itemOffset = 0
-    local space = 2
+    local space = 1
     local scrollable = false
 
     local function maxScroll()
         local mScroll = 0
-        local xPos = 1
+        local xPos = 0
         for n = 1, #list do
-            if (xPos + list[n].text:len() + space * 2 > object.w) then
-                mScroll = mScroll + list[n].text:len() + space * 2
+            if (xPos + list[n].text:len() + space * 2 > object.width) then
+                if(xPos < object.width)then
+                    mScroll = mScroll + (list[n].text:len() + space * 2-(object.width - xPos))
+                else
+                    mScroll = mScroll + list[n].text:len() + space * 2
+                end
             end
             xPos = xPos + list[n].text:len() + space * 2
 
@@ -2118,7 +2123,7 @@ local function Menubar(name)
             return self
         end;
 
-        setButtonOffset = function(self, offset)
+        setPositionOffset = function(self, offset)
             itemOffset = offset or 0
             if (itemOffset < 0) then
                 itemOffset = 0
@@ -2131,8 +2136,13 @@ local function Menubar(name)
             return self
         end;
 
+        getPositionOffset = function(self)
+            return itemOffset
+        end;
+
         setScrollable = function(self, scroll)
             scrollable = scroll
+            if(scroll==nil)then scrollable = true end
             return self
         end;
 
@@ -2168,41 +2178,41 @@ local function Menubar(name)
         end;
 
         mouseClickHandler = function(self, event, button, x, y)
-            local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
-            if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (self:isVisible()) then
-                if (self.parent ~= nil) then
-                    self.parent:setFocusedObject(self)
-                end
-                if (event == "mouse_click") or (event == "monitor_touch") then
-                    local xPos = 1
-                    for n = 1 + itemOffset, #list do
-                        if (list[n] ~= nil) then
-                            if (xPos + list[n].text:len() + space * 2 <= self.width) then
-                                if (objX + (xPos - 1) <= x) and (objX + (xPos - 1) + list[n].text:len() + space * 2 > x) and (objY == y) then
+            if(base.mouseClickHandler(self, event, button, x, y))then
+                local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+                if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (self:isVisible()) then
+                    if (self.parent ~= nil) then
+                        self.parent:setFocusedObject(self)
+                    end
+                    if (event == "mouse_click") or (event == "monitor_touch") then
+                        local xPos = 0
+                        for n = 1, #list do
+                            if (list[n] ~= nil) then
+                                --if (xPos-1 + list[n].text:len() + space * 2 <= self.width) then
+                                if (objX + xPos <= x + itemOffset) and (objX + xPos + list[n].text:len() + (space*2) > x + itemOffset) and (objY == y) then
                                     self:setValue(list[n])
-                                    self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n])
+                                    self:getEventSystem():sendEvent(event, self, event, 0, x, y, list[n])
                                 end
                                 xPos = xPos + list[n].text:len() + space * 2
-                            else
-                                break
                             end
                         end
-                    end
 
+                    end
+                    if (event == "mouse_scroll") and (scrollable) then
+                        itemOffset = itemOffset + button
+                        if (itemOffset < 0) then
+                            itemOffset = 0
+                        end
+
+                        local mScroll = maxScroll()
+
+                        if (itemOffset > mScroll) then
+                            itemOffset = mScroll
+                        end
+                    end
+                    self:setVisualChanged(true)
+                    return true
                 end
-                if (event == "mouse_scroll") and (scrollable) then
-                    itemOffset = itemOffset + button
-                    if (itemOffset < 0) then
-                        itemOffset = 0
-                    end
-
-                    local mScroll = maxScroll()
-
-                    if (itemOffset > mScroll) then
-                        itemOffset = mScroll
-                    end
-                end
-                return true
             end
             return false
         end;
@@ -2212,27 +2222,26 @@ local function Menubar(name)
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
                     self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                    local xPos = 0
-                    for _, value in pairs(list) do
-                        if (xPos + value.text:len() + space * 2 <= self.width) then
-                            if (value == self:getValue()) then
-                                self.parent:writeText(obx + (xPos - 1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space) .. value.text .. (" "):rep(space), value.text:len() + space * 2, align), itemSelectedBG or value.bgCol, itemSelectedFG or value.fgCol)
-                            else
-                                self.parent:writeText(obx + (xPos - 1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space) .. value.text .. (" "):rep(space), value.text:len() + space * 2, align), value.bgCol, value.fgCol)
-                            end
-                            xPos = xPos + value.text:len() + space * 2
+                    local text = ""
+                    local textBGCol = ""
+                    local textFGCol = ""
+                    for _, v in pairs(list) do
+                        local newItem = (" "):rep(space) .. v.text .. (" "):rep(space)
+                        text = text .. newItem
+                        if(v == self:getValue())then
+                            textBGCol = textBGCol .. tHex[itemSelectedBG or v.bgCol or self.bgColor]:rep(newItem:len())
+                            textFGCol = textFGCol .. tHex[itemSelectedFG or v.FgCol or self.fgColor]:rep(newItem:len())
                         else
-                            if (xPos < self.width + itemOffset) then
-                                if (value == self:getValue()) then
-                                    self.parent:writeText(obx + (xPos - 1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space) .. value.text .. (" "):rep(space), value.text:len() + space * 2, align):sub(1, self.width + itemOffset - xPos), itemSelectedBG or value.bgCol, itemSelectedFG or value.fgCol)
-                                else
-                                    self.parent:writeText(obx + (xPos - 1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space) .. value.text .. (" "):rep(space), value.text:len() + space * 2, align):sub(1, self.width + itemOffset - xPos), value.bgCol, value.fgCol)
-                                end
-                                xPos = xPos + value.text:len() + space * 2
-                            end
+                            textBGCol = textBGCol .. tHex[v.bgCol or self.bgColor]:rep(newItem:len())
+                            textFGCol = textFGCol .. tHex[v.FgCol or self.fgColor]:rep(newItem:len())
                         end
                     end
+
+                    self.parent:setText(obx, oby, text:sub(itemOffset+1, self.width+itemOffset))
+                    self.parent:setBG(obx, oby, textBGCol:sub(itemOffset+1, self.width+itemOffset))
+                    self.parent:setFG(obx, oby, textFGCol:sub(itemOffset+1, self.width+itemOffset))
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -2256,6 +2265,7 @@ local function Pane(name)
                     self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
                     self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.bgColor)
                 end
+                self:setVisualChanged(false)
             end
         end;
 
@@ -2898,6 +2908,7 @@ local function Program(name)
                     self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
                     pWindow.basalt_update()
                 end
+                self:setVisualChanged(false)
             end
         end;
 
@@ -2997,6 +3008,7 @@ local function Progressbar(name)
                         self.parent:drawTextBox(obx, oby, self.width / 100 * progress, self.height, activeBarSymbol)
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
 
@@ -3122,6 +3134,7 @@ local function Radio(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -3251,6 +3264,7 @@ local function Scrollbar(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -3262,6 +3276,7 @@ local function Slider(name)
     local objectType = "Slider"
 
     base.width = 8
+    base.height = 1
     base.bgColor = colors.lightGray
     base.fgColor = colors.gray
     base:setValue(1)
@@ -3272,6 +3287,7 @@ local function Slider(name)
     local bgSymbol = "\140"
     local maxValue = base.width
     local index = 1
+    local symbolSize = 1
 
     local object = {
         getType = function(self)
@@ -3281,6 +3297,22 @@ local function Slider(name)
         setSymbol = function(self, _symbol)
             symbol = _symbol:sub(1, 1)
             self:setVisualChanged()
+            return self
+        end;
+
+        setSymbolSize = function(self, size)
+            symbolSize = tonumber(size) or 1
+            if (barType == "vertical") then
+                self:setValue(index - 1 * (maxValue / (self.height - (symbolSize - 1))) - (maxValue / (self.height - (symbolSize - 1))))
+            elseif (barType == "horizontal") then
+                self:setValue(index - 1 * (maxValue / (self.width - (symbolSize - 1))) - (maxValue / (self.width - (symbolSize - 1))))
+            end
+            self:setVisualChanged()
+            return self
+        end;
+
+        setMaxValue = function(self, val)
+            maxValue = val
             return self
         end;
 
@@ -3301,63 +3333,38 @@ local function Slider(name)
             return self
         end;
 
-        setValue = function(self, val)
-            index = math.floor(val / maxValue)
-            if (barType == "horizontal") then
-                if(index<1)then index = 1
-                elseif(index>self.width)then index = self.width end
-                base.setValue(self, maxValue / self.width * (index))
-            elseif (barType == "vertical") then
-                if(index<1)then index = 1
-                elseif(index>self.height)then index = self.height end
-                base.setValue(self, maxValue / self.height * (index))
-            end
-            return self
-        end;
-
-        setIndex = function(self, _index)
-            if (barType == "horizontal") then
-                if(_index>=1)and(_index<=self.width)then
-                    index = _index
-                    base.setValue(self, maxValue / self.width * (index))
-                end
-            elseif(barType == "vertical") then
-                if(_index>=1)and(_index<=self.height)then
-                    index = _index
-                    base.setValue(self, maxValue / self.height * (index))
-                end
-            end
-            return self
-        end;
-
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if (barType == "horizontal") then
-                    for _index = 0, self.width - 1 do
-                        if (obx + _index == x) and (oby <= y) and (oby + self.height > y) then
-                            index = _index + 1
-                            base.setValue(self, maxValue / self.width * (index))
-                            self:setVisualChanged()
+                if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
+                    if (barType == "horizontal") then
+                        for _index = 0, self.width do
+                            if (obx + _index == x) and (oby <= y) and (oby + self.height > y) then
+                                index = math.min(_index + 1, self.width - (symbolSize - 1))
+                                self:setValue(maxValue / self.width * (index))
+                                self:setVisualChanged()
+                            end
+                        end
+                    end
+                    if (barType == "vertical") then
+                        for _index = 0, self.height do
+                            if (oby + _index == y) and (obx <= x) and (obx + self.width > x) then
+                                index = math.min(_index + 1, self.height - (symbolSize - 1))
+                                self:setValue(maxValue / self.height * (index))
+                                self:setVisualChanged()
+                            end
                         end
                     end
                 end
-                if (barType == "vertical") then
-                    for _index = 0, self.height - 1 do
-                        if (oby + _index == y) and (obx <= x) and (obx + self.width > x) then
-                            index = _index + 1
-                            base.setValue(self, maxValue / self.height * (index))
-                            self:setVisualChanged()
-                        end
+                if (event == "mouse_scroll") then
+                    index = index + button
+                    if (index < 1) then
+                        index = 1
                     end
+                    index = math.min(index, (barType == "vertical" and self.height or self.width) - (symbolSize - 1))
+                    self:setValue(maxValue / (barType == "vertical" and self.height or self.width) * index)
                 end
-                --[[if(event=="mouse_scroll")then
-                    self:setValue(self:getValue() + (maxValue/(barType=="vertical" and self.height or self.width))*typ)
-                    self:setVisualChanged()
-                end
-                if(self:getValue()>maxValue)then self:setValue(maxValue) end
-                if(self:getValue()<maxValue/(barType=="vertical" and self.height or self.width))then self:setValue(maxValue/(barType=="vertical" and self.height or self.width)) end
-                ]]
+                return true
             end
         end;
 
@@ -3367,23 +3374,28 @@ local function Slider(name)
                     local obx, oby = self:getAnchorPosition()
                     if (barType == "horizontal") then
                         self.parent:writeText(obx, oby, bgSymbol:rep(index - 1), self.bgColor, self.fgColor)
-                        self.parent:writeText(obx + index - 1, oby, symbol, symbolColor, symbolColor)
-                        self.parent:writeText(obx + index, oby, bgSymbol:rep(self.width - (index)), self.bgColor, self.fgColor)
+                        self.parent:writeText(obx + index - 1, oby, symbol:rep(symbolSize), symbolColor, symbolColor)
+                        self.parent:writeText(obx + index + symbolSize - 1, oby, bgSymbol:rep(self.width - (index + symbolSize - 1)), self.bgColor, self.fgColor)
                     end
 
                     if (barType == "vertical") then
                         for n = 0, self.height - 1 do
-                            if (n + 1 == index) then
-                                self.parent:writeText(obx, oby + n, symbol, symbolColor, symbolColor)
+
+                            if (index == n + 1) then
+                                for curIndexOffset = 0, math.min(symbolSize - 1, self.height) do
+                                    self.parent:writeText(obx, oby + n + curIndexOffset, symbol, symbolColor, symbolColor)
+                                end
                             else
-                                self.parent:writeText(obx, oby + n, bgSymbol, self.bgColor, self.fgColor)
+                                if (n + 1 < index) or (n + 1 > index - 1 + symbolSize) then
+                                    self.parent:writeText(obx, oby + n, bgSymbol, self.bgColor, self.fgColor)
+                                end
                             end
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
-
     }
 
     return setmetatable(object, base)
@@ -3422,6 +3434,7 @@ local function Switch(name)
                     local obx, oby = self:getAnchorPosition()
 
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -3758,6 +3771,7 @@ local function Textfield(name)
                         self.parent:setText(obx, oby + n - 1, text)
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
@@ -3841,6 +3855,7 @@ local function Timer(name)
     local repeats = 0
     local timerObj
     local eventSystem = BasaltEvents()
+    local timerIsActive = false
 
     local object = {
         name = name,
@@ -3863,15 +3878,24 @@ local function Timer(name)
         end;
 
         start = function(self)
+            if(timerIsActive)then
+                os.cancelTimer(timerObj)
+            end
             repeats = savedRepeats
             timerObj = os.startTimer(timer)
+            timerIsActive = true
             return self
+        end;
+
+        isActive = function(self)
+            return timerIsActive
         end;
 
         cancel = function(self)
             if (timerObj ~= nil) then
                 os.cancelTimer(timerObj)
             end
+            timerIsActive = false
             return self
         end;
 
@@ -3881,7 +3905,7 @@ local function Timer(name)
         end;
 
         eventHandler = function(self, event, tObj)
-            if (event == "timer") and (tObj == timerObj) then
+            if event == "timer" and tObj == timerObj and timerIsActive then
                 eventSystem:sendEvent("timed_event", self)
                 if (repeats >= 1) then
                     repeats = repeats - 1
@@ -4081,7 +4105,8 @@ local function Frame(name, parent)
         end;
 
         setFrameAsMonitor = function(self, isMon)
-            isMonitor = isMon or true
+            isMonitor = isMon
+            if(isMon==nil)then isMonitor = true end
             return self
         end;
 
@@ -4317,11 +4342,11 @@ local function Frame(name, parent)
         end;
 
         draw = function(self)
+            for _,v in pairs(monitors)do
+                v.frame:draw()
+            end
             if (self:getVisualChanged()) then
                 if (base.draw(self)) then
-                    for _,v in pairs(monitors)do
-                        v.frame:draw()
-                    end
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                     local anchx, anchy = self:getAnchorPosition()
                     if (self.parent ~= nil) then
@@ -4333,7 +4358,7 @@ local function Frame(name, parent)
                         drawHelper.drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
                         drawHelper.drawTextBox(obx, oby, self.width, self.height, " ")
                     end
-                    parentTerminal.setCursorBlink(false)
+                    termObject.setCursorBlink(false)
                     if (self.barActive) then
                         if (self.parent ~= nil) then
                             self.parent:writeText(anchx, anchy, getTextHorizontalAlign(self.barText, self.width, self.barTextAlign), self.barBackground, self.barTextcolor)
@@ -4363,7 +4388,13 @@ local function Frame(name, parent)
                     end
                     self:setVisualChanged(false)
                 end
-                drawHelper.update()
+            end
+        end;
+
+        drawUpdate = function (self)
+            drawHelper.update()
+            for k,v in pairs(monitors)do
+                v.frame:drawUpdate()
             end
         end;
 
@@ -4387,7 +4418,6 @@ local function Frame(name, parent)
 
         addLabel = function(self, name)
             local obj = Label(name)
-            obj.name = name
             obj.bgColor = self.bgColor
             obj.fgColor = self.fgColor
             return addObject(obj)
@@ -4395,103 +4425,87 @@ local function Frame(name, parent)
 
         addCheckbox = function(self, name)
             local obj = Checkbox(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addInput = function(self, name)
             local obj = Input(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addProgram = function(self, name)
             local obj = Program(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addTextfield = function(self, name)
             local obj = Textfield(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addList = function(self, name)
             local obj = List(name)
-            obj.name = name
+            obj.name = nam
             return addObject(obj)
         end;
 
         addDropdown = function(self, name)
             local obj = Dropdown(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addRadio = function(self, name)
             local obj = Radio(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addTimer = function(self, name)
             local obj = Timer(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addAnimation = function(self, name)
             local obj = Animation(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addSlider = function(self, name)
             local obj = Slider(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addScrollbar = function(self, name)
             local obj = Scrollbar(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addMenubar = function(self, name)
             local obj = Menubar(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addThread = function(self, name)
             local obj = Thread(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addPane = function(self, name)
             local obj = Pane(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addImage = function(self, name)
             local obj = Image(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addProgressbar = function(self, name)
             local obj = Progressbar(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addFrame = function(self, name)
             local obj = Frame(name, self)
-            obj.name = name
             return addObject(obj)
         end;
     }
@@ -4531,6 +4545,7 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
     end
     if (updaterActive) then
         activeFrame:draw()
+        activeFrame:drawUpdate()
     end
 end
 
@@ -4538,6 +4553,7 @@ function basalt.autoUpdate(isActive)
     parentTerminal.clear()
     updaterActive = isActive or true
     activeFrame:draw()
+    activeFrame:drawUpdate()
     while updaterActive do
         local event, p1, p2, p3, p4 = os.pullEventRaw() -- change to raw later
         basaltUpdateEvent(event, p1, p2, p3, p4)
@@ -4545,10 +4561,11 @@ function basalt.autoUpdate(isActive)
 end
 
 function basalt.update(event, p1, p2, p3, p4)
-    if (event ~= "nil") then
+    if (event ~= nil) then
         basaltUpdateEvent(event, p1, p2, p3, p4)
     else
         activeFrame:draw()
+        activeFrame:drawUpdate()
     end
 end
 
@@ -4620,6 +4637,9 @@ if (basalt.debugger) then
             basalt.debugList:removeItem(1)
         end
         basalt.debugList:setValue(basalt.debugList:getItem(basalt.debugList:getItemCount()))
+        if(basalt.debugList.getItemCount() > basalt.debugList:getHeight())then
+            basalt.debugList:setIndexOffset(basalt.debugList:getItemCount() - basalt.debugList:getHeight())
+        end
         basalt.debugLabel:show()
     end
 end

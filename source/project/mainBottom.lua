@@ -28,6 +28,7 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
     end
     if (updaterActive) then
         activeFrame:draw()
+        activeFrame:drawUpdate()
     end
 end
 
@@ -35,6 +36,7 @@ function basalt.autoUpdate(isActive)
     parentTerminal.clear()
     updaterActive = isActive or true
     activeFrame:draw()
+    activeFrame:drawUpdate()
     while updaterActive do
         local event, p1, p2, p3, p4 = os.pullEventRaw() -- change to raw later
         basaltUpdateEvent(event, p1, p2, p3, p4)
@@ -42,10 +44,11 @@ function basalt.autoUpdate(isActive)
 end
 
 function basalt.update(event, p1, p2, p3, p4)
-    if (event ~= "nil") then
+    if (event ~= nil) then
         basaltUpdateEvent(event, p1, p2, p3, p4)
     else
         activeFrame:draw()
+        activeFrame:drawUpdate()
     end
 end
 
@@ -117,6 +120,9 @@ if (basalt.debugger) then
             basalt.debugList:removeItem(1)
         end
         basalt.debugList:setValue(basalt.debugList:getItem(basalt.debugList:getItemCount()))
+        if(basalt.debugList.getItemCount() > basalt.debugList:getHeight())then
+            basalt.debugList:setIndexOffset(basalt.debugList:getItemCount() - basalt.debugList:getHeight())
+        end
         basalt.debugLabel:show()
     end
 end

@@ -3,6 +3,7 @@ local function Slider(name)
     local objectType = "Slider"
 
     base.width = 8
+    base.height = 1
     base.bgColor = colors.lightGray
     base.fgColor = colors.gray
     base:setValue(1)
@@ -13,6 +14,7 @@ local function Slider(name)
     local bgSymbol = "\140"
     local maxValue = base.width
     local index = 1
+    local symbolSize = 1
 
     local object = {
         getType = function(self)
@@ -22,6 +24,22 @@ local function Slider(name)
         setSymbol = function(self, _symbol)
             symbol = _symbol:sub(1, 1)
             self:setVisualChanged()
+            return self
+        end;
+
+        setSymbolSize = function(self, size)
+            symbolSize = tonumber(size) or 1
+            if (barType == "vertical") then
+                self:setValue(index - 1 * (maxValue / (self.height - (symbolSize - 1))) - (maxValue / (self.height - (symbolSize - 1))))
+            elseif (barType == "horizontal") then
+                self:setValue(index - 1 * (maxValue / (self.width - (symbolSize - 1))) - (maxValue / (self.width - (symbolSize - 1))))
+            end
+            self:setVisualChanged()
+            return self
+        end;
+
+        setMaxValue = function(self, val)
+            maxValue = val
             return self
         end;
 
@@ -42,63 +60,38 @@ local function Slider(name)
             return self
         end;
 
-        setValue = function(self, val)
-            index = math.floor(val / maxValue)
-            if (barType == "horizontal") then
-                if(index<1)then index = 1
-                elseif(index>self.width)then index = self.width end
-                base.setValue(self, maxValue / self.width * (index))
-            elseif (barType == "vertical") then
-                if(index<1)then index = 1
-                elseif(index>self.height)then index = self.height end
-                base.setValue(self, maxValue / self.height * (index))
-            end
-            return self
-        end;
-
-        setIndex = function(self, _index)
-            if (barType == "horizontal") then
-                if(_index>=1)and(_index<=self.width)then
-                    index = _index
-                    base.setValue(self, maxValue / self.width * (index))
-                end
-            elseif(barType == "vertical") then
-                if(_index>=1)and(_index<=self.height)then
-                    index = _index
-                    base.setValue(self, maxValue / self.height * (index))
-                end
-            end
-            return self
-        end;
-
         mouseClickHandler = function(self, event, button, x, y)
             if (base.mouseClickHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if (barType == "horizontal") then
-                    for _index = 0, self.width - 1 do
-                        if (obx + _index == x) and (oby <= y) and (oby + self.height > y) then
-                            index = _index + 1
-                            base.setValue(self, maxValue / self.width * (index))
-                            self:setVisualChanged()
+                if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
+                    if (barType == "horizontal") then
+                        for _index = 0, self.width do
+                            if (obx + _index == x) and (oby <= y) and (oby + self.height > y) then
+                                index = math.min(_index + 1, self.width - (symbolSize - 1))
+                                self:setValue(maxValue / self.width * (index))
+                                self:setVisualChanged()
+                            end
+                        end
+                    end
+                    if (barType == "vertical") then
+                        for _index = 0, self.height do
+                            if (oby + _index == y) and (obx <= x) and (obx + self.width > x) then
+                                index = math.min(_index + 1, self.height - (symbolSize - 1))
+                                self:setValue(maxValue / self.height * (index))
+                                self:setVisualChanged()
+                            end
                         end
                     end
                 end
-                if (barType == "vertical") then
-                    for _index = 0, self.height - 1 do
-                        if (oby + _index == y) and (obx <= x) and (obx + self.width > x) then
-                            index = _index + 1
-                            base.setValue(self, maxValue / self.height * (index))
-                            self:setVisualChanged()
-                        end
+                if (event == "mouse_scroll") then
+                    index = index + button
+                    if (index < 1) then
+                        index = 1
                     end
+                    index = math.min(index, (barType == "vertical" and self.height or self.width) - (symbolSize - 1))
+                    self:setValue(maxValue / (barType == "vertical" and self.height or self.width) * index)
                 end
-                --[[if(event=="mouse_scroll")then
-                    self:setValue(self:getValue() + (maxValue/(barType=="vertical" and self.height or self.width))*typ)
-                    self:setVisualChanged()
-                end
-                if(self:getValue()>maxValue)then self:setValue(maxValue) end
-                if(self:getValue()<maxValue/(barType=="vertical" and self.height or self.width))then self:setValue(maxValue/(barType=="vertical" and self.height or self.width)) end
-                ]]
+                return true
             end
         end;
 
@@ -108,23 +101,28 @@ local function Slider(name)
                     local obx, oby = self:getAnchorPosition()
                     if (barType == "horizontal") then
                         self.parent:writeText(obx, oby, bgSymbol:rep(index - 1), self.bgColor, self.fgColor)
-                        self.parent:writeText(obx + index - 1, oby, symbol, symbolColor, symbolColor)
-                        self.parent:writeText(obx + index, oby, bgSymbol:rep(self.width - (index)), self.bgColor, self.fgColor)
+                        self.parent:writeText(obx + index - 1, oby, symbol:rep(symbolSize), symbolColor, symbolColor)
+                        self.parent:writeText(obx + index + symbolSize - 1, oby, bgSymbol:rep(self.width - (index + symbolSize - 1)), self.bgColor, self.fgColor)
                     end
 
                     if (barType == "vertical") then
                         for n = 0, self.height - 1 do
-                            if (n + 1 == index) then
-                                self.parent:writeText(obx, oby + n, symbol, symbolColor, symbolColor)
+
+                            if (index == n + 1) then
+                                for curIndexOffset = 0, math.min(symbolSize - 1, self.height) do
+                                    self.parent:writeText(obx, oby + n + curIndexOffset, symbol, symbolColor, symbolColor)
+                                end
                             else
-                                self.parent:writeText(obx, oby + n, bgSymbol, self.bgColor, self.fgColor)
+                                if (n + 1 < index) or (n + 1 > index - 1 + symbolSize) then
+                                    self.parent:writeText(obx, oby + n, bgSymbol, self.bgColor, self.fgColor)
+                                end
                             end
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
-
     }
 
     return setmetatable(object, base)

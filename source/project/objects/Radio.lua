@@ -116,6 +116,7 @@ local function Radio(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }

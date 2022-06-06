@@ -121,6 +121,7 @@ local function Scrollbar(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }

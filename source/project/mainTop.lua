@@ -1,6 +1,6 @@
 local basalt = { debugger = true, version = 1 } 
 local activeFrame 
-local frames = {} 
+local frames = {}
 local keyActive = {} 
 local parentTerminal = term.current()
 

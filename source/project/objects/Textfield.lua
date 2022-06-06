@@ -328,6 +328,7 @@ local function Textfield(name)
                         self.parent:setText(obx, oby + n - 1, text)
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }

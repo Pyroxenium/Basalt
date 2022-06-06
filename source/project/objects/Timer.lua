@@ -6,6 +6,7 @@ local function Timer(name)
     local repeats = 0
     local timerObj
     local eventSystem = BasaltEvents()
+    local timerIsActive = false
 
     local object = {
         name = name,
@@ -28,15 +29,24 @@ local function Timer(name)
         end;
 
         start = function(self)
+            if(timerIsActive)then
+                os.cancelTimer(timerObj)
+            end
             repeats = savedRepeats
             timerObj = os.startTimer(timer)
+            timerIsActive = true
             return self
+        end;
+
+        isActive = function(self)
+            return timerIsActive
         end;
 
         cancel = function(self)
             if (timerObj ~= nil) then
                 os.cancelTimer(timerObj)
             end
+            timerIsActive = false
             return self
         end;
 
@@ -46,7 +56,7 @@ local function Timer(name)
         end;
 
         eventHandler = function(self, event, tObj)
-            if (event == "timer") and (tObj == timerObj) then
+            if event == "timer" and tObj == timerObj and timerIsActive then
                 eventSystem:sendEvent("timed_event", self)
                 if (repeats >= 1) then
                     repeats = repeats - 1

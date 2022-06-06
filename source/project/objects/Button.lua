@@ -44,6 +44,7 @@ local function Button(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
 

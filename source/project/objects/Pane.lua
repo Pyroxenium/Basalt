@@ -15,6 +15,7 @@ local function Pane(name)
                     self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
                     self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.bgColor)
                 end
+                self:setVisualChanged(false)
             end
         end;
 

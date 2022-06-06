@@ -48,6 +48,7 @@ local function Checkbox(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
 

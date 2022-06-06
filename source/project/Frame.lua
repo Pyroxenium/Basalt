@@ -181,7 +181,8 @@ local function Frame(name, parent)
         end;
 
         setFrameAsMonitor = function(self, isMon)
-            isMonitor = isMon or true
+            isMonitor = isMon
+            if(isMon==nil)then isMonitor = true end
             return self
         end;
 
@@ -417,11 +418,11 @@ local function Frame(name, parent)
         end;
 
         draw = function(self)
+            for _,v in pairs(monitors)do
+                v.frame:draw()
+            end
             if (self:getVisualChanged()) then
                 if (base.draw(self)) then
-                    for _,v in pairs(monitors)do
-                        v.frame:draw()
-                    end
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                     local anchx, anchy = self:getAnchorPosition()
                     if (self.parent ~= nil) then
@@ -433,7 +434,7 @@ local function Frame(name, parent)
                         drawHelper.drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
                         drawHelper.drawTextBox(obx, oby, self.width, self.height, " ")
                     end
-                    parentTerminal.setCursorBlink(false)
+                    termObject.setCursorBlink(false)
                     if (self.barActive) then
                         if (self.parent ~= nil) then
                             self.parent:writeText(anchx, anchy, getTextHorizontalAlign(self.barText, self.width, self.barTextAlign), self.barBackground, self.barTextcolor)
@@ -463,7 +464,13 @@ local function Frame(name, parent)
                     end
                     self:setVisualChanged(false)
                 end
-                drawHelper.update()
+            end
+        end;
+
+        drawUpdate = function (self)
+            drawHelper.update()
+            for k,v in pairs(monitors)do
+                v.frame:drawUpdate()
             end
         end;
 
@@ -487,7 +494,6 @@ local function Frame(name, parent)
 
         addLabel = function(self, name)
             local obj = Label(name)
-            obj.name = name
             obj.bgColor = self.bgColor
             obj.fgColor = self.fgColor
             return addObject(obj)
@@ -495,103 +501,87 @@ local function Frame(name, parent)
 
         addCheckbox = function(self, name)
             local obj = Checkbox(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addInput = function(self, name)
             local obj = Input(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addProgram = function(self, name)
             local obj = Program(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addTextfield = function(self, name)
             local obj = Textfield(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addList = function(self, name)
             local obj = List(name)
-            obj.name = name
+            obj.name = nam
             return addObject(obj)
         end;
 
         addDropdown = function(self, name)
             local obj = Dropdown(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addRadio = function(self, name)
             local obj = Radio(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addTimer = function(self, name)
             local obj = Timer(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addAnimation = function(self, name)
             local obj = Animation(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addSlider = function(self, name)
             local obj = Slider(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addScrollbar = function(self, name)
             local obj = Scrollbar(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addMenubar = function(self, name)
             local obj = Menubar(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addThread = function(self, name)
             local obj = Thread(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addPane = function(self, name)
             local obj = Pane(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addImage = function(self, name)
             local obj = Image(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addProgressbar = function(self, name)
             local obj = Progressbar(name)
-            obj.name = name
             return addObject(obj)
         end;
 
         addFrame = function(self, name)
             local obj = Frame(name, self)
-            obj.name = name
             return addObject(obj)
         end;
     }

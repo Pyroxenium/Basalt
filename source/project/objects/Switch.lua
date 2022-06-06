@@ -32,6 +32,7 @@ local function Switch(name)
                     local obx, oby = self:getAnchorPosition()
 
                 end
+                self:setVisualChanged(false)
             end
         end;
     }
