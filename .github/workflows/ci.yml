@@ -50,9 +50,11 @@ jobs:
       - name: compile-basalt
         run: lua scripts/compiler.lua
 
+      - name: dir-check
+        run: "pwd"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: Basalt-Artifact
-          path: basalt.lua
+          path: build/basalt.lua
