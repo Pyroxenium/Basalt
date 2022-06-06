@@ -46,7 +46,7 @@ jobs:
         run: lua scripts/compiler.lua
 
       - name: dir-check
-        run: "pwd"
+        run: "pwd && ls -la"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
