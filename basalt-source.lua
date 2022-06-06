@@ -3975,7 +3975,7 @@ local function Frame(name, parent)
 
     if (parent ~= nil) then
         base.parent = parent
-        base.width, base.height = parent.w, parent.h
+        base.width, base.height = parent:getSize()
         base.bgColor = theme.FrameBG
         base.fgColor = theme.FrameFG
     else

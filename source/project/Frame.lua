@@ -24,7 +24,7 @@ local function Frame(name, parent)
 
     if (parent ~= nil) then
         base.parent = parent
-        base.width, base.height = parent.w, parent.h
+        base.width, base.height = parent:getSize()
         base.bgColor = theme.FrameBG
         base.fgColor = theme.FrameFG
     else
@@ -577,6 +577,11 @@ local function Frame(name, parent)
 
         addProgressbar = function(self, name)
             local obj = Progressbar(name)
+            return addObject(obj)
+        end;
+
+        addSwitch = function(self, name)
+            local obj = Switch(name)
             return addObject(obj)
         end;
 
