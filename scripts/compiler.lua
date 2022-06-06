@@ -37,6 +37,7 @@ if not dirExists(buildPath) then
 end
 
 print(string.format("Writing to %s/%s%s", lfs.currentdir(), buildPath, sourceFileName))
+os.execute("echo ".. string.format("Writing to %s/%s%s", lfs.currentdir(), buildPath, sourceFileName))
 local sourceFile = io.open(buildPath .. sourceFileName, "w")
 
 sourceFile:write(compiledSource)
