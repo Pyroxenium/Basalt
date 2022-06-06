@@ -1,5 +1,3 @@
-local basaltFileName = "basalt.lua"
-
 local requiredFiles = {
     "mainTop.lua",
     "mainBottom.lua",
@@ -36,7 +34,7 @@ end
 table.insert(filesOrdered, "Frame.lua")
 table.insert(filesOrdered, "mainBottom.lua")
 
-local basalt = io.open(sourcesPath .. basaltFileName, "w")
+--local basalt = io.open(sourcesPath .. sourceFileName, "w")
 local compiledSource = ""
 
 for _, file in ipairs(filesOrdered) do
@@ -44,6 +42,6 @@ for _, file in ipairs(filesOrdered) do
     compiledSource = compiledSource .. currentSource:read("*a") .. "\n"
 end
 
-basalt:write(compiledSource)
-basalt:close()
+--basalt:write(compiledSource)
+--basalt:close()
 return compiledSource

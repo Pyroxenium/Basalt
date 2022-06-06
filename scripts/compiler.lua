@@ -2,6 +2,7 @@ lfs = require "lfs"
 sourcesPath = "source/"
 scriptsPath = "scripts/"
 buildPath = "build/"
+sourceFileName = "basalt.lua"
 
 fetchFiles = function(...)
     local tbl = {}
@@ -35,10 +36,8 @@ if not dirExists(buildPath) then
     return
 end
 
-print("Writing to %s/%s%s", lfs.currentdir(), buildPath, sourceFileName)
-
-local sourceFileName = "basalt.lua"
-local sourceFile = io.open(sourceFileName, "w")
+print(string.format("Writing to %s/%s%s", lfs.currentdir(), buildPath, sourceFileName))
+local sourceFile = io.open(buildPath .. sourceFileName, "w")
 
 sourceFile:write(compiledSource)
 sourceFile:close()
