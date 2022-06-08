@@ -4,19 +4,19 @@ This is just a script which helps you to setup your program to automatically ins
 
 ## Basic Installer
 Here is a very basic one which just installs basalt.lua if don't exist:
-````lua
+```lua
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
 if not(fs.exists(filePath))then
     shell.run("pastebin run ESs1mg7P "..filePath) -- this is an alternative to the wget command
 end
 local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
-````
+```
 
 ## Advanced Installer
 This is a visual version, it asks the user if he wants to install basalt.lua (if not found)<br>
 ![](https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/_media/installer.png)
-````lua
+```lua
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
 if not(fs.exists(filePath))then
@@ -71,4 +71,4 @@ end
 
 local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
 ------------------------------
-````
+```
