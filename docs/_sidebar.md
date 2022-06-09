@@ -29,3 +29,4 @@
     - [Component Logic](tips/logic)
     - [Changing Button Color](tips/buttons)
     - [Advanced usage of Events](tips/events.md)
+    - [Example Designs](tips/design.md)
