@@ -5,9 +5,9 @@ Remember button also inherits from [Object](objects/Object.md)
 
 
 Create a onChange event:
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aCheckbox = mainFrame:addCheckbox("myFirstCheckbox"):onChange(function(self) basalt.debug("The value got changed into "..self:getValue()) end):show()
 
-````
+```
 

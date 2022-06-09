@@ -10,16 +10,16 @@ Just use the following command in any CC:Tweaked shell:
 This will download `basalt.lua` to your local directory
 
 To load the framework, make use of the following snippet
-````lua
+```lua
 --> For those who are unfamiliar with lua, dofile executes the code in the referenced file
 local basalt = dofile("basalt.lua")
-````
+```
 
 
 
 Here is a fully functioning example of Basalt code
 
-````lua
+```lua
 local basalt = dofile("basalt.lua") --> Load the Basalt framework
 
 --> Create the first frame. Please note that Basalt needs at least one active "non-parent" frame to properly supply events
@@ -50,9 +50,9 @@ button:onClick(buttonClick)
 button:show() --> Make the button visible, so the user can click it
 
 basalt.autoUpdate() --> Basalt#autoUpdate starts the event listener to detect user input
-````
+```
 If you're like us and strive for succinct and beautiful code, here is a cleaner implementation of the code above:
-````lua
+```lua
 local basalt = dofile("basalt.lua")
 
 local mainFrame = basalt.createFrame("mainFrame"):show()
@@ -67,4 +67,4 @@ local button = mainFrame --> Basalt returns an instance of the object on most me
         :show()
 
 basalt.autoUpdate()
-````
+```

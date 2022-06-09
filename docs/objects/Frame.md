@@ -15,9 +15,9 @@ Creates a new non-parent frame - in most cases it is the first thing you'll need
 
 #### Usage:
 * Create a frame with an id "myFirstFrame", stored in a variable named frame
-````lua
+```lua
 local myFrame = basalt.createFrame("myFirstFrame")
-````
+```
 
 ## addFrame
 Creates a child frame on the frame, the same as [basalt.createFrame](https://github.com/Pyroxenium/Basalt/wiki/Frame#basaltcreateframe) except the frames are given a parent-child relationship automatically
@@ -30,10 +30,10 @@ Creates a child frame on the frame, the same as [basalt.createFrame](https://git
 
 #### Usage:
 * Create a frame with id "myFirstFrame" then create a child of that frame, named "myFirstSubFrame"
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame")
 local myFrame = mainFrame:addFrame("myFirstSubFrame")
-````
+```
 
 ## setBar
 Sets the text, background, and foreground of the upper bar of the frame, accordingly.
@@ -48,20 +48,20 @@ Sets the text, background, and foreground of the upper bar of the frame, accordi
 
 #### Usage:
 * Set the title to "My first frame!", with a background of gray and a foreground of light gray.
-````lua
+```lua
 frame:setBar("My first Frame!", colors.gray, colors.lightGray)
-````
+```
 * Store the frame, use the named frame variable after assigning.
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame")
 local myFrame = MainFrame:addFrame("myFirstSubFrame")
 myFrame:setBar("My first Frame!")
-````
+```
 * This abuses the call-chaining that Basalt uses.
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame")
 local myFrame = mainFrame:addFrame("myFirstSubFrame"):setBar("My first Frame!")
-````
+```
 
 ## setBarTextAlign
 Sets the frame's bar-text alignment
@@ -72,9 +72,9 @@ Sets the frame's bar-text alignment
 1. `frame` The frame being used
 #### Usage:
 * Set the title of myFrame to "My first frame!", and align it to the right.
-````lua
+```lua
 local mainFrame = myFrame:setBar("My first Frame!"):setBarTextAlign("right")
-````
+```
 
 ## showBar
 Toggles the frame's upper bar
@@ -84,9 +84,9 @@ Toggles the frame's upper bar
 1. `frame` The frame being used
 #### Usage:
 * Sets myFrame to have a bar titled "Hello World!" and subsequently displays it.
-````lua
+```lua
 local mainFrame = myFrame:setBar("Hello World!"):showBar()
-````
+```
 
 ## addMonitor
 adds a monitor to the active main frame.
@@ -96,12 +96,12 @@ adds a monitor to the active main frame.
 1. `frame` returns a frame which you can use like normal frames
 #### Usage:
 * Adds a monitor to the mainFrame. Only as long as this frame is also the active Frame, the monitor will be shown.
-````lua
+```lua
 local mainFrame = basalt.createFrame("mainFrame"):show()
 local monitor1 = mainFrame:addMonitor("right"):show()
 
 monitor1:setBar("Monitor 1"):showBar()
-````
+```
 
 ## setMonitorScale
 changes the monitor scale (almost the same as setTextScale())
@@ -111,12 +111,12 @@ changes the monitor scale (almost the same as setTextScale())
 1. `monitor` The monitor being used
 #### Usage:
 * Changes the monitor scale to 2
-````lua
+```lua
 local mainFrame = basalt.createFrame("mainFrame"):show()
 local monitor1 = mainFrame:addMonitor("right"):setMonitorScale(2):show()
 
 monitor1:setBar("Monitor 1"):showBar()
-````
+```
 
 ## ~~isModifierActive~~ 
 ### _Disabled, this function is a WIP_
@@ -128,11 +128,11 @@ Returns true if the user is currently holding the respective key down
 1. `boolean` - Whether the user is holding the key down
 #### Usage:
 * Checks if the "shift" modifier is active on the myFrame frame
-````lua
+```lua
 local isActive = myFrame:isModifierActive("shift")
-````
+```
 * Creates a label, changing the text to "Shift is inactive oh no :(" and "Shift is active yay!", accordingly.
-````lua
+```lua
 local aLabel = myFrame:addLabel("myFirstLabel"):setText("Shift is inactive oh no :(")
 myFrame:addButton("myFirstButton"):setText("Click"):onClick(
         function() 
@@ -143,7 +143,7 @@ myFrame:addButton("myFirstButton"):setText("Click"):onClick(
             end 
         end
 )
-````
+```
 
 ## getObject 
 Returns a child object of the frame
@@ -154,10 +154,10 @@ Returns a child object of the frame
 1. `object | nil` The object with the supplied name, or `nil` if there is no object present with the given name 
 #### Usage:
 * Adds a button with id "myFirstButton", then retrieves it again through the frame object
-````lua
+```lua
 myFrame:addButton("myFirstButton")
 local aButton = myFrame:getObject("myFirstButton")
-````
+```
 
 ## removeObject 
 Removes a child object from the frame
@@ -167,10 +167,10 @@ Removes a child object from the frame
 1. `boolean` Whether the object with the given name was properly removed
 #### Usage:
 * Adds a button with the id "myFirstButton", then removes it with the aforementioned id
-````lua
+```lua
 myFrame:addButton("myFirstButton")
 myFrame:removeObject("myFirstButton")
-````
+```
 
 ## setFocusedObject 
 Sets the currently focused object
@@ -181,10 +181,10 @@ Sets the currently focused object
 1. `frame` The frame being used
 #### Usage:
 * Creates button with id "myFirstButton", sets the focused object to the previously mentioned button
-````lua
+```lua
 local aButton = myFrame:addButton("myFirstButton")
 myFrame:setFocusedObject(aButton)
-````
+```
 ## removeFocusedObject 
 Removes the focus of the supplied object
 #### Parameters: 
@@ -193,10 +193,10 @@ Removes the focus of the supplied object
 1. `frame` The frame being used
 #### Usage:
 * Creates a button with id "myFirstButton", then removes the focus from that button
-````lua
+```lua
 local aButton = myFrame:addButton("myFirstButton")
 myFrame:removeFocusedObject(aButton)
-````
+```
 
 ## getFocusedObject
 Gets the currently focused object
@@ -205,9 +205,9 @@ Gets the currently focused object
 1. `object` The currently focused object
 #### Usage:
 * Gets the currently focused object from the frame, storing it in a variable
-````lua
+```lua
 local focusedObject = myFrame:getFocusedObject()
-````
+```
 ## setMovable
 
 Sets whether the frame can be moved. _In order to move the frame click and drag the upper bar of the frame_
@@ -217,9 +217,9 @@ Sets whether the frame can be moved. _In order to move the frame click and drag 
 1. `frame` The frame being used
 #### Usage:
 * Creates a frame with id "myFirstFrame" and makes it movable
-````lua
+```lua
 local myFrame = basalt.createFrame("myFirstFrame"):setMovable(true)
-````
+```
 
 ## ~~setMoveable~~
 ### _Deprecated in favor of setMovable_
@@ -231,9 +231,9 @@ Sets whether the frame can be moved. _In order to move the frame use the upper b
 1. `frame` The frame being used
 #### Usage:
 * Creates a frame with id "myFirstFrame" and makes it movable
-````lua
+```lua
 local myFrame = basalt.createFrame("myFirstFrame"):setMoveable(true)
-````
+```
 
 ## setOffset
 Sets the frame's coordinate offset. The frame's child objects will receive the frame's coordinate offset. For example, when using the scrollbar, if you use its value to add an offset to a frame, you will get a scrollable frame.
@@ -248,10 +248,10 @@ The function can be supplied negative offsets
 1. `frame` The frame being used
 #### Usage:
 * Creates "myFirstFrame" with an x offset of 5 and a y offset of 3
-````lua
+```lua
 local myFrame = basalt.createFrame("myFirstFrame"):setOffset(5, 3)
-````
+```
 * Creates "myFirstFrame" with an x offset of 5 and a y offset of -5 (Meaning if you added a button with y position 5, it would be at y position 0)
-````lua
+```lua
 local myFrame = basalt.createFrame("myFirstFrame"):setOffset(5, -5)
-````
+```

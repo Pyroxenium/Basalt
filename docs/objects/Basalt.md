@@ -16,9 +16,9 @@ Create a frame without a parent
 
 #### Usage:
 * Create and show a frame with id "myFirstFrame"
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
-````
+```
 
 ## basalt.removeFrame
 Removes a frame (only possible for non-parent frames)
@@ -28,10 +28,10 @@ Removes a frame (only possible for non-parent frames)
 
 #### Usage:
 * Removes the previously created frame with id "myFirstFrame" 
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 basalt.removeFrame("myFirstFrame")
-````
+```
 
 ## basalt.getFrame
 With that function you can get frames, but only frames without a parent!
@@ -43,10 +43,10 @@ With that function you can get frames, but only frames without a parent!
 
 #### Usage:
 * Creates, fetches and shows the "myFirstFrame" object
-````lua
+```lua
 basalt.createFrame("myFirstFrame")
 basalt.getFrame("myFirstFrame"):show()
-````
+```
 
 
 ## basalt.getActiveFrame
@@ -57,20 +57,20 @@ Returns the currently active (without a parent) frame
 
 #### Usage:
 * Displays the active frame name in the debug console
-````lua
+```lua
 basalt.createFrame("myFirstFrame"):show()
 basalt.debug(basalt.getActiveFrame():getName()) -- returns myFirstFrame
-````
+```
 
 ## basalt.autoUpdate
 Starts the draw and event handler until basalt.stopUpdate() is called
 
 #### Usage:
 * Enable the basalt updates, otherwise the screen will not continue to update
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 basalt.autoUpdate()
-````
+```
 
 
 ## basalt.update
@@ -82,7 +82,7 @@ Calls the draw and event handler method once
 
 #### Usage:
 * Prints "Left Mouse Button clicked!" when clicked
-````lua
+```lua
 quitButton:onClick(
         function(obj, event, x, y) 
             if(event == "mouse_click") and (button == 1) then --> The button at index 1 is left
@@ -90,14 +90,14 @@ quitButton:onClick(
             end
         end
 )
-````
+```
 
 ## basalt.stopUpdate
 Stops the draw and event handler _(including, but not limited to mouse clicks)_
 
 #### Usage:
 * When the quit button is clicked, the button stops basalt updates and clears the terminal
-````lua
+```lua
 quitButton:onClick(
         function(obj, event)
             if (event == "mouse_click") and (obj == quitButton) then --> The button at index 1 is left
@@ -106,7 +106,7 @@ quitButton:onClick(
             end
         end
 )
-````
+```
 
 
 ## basalt.debug
@@ -117,7 +117,7 @@ creates a label with some information on the main frame on the bottom left, if y
 
 #### Usage:
 * Prints "Hello! ^-^" to the debug console
-````lua
+```lua
 basalt.debug("Hello! ^-^")
-````
+```
 

@@ -5,7 +5,7 @@ This is just a script which helps you to install basalt.lua, if it's not already
 ## Visual Installer
 This is a visual version, it asks the user if he wants to install basalt.lua (if not found)<br>
 ![](https://i.imgur.com/b4Ys7FB.png)
-````lua
+```lua
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
 if not(fs.exists(filePath))then
@@ -59,11 +59,11 @@ if not(fs.exists(filePath))then
 end
 
 local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
-````
+```
 
 ## Basic Installer
 Here is a very basic one which just installs basalt.lua if don't exist:
-````lua
+```lua
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
 if not(fs.exists(filePath))then
@@ -71,4 +71,4 @@ if not(fs.exists(filePath))then
 end
 local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
 
-````
+```

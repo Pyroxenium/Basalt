@@ -31,13 +31,13 @@ Sets a wait timer for the next function after the previous function got executed
 1. `animation` Animation in use
 
 #### Usage:
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local testButton = mainFrame:addButton("myTestButton"):show()
 local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setPosition(3,3) end):wait(1):add(function() testButton:setPosition(1,1,"r") end):wait(2):add(function() testButton:setPosition(1,1,"r") end)
 
 aAnimation:play()
-````
+```
 
 ## play
 Plays the animation
@@ -48,13 +48,13 @@ Plays the animation
 1. `animation` Animation in use
 
 #### Usage:
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local testButton = mainFrame:addButton("myTestButton"):show()
 local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setBackground(colors.black) end):wait(1):add(function() testButton:setBackground(colors.gray) end):wait(1):add(function() testButton:setBackground(colors.lightGray) end)
 
 aAnimation:play() -- changes the background color of that button from black to gray and then to lightGray 
-````
+```
 
 ## cancel
 Cancels the animation
@@ -64,10 +64,10 @@ Cancels the animation
 
 #### Usage:
 
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local testButton = mainFrame:addButton("myTestButton"):show()
 local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setBackground(colors.black) end):wait(1):add(function() aAnimation:cancel() end):wait(1):add(function() testButton:setBackground(colors.lightGray) end)
 
 aAnimation:play()
-````
+```

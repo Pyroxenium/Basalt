@@ -7,10 +7,10 @@ Pane doesn't have any custom functionallity. If you want to change the color/pos
 
 ## Example:
 
-````lua
+```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aPane = mainFrame:addPane("myFirstBackground")
 aPane:setSize(30, 10)
 aPane:setBackground(colors.yellow)
 aPane:show()
-````
+```
