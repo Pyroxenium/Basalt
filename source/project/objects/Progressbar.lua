@@ -90,6 +90,7 @@ local function Progressbar(name)
                         self.parent:drawTextBox(obx, oby, self.width / 100 * progress, self.height, activeBarSymbol)
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
 

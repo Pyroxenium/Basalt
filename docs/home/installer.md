@@ -1,10 +1,21 @@
 # Installer
 
-This is just a script which helps you to install basalt.lua, if it's not already on the computer. Means, you create your program (which requires basalt) and add this on the top of your program. Now, everytime you execute your program it checks if basalt.lua exists or not.
+This is just a script which helps you to setup your program to automatically install the Basalt UI Framework, if it doesn't exists. Means, you create your program (which requires basalt) and add this on the top of your program. Now, everytime you execute your program it checks if basalt.lua (or your custom filepath) exists or not, if not it installs it, or if you are using the advanced installer, it asks the user if the program is allowed to install basalt for you.
 
-## Visual Installer
+## Basic Installer
+Here is a very basic one which just installs basalt.lua if don't exist:
+```lua
+--Basalt configurated installer
+local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
+if not(fs.exists(filePath))then
+    shell.run("pastebin run ESs1mg7P "..filePath) -- this is an alternative to the wget command
+end
+local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
+```
+
+## Advanced Installer
 This is a visual version, it asks the user if he wants to install basalt.lua (if not found)<br>
-![](https://i.imgur.com/b4Ys7FB.png)
+![](https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/_media/installer.png)
 ```lua
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
@@ -40,12 +51,12 @@ if not(fs.exists(filePath))then
         local event, p1,p2,p3,p4 = os.pullEvent()
         if(event=="mouse_click")then
             if(p3==math.floor(h/2+2))and(p2>=w/2-8)and(p2<=w/2-2)then
-                shell.run("pastebin run ESs1mg7P") -- this is an alternative to the wget command
+                shell.run("pastebin run ESs1mg7P "..filePath)
                 _installerWindow.setVisible(false)
                 term.clear()
                 break
             end
-            if(p3==h/2+2)and(p2<=w/2+9)and(p2>=w/2+4)then
+            if(p3==math.floor(h/2+2))and(p2<=w/2+9)and(p2>=w/2+4)then
                 _installerWindow.clear()
                 _installerWindow.setVisible(false)
                 term.setCursorPos(1,1)
@@ -59,16 +70,5 @@ if not(fs.exists(filePath))then
 end
 
 local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
-```
-
-## Basic Installer
-Here is a very basic one which just installs basalt.lua if don't exist:
-```lua
---Basalt configurated installer
-local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
-if not(fs.exists(filePath))then
-    shell.run("wget https://github.com/Pyroxenium/Basalt/raw/master/basalt.lua basalt.lua")
-end
-local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
-
+------------------------------
 ```

@@ -18,7 +18,7 @@ local function Dropdown(name)
     local dropdownH = 6
     local closedSymbol = "\16"
     local openedSymbol = "\31"
-    local state = 1
+    local isOpened = false
 
     local object = {
         getType = function(self)
@@ -95,7 +95,7 @@ local function Dropdown(name)
         end;
 
         mouseClickHandler = function(self, event, button, x, y)
-            if (state == 2) then
+            if (isOpened) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
 
@@ -130,9 +130,9 @@ local function Dropdown(name)
                 self:setVisualChanged()
             end
             if (base.mouseClickHandler(self, event, button, x, y)) then
-                state = 2
+                isOpened = true
             else
-                state = 1
+                isOpened = false
             end
         end;
 
@@ -141,33 +141,27 @@ local function Dropdown(name)
                 local obx, oby = self:getAnchorPosition()
                 if (self.parent ~= nil) then
                     self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                    if (#list >= 1) then
-                        if (self:getValue() ~= nil) then
-                            if (self:getValue().text ~= nil) then
-                                if (state == 1) then
-                                    self.parent:writeText(obx, oby, getTextHorizontalAlign(self:getValue().text, self.width, align):sub(1, self.width - 1) .. closedSymbol, self.bgColor, self.fgColor)
-                                else
-                                    self.parent:writeText(obx, oby, getTextHorizontalAlign(self:getValue().text, self.width, align):sub(1, self.width - 1) .. openedSymbol, self.bgColor, self.fgColor)
-                                end
-                            end
-                        end
-                        if (state == 2) then
-                            for n = 1, dropdownH do
-                                if (list[n + yOffset] ~= nil) then
-                                    if (list[n + yOffset] == self:getValue()) then
-                                        if (selectionColorActive) then
-                                            self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), itemSelectedBG, itemSelectedFG)
-                                        else
-                                            self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
-                                        end
+                    local val = self:getValue()
+                    local text = getTextHorizontalAlign((val~=nil and val.text or ""), self.width, align):sub(1, self.width - 1)  .. (isOpened and openedSymbol or closedSymbol)
+                    self.parent:writeText(obx, oby, text, self.bgColor, self.fgColor)
+
+                    if (isOpened) then
+                        for n = 1, dropdownH do
+                            if (list[n + yOffset] ~= nil) then
+                                if (list[n + yOffset] == val) then
+                                    if (selectionColorActive) then
+                                        self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), itemSelectedBG, itemSelectedFG)
                                     else
                                         self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
                                     end
+                                else
+                                    self.parent:writeText(obx, oby + n, getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
                                 end
                             end
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }

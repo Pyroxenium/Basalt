@@ -43,10 +43,6 @@ local function Object(name)
             return isVisible
         end;
 
-        getZIndex = function(self)
-            return zIndex;
-        end;
-
         setFocus = function(self)
             if (self.parent ~= nil) then
                 self.parent:setFocusedObject(self)
@@ -61,6 +57,10 @@ local function Object(name)
                 self.parent:addObject(self)
             end
             return self
+        end;
+
+        getZIndex = function(self)
+            return zIndex;
         end;
 
         getType = function(self)
@@ -108,6 +108,7 @@ local function Object(name)
 
         setVisualChanged = function(self, change)
             visualsChanged = change or true
+            if(change == nil)then visualsChanged = true end
             return self
         end;
 

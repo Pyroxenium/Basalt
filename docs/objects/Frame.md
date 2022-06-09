@@ -68,8 +68,10 @@ Sets the frame's bar-text alignment
 
 #### Parameters: 
 1. `string` Can be supplied with "left", "center", or "right"
+
 #### Returns: 
 1. `frame` The frame being used
+
 #### Usage:
 * Set the title of myFrame to "My first frame!", and align it to the right.
 ```lua
@@ -78,10 +80,13 @@ local mainFrame = myFrame:setBar("My first Frame!"):setBarTextAlign("right")
 
 ## showBar
 Toggles the frame's upper bar
+
 #### Parameters: 
 1. `boolean | nil` Whether the frame's bar is visible or if supplied `nil`, is automatically visible
+
 #### Returns:
 1. `frame` The frame being used
+
 #### Usage:
 * Sets myFrame to have a bar titled "Hello World!" and subsequently displays it.
 ```lua
@@ -90,10 +95,13 @@ local mainFrame = myFrame:setBar("Hello World!"):showBar()
 
 ## addMonitor
 adds a monitor to the active main frame.
+
 #### Parameters: 
 1. `string` The monitor name ("right", "left",... "monitor_1", "monitor_2",...)
+
 #### Returns:
 1. `frame` returns a frame which you can use like normal frames
+
 #### Usage:
 * Adds a monitor to the mainFrame. Only as long as this frame is also the active Frame, the monitor will be shown.
 ```lua
@@ -105,10 +113,13 @@ monitor1:setBar("Monitor 1"):showBar()
 
 ## setMonitorScale
 changes the monitor scale (almost the same as setTextScale())
+
 #### Parameters: 
 1. `number` Possible values are: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 (1 is the same as 0.5 by setTextScale, and 10 is the same as 5)
+
 #### Returns:
 1. `monitor` The monitor being used
+
 #### Usage:
 * Changes the monitor scale to 2
 ```lua
@@ -124,8 +135,10 @@ Returns true if the user is currently holding the respective key down
 
 #### Parameters: 
 1. `number | string` - Any os.queueEvent("key") key, or you can use the following strings: "shift", "ctrl", "alt"
+
 #### Returns: 
 1. `boolean` - Whether the user is holding the key down
+
 #### Usage:
 * Checks if the "shift" modifier is active on the myFrame frame
 ```lua
@@ -150,8 +163,10 @@ Returns a child object of the frame
 
 #### Parameters: 
 1. `string` The name of the child object
+
 #### Returns: 
 1. `object | nil` The object with the supplied name, or `nil` if there is no object present with the given name 
+
 #### Usage:
 * Adds a button with id "myFirstButton", then retrieves it again through the frame object
 ```lua
@@ -161,10 +176,13 @@ local aButton = myFrame:getObject("myFirstButton")
 
 ## removeObject 
 Removes a child object from the frame
+
 #### Parameters:
 1. `string` The name of the child object
+
 #### Returns: 
 1. `boolean` Whether the object with the given name was properly removed
+
 #### Usage:
 * Adds a button with the id "myFirstButton", then removes it with the aforementioned id
 ```lua
@@ -177,8 +195,10 @@ Sets the currently focused object
 
 #### Parameters: 
 1. `object` The child object to focus on
+
 #### Returns: 
 1. `frame` The frame being used
+
 #### Usage:
 * Creates button with id "myFirstButton", sets the focused object to the previously mentioned button
 ```lua
@@ -187,10 +207,13 @@ myFrame:setFocusedObject(aButton)
 ```
 ## removeFocusedObject 
 Removes the focus of the supplied object
+
 #### Parameters: 
 1. `object` The child object to remove focus from
+
 #### Returns: 
 1. `frame` The frame being used
+
 #### Usage:
 * Creates a button with id "myFirstButton", then removes the focus from that button
 ```lua
@@ -200,9 +223,9 @@ myFrame:removeFocusedObject(aButton)
 
 ## getFocusedObject
 Gets the currently focused object
-#### Parameters: 
 #### Returns: 
 1. `object` The currently focused object
+
 #### Usage:
 * Gets the currently focused object from the frame, storing it in a variable
 ```lua
@@ -213,8 +236,10 @@ local focusedObject = myFrame:getFocusedObject()
 Sets whether the frame can be moved. _In order to move the frame click and drag the upper bar of the frame_
 #### Parameters: 
 1. `boolean` Whether the object is movable
+
 #### Returns:
 1. `frame` The frame being used
+
 #### Usage:
 * Creates a frame with id "myFirstFrame" and makes it movable
 ```lua
@@ -227,8 +252,10 @@ local myFrame = basalt.createFrame("myFirstFrame"):setMovable(true)
 Sets whether the frame can be moved. _In order to move the frame use the upper bar of the frame_
 #### Parameters:
 1. `boolean` Whether the object is movable
+
 #### Returns:
 1. `frame` The frame being used
+
 #### Usage:
 * Creates a frame with id "myFirstFrame" and makes it movable
 ```lua
@@ -244,8 +271,10 @@ The function can be supplied negative offsets
 #### Parameters: 
 1. `number` The x direction offset (+/-)
 2. `number` The y direction offset (+/-)
+
 #### Returns:
 1. `frame` The frame being used
+
 #### Usage:
 * Creates "myFirstFrame" with an x offset of 5 and a y offset of 3
 ```lua

@@ -3,7 +3,7 @@
     - [Quick Start](home/Quick-Start.md)
     - [Installer](home/installer)
 - Objects
-    - [Animation](objects/Animation.md)
+    - [Object](objects/Object)
     - [Basalt](objects/Basalt)
     - [Button](objects/Button)
     - [Checkbox](objects/Checkbox)
@@ -14,16 +14,18 @@
     - [Label](objects/Label)
     - [List](objects/List)
     - [Menubar](objects/Menubar)
-    - [Object](objects/Object)
     - [Pane](objects/Pane)
     - [Program](objects/Program)
     - [Radio](objects/Radio)
     - [Scrollbar](objects/Scrollbar)
     - [Slider](objects/Slider)
     - [Text Field](objects/Textfield)
+    - [Animation](objects/Animation.md)
     - [Thread](objects/Thread)
     - [Timer](objects/Timer)
-
+- Events
+    - [Mouse Events](events/mouseEvents.md)
 - Tips & Tricks
     - [Component Logic](tips/logic)
     - [Changing Button Color](tips/buttons)
+    - [Advanced usage of Events](tips/events.md)

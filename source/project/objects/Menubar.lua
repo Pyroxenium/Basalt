@@ -15,15 +15,19 @@ local function Menubar(name)
     local selectionColorActive = true
     local align = "left"
     local itemOffset = 0
-    local space = 2
+    local space = 1
     local scrollable = false
 
     local function maxScroll()
         local mScroll = 0
-        local xPos = 1
+        local xPos = 0
         for n = 1, #list do
-            if (xPos + list[n].text:len() + space * 2 > object.w) then
-                mScroll = mScroll + list[n].text:len() + space * 2
+            if (xPos + list[n].text:len() + space * 2 > object.width) then
+                if(xPos < object.width)then
+                    mScroll = mScroll + (list[n].text:len() + space * 2-(object.width - xPos))
+                else
+                    mScroll = mScroll + list[n].text:len() + space * 2
+                end
             end
             xPos = xPos + list[n].text:len() + space * 2
 
@@ -68,7 +72,7 @@ local function Menubar(name)
             return self
         end;
 
-        setButtonOffset = function(self, offset)
+        setPositionOffset = function(self, offset)
             itemOffset = offset or 0
             if (itemOffset < 0) then
                 itemOffset = 0
@@ -81,8 +85,13 @@ local function Menubar(name)
             return self
         end;
 
+        getPositionOffset = function(self)
+            return itemOffset
+        end;
+
         setScrollable = function(self, scroll)
             scrollable = scroll
+            if(scroll==nil)then scrollable = true end
             return self
         end;
 
@@ -118,41 +127,41 @@ local function Menubar(name)
         end;
 
         mouseClickHandler = function(self, event, button, x, y)
-            local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
-            if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (self:isVisible()) then
-                if (self.parent ~= nil) then
-                    self.parent:setFocusedObject(self)
-                end
-                if (event == "mouse_click") or (event == "monitor_touch") then
-                    local xPos = 1
-                    for n = 1 + itemOffset, #list do
-                        if (list[n] ~= nil) then
-                            if (xPos + list[n].text:len() + space * 2 <= self.width) then
-                                if (objX + (xPos - 1) <= x) and (objX + (xPos - 1) + list[n].text:len() + space * 2 > x) and (objY == y) then
+            if(base.mouseClickHandler(self, event, button, x, y))then
+                local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+                if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (self:isVisible()) then
+                    if (self.parent ~= nil) then
+                        self.parent:setFocusedObject(self)
+                    end
+                    if (event == "mouse_click") or (event == "monitor_touch") then
+                        local xPos = 0
+                        for n = 1, #list do
+                            if (list[n] ~= nil) then
+                                --if (xPos-1 + list[n].text:len() + space * 2 <= self.width) then
+                                if (objX + xPos <= x + itemOffset) and (objX + xPos + list[n].text:len() + (space*2) > x + itemOffset) and (objY == y) then
                                     self:setValue(list[n])
-                                    self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n])
+                                    self:getEventSystem():sendEvent(event, self, event, 0, x, y, list[n])
                                 end
                                 xPos = xPos + list[n].text:len() + space * 2
-                            else
-                                break
                             end
                         end
-                    end
 
+                    end
+                    if (event == "mouse_scroll") and (scrollable) then
+                        itemOffset = itemOffset + button
+                        if (itemOffset < 0) then
+                            itemOffset = 0
+                        end
+
+                        local mScroll = maxScroll()
+
+                        if (itemOffset > mScroll) then
+                            itemOffset = mScroll
+                        end
+                    end
+                    self:setVisualChanged(true)
+                    return true
                 end
-                if (event == "mouse_scroll") and (scrollable) then
-                    itemOffset = itemOffset + button
-                    if (itemOffset < 0) then
-                        itemOffset = 0
-                    end
-
-                    local mScroll = maxScroll()
-
-                    if (itemOffset > mScroll) then
-                        itemOffset = mScroll
-                    end
-                end
-                return true
             end
             return false
         end;
@@ -162,27 +171,26 @@ local function Menubar(name)
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
                     self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                    local xPos = 0
-                    for _, value in pairs(list) do
-                        if (xPos + value.text:len() + space * 2 <= self.width) then
-                            if (value == self:getValue()) then
-                                self.parent:writeText(obx + (xPos - 1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space) .. value.text .. (" "):rep(space), value.text:len() + space * 2, align), itemSelectedBG or value.bgCol, itemSelectedFG or value.fgCol)
-                            else
-                                self.parent:writeText(obx + (xPos - 1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space) .. value.text .. (" "):rep(space), value.text:len() + space * 2, align), value.bgCol, value.fgCol)
-                            end
-                            xPos = xPos + value.text:len() + space * 2
+                    local text = ""
+                    local textBGCol = ""
+                    local textFGCol = ""
+                    for _, v in pairs(list) do
+                        local newItem = (" "):rep(space) .. v.text .. (" "):rep(space)
+                        text = text .. newItem
+                        if(v == self:getValue())then
+                            textBGCol = textBGCol .. tHex[itemSelectedBG or v.bgCol or self.bgColor]:rep(newItem:len())
+                            textFGCol = textFGCol .. tHex[itemSelectedFG or v.FgCol or self.fgColor]:rep(newItem:len())
                         else
-                            if (xPos < self.width + itemOffset) then
-                                if (value == self:getValue()) then
-                                    self.parent:writeText(obx + (xPos - 1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space) .. value.text .. (" "):rep(space), value.text:len() + space * 2, align):sub(1, self.width + itemOffset - xPos), itemSelectedBG or value.bgCol, itemSelectedFG or value.fgCol)
-                                else
-                                    self.parent:writeText(obx + (xPos - 1) + (-itemOffset), oby, getTextHorizontalAlign((" "):rep(space) .. value.text .. (" "):rep(space), value.text:len() + space * 2, align):sub(1, self.width + itemOffset - xPos), value.bgCol, value.fgCol)
-                                end
-                                xPos = xPos + value.text:len() + space * 2
-                            end
+                            textBGCol = textBGCol .. tHex[v.bgCol or self.bgColor]:rep(newItem:len())
+                            textFGCol = textFGCol .. tHex[v.FgCol or self.fgColor]:rep(newItem:len())
                         end
                     end
+
+                    self.parent:setText(obx, oby, text:sub(itemOffset+1, self.width+itemOffset))
+                    self.parent:setBG(obx, oby, textBGCol:sub(itemOffset+1, self.width+itemOffset))
+                    self.parent:setFG(obx, oby, textFGCol:sub(itemOffset+1, self.width+itemOffset))
                 end
+                self:setVisualChanged(false)
             end
         end;
     }

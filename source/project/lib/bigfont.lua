@@ -91,12 +91,11 @@ local function generateFontSize(size,yeld)
     return true
 end
 
-generateFontSize(3,false)
-
 local function makeText(nSize, sString, nFC, nBC, bBlit)
     if not type(sString) == "string" then error("Not a String",3) end --this should never happend with expects in place.
     local cFC = type(nFC) == "string" and nFC:sub(1, 1) or tHex[nFC] or error("Wrong Front Color",3)
     local cBC = type(nBC) == "string" and nBC:sub(1, 1) or tHex[nBC] or error("Wrong Back Color",3)
+    if(fonts[nSize]==nil)then generateFontSize(3,false) end
     local font = fonts[nSize] or error("Wrong font size selected",3)
     if sString == "" then return {{""}, {""}, {""}} end
     

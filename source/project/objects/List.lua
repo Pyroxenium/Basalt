@@ -150,6 +150,7 @@ local function List(name)
                         end
                     end
                 end
+                self:setVisualChanged(false)
             end
         end;
     }

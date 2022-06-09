@@ -633,6 +633,7 @@ local function Program(name)
                     self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
                     pWindow.basalt_update()
                 end
+                self:setVisualChanged(false)
             end
         end;
 
