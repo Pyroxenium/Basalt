@@ -9,5 +9,5 @@ changes the input type
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aInput = mainFrame:addInput("myFirstInput"):setInputType("password"):show()
 ```
-**parameters:** string value ("text", "password", "number")<br>
-**returns:** self<br>
+#### Parameters: string value ("text", "password", "number")<br>
+#### Returns: self<br>

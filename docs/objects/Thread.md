@@ -15,8 +15,8 @@ local function randomThreadFunction()
 end
 aThread:start(randomThreadfunction)
 ```
-**parameters:**function func<br>
-**returns:** self<br>
+#### Parameters:function func<br>
+#### Returns: self<br>
 
 ## getStatus
 gets the thread status
@@ -25,8 +25,8 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aThread = mainFrame:addThread("myFirstThread"):show()
 basalt.debug(aThread:getStatus()) -- returns "running", "normal", "suspended" or "dead" 
 ```
-**parameters:** -<br>
-**returns:** string "running" - if its running, "normal" - is active but not running (waiting for a event), "suspended" - is suspended<br>
+#### Parameters: -<br>
+#### Returns: string "running" - if its running, "normal" - is active but not running (waiting for a event), "suspended" - is suspended<br>
 
 ## stop
 stops the thread
@@ -43,5 +43,5 @@ aThread:start(randomThreadfunction)
 local aButton = mainFrame:addButton("myFirstButton"):setText("Stop Thread"):onClick(function() aThread:stop() end):show()
 
 ```
-**parameters:** -<br>
-**returns:** self<br>
+#### Parameters: -<br>
+#### Returns: self<br>

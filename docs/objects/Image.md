@@ -11,8 +11,8 @@ loads a image into the memory.
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aImage = mainFrame:addImage("myFirstImage"):loadImage("randomImage.nfp"):show()
 ```
-**Arguments:** string path<br>
-**returns:** self<br>
+#### Parameters: string path<br>
+#### Returns: self<br>
 
 
 ## loadBlittleImage -- not finished yet
@@ -21,8 +21,8 @@ loads a blittle image into the memory.
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aImage = mainFrame:addImage("myFirstImage"):loadBlittleImage("blittleImage.blt"):show()
 ```
-**Arguments:** string path<br>
-**returns:** self<br>
+#### Parameters: string path<br>
+#### Returns: self<br>
 
 ## shrink
 If you were loading a normal (paint) image into the memory, this function would shrink it to a
@@ -31,6 +31,6 @@ blittle image and immediatly draws it (if it's visible)
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aImage = mainFrame:addImage("myFirstImage"):loadBlittleImage("randomImage.nfp"):shrink():show()
 ```
-**Arguments:** -<br>
-**returns:** self<br>
+#### Parameters: -<br>
+#### Returns: self<br>
 

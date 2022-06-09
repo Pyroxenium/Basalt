@@ -9,8 +9,8 @@ Sets the displayed button text
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("myFirstButton"):setText("Click"):show() -- you could also use :setValue() instead of :setText() - no difference
 ```
-**Arguments:** string text<br>
-**returns:** self<br>
+#### Parameters: string text<br>
+#### Returns: self<br>
 
 # Examples
 Add a onClick event:

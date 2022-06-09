@@ -9,8 +9,8 @@ this will change the foreground symbol
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aSlider = mainFrame:addSlider("myFirstSlider"):setSymbol("X"):show()
 ```
-**parameters:** char symbol<br>
-**returns:** self<br>
+#### Parameters: char symbol<br>
+#### Returns: self<br>
 
 ## setBackgroundSymbol
 this will change the symbol background color
@@ -18,8 +18,8 @@ this will change the symbol background color
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aSlider = mainFrame:addSlider("myFirstSlider"):setBackgroundSymbol(colors.yellow):show()
 ```
-**parameters:** number color<br>
-**returns:** self<br>
+#### Parameters: number color<br>
+#### Returns: self<br>
 
 ## setSymbolColor
 this will change the symbol color
@@ -27,8 +27,8 @@ this will change the symbol color
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aSlider = mainFrame:addSlider("myFirstSlider"):setSymbolColor(colors.red):show()
 ```
-**parameters:** number color<br>
-**returns:** self<br>
+#### Parameters: number color<br>
+#### Returns: self<br>
 
 ## setBarType
 this will change the bar to vertical/horizontal (default is horizontal)
@@ -36,7 +36,7 @@ this will change the bar to vertical/horizontal (default is horizontal)
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aSlider = mainFrame:addSlider("myFirstSlider"):setBarType("vertical"):show()
 ```
-**parameters:** string value ("vertical", "horizontal"<br>
-**returns:** self<br>
+#### Parameters: string value ("vertical", "horizontal"<br>
+#### Returns: self<br>
 
 

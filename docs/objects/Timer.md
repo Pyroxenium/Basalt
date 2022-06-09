@@ -9,8 +9,8 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTimer = mainFrame:addTimer("myFirstTimer")
 aTimer:setTime(5)
 ```
-**parameters:**number time[, number repeats] - (time in seconds, if repeats is -1 it will call the function infinitly (every x seconds)<br>
-**returns:** self<br>
+#### Parameters:number time[, number repeats] - (time in seconds, if repeats is -1 it will call the function infinitly (every x seconds)<br>
+#### Returns: self<br>
 
 ## start
 starts the timer
@@ -19,8 +19,8 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTimer = mainFrame:addTimer("myFirstTimer")
 aTimer:setTime(5):start()
 ```
-**parameters:** -<br>
-**returns:** self<br>
+#### Parameters: -<br>
+#### Returns: self<br>
 
 ## cancel
 stops/cancels the timer
@@ -30,8 +30,8 @@ local aTimer = mainFrame:addTimer("myFirstTimer")
 aTimer:setTime(5):start()
 aTimer:cancel()
 ```
-**parameters:** -<br>
-**returns:** self<br>
+#### Parameters: -<br>
+#### Returns: self<br>
 
 
 ## onCall
@@ -45,5 +45,5 @@ local aTimer = mainFrame:addTimer("myFirstTimer")
 aTimer:setTime(5):onCall(timerCall):start()
 
 ```
-**parameters:** function func<br>
-**returns:** self<br>
+#### Parameters: function func<br>
+#### Returns: self<br>

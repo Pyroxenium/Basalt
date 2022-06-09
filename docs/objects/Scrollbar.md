@@ -14,8 +14,8 @@ Changes the symbol
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aScrollbar = mainFrame:addScrollbar("myFirstScrollbar"):setSymbol("X"):show()
 ```
-**parameters:** char symbol<br>
-**returns:** self<br>
+#### Parameters: char symbol<br>
+#### Returns: self<br>
 
 ## setBackgroundSymbol
 Changes the background symbol color
@@ -24,8 +24,8 @@ Changes the background symbol color
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aScrollbar = mainFrame:addScrollbar("myFirstScrollbar"):setSymbol("X"):setBackgroundSymbol(colors.green):show()
 ```
-**parameters:** number symbolcolor<br>
-**returns:** self<br>
+#### Parameters: number symbolcolor<br>
+#### Returns: self<br>
 
 ## setBarType
 If the bar goes vertically or horizontally
@@ -34,8 +34,8 @@ If the bar goes vertically or horizontally
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aScrollbar = mainFrame:addScrollbar("myFirstScrollbar"):setBarType("horizontal"):show()
 ```
-**parameters:** string value ("vertical" or "horizontal")<br>
-**returns:** self<br>
+#### Parameters: string value ("vertical" or "horizontal")<br>
+#### Returns: self<br>
 
 ## setMaxValue
 the default max value is always the width (if horizontal) or height (if vertical), if you change the max value the bar will always calculate the value based on its width or height - example: you set the max value to 100, the height is 10 and it is a vertical bar, this means if the bar is on top, the value is 10, if the bar goes one below, it is 20 and so on.
@@ -44,5 +44,5 @@ the default max value is always the width (if horizontal) or height (if vertical
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aScrollbar = mainFrame:addScrollbar("myFirstScrollbar"):setMaxValue(123):show()
 ```
-**parameters:** any number<br>
-**returns:** self<br>
+#### Parameters: any number<br>
+#### Returns: self<br>

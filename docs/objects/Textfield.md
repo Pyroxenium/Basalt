@@ -18,8 +18,8 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 basalt.debug(aTextfield:getLines())
 ```
-**parameters:** -<br>
-**returns:** table lines<br>
+#### Parameters: -<br>
+#### Returns: table lines<br>
 
 ## getLine
 returns the line on index position
@@ -28,8 +28,8 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 basalt.debug(aTextfield:getLine(2))
 ```
-**parameters:** number index<br>
-**returns:** string line<br>
+#### Parameters: number index<br>
+#### Returns: string line<br>
 
 ## editLine
 edits line on index position
@@ -38,8 +38,8 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 aTextfield:editLine(2, "hellow")
 ```
-**parameters:** number index, string text<br>
-**returns:** self<br>
+#### Parameters: number index, string text<br>
+#### Returns: self<br>
 
 ## addLine
 adds a line on index position (if index is nil it just adds the line on the bottom)
@@ -48,8 +48,8 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 aTextfield:addLine("hellow")
 ```
-**parameters:** string text, number index<br>
-**returns:** self<br>
+#### Parameters: string text, number index<br>
+#### Returns: self<br>
 
 ## removeLine
 removes the line on index position
@@ -58,8 +58,8 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 aTextfield:removeLine(1)
 ```
-**parameters:** number index<br>
-**returns:** self<br>
+#### Parameters: number index<br>
+#### Returns: self<br>
 
 ## getTextCursor
 returns the cursor position
@@ -68,5 +68,5 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 basalt.debug(aTextfield:getTextCursor())
 ```
-**parameters:** -<br>
-**returns:** number x, number y<br>
+#### Parameters: -<br>
+#### Returns: number x, number y<br>

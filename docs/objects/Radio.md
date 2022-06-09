@@ -20,8 +20,8 @@ aRadio:addItem("1. Entry",3,4)
 aRadio:addItem("2. Entry",3,5,colors.yellow)
 aRadio:addItem("3. Entry",3,6,colors.yellow,colors.green)
 ```
-**parameters:** string text, number x, number y, number bgcolor, number fgcolor, any ... - (text is the displayed text, bgcolor and fgcolors the colors of background/text and args (...) is something dynamic, you wont see them but if you require some more information per item you can use that)<br>
-**returns:** self<br>
+#### Parameters: string text, number x, number y, number bgcolor, number fgcolor, any ... - (text is the displayed text, bgcolor and fgcolors the colors of background/text and args (...) is something dynamic, you wont see them but if you require some more information per item you can use that)<br>
+#### Returns: self<br>
 
 ## removeItem
 Removes a item from the radio
@@ -34,8 +34,8 @@ aRadio:addItem("2. Entry",3,5,colors.yellow)
 aRadio:addItem("3. Entry",3,6,colors.yellow,colors.green)
 aRadio:removeItem(2)
 ```
-**parameters:** number index<br>
-**returns:** self<br>
+#### Parameters: number index<br>
+#### Returns: self<br>
 
 ## editItem
 Edits a item on the radio
@@ -48,8 +48,8 @@ aRadio:addItem("2. Entry",3,5,colors.yellow)
 aRadio:addItem("3. Entry",3,6,colors.yellow,colors.green)
 aRadio:editItem(3,"3. Edited Entry",3,6,colors.yellow,colors.green)
 ```
-**parameters:** number index, string text, number x, number y, number bgcolor, number fgcolor, any ...<br>
-**returns:** self<br>
+#### Parameters: number index, string text, number x, number y, number bgcolor, number fgcolor, any ...<br>
+#### Returns: self<br>
 
 ## setScrollable
 Makes the radio scrollable
@@ -62,8 +62,8 @@ aRadio:addItem("2. Entry",3,5,colors.yellow)
 aRadio:addItem("3. Entry",3,6,colors.yellow,colors.green)
 aRadio:setScrollable(true)
 ```
-**parameters:** boolean isScrollable<br>
-**returns:** self<br>
+#### Parameters: boolean isScrollable<br>
+#### Returns: self<br>
 
 ## selectItem
 selects a item in the radio (same as a player would click on a item)
@@ -76,8 +76,8 @@ aRadio:addItem("2. Entry",3,5,colors.yellow)
 aRadio:addItem("3. Entry",3,6,colors.yellow,colors.green)
 aRadio:selectItem(1)
 ```
-**parameters:** number index<br>
-**returns:** self<br>
+#### Parameters: number index<br>
+#### Returns: self<br>
 
 ## clear
 clears the entire list (radio)
@@ -90,8 +90,8 @@ aRadio:addItem("2. Entry",3,5,colors.yellow)
 aRadio:addItem("3. Entry",3,6,colors.yellow,colors.green)
 aRadio:clear()
 ```
-**parameters:** -<br>
-**returns:** self<br>
+#### Parameters: -<br>
+#### Returns: self<br>
 
 ## getItemIndex
 returns the item index of the currently selected item
@@ -104,8 +104,8 @@ aRadio:addItem("2. Entry",3,5,colors.yellow)
 aRadio:addItem("3. Entry",3,6,colors.yellow,colors.green)
 aRadio:getItemIndex()
 ```
-**parameters:** -<br>
-**returns:** number index<br>
+#### Parameters: -<br>
+#### Returns: number index<br>
 
 ## setSelectedItem
 Sets the background of the item which is currently selected
@@ -118,5 +118,5 @@ aRadio:addItem("2. Entry",3,5,colors.yellow)
 aRadio:addItem("3. Entry",3,6,colors.yellow,colors.green)
 aRadio:setSelectedItem(colors.green, colors.blue)
 ```
-**parameters:** number bgcolor, number fgcolor, boolean isActive (isActive means if different colors for selected item should be used)<br>
-**returns:** self<br>
+#### Parameters: number bgcolor, number fgcolor, boolean isActive (isActive means if different colors for selected item should be used)<br>
+#### Returns: self<br>
