@@ -103,16 +103,16 @@ adds a monitor to the active main frame.
 1. `frame` returns a frame which you can use like normal frames
 
 #### Usage:
-* Adds a monitor to the mainFrame. Only as long as this frame is also the active Frame, the monitor will be shown.
+* Adds a monitor to the mainFrame. Only as long as this frame is also the active Frame, the monitor will be shown
 ```lua
 local mainFrame = basalt.createFrame("mainFrame"):show()
 local monitor1 = mainFrame:addMonitor("right"):show()
-
 monitor1:setBar("Monitor 1"):showBar()
 ```
 
-## setMonitorScale
-changes the monitor scale (almost the same as setTextScale())
+
+### setMonitorScale
+Changes the monitor scale (almost the same as setTextScale())
 
 #### Parameters: 
 1. `number` Possible values are: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 (1 is the same as 0.5 by setTextScale, and 10 is the same as 5)
@@ -125,7 +125,6 @@ changes the monitor scale (almost the same as setTextScale())
 ```lua
 local mainFrame = basalt.createFrame("mainFrame"):show()
 local monitor1 = mainFrame:addMonitor("right"):setMonitorScale(2):show()
-
 monitor1:setBar("Monitor 1"):showBar()
 ```
 
