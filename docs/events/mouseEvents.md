@@ -32,12 +32,12 @@ local basalt = dofile("basalt.lua")
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):setText("Click"):show()
 
-function buttonOnClick()
+function buttonOnClick(self, button, x, y)
   basalt.debug("Button got clicked!")
 end
 button:onClick(buttonOnClick)
 
-function buttonOnRelease()
+function buttonOnRelease(self, button, x, y)
   basalt.debug("Button got released!")
 end
 button:onClickUp(buttonOnRelease)
@@ -56,14 +56,14 @@ local basalt = dofile("basalt.lua")
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):setText("Click"):show()
 
-function buttonOnScroll()
+function buttonOnScroll(self, direction, x, y)
   basalt.debug("Someone scrolls on me!")
 end
 button:onScroll(buttonOnScroll)
 ```
 
 # onDrag
-`onDrag(self, x, y)`<br>
+`onDrag(self, button, x, y)`<br>
 The computercraft event which triggers this method is `mouse_drag`.
 Any visual object can register onDrag events.
 
@@ -75,7 +75,7 @@ local basalt = dofile("basalt.lua")
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):setText("Click"):show()
 
-function buttonOnDrag()
+function buttonOnDrag(self, button, x, y)
   basalt.debug("Someone drags me (i know i wont reposition myself)!")
 end
 button:onDrag(buttonOnDrag)
