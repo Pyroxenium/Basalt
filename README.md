@@ -9,12 +9,3 @@ Basalt is still under developement and you may find bugs!
 
 Check out the [wiki](https://basalt.madefor.cc/) for information<br>
 If you have questions, feel free to join the discord server: [https://discord.gg/yM7kndJdJJ](https://discord.gg/yM7kndJdJJ)
-
-Todo:<br>
-- Improve performance<br>
-- Fix menubar scroll functionality<br>
-- Fix frames moving incorrectly when anchor is bottom/right<br>
-- Fix click event and lose focus event order<br>
-- Improve event system<br>
-- Add info to image and pane object, and onBackgroundKey
-- Fix mouse events for frames with a program
