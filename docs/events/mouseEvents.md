@@ -46,7 +46,7 @@ button:onClickUp(buttonOnRelease)
 # onScroll
 `onScroll(self, direction, x, y)`<br>
 The computercraft event which triggers this method is `mouse_scroll`.
-Any visual object can register a onScroll events.
+Any visual object can register onScroll events.
 
 Here is a example on how to add a onScroll event to your button:
 
@@ -60,4 +60,23 @@ function buttonOnScroll()
   basalt.debug("Someone scrolls on me!")
 end
 button:onScroll(buttonOnScroll)
+```
+
+# onDrag
+`onDrag(self, x, y)`<br>
+The computercraft event which triggers this method is `mouse_drag`.
+Any visual object can register onDrag events.
+
+Here is a example on how to add a onDrag event to your button:
+
+```lua
+local basalt = dofile("basalt.lua")
+
+local mainFrame = basalt.createFrame("myMainFrame"):show()
+local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):setText("Click"):show()
+
+function buttonOnDrag()
+  basalt.debug("Someone drags me (i know i wont reposition myself)!")
+end
+button:onDrag(buttonOnDrag)
 ```
