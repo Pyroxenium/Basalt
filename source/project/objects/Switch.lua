@@ -36,8 +36,8 @@ local function Switch(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if ((event == "mouse_click") and (button == 1))or(event=="monitor_touch") then
                     self:setValue(not self:getValue())

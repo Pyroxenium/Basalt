@@ -94,7 +94,7 @@ local function Dropdown(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             if (isOpened) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
@@ -129,7 +129,7 @@ local function Dropdown(name)
                 end
                 self:setVisualChanged()
             end
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+            if (base.mouseHandler(self, event, button, x, y)) then
                 isOpened = true
             else
                 isOpened = false

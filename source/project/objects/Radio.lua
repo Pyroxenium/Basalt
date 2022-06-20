@@ -80,7 +80,7 @@ local function Radio(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if ((event == "mouse_click")and(button==1))or(event=="monitor_touch") then
                 if (#list > 0) then

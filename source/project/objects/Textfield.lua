@@ -244,8 +244,8 @@ local function Textfield(name)
             end
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx, anchy = self:getAnchorPosition()
                 if (event == "mouse_click")or(event=="monitor_touch") then
@@ -262,7 +262,7 @@ local function Textfield(name)
                             end
                         end
                         if (self.parent ~= nil) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex)
+                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                         end
                     end
                 end
@@ -280,7 +280,7 @@ local function Textfield(name)
                             end
                         end
                         if (self.parent ~= nil) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex)
+                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                         end
                     end
                 end
@@ -297,7 +297,7 @@ local function Textfield(name)
 
                     if (self.parent ~= nil) then
                         if (obx + textX - wIndex >= obx and obx + textX - wIndex <= obx + self.width) and (oby + textY - hIndex >= oby and oby + textY - hIndex <= oby + self.height) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex)
+                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                         else
                             self.parent:setCursor(false)
                         end

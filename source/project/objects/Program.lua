@@ -534,15 +534,15 @@ local function Program(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 if (curProcess == nil) then
                     return false
                 end
                 if not (curProcess:isDead()) then
                     if not (paused) then
                         local absX, absY = self:getAbsolutePosition(self:getAnchorPosition(nil, nil, true))
-                        curProcess:resume(event, button, x - absX + 1, y - absY + 1)
+                        curProcess:resume(event, button, x - (absX - 1), y - (absY - 1))
                     end
                 end
                 return true

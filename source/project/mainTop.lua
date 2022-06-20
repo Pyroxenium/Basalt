@@ -1,7 +1,12 @@
 local basalt = { debugger = true, version = 1 } 
-local activeFrame 
+local keyActive = {}
+local focusedObject
 local frames = {}
-local keyActive = {} 
+local activeFrame
+
+local mainFrame
+local monFrames = {}
+
 local parentTerminal = term.current()
 
 local sub = string.sub

@@ -5,11 +5,12 @@ local function Frame(name, parent)
     local objects = {}
     local objZIndex = {}
     local object = {}
-    local focusedObject
     local termObject = parentTerminal
 
-    local monitors = {}
+    local monSide = ""
     local isMonitor = false
+    local monitorAttached = false
+    local dragOffset = 0
 
     base:setZIndex(10)
 
@@ -97,16 +98,13 @@ local function Frame(name, parent)
         end;
 
         setFocusedObject = function(self, obj)
-            for _, index in pairs(objZIndex) do
-                for _, value in pairs(objects[index]) do
-                    if (value == obj) then
-                        if (focusedObject ~= nil) then
-                            focusedObject:loseFocusHandler()
-                        end
-                        focusedObject = obj
-                        focusedObject:getFocusHandler()
-                    end
-                end
+            if (focusedObject ~= nil) then
+                focusedObject:loseFocusHandler()
+                focusedObject = nil
+            end
+            if(obj~=nil)then
+                focusedObject = obj
+                obj:getFocusHandler()
             end
             return self
         end;
@@ -117,7 +115,7 @@ local function Frame(name, parent)
             return self
         end;
 
-        getFrameOffset = function(self)
+        getFrameOffset = function(self) -- internal
             return xOffset, yOffset
         end;
 
@@ -133,25 +131,22 @@ local function Frame(name, parent)
             return focusedObject
         end;
 
-        show = function(self)
-            base:show()
-            if (self.parent == nil)and not(isMonitor) then
-                activeFrame = self
-            end
-            return self
-        end;
-
         setCursor = function(self, _blink, _xCursor, _yCursor, color)
-            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-            cursorBlink = _blink or false
-            if (_xCursor ~= nil) then
-                xCursor = obx + _xCursor - 1
+            if(self.parent~=nil)then
+                local obx, oby = self:getAnchorPosition()
+                self.parent:setCursor(_blink or false, (_xCursor or 0)+obx-1, (_yCursor or 0)+oby-1, color or cursorColor)
+            else
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                cursorBlink = _blink or false
+                if (_xCursor ~= nil) then
+                    xCursor = obx + _xCursor - 1
+                end
+                if (_yCursor ~= nil) then
+                    yCursor = oby + _yCursor - 1
+                end
+                cursorColor = color or cursorColor
+                self:setVisualChanged()
             end
-            if (_yCursor ~= nil) then
-                yCursor = oby + _yCursor - 1
-            end
-            cursorColor = color or cursorColor
-            self:setVisualChanged()
             return self
         end;
 
@@ -161,30 +156,36 @@ local function Frame(name, parent)
             return self;
         end;
 
-
-        addMonitor = function(self, mon)
-            local screen = peripheral.wrap(mon)
-            monitors[mon] = {monitor=mon, frame=basalt.createFrame(self:getName().."_monitor_"..mon)}
-            monitors[mon].frame:setDisplay(screen):setFrameAsMonitor()
-            monitors[mon].frame:setSize(screen:getSize())
-            return monitors[mon].frame
-        end;
-
-        setMonitorScale = function(self, scale, fullSize) -- 1,2,3,4,5,6,7,8,9,10
-            if(isMonitor)then
-                termObject.setTextScale(scale*0.5)
-                if(fullSize)then
-                    self:setSize(termObject:getSize())
+        show = function(self)
+            base.show(self)
+            if(self.parent==nil)then
+                activeFrame = self;
+                if(isMonitor)then
+                    monFrames[monSide] = self;
+                else
+                    mainFrame = self;
                 end
             end
-            return self, isMonitor
+            return self;
         end;
 
-        setFrameAsMonitor = function(self, isMon)
-            isMonitor = isMon
-            if(isMon==nil)then isMonitor = true end
+        hide = function (self)
+            base.hide(self)
+            if(self.parent==nil)then
+                if(activeFrame == self)then activeFrame = nil end
+                if(isMonitor)then
+                    if(monFrames[monSide] == self)then
+                        monFrames[monSide] = nil;
+                    end
+                else
+                    if(mainFrame == self)then
+                        mainFrame = nil;
+                    end
+                end
+            end
             return self
         end;
+        
 
         showBar = function(self, showIt)
             self.barActive = showIt or not self.barActive
@@ -206,14 +207,23 @@ local function Frame(name, parent)
             return self
         end;
 
-        setDisplay = function(self, drawTerm)
-            termObject = drawTerm
+        setMonitor = function(self, side)
+            if(side~=nil)or(side~=false)then
+                if(peripheral.getType(side)=="monitor")then
+                    termObject = peripheral.wrap(side)
+                    monitorAttached = true
+                end
+                isMonitor = true
+            else
+                termObject = parentTerminal
+                isMonitor = false
+                if(monFrames[monSide]==self)then
+                    monFrames[monSide] = nil
+                end
+            end
             drawHelper = basaltDrawHelper(termObject)
-            return self
-        end;
-
-        getDisplay = function(self)
-            return termObject
+            monSide = side or nil
+            return self;
         end;
 
         getVisualChanged = function(self)
@@ -244,10 +254,14 @@ local function Frame(name, parent)
 
         keyHandler = function(self, event, key)
             if (focusedObject ~= nil) then
-                if (focusedObject.keyHandler ~= nil) then
-                    if (focusedObject:keyHandler(event, key)) then
-                        return true
+                if(focusedObject~=self)then
+                    if (focusedObject.keyHandler ~= nil) then
+                        if (focusedObject:keyHandler(event, key)) then
+                            return true
+                        end
                     end
+                else
+                    base.keyHandler(self, event, key)
                 end
             end
             return false
@@ -277,6 +291,18 @@ local function Frame(name, parent)
                     end
                 end
             end
+            if(isMonitor)then
+                if(event == "peripheral")and(p1==monSide)then
+                    if(peripheral.getType(monSide)=="monitor")then
+                        monitorAttached = true
+                        termObject = peripheral.wrap(monSide)
+                        drawHelper = basaltDrawHelper(termObject)
+                    end
+                end
+                if(event == "peripheral_detach")and(p1==monSide)then
+                    monitorAttached = false
+                end
+            end
             if (event == "terminate") then
                 termObject.clear()
                 termObject.setCursorPos(1, 1)
@@ -284,7 +310,7 @@ local function Frame(name, parent)
             end
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             local xO, yO = self:getOffset()
             xO = xO < 0 and math.abs(xO) or -xO
             yO = yO < 0 and math.abs(yO) or -yO
@@ -295,7 +321,7 @@ local function Frame(name, parent)
                     if (self.parent ~= nil) then
                         parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
                     end
-                    self:setPosition(x + self.xToRem - (parentX - 1) + xO, y - (parentY - 1) + yO)
+                    self:setPosition(x + dragOffset - (parentX - 1) + xO, y - (parentY - 1) + yO)
                 end
                 if (event == "mouse_up") then
                     self.drag = false
@@ -303,32 +329,25 @@ local function Frame(name, parent)
                 return true
             end
 
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+            if (base.mouseHandler(self, event, button, x, y)) then
                 local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
-                if(event~="monitor_touch") or (isMonitor)then
+                fx = fx + xOffset;fy = fy + yOffset;
                     for _, index in pairs(objZIndex) do
                         if (objects[index] ~= nil) then
                             for _, value in rpairs(objects[index]) do
-                                if (value.mouseClickHandler ~= nil) then
-                                    if (value:mouseClickHandler(event, button, x + xO, y + yO)) then
+                                if (value.mouseHandler ~= nil) then
+                                    if (value:mouseHandler(event, button, x, y)) then
                                         return true
                                     end
                                 end
                             end
                         end
                     end
-                elseif not(isMonitor)then
-                    for _,v in pairs(monitors)do
-                        if(button==v.monitor)then
-                            v.frame:mouseClickHandler(event, button, x, y)
-                        end
-                    end
-                end
 
                 if (self.isMoveable) then
                     if (x >= fx) and (x <= fx + self.width - 1) and (y == fy) and (event == "mouse_click") then
                         self.drag = true
-                        self.xToRem = fx - x
+                        dragOffset = fx - x
                     end
                 end
                 if (focusedObject ~= nil) then
@@ -344,7 +363,8 @@ local function Frame(name, parent)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
-                    self.parent:setText(math.max(x + (obx - 1), obx) - (self.parent.x - 1), oby + y - 1 - (self.parent.y - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
+                    local parentX, parentY = self.parent:getAnchorPosition()
+                    self.parent:setText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
                 else
                     drawHelper.setText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
                 end
@@ -355,7 +375,8 @@ local function Frame(name, parent)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
-                    self.parent:setBG(math.max(x + (obx - 1), obx) - (self.parent.x - 1), oby + y - 1 - (self.parent.y - 1), sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    local parentX, parentY = self.parent:getAnchorPosition()
+                    self.parent:setBG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
                 else
                     drawHelper.setBG(math.max(x + (obx - 1), obx), oby + y - 1, sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
                 end
@@ -366,7 +387,8 @@ local function Frame(name, parent)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
-                    self.parent:setFG(math.max(x + (obx - 1), obx) - (self.parent.x - 1), oby + y - 1 - (self.parent.y - 1), sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    local parentX, parentY = self.parent:getAnchorPosition()
+                    self.parent:setFG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
                 else
                     drawHelper.setFG(math.max(x + (obx - 1), obx), oby + y - 1, sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
                 end
@@ -377,7 +399,8 @@ local function Frame(name, parent)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
-                    self.parent:writeText(math.max(x + (obx - 1), obx) - (self.parent.x - 1), oby + y - 1 - (self.parent.y - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
+                    local parentX, parentY = self.parent:getAnchorPosition()
+                    self.parent:writeText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
                 else
                     drawHelper.writeText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
                 end
@@ -389,7 +412,8 @@ local function Frame(name, parent)
             height = (y < 1 and (height + y > self.height and self.height or height + y - 1) or (height + y > self.height and self.height - y + 1 or height))
             width = (x < 1 and (width + x > self.width and self.width or width + x - 1) or (width + x > self.width and self.width - x + 1 or width))
             if (self.parent ~= nil) then
-                self.parent:drawBackgroundBox(math.max(x + (obx - 1), obx) - (self.parent.x - 1), math.max(y + (oby - 1), oby) - (self.parent.y - 1), width, height, bgCol)
+                local parentX, parentY = self.parent:getAnchorPosition()
+                self.parent:drawBackgroundBox(math.max(x + (obx - 1), obx) - (parentX - 1), math.max(y + (oby - 1), oby) - (parentY - 1), width, height, bgCol)
             else
                 drawHelper.drawBackgroundBox(math.max(x + (obx - 1), obx), math.max(y + (oby - 1), oby), width, height, bgCol)
             end
@@ -400,7 +424,8 @@ local function Frame(name, parent)
             height = (y < 1 and (height + y > self.height and self.height or height + y - 1) or (height + y > self.height and self.height - y + 1 or height))
             width = (x < 1 and (width + x > self.width and self.width or width + x - 1) or (width + x > self.width and self.width - x + 1 or width))
             if (self.parent ~= nil) then
-                self.parent:drawTextBox(math.max(x + (obx - 1), obx) - (self.parent.x - 1), math.max(y + (oby - 1), oby) - (self.parent.y - 1), width, height, symbol:sub(1, 1))
+                local parentX, parentY = self.parent:getAnchorPosition()
+                self.parent:drawTextBox(math.max(x + (obx - 1), obx) - (parentX - 1), math.max(y + (oby - 1), oby) - (parentY - 1), width, height, symbol:sub(1, 1))
             else
                 drawHelper.drawTextBox(math.max(x + (obx - 1), obx), math.max(y + (oby - 1), oby), width, height, symbol:sub(1, 1))
             end
@@ -411,16 +436,15 @@ local function Frame(name, parent)
             height = (y < 1 and (height + y > self.height and self.height or height + y - 1) or (height + y > self.height and self.height - y + 1 or height))
             width = (x < 1 and (width + x > self.width and self.width or width + x - 1) or (width + x > self.width and self.width - x + 1 or width))
             if (self.parent ~= nil) then
-                self.parent:drawForegroundBox(math.max(x + (obx - 1), obx) - (self.parent.x - 1), math.max(y + (oby - 1), oby) - (self.parent.y - 1), width, height, fgCol)
+                local parentX, parentY = self.parent:getAnchorPosition()
+                self.parent:drawForegroundBox(math.max(x + (obx - 1), obx) - (parentX - 1), math.max(y + (oby - 1), oby) - (parentY - 1), width, height, fgCol)
             else
                 drawHelper.drawForegroundBox(math.max(x + (obx - 1), obx), math.max(y + (oby - 1), oby), width, height, fgCol)
             end
         end;
 
         draw = function(self)
-            for _,v in pairs(monitors)do
-                v.frame:draw()
-            end
+            if(isMonitor)and not(monitorAttached)then return false end;
             if (self:getVisualChanged()) then
                 if (base.draw(self)) then
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
@@ -467,11 +491,9 @@ local function Frame(name, parent)
             end
         end;
 
-        drawUpdate = function (self)
+        drawUpdate = function(self)
+            if(isMonitor)and not(monitorAttached)then return false end;
             drawHelper.update()
-            for k,v in pairs(monitors)do
-                v.frame:drawUpdate()
-            end
         end;
 
         addObject = function(self, obj)
@@ -591,8 +613,5 @@ local function Frame(name, parent)
         end;
     }
     setmetatable(object, base)
-    if (parent == nil) then
-        table.insert(frames, object)
-    end
     return object
 end

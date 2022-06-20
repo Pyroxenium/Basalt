@@ -187,8 +187,8 @@ local function Input(name)
             end
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 if (event == "mouse_click") and (button == 1) then
 
                 end

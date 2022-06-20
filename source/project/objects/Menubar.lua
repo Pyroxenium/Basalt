@@ -126,8 +126,8 @@ local function Menubar(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if(base.mouseClickHandler(self, event, button, x, y))then
+        mouseHandler = function(self, event, button, x, y)
+            if(base.mouseHandler(self, event, button, x, y))then
                 local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
                 if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (self:isVisible()) then
                     if (self.parent ~= nil) then

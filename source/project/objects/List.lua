@@ -92,7 +92,7 @@ local function List(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (obx <= x) and (obx + self.width > x) and (oby <= y) and (oby + self.height > y) and (self:isVisible()) then
                 if (((event == "mouse_click") or (event == "mouse_drag"))and(button==1))or(event=="monitor_touch") then

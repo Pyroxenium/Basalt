@@ -1,11 +1,6 @@
 local function Object(name)
     -- Base object
     local objectType = "Object" -- not changeable
-    --[[
-    local horizontalAnchor = "left"
-    local verticalAnchor = "top"
-    local ignYOffset = false
-    local ignXOffset = false  ]]
     local value
     local zIndex = 1
     local hanchor = "left"
@@ -194,11 +189,8 @@ local function Object(name)
 
         getAbsolutePosition = function(self, x, y)
             -- relative position to absolute position
-            if (x == nil) then
-                x = self.x
-            end
-            if (y == nil) then
-                y = self.y
+            if (x == nil) or (y == nil) then
+                x, y = self:getAnchorPosition()
             end
 
             if (self.parent ~= nil) then
@@ -223,24 +215,32 @@ local function Object(name)
                 y = self.parent.height - y - self.height + 2
             end
             local xO, yO = self:getOffset()
-            if (ignOffset or ignOff) then
-                return x, y
+            if not(ignOffset or ignOff) then
+                return x+xO, y+yO
             end
-            return x + xO, y + yO
+            return x, y
         end;
 
         getOffset = function(self)
-            if (self.parent ~= nil) and (ignOffset == false) then
+            if (self.parent ~= nil) then
                 return self.parent:getFrameOffset()
             end
             return 0, 0
         end;
 
         ignoreOffset = function(self, ignore)
-            ignOffset = ignore or true
+            ignOffset = ignore
+            if(ignore==nil)then ignOffset = true end
             return self
         end;
 
+        getBaseFrame = function(self)
+            if(self.parent~=nil)then
+                return self.parent:getBaseFrame()
+            end
+            return self
+        end;
+        
         setAnchor = function(self, ...)
             for _, value in pairs(table.pack(...)) do
                 if (value == "right") or (value == "left") then
@@ -269,13 +269,24 @@ local function Object(name)
             return self
         end;
 
-        onEvent = function(self, func)
-            self:registerEvent("custom_event_handler", func)
+        onClickUp = function(self, func)
+            self:registerEvent("mouse_up", func)
             return self
         end;
 
-        onClickUp = function(self, func)
-            self:registerEvent("mouse_up", func)
+
+        onScroll = function(self, func)
+            self:registerEvent("mouse_scroll", func)
+            return self
+        end;
+
+        onDrag = function(self, func)
+            self:registerEvent("mouse_drag", func)
+            return self
+        end;
+
+        onEvent = function(self, func)
+            self:registerEvent("custom_event_handler", func)
             return self
         end;
 
@@ -330,7 +341,7 @@ local function Object(name)
             return eventSystem:sendEvent(event, self, ...)
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
             if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (isVisible) then
                 if (self.parent ~= nil) then

@@ -17,8 +17,8 @@ local function Checkbox(name)
             return objectType
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
                     if (self:getValue() ~= true) and (self:getValue() ~= false) then
                         self:setValue(false)

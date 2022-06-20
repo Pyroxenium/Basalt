@@ -1,7 +1,12 @@
 local basalt = { debugger = true, version = 1 } 
-local activeFrame 
+local keyActive = {}
+local focusedObject
 local frames = {}
-local keyActive = {} 
+local activeFrame
+
+local mainFrame
+local monFrames = {}
+
 local parentTerminal = term.current()
 
 local sub = string.sub
@@ -606,11 +611,6 @@ end
 local function Object(name)
     -- Base object
     local objectType = "Object" -- not changeable
-    --[[
-    local horizontalAnchor = "left"
-    local verticalAnchor = "top"
-    local ignYOffset = false
-    local ignXOffset = false  ]]
     local value
     local zIndex = 1
     local hanchor = "left"
@@ -799,11 +799,8 @@ local function Object(name)
 
         getAbsolutePosition = function(self, x, y)
             -- relative position to absolute position
-            if (x == nil) then
-                x = self.x
-            end
-            if (y == nil) then
-                y = self.y
+            if (x == nil) or (y == nil) then
+                x, y = self:getAnchorPosition()
             end
 
             if (self.parent ~= nil) then
@@ -828,24 +825,32 @@ local function Object(name)
                 y = self.parent.height - y - self.height + 2
             end
             local xO, yO = self:getOffset()
-            if (ignOffset or ignOff) then
-                return x, y
+            if not(ignOffset or ignOff) then
+                return x+xO, y+yO
             end
-            return x + xO, y + yO
+            return x, y
         end;
 
         getOffset = function(self)
-            if (self.parent ~= nil) and (ignOffset == false) then
+            if (self.parent ~= nil) then
                 return self.parent:getFrameOffset()
             end
             return 0, 0
         end;
 
         ignoreOffset = function(self, ignore)
-            ignOffset = ignore or true
+            ignOffset = ignore
+            if(ignore==nil)then ignOffset = true end
             return self
         end;
 
+        getBaseFrame = function(self)
+            if(self.parent~=nil)then
+                return self.parent:getBaseFrame()
+            end
+            return self
+        end;
+        
         setAnchor = function(self, ...)
             for _, value in pairs(table.pack(...)) do
                 if (value == "right") or (value == "left") then
@@ -874,13 +879,24 @@ local function Object(name)
             return self
         end;
 
-        onEvent = function(self, func)
-            self:registerEvent("custom_event_handler", func)
+        onClickUp = function(self, func)
+            self:registerEvent("mouse_up", func)
             return self
         end;
 
-        onClickUp = function(self, func)
-            self:registerEvent("mouse_up", func)
+
+        onScroll = function(self, func)
+            self:registerEvent("mouse_scroll", func)
+            return self
+        end;
+
+        onDrag = function(self, func)
+            self:registerEvent("mouse_drag", func)
+            return self
+        end;
+
+        onEvent = function(self, func)
+            self:registerEvent("custom_event_handler", func)
             return self
         end;
 
@@ -935,7 +951,7 @@ local function Object(name)
             return eventSystem:sendEvent(event, self, ...)
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
             if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (isVisible) then
                 if (self.parent ~= nil) then
@@ -1148,8 +1164,8 @@ local function Checkbox(name)
             return objectType
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
                     if (self:getValue() ~= true) and (self:getValue() ~= false) then
                         self:setValue(false)
@@ -1283,7 +1299,7 @@ local function Dropdown(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             if (isOpened) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
@@ -1318,7 +1334,7 @@ local function Dropdown(name)
                 end
                 self:setVisualChanged()
             end
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+            if (base.mouseHandler(self, event, button, x, y)) then
                 isOpened = true
             else
                 isOpened = false
@@ -1739,8 +1755,8 @@ local function Input(name)
             end
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 if (event == "mouse_click") and (button == 1) then
 
                 end
@@ -1984,7 +2000,7 @@ local function List(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (obx <= x) and (obx + self.width > x) and (oby <= y) and (oby + self.height > y) and (self:isVisible()) then
                 if (((event == "mouse_click") or (event == "mouse_drag"))and(button==1))or(event=="monitor_touch") then
@@ -2177,8 +2193,8 @@ local function Menubar(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if(base.mouseClickHandler(self, event, button, x, y))then
+        mouseHandler = function(self, event, button, x, y)
+            if(base.mouseHandler(self, event, button, x, y))then
                 local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
                 if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (self:isVisible()) then
                     if (self.parent ~= nil) then
@@ -2809,15 +2825,15 @@ local function Program(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 if (curProcess == nil) then
                     return false
                 end
                 if not (curProcess:isDead()) then
                     if not (paused) then
                         local absX, absY = self:getAbsolutePosition(self:getAnchorPosition(nil, nil, true))
-                        curProcess:resume(event, button, x - absX + 1, y - absY + 1)
+                        curProcess:resume(event, button, x - (absX - 1), y - (absY - 1))
                     end
                 end
                 return true
@@ -3098,7 +3114,7 @@ local function Radio(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if ((event == "mouse_click")and(button==1))or(event=="monitor_touch") then
                 if (#list > 0) then
@@ -3204,8 +3220,8 @@ local function Scrollbar(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
                     if (barType == "horizontal") then
@@ -3333,8 +3349,8 @@ local function Slider(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
                     if (barType == "horizontal") then
@@ -3438,8 +3454,8 @@ local function Switch(name)
             return self
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if ((event == "mouse_click") and (button == 1))or(event=="monitor_touch") then
                     self:setValue(not self:getValue())
@@ -3714,8 +3730,8 @@ local function Textfield(name)
             end
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+        mouseHandler = function(self, event, button, x, y)
+            if (base.mouseHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx, anchy = self:getAnchorPosition()
                 if (event == "mouse_click")or(event=="monitor_touch") then
@@ -3732,7 +3748,7 @@ local function Textfield(name)
                             end
                         end
                         if (self.parent ~= nil) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex)
+                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                         end
                     end
                 end
@@ -3750,7 +3766,7 @@ local function Textfield(name)
                             end
                         end
                         if (self.parent ~= nil) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex)
+                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                         end
                     end
                 end
@@ -3767,7 +3783,7 @@ local function Textfield(name)
 
                     if (self.parent ~= nil) then
                         if (obx + textX - wIndex >= obx and obx + textX - wIndex <= obx + self.width) and (oby + textY - hIndex >= oby and oby + textY - hIndex <= oby + self.height) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex)
+                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                         else
                             self.parent:setCursor(false)
                         end
@@ -3956,11 +3972,12 @@ local function Frame(name, parent)
     local objects = {}
     local objZIndex = {}
     local object = {}
-    local focusedObject
     local termObject = parentTerminal
 
-    local monitors = {}
+    local monSide = ""
     local isMonitor = false
+    local monitorAttached = false
+    local dragOffset = 0
 
     base:setZIndex(10)
 
@@ -4048,16 +4065,13 @@ local function Frame(name, parent)
         end;
 
         setFocusedObject = function(self, obj)
-            for _, index in pairs(objZIndex) do
-                for _, value in pairs(objects[index]) do
-                    if (value == obj) then
-                        if (focusedObject ~= nil) then
-                            focusedObject:loseFocusHandler()
-                        end
-                        focusedObject = obj
-                        focusedObject:getFocusHandler()
-                    end
-                end
+            if (focusedObject ~= nil) then
+                focusedObject:loseFocusHandler()
+                focusedObject = nil
+            end
+            if(obj~=nil)then
+                focusedObject = obj
+                obj:getFocusHandler()
             end
             return self
         end;
@@ -4068,7 +4082,7 @@ local function Frame(name, parent)
             return self
         end;
 
-        getFrameOffset = function(self)
+        getFrameOffset = function(self) -- internal
             return xOffset, yOffset
         end;
 
@@ -4084,25 +4098,22 @@ local function Frame(name, parent)
             return focusedObject
         end;
 
-        show = function(self)
-            base:show()
-            if (self.parent == nil)and not(isMonitor) then
-                activeFrame = self
-            end
-            return self
-        end;
-
         setCursor = function(self, _blink, _xCursor, _yCursor, color)
-            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-            cursorBlink = _blink or false
-            if (_xCursor ~= nil) then
-                xCursor = obx + _xCursor - 1
+            if(self.parent~=nil)then
+                local obx, oby = self:getAnchorPosition()
+                self.parent:setCursor(_blink or false, (_xCursor or 0)+obx-1, (_yCursor or 0)+oby-1, color or cursorColor)
+            else
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                cursorBlink = _blink or false
+                if (_xCursor ~= nil) then
+                    xCursor = obx + _xCursor - 1
+                end
+                if (_yCursor ~= nil) then
+                    yCursor = oby + _yCursor - 1
+                end
+                cursorColor = color or cursorColor
+                self:setVisualChanged()
             end
-            if (_yCursor ~= nil) then
-                yCursor = oby + _yCursor - 1
-            end
-            cursorColor = color or cursorColor
-            self:setVisualChanged()
             return self
         end;
 
@@ -4112,30 +4123,36 @@ local function Frame(name, parent)
             return self;
         end;
 
-
-        addMonitor = function(self, mon)
-            local screen = peripheral.wrap(mon)
-            monitors[mon] = {monitor=mon, frame=basalt.createFrame(self:getName().."_monitor_"..mon)}
-            monitors[mon].frame:setDisplay(screen):setFrameAsMonitor()
-            monitors[mon].frame:setSize(screen:getSize())
-            return monitors[mon].frame
-        end;
-
-        setMonitorScale = function(self, scale, fullSize) -- 1,2,3,4,5,6,7,8,9,10
-            if(isMonitor)then
-                termObject.setTextScale(scale*0.5)
-                if(fullSize)then
-                    self:setSize(termObject:getSize())
+        show = function(self)
+            base.show(self)
+            if(self.parent==nil)then
+                activeFrame = self;
+                if(isMonitor)then
+                    monFrames[monSide] = self;
+                else
+                    mainFrame = self;
                 end
             end
-            return self, isMonitor
+            return self;
         end;
 
-        setFrameAsMonitor = function(self, isMon)
-            isMonitor = isMon
-            if(isMon==nil)then isMonitor = true end
+        hide = function (self)
+            base.hide(self)
+            if(self.parent==nil)then
+                if(activeFrame == self)then activeFrame = nil end
+                if(isMonitor)then
+                    if(monFrames[monSide] == self)then
+                        monFrames[monSide] = nil;
+                    end
+                else
+                    if(mainFrame == self)then
+                        mainFrame = nil;
+                    end
+                end
+            end
             return self
         end;
+        
 
         showBar = function(self, showIt)
             self.barActive = showIt or not self.barActive
@@ -4157,14 +4174,23 @@ local function Frame(name, parent)
             return self
         end;
 
-        setDisplay = function(self, drawTerm)
-            termObject = drawTerm
+        setMonitor = function(self, side)
+            if(side~=nil)or(side~=false)then
+                if(peripheral.getType(side)=="monitor")then
+                    termObject = peripheral.wrap(side)
+                    monitorAttached = true
+                end
+                isMonitor = true
+            else
+                termObject = parentTerminal
+                isMonitor = false
+                if(monFrames[monSide]==self)then
+                    monFrames[monSide] = nil
+                end
+            end
             drawHelper = basaltDrawHelper(termObject)
-            return self
-        end;
-
-        getDisplay = function(self)
-            return termObject
+            monSide = side or nil
+            return self;
         end;
 
         getVisualChanged = function(self)
@@ -4195,10 +4221,14 @@ local function Frame(name, parent)
 
         keyHandler = function(self, event, key)
             if (focusedObject ~= nil) then
-                if (focusedObject.keyHandler ~= nil) then
-                    if (focusedObject:keyHandler(event, key)) then
-                        return true
+                if(focusedObject~=self)then
+                    if (focusedObject.keyHandler ~= nil) then
+                        if (focusedObject:keyHandler(event, key)) then
+                            return true
+                        end
                     end
+                else
+                    base.keyHandler(self, event, key)
                 end
             end
             return false
@@ -4228,6 +4258,18 @@ local function Frame(name, parent)
                     end
                 end
             end
+            if(isMonitor)then
+                if(event == "peripheral")and(p1==monSide)then
+                    if(peripheral.getType(monSide)=="monitor")then
+                        monitorAttached = true
+                        termObject = peripheral.wrap(monSide)
+                        drawHelper = basaltDrawHelper(termObject)
+                    end
+                end
+                if(event == "peripheral_detach")and(p1==monSide)then
+                    monitorAttached = false
+                end
+            end
             if (event == "terminate") then
                 termObject.clear()
                 termObject.setCursorPos(1, 1)
@@ -4235,7 +4277,7 @@ local function Frame(name, parent)
             end
         end;
 
-        mouseClickHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, event, button, x, y)
             local xO, yO = self:getOffset()
             xO = xO < 0 and math.abs(xO) or -xO
             yO = yO < 0 and math.abs(yO) or -yO
@@ -4246,7 +4288,7 @@ local function Frame(name, parent)
                     if (self.parent ~= nil) then
                         parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
                     end
-                    self:setPosition(x + self.xToRem - (parentX - 1) + xO, y - (parentY - 1) + yO)
+                    self:setPosition(x + dragOffset - (parentX - 1) + xO, y - (parentY - 1) + yO)
                 end
                 if (event == "mouse_up") then
                     self.drag = false
@@ -4254,32 +4296,25 @@ local function Frame(name, parent)
                 return true
             end
 
-            if (base.mouseClickHandler(self, event, button, x, y)) then
+            if (base.mouseHandler(self, event, button, x, y)) then
                 local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
-                if(event~="monitor_touch") or (isMonitor)then
+                fx = fx + xOffset;fy = fy + yOffset;
                     for _, index in pairs(objZIndex) do
                         if (objects[index] ~= nil) then
                             for _, value in rpairs(objects[index]) do
-                                if (value.mouseClickHandler ~= nil) then
-                                    if (value:mouseClickHandler(event, button, x + xO, y + yO)) then
+                                if (value.mouseHandler ~= nil) then
+                                    if (value:mouseHandler(event, button, x, y)) then
                                         return true
                                     end
                                 end
                             end
                         end
                     end
-                elseif not(isMonitor)then
-                    for _,v in pairs(monitors)do
-                        if(button==v.monitor)then
-                            v.frame:mouseClickHandler(event, button, x, y)
-                        end
-                    end
-                end
 
                 if (self.isMoveable) then
                     if (x >= fx) and (x <= fx + self.width - 1) and (y == fy) and (event == "mouse_click") then
                         self.drag = true
-                        self.xToRem = fx - x
+                        dragOffset = fx - x
                     end
                 end
                 if (focusedObject ~= nil) then
@@ -4295,7 +4330,8 @@ local function Frame(name, parent)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
-                    self.parent:setText(math.max(x + (obx - 1), obx) - (self.parent.x - 1), oby + y - 1 - (self.parent.y - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
+                    local parentX, parentY = self.parent:getAnchorPosition()
+                    self.parent:setText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
                 else
                     drawHelper.setText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
                 end
@@ -4306,7 +4342,8 @@ local function Frame(name, parent)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
-                    self.parent:setBG(math.max(x + (obx - 1), obx) - (self.parent.x - 1), oby + y - 1 - (self.parent.y - 1), sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    local parentX, parentY = self.parent:getAnchorPosition()
+                    self.parent:setBG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
                 else
                     drawHelper.setBG(math.max(x + (obx - 1), obx), oby + y - 1, sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
                 end
@@ -4317,7 +4354,8 @@ local function Frame(name, parent)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
-                    self.parent:setFG(math.max(x + (obx - 1), obx) - (self.parent.x - 1), oby + y - 1 - (self.parent.y - 1), sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    local parentX, parentY = self.parent:getAnchorPosition()
+                    self.parent:setFG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
                 else
                     drawHelper.setFG(math.max(x + (obx - 1), obx), oby + y - 1, sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
                 end
@@ -4328,7 +4366,8 @@ local function Frame(name, parent)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
-                    self.parent:writeText(math.max(x + (obx - 1), obx) - (self.parent.x - 1), oby + y - 1 - (self.parent.y - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
+                    local parentX, parentY = self.parent:getAnchorPosition()
+                    self.parent:writeText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
                 else
                     drawHelper.writeText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
                 end
@@ -4340,7 +4379,8 @@ local function Frame(name, parent)
             height = (y < 1 and (height + y > self.height and self.height or height + y - 1) or (height + y > self.height and self.height - y + 1 or height))
             width = (x < 1 and (width + x > self.width and self.width or width + x - 1) or (width + x > self.width and self.width - x + 1 or width))
             if (self.parent ~= nil) then
-                self.parent:drawBackgroundBox(math.max(x + (obx - 1), obx) - (self.parent.x - 1), math.max(y + (oby - 1), oby) - (self.parent.y - 1), width, height, bgCol)
+                local parentX, parentY = self.parent:getAnchorPosition()
+                self.parent:drawBackgroundBox(math.max(x + (obx - 1), obx) - (parentX - 1), math.max(y + (oby - 1), oby) - (parentY - 1), width, height, bgCol)
             else
                 drawHelper.drawBackgroundBox(math.max(x + (obx - 1), obx), math.max(y + (oby - 1), oby), width, height, bgCol)
             end
@@ -4351,7 +4391,8 @@ local function Frame(name, parent)
             height = (y < 1 and (height + y > self.height and self.height or height + y - 1) or (height + y > self.height and self.height - y + 1 or height))
             width = (x < 1 and (width + x > self.width and self.width or width + x - 1) or (width + x > self.width and self.width - x + 1 or width))
             if (self.parent ~= nil) then
-                self.parent:drawTextBox(math.max(x + (obx - 1), obx) - (self.parent.x - 1), math.max(y + (oby - 1), oby) - (self.parent.y - 1), width, height, symbol:sub(1, 1))
+                local parentX, parentY = self.parent:getAnchorPosition()
+                self.parent:drawTextBox(math.max(x + (obx - 1), obx) - (parentX - 1), math.max(y + (oby - 1), oby) - (parentY - 1), width, height, symbol:sub(1, 1))
             else
                 drawHelper.drawTextBox(math.max(x + (obx - 1), obx), math.max(y + (oby - 1), oby), width, height, symbol:sub(1, 1))
             end
@@ -4362,16 +4403,15 @@ local function Frame(name, parent)
             height = (y < 1 and (height + y > self.height and self.height or height + y - 1) or (height + y > self.height and self.height - y + 1 or height))
             width = (x < 1 and (width + x > self.width and self.width or width + x - 1) or (width + x > self.width and self.width - x + 1 or width))
             if (self.parent ~= nil) then
-                self.parent:drawForegroundBox(math.max(x + (obx - 1), obx) - (self.parent.x - 1), math.max(y + (oby - 1), oby) - (self.parent.y - 1), width, height, fgCol)
+                local parentX, parentY = self.parent:getAnchorPosition()
+                self.parent:drawForegroundBox(math.max(x + (obx - 1), obx) - (parentX - 1), math.max(y + (oby - 1), oby) - (parentY - 1), width, height, fgCol)
             else
                 drawHelper.drawForegroundBox(math.max(x + (obx - 1), obx), math.max(y + (oby - 1), oby), width, height, fgCol)
             end
         end;
 
         draw = function(self)
-            for _,v in pairs(monitors)do
-                v.frame:draw()
-            end
+            if(isMonitor)and not(monitorAttached)then return false end;
             if (self:getVisualChanged()) then
                 if (base.draw(self)) then
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
@@ -4418,11 +4458,9 @@ local function Frame(name, parent)
             end
         end;
 
-        drawUpdate = function (self)
+        drawUpdate = function(self)
+            if(isMonitor)and not(monitorAttached)then return false end;
             drawHelper.update()
-            for k,v in pairs(monitors)do
-                v.frame:drawUpdate()
-            end
         end;
 
         addObject = function(self, obj)
@@ -4542,24 +4580,41 @@ local function Frame(name, parent)
         end;
     }
     setmetatable(object, base)
-    if (parent == nil) then
-        table.insert(frames, object)
-    end
     return object
 end
+local function drawFrames()
+    mainFrame:draw()
+    mainFrame:drawUpdate()
+    for _,v in pairs(monFrames)do
+        v:draw()
+        v:drawUpdate()
+    end
+end
+
 local updaterActive = false
 local function basaltUpdateEvent(event, p1, p2, p3, p4)
-    if (event == "mouse_click") then
-        activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    elseif (event == "mouse_drag") then
-        activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    elseif (event == "mouse_up") then
-        activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    elseif (event == "mouse_scroll") then
-        activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    elseif (event == "monitor_touch") then
-        activeFrame:mouseClickHandler(event, p1, p2, p3, p4)
-    elseif (event == "key") or (event == "char") then
+    if(mainFrame~=nil)then
+        if (event == "mouse_click") then
+            mainFrame:mouseHandler(event, p1, p2, p3, p4)
+            activeFrame = mainFrame
+        elseif (event == "mouse_drag") then
+            mainFrame:mouseHandler(event, p1, p2, p3, p4)
+            activeFrame = mainFrame
+        elseif (event == "mouse_up") then
+            mainFrame:mouseHandler(event, p1, p2, p3, p4)
+            activeFrame = mainFrame
+        elseif (event == "mouse_scroll") then
+            mainFrame:mouseHandler(event, p1, p2, p3, p4)
+            activeFrame = mainFrame
+        elseif (event == "monitor_touch") then
+            if(monFrames[p1]~=nil)then
+                monFrames[p1]:mouseHandler(event, p1, p2, p3, p4)
+                activeFrame = monFrames[p1]
+            end
+        end
+    end
+
+    if(event == "key") or (event == "char") then
         activeFrame:keyHandler(event, p1)
         activeFrame:backgroundKeyHandler(event, p1)
     end
@@ -4572,20 +4627,18 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
         keyActive[p1] = false
     end
 
-    for _, value in pairs(frames) do
-        value:eventHandler(event, p1, p2, p3, p4)
+    for _, v in pairs(frames) do
+        v:eventHandler(event, p1, p2, p3, p4)
     end
     if (updaterActive) then
-        activeFrame:draw()
-        activeFrame:drawUpdate()
+        drawFrames()
     end
 end
 
 function basalt.autoUpdate(isActive)
-    parentTerminal.clear()
-    updaterActive = isActive or true
-    activeFrame:draw()
-    activeFrame:drawUpdate()
+    updaterActive = isActive
+    if(isActive==nil)then updaterActive = true end
+    drawFrames()
     while updaterActive do
         local event, p1, p2, p3, p4 = os.pullEventRaw() -- change to raw later
         basaltUpdateEvent(event, p1, p2, p3, p4)
@@ -4596,8 +4649,7 @@ function basalt.update(event, p1, p2, p3, p4)
     if (event ~= nil) then
         basaltUpdateEvent(event, p1, p2, p3, p4)
     else
-        activeFrame:draw()
-        activeFrame:drawUpdate()
+        drawFrames()
     end
 end
 
@@ -4631,32 +4683,34 @@ function basalt.setActiveFrame(frame)
 end
 
 function basalt.createFrame(name)
-    return Frame(name)
+    for _, v in pairs(frames) do
+        if (v.name == name) then
+            return nil
+        end
+    end
+    local newFrame = Frame(name)
+    table.insert(frames, newFrame)
+    return newFrame
 end
 
 function basalt.removeFrame(name)
-    for key, value in pairs(frames) do
-        if (value.name == name) then
-            frames[key] = nil
-            return true
-        end
-    end
-    return false
+    frames[name] = nil
 end
+
 
 if (basalt.debugger) then
     basalt.debugFrame = basalt.createFrame("basaltDebuggingFrame"):showBar():setBackground(colors.lightGray):setBar("Debug", colors.black, colors.gray)
     basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.width - 2, basalt.debugFrame.height - 3):setPosition(2, 3):setScrollable(true):show()
     basalt.debugFrame:addButton("back"):setAnchor("right"):setSize(1, 1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
-    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = activeFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):setZIndex(20):show()
+    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = mainFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):ignoreOffset():setZIndex(20):show()
 end
 
 if (basalt.debugger) then
     function basalt.debug(...)
         local args = { ... }
-        if (activeFrame.name ~= "basaltDebuggingFrame") then
-            if (activeFrame ~= basalt.debugLabel.frame) then
-                basalt.debugLabel:setParent(activeFrame)
+        if (mainFrame.name ~= "basaltDebuggingFrame") then
+            if (mainFrame ~= basalt.debugFrame) then
+                basalt.debugLabel:setParent(mainFrame)
             end
         end
         local str = ""
