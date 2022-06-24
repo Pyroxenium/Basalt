@@ -16,6 +16,7 @@ local aInput = mainFrame:addLabel("myFirstLabel"):setText("Hello lovely basalt c
 
 ## setFontSize
 sets the font size of that text.
+The font size is handled by bigfonts, if you're curious what bigfonts is, check out this page: http://www.computercraft.info/forums2/index.php?/topic/25367-bigfont-api-write-bigger-letters-v10/
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aInput = mainFrame:addLabel("myFirstLabel"):setText("Hello"):setFontSize(2):show()
