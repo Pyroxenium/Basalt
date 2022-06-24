@@ -2,7 +2,7 @@ There are also other useful events you can listen to:
 
 # onChange
 `onChange(self)`<br>
-This is a custom event which gets triggered as soon as the method :setValue() gets called. Not only you can call :setValue(), also input, checkbox, textfield, ... objects call them internally.
+This is a custom event which gets triggered as soon as the function :setValue() is called. This function is also called by basalt, for example if you change the input, textfield or checkbox (or all the different types of lists) objects.
 
 Here is a example on how to add a onChange event to your input, and also another example for your checkbox:
 
