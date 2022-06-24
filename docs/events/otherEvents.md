@@ -48,7 +48,7 @@ end
 
 aButton:onResize(onButtonResize)
 ```
-## onLoseFocus
+# onLoseFocus
 `onLoseFocus(self)`<br>
 This event gets triggered as soon as the object loses its focus.
 
@@ -61,7 +61,7 @@ local aButton = mainFrame:addButton("exampleButton"):setPosition(3,3):onLoseFocu
 ):show()
 ```
 
-## onGetFocus
+# onGetFocus
 `onGetFocus(self)`<br>
 This event gets triggered as soon as the object is the currently focused object.
 
