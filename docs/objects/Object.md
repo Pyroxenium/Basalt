@@ -176,7 +176,7 @@ basalt.debug(aButton:getAnchorPosition()) -- returns 7,14 (framesize - own size)
 Sets the anchor of the object
 
 #### Parameters: 
-1. `string` Anchor sides `("left", "right", "top", "bottom")` Positions stack like so `object:setAnchor("right", "bottom")`
+1. `string` Anchor sides `("topLeft" "top", "topRight", "right", "bottomRight", "bottom", "bottomLeft", "left", "center")`
 
 #### Returns:
 1. `object` The object in use
@@ -184,13 +184,11 @@ Sets the anchor of the object
 #### Usage:
 * Sets the mainFrame to have an anchor of `right` and aButton to have an anchor of `bottom, right`
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame")
-        :setAnchor("right")
-        :show()
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("myFirstButton")
-        :setAnchor("bottom","right")
+        :setAnchor("bottomRight")
         :setSize(8,1)
-        :setPosition(1,1)
+        :setPosition(-8,1)
         :show()
 ```
 
