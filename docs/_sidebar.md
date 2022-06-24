@@ -16,6 +16,7 @@
     - [Menubar](objects/Menubar)
     - [Pane](objects/Pane)
     - [Program](objects/Program)
+    - [Progressbar](objects/Progressbar)
     - [Radio](objects/Radio)
     - [Scrollbar](objects/Scrollbar)
     - [Slider](objects/Slider)
