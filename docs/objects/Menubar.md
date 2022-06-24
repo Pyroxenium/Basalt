@@ -1,4 +1,4 @@
-Menubars are like lists but instead of being vertical, they are horizontal. Imagine you are creating a Operating System and you would like to add a taskbar, menubars would be exactly what you need, because they are also scrollable, which means they have endless entries.
+Menubars are like lists but instead of being vertical, they are horizontal. Imagine you are creating a Operating System and you would like to add a taskbar, menubars would be exactly what you need, because they are also scrollable, which means they have endless entry possibility.
 
 If you want to access values inside items this is how the table for single items is made (just a example):
 
