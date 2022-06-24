@@ -44,7 +44,7 @@ local mainFrame = basalt.createFrame("myFirstFrame"):setPosition(2,3)
 ```
 
 ## setBackground
-Changes the object background color
+Changes the object background color, if you set the value to false the background wont be visible. For example you could see trough a frame.
 #### Parameters: 
 1. `number|color` Background color
 
@@ -294,6 +294,88 @@ Returns the given name of the object
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 basalt.debug(mainFrame:getName()) -- returns myFirstFrame
+```
+
+## setShadow
+Sets the shadow color - default: colors.black
+
+#### Parameters: 
+1. `number|color` Shadow color
+
+#### Returns: 
+1. `object` The object in use
+
+#### Usage:
+* Sets the shadow to green and shows it:
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local subFrame = mainFrame:addFrame("mySubFrame")
+        :setMoveable()
+        :setSize(18,6)
+        :setShadow(colors.green)
+        :showShadow(true)
+        :show()
+```
+
+## showShadow
+Shows or hides the shadow
+
+#### Parameters: 
+1. `boolean` Whether it should show or hide the shadow
+
+#### Returns: 
+1. `object` The object in use
+
+#### Usage:
+* Sets the shadow to green and shows it:
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local subFrame = mainFrame:addFrame("mySubFrame")
+        :setMoveable()
+        :setSize(18,6)
+        :showShadow(true)
+        :show()
+```
+
+## setBorder
+Sets the border color - default: colors.black
+
+#### Parameters: 
+1. `number|color` Border color
+
+#### Returns: 
+1. `object` The object in use
+
+#### Usage:
+* Sets the shadow to green and shows it:
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local subFrame = mainFrame:addFrame("mySubFrame")
+        :setMoveable()
+        :setSize(18,6)
+        :setBorder(colors.green)
+        :showBorder("left", "top", "right", "bottom")
+        :show()
+```
+
+## showBorder
+Shows or hides the border
+
+#### Parameters: 
+1. `strings` Whether it should show or hide the border on the specific sides ("left", "top", "right", "bottom")
+
+#### Returns: 
+1. `object` The object in use
+
+#### Usage:
+* Sets the shadow to green and shows it:
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local subFrame = mainFrame:addFrame("mySubFrame")
+        :setMoveable()
+        :setSize(18,6)
+        :showBorder("left", "top", "right", "bottom")
+        :show()
 ```
 
 # Object Events
