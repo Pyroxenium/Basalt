@@ -327,7 +327,7 @@ Shows or hides the shadow
 1. `object` The object in use
 
 #### Usage:
-* Sets the shadow to green and shows it:
+* Shows the shadow:
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local subFrame = mainFrame:addFrame("mySubFrame")
@@ -347,7 +347,7 @@ Sets the border color - default: colors.black
 1. `object` The object in use
 
 #### Usage:
-* Sets the shadow to green and shows it:
+* Sets the border to green and shows it:
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local subFrame = mainFrame:addFrame("mySubFrame")
@@ -368,7 +368,7 @@ Shows or hides the border
 1. `object` The object in use
 
 #### Usage:
-* Sets the shadow to green and shows it:
+* Shows the border:
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local subFrame = mainFrame:addFrame("mySubFrame")
@@ -376,138 +376,4 @@ local subFrame = mainFrame:addFrame("mySubFrame")
         :setSize(18,6)
         :showBorder("left", "top", "right", "bottom")
         :show()
-```
-
-# Object Events
-These events are available for all objects, objects with unique events will have documentation in their respective sections
-
-## onClick
-Creates a mouse_click event listener
-#### Parameters: 
-1. `function` Function handling event listener logic
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Prints to the debug console when the button is clicked
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setSize(10,3):onClick(
-        function(self,event,button,x,y) 
-            basalt.debug("Hellooww UwU") 
-        end
-):show()
-```
-
-## onClickUp
-Creates a click_up event listener
-#### Parameters: 
-1. `function` Function handling event listener logic
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Prints to the debug console when there is a click_up event
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setSize(10,3):onClickUp(
-        function(self,event,button,x,y) 
-            basalt.debug("Byeeeee UwU") 
-        end
-):show()
-```
-
-## onMouseDrag
-### _Not currently implemented_
-Creates a mouse_drag event listener
-#### Parameters: 
-1. `function` Function handling event listener logic
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Prints to the debug console when the object is dragged
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setSize(10,3):onClickUp(
-        function(self,event,button,x,y) 
-            basalt.debug("Byeeeee UwU") 
-        end
-):show()
-```
-
-## onChange
-Creates an on change event listener (called when the value gets changed)
-#### Parameters: 
-1. `function` Function handling event listener logic
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Prints the checkbox value to the debug window when changed
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aCheckbox = mainFrame:addCheckbox("myFirstCheckbox"):onChange(
-        function(self) 
-            basalt.debug("I got changed into " .. self:getValue()) 
-        end
-):show()
-```
-
-## onKey
-Creates a keyboard event listener that can be key or character based
-#### Parameters: 
-1. `function` Function handling event listener logic
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Prints the clicked key to the debug window
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):onKey(
-        function(self,event,key) 
-            basalt.debug("You clicked " .. key) 
-        end
-):show()
-```
-
-## onLoseFocus
-Creates a lose focus event listener
-#### Parameters: 
-1. `function` Function handling event listener logic
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Prints "Please come back... :(" to the debug window when the frame loses focus
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):onLoseFocus(
-        function(self) 
-            basalt.debug("Please come back... :(") 
-        end
-):show()
-```
-
-## onGetFocus
-Creates a get focus event listener
-#### Parameters: 
-1. `function` Function handling event listener logic
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Prints "Thanks!" to the debug window when "myFirstFrame" is focused
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):onGetFocus(
-        function(self) 
-            basalt.debug("Thanks!") 
-        end
-):show()
 ```
