@@ -3,8 +3,8 @@
     - [Quick Start](home/Quick-Start.md)
     - [Installer](home/installer)
 - Objects
-    - [Object](objects/Object)
     - [Basalt](objects/Basalt)
+    - [Object](objects/Object)
     - [Button](objects/Button)
     - [Checkbox](objects/Checkbox)
     - [Dropdown](objects/Dropdown)
@@ -25,6 +25,8 @@
     - [Timer](objects/Timer)
 - Events
     - [Mouse Events](events/mouseEvents.md)
+    - [Keyboard Events](events/keyEvents.md)
+    - [Other Events](events/otherEvents.md)
 - Tips & Tricks
     - [Component Logic](tips/logic)
     - [Changing Button Color](tips/buttons)

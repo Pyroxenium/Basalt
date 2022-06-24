@@ -9,6 +9,7 @@ end
 
 local updaterActive = false
 local function basaltUpdateEvent(event, p1, p2, p3, p4)
+    if(eventSystem:sendEvent("basaltEventCycle", event, p1, p2, p3, p4)==false)then return end
     if(mainFrame~=nil)then
         if (event == "mouse_click") then
             mainFrame:mouseHandler(event, p1, p2, p3, p4)
@@ -46,9 +47,7 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
     for _, v in pairs(frames) do
         v:eventHandler(event, p1, p2, p3, p4)
     end
-    if (updaterActive) then
-        drawFrames()
-    end
+    drawFrames()
 end
 
 function basalt.autoUpdate(isActive)
@@ -64,8 +63,6 @@ end
 function basalt.update(event, p1, p2, p3, p4)
     if (event ~= nil) then
         basaltUpdateEvent(event, p1, p2, p3, p4)
-    else
-        drawFrames()
     end
 end
 
@@ -98,6 +95,14 @@ function basalt.setActiveFrame(frame)
     return false
 end
 
+function basalt.onEvent(...)
+    for _,v in pairs(table.pack(...))do
+        if(type(v)=="function")then
+            eventSystem:registerEvent("basaltEventCycle", v)
+        end
+    end
+end
+
 function basalt.createFrame(name)
     for _, v in pairs(frames) do
         if (v.name == name) then
@@ -117,8 +122,8 @@ end
 if (basalt.debugger) then
     basalt.debugFrame = basalt.createFrame("basaltDebuggingFrame"):showBar():setBackground(colors.lightGray):setBar("Debug", colors.black, colors.gray)
     basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.width - 2, basalt.debugFrame.height - 3):setPosition(2, 3):setScrollable(true):show()
-    basalt.debugFrame:addButton("back"):setAnchor("right"):setSize(1, 1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
-    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = mainFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):ignoreOffset():setZIndex(20):show()
+    basalt.debugFrame:addButton("back"):setAnchor("topRight"):setSize(1, 1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
+    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = mainFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottomLeft"):ignoreOffset():setZIndex(20):show()
 end
 
 if (basalt.debugger) then

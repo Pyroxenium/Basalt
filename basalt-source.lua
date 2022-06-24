@@ -389,16 +389,22 @@ local function BasaltEvents()
         end;
 
         sendEvent = function(self, _event, ...)
+            local returnValue
             if (events[_event] ~= nil) then
                 for _, value in pairs(events[_event]) do
-                    value(...)
+                    local val = value(...)
+                    if(val==false)then
+                        returnValue = val
+                    end
                 end
             end
+            return returnValue
         end;
     }
     event.__index = event
     return event
 end
+local eventSystem = BasaltEvents()
 local processes = {}
 local process = {}
 local processId = 0
@@ -409,7 +415,7 @@ function process:new(path, window, ...)
     newP.window = window
     newP.processId = processId
     newP.coroutine = coroutine.create(function()
-        os.run({ basalt = basalt }, path, table.unpack(args))
+        os.run({ }, path, table.unpack(args))
     end)
     processes[processId] = newP
     processId = processId + 1
@@ -487,9 +493,8 @@ local function rpairs(t)
     end, t, #t + 1
 end
 
+-- shrink system is copy pasted (and slightly changed) from blittle by Bomb Bloke: http://www.computercraft.info/forums2/index.php?/topic/25354-cc-176-blittle-api/
 local function shrink(bLittleData, bgColor)
-
-    -- shrinkSystem is copy pasted (and slightly changed) from blittle by Bomb Bloke: http://www.computercraft.info/forums2/index.php?/topic/25354-cc-176-blittle-api/
     local relations = { [0] = { 8, 4, 3, 6, 5 }, { 4, 14, 8, 7 }, { 6, 10, 8, 7 }, { 9, 11, 8, 0 }, { 1, 14, 8, 0 }, { 13, 12, 8, 0 }, { 2, 10, 8, 0 }, { 15, 8, 10, 11, 12, 14 },
                         { 0, 7, 1, 9, 2, 13 }, { 3, 11, 8, 7 }, { 2, 6, 7, 15 }, { 9, 3, 7, 15 }, { 13, 5, 7, 15 }, { 5, 12, 8, 7 }, { 1, 4, 7, 15 }, { 7, 10, 11, 12, 14 } }
 
@@ -613,10 +618,18 @@ local function Object(name)
     local objectType = "Object" -- not changeable
     local value
     local zIndex = 1
-    local hanchor = "left"
-    local vanchor = "top"
+    local anchor = "topLeft"
     local ignOffset = false
     local isVisible = false
+
+    local shadow = false
+    local borderLeft = false
+    local borderTop = false
+    local borderRight = false
+    local borderBottom = false
+
+    local shadowColor = colors.black
+    local borderColor = colors.black
 
     local visualsChanged = true
 
@@ -789,8 +802,104 @@ local function Object(name)
             return self.fgColor
         end;
 
+        showShadow = function(self, show)
+            shadow = show or (not shadow)
+            return self
+        end;
+
+        setShadow = function(self, color)
+            shadowColor = color
+            return self
+        end;
+
+        isShadowActive = function(self)
+            return shadow;
+        end;
+
+        showBorder = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(v=="left")then
+                    borderLeft = true
+                end
+                if(v=="top")then
+                    borderTop = true
+                end
+                if(v=="right")then
+                    borderRight = true
+                end
+                if(v=="bottom")then
+                    borderBottom = true
+                end
+            end
+            return self
+        end;
+
+        setBorder = function(self, color)
+            shadowColor = color
+            return self
+        end;
+        
+        getBorder = function(self, side)
+            if(side=="left")then
+                return borderLeft;
+            end
+            if(side=="top")then
+                return borderTop;
+            end
+            if(side=="right")then
+                return borderRight;
+            end
+            if(side=="bottom")then
+                return borderBottom;
+            end
+        end;
+
         draw = function(self)
             if (isVisible) then
+                if(self.parent~=nil)then
+                    local x, y = self:getAnchorPosition()
+                    if(shadow)then                        
+                        self.parent:drawBackgroundBox(x+1, y+self.height, self.width, 1, shadowColor)
+                        self.parent:drawBackgroundBox(x+self.width, y+1, 1, self.height, shadowColor)
+                        self.parent:drawForegroundBox(x+1, y+self.height, self.width, 1, shadowColor)
+                        self.parent:drawForegroundBox(x+self.width, y+1, 1, self.height, shadowColor)
+                    end
+                    if(borderLeft)then
+                        self.parent:drawTextBox(x-1, y, 1, self.height, "\149")
+                        self.parent:drawForegroundBox(x-1, y, 1, self.height, borderColor)
+                        if(self.bgColor~=false)then self.parent:drawBackgroundBox(x-1, y, 1, self.height, self.bgColor) end
+                    end
+                    if(borderLeft)and(borderTop)then
+                        self.parent:drawTextBox(x-1, y-1, 1, 1, "\151")
+                        self.parent:drawForegroundBox(x-1, y-1, 1, 1, borderColor)
+                        if(self.bgColor~=false)then self.parent:drawBackgroundBox(x-1, y-1, 1, 1, self.bgColor) end
+                    end
+                    if(borderTop)then
+                        self.parent:drawTextBox(x, y-1, self.width, 1, "\131")
+                        self.parent:drawForegroundBox(x, y-1, self.width, 1, borderColor)
+                        if(self.bgColor~=false)then self.parent:drawBackgroundBox(x, y-1, self.width, 1, self.bgColor) end
+                    end
+                    if(borderTop)and(borderRight)then
+                        self.parent:drawTextBox(x+self.width, y-1, 1, 1, "\149")
+                        self.parent:drawForegroundBox(x+self.width, y-1, 1, 1, borderColor)
+                    end
+                    if(borderRight)then
+                        self.parent:drawTextBox(x+self.width, y, 1, self.height, "\149")
+                        self.parent:drawForegroundBox(x+self.width, y, 1, self.height, borderColor)
+                    end
+                    if(borderRight)and(borderBottom)then
+                        self.parent:drawTextBox(x+self.width, y+self.height, 1, 1, "\129")
+                        self.parent:drawForegroundBox(x+self.width, y+self.height, 1, 1, borderColor)
+                    end
+                    if(borderBottom)then
+                        self.parent:drawTextBox(x, y+self.height, self.width, 1, "\131")
+                        self.parent:drawForegroundBox(x, y+self.height, self.width, 1, borderColor)
+                    end
+                    if(borderBottom)and(borderLeft)then
+                        self.parent:drawTextBox(x-1, y+self.height, 1, 1, "\131")
+                        self.parent:drawForegroundBox(x-1, y+self.height, 1, 1, borderColor)
+                    end
+                end
                 return true
             end
             return false
@@ -818,11 +927,26 @@ local function Object(name)
             if (y == nil) then
                 y = self.y
             end
-            if (hanchor == "right") then
-                x = self.parent.width - x - self.width + 2
-            end
-            if (vanchor == "bottom") then
-                y = self.parent.height - y - self.height + 2
+            if (anchor == "top") then
+                x = math.floor(self.parent.width/2) + x - 1
+            elseif(anchor == "topRight") then
+                x = self.parent.width + x - 1
+            elseif(anchor == "right") then
+                x = self.parent.width + x - 1
+                y = math.floor(self.parent.height/2) + y - 1
+            elseif(anchor == "bottomRight") then
+                x = self.parent.width + x - 1
+                y = self.parent.height + y - 1
+            elseif(anchor == "bottom") then
+                x = math.floor(self.parent.width/2) + x - 1
+                y = self.parent.height + y - 1
+            elseif(anchor == "bottomLeft") then
+                y = self.parent.height + y - 1
+            elseif(anchor == "left") then
+                y = math.floor(self.parent.height/2) + y - 1
+            elseif(anchor == "center") then
+                x = math.floor(self.parent.width/2) + x - 1
+                y = math.floor(self.parent.height/2) + y - 1
             end
             local xO, yO = self:getOffset()
             if not(ignOffset or ignOff) then
@@ -851,74 +975,116 @@ local function Object(name)
             return self
         end;
         
-        setAnchor = function(self, ...)
-            for _, value in pairs(table.pack(...)) do
-                if (value == "right") or (value == "left") then
-                    hanchor = value
-                end
-                if (value == "top") or (value == "bottom") then
-                    vanchor = value
-                end
-            end
+        setAnchor = function(self, newAnchor)
+            anchor = newAnchor
             visualsChanged = true
             return self
         end;
 
         getAnchor = function(self)
-            return hanchor, vanchor
+            return anchor
         end;
 
-        onChange = function(self, func)
-            self:registerEvent("value_changed", func)
+        onChange = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("value_changed", v)
+                end
+            end
             return self
         end;
 
-        onClick = function(self, func)
-            self:registerEvent("mouse_click", func)
-            self:registerEvent("monitor_touch", func)
+        onClick = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("mouse_click", v)
+                    self:registerEvent("monitor_touch", v)
+                end
+            end
             return self
         end;
 
-        onClickUp = function(self, func)
-            self:registerEvent("mouse_up", func)
+        onClickUp = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("mouse_up", v)
+                end
+            end
             return self
         end;
 
 
-        onScroll = function(self, func)
-            self:registerEvent("mouse_scroll", func)
+        onScroll = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("mouse_scroll", v)
+                end
+            end
             return self
         end;
 
-        onDrag = function(self, func)
-            self:registerEvent("mouse_drag", func)
+        onDrag = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("mouse_drag", v)
+                end
+            end
             return self
         end;
 
-        onEvent = function(self, func)
-            self:registerEvent("custom_event_handler", func)
+        onEvent = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("custom_event_handler", v)
+                end
+            end
             return self
         end;
 
-        onKey = function(self, func)
-            self:registerEvent("key", func)
-            self:registerEvent("char", func)
+        onKey = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("key", v)
+                    self:registerEvent("char", v)
+                end
+            end
             return self
         end;
 
-        onKeyUp = function(self, func)
-            self:registerEvent("key_up", func)
+        onResize = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("basalt_resize", v)
+                end
+            end
             return self
         end;
 
-        onBackgroundKey = function(self, func)
-            self:registerEvent("background_key", func)
-            self:registerEvent("background_char", func)
+        onKeyUp = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("key_up", v)
+                end
+            end
             return self
         end;
 
-        onBackgroundKeyUp = function(self, func)
-            self:registerEvent("background_key_up", func)
+        onBackgroundKey = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("background_key", v)
+                    self:registerEvent("background_char", v)
+                end
+            end
+            return self
+        end;
+
+        onBackgroundKeyUp = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("background_key_up", v)
+                end
+            end
             return self
         end;
 
@@ -929,13 +1095,21 @@ local function Object(name)
             return false
         end;
 
-        onGetFocus = function(self, func)
-            self:registerEvent("get_focus", func)
+        onGetFocus = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("get_focus", v)
+                end
+            end
             return self
         end;
 
-        onLoseFocus = function(self, func)
-            self:registerEvent("lose_focus", func)
+        onLoseFocus = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("lose_focus", v)
+                end
+            end
             return self
         end;
 
@@ -953,11 +1127,18 @@ local function Object(name)
 
         mouseHandler = function(self, event, button, x, y)
             local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+            local yOff = false
+            if(objY-1 == y)and(self:getBorder("top"))then
+                y = y+1
+                yOff = true
+            end
+
             if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (isVisible) then
                 if (self.parent ~= nil) then
                     self.parent:setFocusedObject(self)
                 end
-                eventSystem:sendEvent(event, self, event, button, x, y)
+                local val = eventSystem:sendEvent(event, self, event, button, x, y)
+                if(val~=nil)then return val end
                 return true
             end
             return false
@@ -965,14 +1146,17 @@ local function Object(name)
 
         keyHandler = function(self, event, key)
             if (self:isFocused()) then
-                eventSystem:sendEvent(event, self, event, key)
+                local val = eventSystem:sendEvent(event, self, event, key)
+                if(val~=nil)then return val end
                 return true
             end
             return false
         end;
 
         backgroundKeyHandler = function(self, event, key)
-            eventSystem:sendEvent("background_" .. event, self, event, key)
+            local val = eventSystem:sendEvent("background_"..event, self, event, key)
+            if(val~=nil)then return val end
+            return true
         end;
 
         valueChangedHandler = function(self)
@@ -984,11 +1168,15 @@ local function Object(name)
         end;
 
         getFocusHandler = function(self)
-            eventSystem:sendEvent("get_focus", self)
+            local val = eventSystem:sendEvent("get_focus", self)
+            if(val~=nil)then return val end
+            return true
         end;
 
         loseFocusHandler = function(self)
-            eventSystem:sendEvent("lose_focus", self)
+            local val = eventSystem:sendEvent("lose_focus", self)
+            if(val~=nil)then return val end
+            return true
         end;
 
 
@@ -1129,9 +1317,11 @@ local function Button(name)
                     local obx, oby = self:getAnchorPosition()
                     local verticalAlign = getTextVerticalAlign(self.height, textVerticalAlign)
 
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                    self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
-                    self.parent:drawTextBox(obx, oby, self.width, self.height, " ")
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                        self.parent:drawTextBox(obx, oby, self.width, self.height, " ")
+                    end
+                    if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
                     for n = 1, self.height do
                         if (n == verticalAlign) then
                             self.parent:setText(obx, oby + (n - 1), getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign))
@@ -1184,7 +1374,7 @@ local function Checkbox(name)
                     local obx, oby = self:getAnchorPosition()
                     local verticalAlign = getTextVerticalAlign(self.height, "center")
 
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor) end
                     for n = 1, self.height do
                         if (n == verticalAlign) then
                             if (self:getValue() == true) then
@@ -1345,7 +1535,7 @@ local function Dropdown(name)
             if (base.draw(self)) then
                 local obx, oby = self:getAnchorPosition()
                 if (self.parent ~= nil) then
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor) end
                     local val = self:getValue()
                     local text = getTextHorizontalAlign((val~=nil and val.text or ""), self.width, align):sub(1, self.width - 1)  .. (isOpened and openedSymbol or closedSymbol)
                     self.parent:writeText(obx, oby, text, self.bgColor, self.fgColor)
@@ -1517,7 +1707,7 @@ local function Image(name)
 
         loadBlittleImage = function(self, path) -- not done yet
             --image = paintutils.loadImage(path)
-            imageGotShrinked = true
+            --imageGotShrinked = true
             return self
         end;
 
@@ -1646,7 +1836,7 @@ local function Input(name)
                 local obx, oby = self:getAnchorPosition()
                 showingText = ""
                 if (self.parent ~= nil) then
-                    self.parent:setCursor(true, obx + textX - wIndex, oby, self.fgColor)
+                    self.parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self.height/2), self.fgColor)
                 end
             end
         end;
@@ -1749,7 +1939,7 @@ local function Input(name)
                     cursorX = self.x + self.width - 1
                 end
                 if (self.parent ~= nil) then
-                    self.parent:setCursor(true, obx + cursorX, oby, self.fgColor)
+                    self.parent:setCursor(true, obx + cursorX, oby+math.floor(self.height/2), self.fgColor)
                 end
                 internalValueChange = false
             end
@@ -1771,7 +1961,7 @@ local function Input(name)
                     local obx, oby = self:getAnchorPosition()
                     local verticalAlign = getTextVerticalAlign(self.height, "center")
 
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor) end
                     for n = 1, self.height do
                         if (n == verticalAlign) then
                             local val = tostring(base.getValue())
@@ -1867,9 +2057,10 @@ local function Label(name)
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
                     local verticalAlign = getTextVerticalAlign(self.height, textVerticalAlign)
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                    self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
-                    self.parent:drawTextBox(obx, oby, self.width, self.height, " ")
+                    if(self.bgColor~=false)then 
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                        self.parent:drawTextBox(obx, oby, self.width, self.height, " ") end
+                    if(self.bgColor~=false)then self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
                     if(fontsize==0)then
                         for n = 1, self.height do
                             if (n == verticalAlign) then
@@ -2043,7 +2234,9 @@ local function List(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    end
                     for n = 1, self.height do
                         if (list[n + yOffset] ~= nil) then
                             if (list[n + yOffset] == self:getValue()) then
@@ -2237,7 +2430,9 @@ local function Menubar(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    end
                     local text = ""
                     local textBGCol = ""
                     local textFGCol = ""
@@ -2834,6 +3029,7 @@ local function Program(name)
                     if not (paused) then
                         local absX, absY = self:getAbsolutePosition(self:getAnchorPosition(nil, nil, true))
                         curProcess:resume(event, button, x - (absX - 1), y - (absY - 1))
+                        basalt.debug(event, button, x - (absX - 1), y - (absY - 1))
                     end
                 end
                 return true
@@ -2921,7 +3117,9 @@ local function Program(name)
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
                     pWindow.basalt_reposition(obx, oby)
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    end
                     pWindow.basalt_update()
                 end
                 self:setVisualChanged(false)
@@ -3798,8 +3996,12 @@ local function Textfield(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                    self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    end
+                    if(self.fgColor~=false)then
+                        self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
+                    end
                     for n = 1, self.height do
                         local text = ""
                         if (lines[n + hIndex - 1] ~= nil) then
@@ -3977,7 +4179,8 @@ local function Frame(name, parent)
     local monSide = ""
     local isMonitor = false
     local monitorAttached = false
-    local dragOffset = 0
+    local dragXOffset = 0
+    local dragYOffset = 0
 
     base:setZIndex(10)
 
@@ -4074,6 +4277,19 @@ local function Frame(name, parent)
                 obj:getFocusHandler()
             end
             return self
+        end;
+
+        setSize = function(self, w, h)
+            base.setSize(self, w, h)
+            for _, index in pairs(objZIndex) do
+                if (objects[index] ~= nil) then
+                    for _, value in pairs(objects[index]) do
+                        if (value.eventHandler ~= nil) then
+                            value:sendEvent("basalt_resize", value, self)
+                        end
+                    end
+                end
+            end
         end;
 
         setOffset = function(self, xO, yO)
@@ -4175,7 +4391,7 @@ local function Frame(name, parent)
         end;
 
         setMonitor = function(self, side)
-            if(side~=nil)or(side~=false)then
+            if(side~=nil)and(side~=false)then
                 if(peripheral.getType(side)=="monitor")then
                     termObject = peripheral.wrap(side)
                     monitorAttached = true
@@ -4288,12 +4504,19 @@ local function Frame(name, parent)
                     if (self.parent ~= nil) then
                         parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
                     end
-                    self:setPosition(x + dragOffset - (parentX - 1) + xO, y - (parentY - 1) + yO)
+                    self:setPosition(x + dragXOffset - (parentX - 1) + xO, y + dragYOffset - (parentY - 1) + yO)
                 end
                 if (event == "mouse_up") then
                     self.drag = false
                 end
                 return true
+            end
+
+            local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+            local yOff = false
+            if(objY-1 == y)and(self:getBorder("top"))then
+                y = y+1
+                yOff = true
             end
 
             if (base.mouseHandler(self, event, button, x, y)) then
@@ -4310,13 +4533,14 @@ local function Frame(name, parent)
                             end
                         end
                     end
-
-                if (self.isMoveable) then
-                    if (x >= fx) and (x <= fx + self.width - 1) and (y == fy) and (event == "mouse_click") then
-                        self.drag = true
-                        dragOffset = fx - x
+                    if (self.isMoveable) then
+                        local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
+                        if (x >= fx) and (x <= fx + self.width - 1) and (y == fy) and (event == "mouse_click") then
+                            self.drag = true
+                            dragXOffset = fx - x
+                            dragYOffset = yOff and 1 or 0
+                        end
                     end
-                end
                 if (focusedObject ~= nil) then
                     focusedObject:loseFocusHandler()
                     focusedObject = nil
@@ -4331,9 +4555,9 @@ local function Frame(name, parent)
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
                     local parentX, parentY = self.parent:getAnchorPosition()
-                    self.parent:setText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
+                    self.parent:setText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 else
-                    drawHelper.setText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
+                    drawHelper.setText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1))) -- math.max(self.width - x + 1,1) now, before: self.width - x + 1
                 end
             end
         end;
@@ -4343,9 +4567,9 @@ local function Frame(name, parent)
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
                     local parentX, parentY = self.parent:getAnchorPosition()
-                    self.parent:setBG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    self.parent:setBG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(bgCol, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 else
-                    drawHelper.setBG(math.max(x + (obx - 1), obx), oby + y - 1, sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    drawHelper.setBG(math.max(x + (obx - 1), obx), oby + y - 1, sub(bgCol, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 end
             end
         end;
@@ -4355,9 +4579,9 @@ local function Frame(name, parent)
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
                     local parentX, parentY = self.parent:getAnchorPosition()
-                    self.parent:setFG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    self.parent:setFG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(fgCol, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 else
-                    drawHelper.setFG(math.max(x + (obx - 1), obx), oby + y - 1, sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    drawHelper.setFG(math.max(x + (obx - 1), obx), oby + y - 1, sub(fgCol, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 end
             end
         end;
@@ -4369,7 +4593,7 @@ local function Frame(name, parent)
                     local parentX, parentY = self.parent:getAnchorPosition()
                     self.parent:writeText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
                 else
-                    drawHelper.writeText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
+                    drawHelper.writeText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)), bgCol, fgCol)
                 end
             end
         end;
@@ -4417,13 +4641,17 @@ local function Frame(name, parent)
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                     local anchx, anchy = self:getAnchorPosition()
                     if (self.parent ~= nil) then
-                        self.parent:drawBackgroundBox(anchx, anchy, self.width, self.height, self.bgColor)
-                        self.parent:drawForegroundBox(anchx, anchy, self.width, self.height, self.fgColor)
-                        self.parent:drawTextBox(anchx, anchy, self.width, self.height, " ")
+                        if(self.bgColor~=false)then
+                            self.parent:drawBackgroundBox(anchx, anchy, self.width, self.height, self.bgColor)
+                            self.parent:drawTextBox(anchx, anchy, self.width, self.height, " ")
+                        end
+                        if(self.bgColor~=false)then self.parent:drawForegroundBox(anchx, anchy, self.width, self.height, self.fgColor) end
                     else
-                        drawHelper.drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                        drawHelper.drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
-                        drawHelper.drawTextBox(obx, oby, self.width, self.height, " ")
+                        if(self.bgColor~=false)then
+                            drawHelper.drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                            drawHelper.drawTextBox(obx, oby, self.width, self.height, " ")
+                        end
+                        if(self.fgColor~=false)then drawHelper.drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
                     end
                     termObject.setCursorBlink(false)
                     if (self.barActive) then
@@ -4431,6 +4659,19 @@ local function Frame(name, parent)
                             self.parent:writeText(anchx, anchy, getTextHorizontalAlign(self.barText, self.width, self.barTextAlign), self.barBackground, self.barTextcolor)
                         else
                             drawHelper.writeText(obx, oby, getTextHorizontalAlign(self.barText, self.width, self.barTextAlign), self.barBackground, self.barTextcolor)
+                        end
+                        if(self:getBorder("left"))then
+                            if (self.parent ~= nil) then
+                                self.parent:drawBackgroundBox(anchx-1, anchy, 1, 1, self.barBackground)
+                                if(self.bgColor~=false)then
+                                    self.parent:drawBackgroundBox(anchx-1, anchy+1, 1, self.height-1, self.bgColor)
+                                end
+                            end
+                        end
+                        if(self:getBorder("top"))then
+                            if (self.parent ~= nil) then
+                                self.parent:drawBackgroundBox(anchx-1, anchy-1, self.width+1, 1, self.barBackground)
+                            end
                         end
                     end
 
@@ -4593,6 +4834,7 @@ end
 
 local updaterActive = false
 local function basaltUpdateEvent(event, p1, p2, p3, p4)
+    if(eventSystem:sendEvent("basaltEventCycle", event, p1, p2, p3, p4)==false)then return end
     if(mainFrame~=nil)then
         if (event == "mouse_click") then
             mainFrame:mouseHandler(event, p1, p2, p3, p4)
@@ -4630,9 +4872,7 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
     for _, v in pairs(frames) do
         v:eventHandler(event, p1, p2, p3, p4)
     end
-    if (updaterActive) then
-        drawFrames()
-    end
+    drawFrames()
 end
 
 function basalt.autoUpdate(isActive)
@@ -4648,8 +4888,6 @@ end
 function basalt.update(event, p1, p2, p3, p4)
     if (event ~= nil) then
         basaltUpdateEvent(event, p1, p2, p3, p4)
-    else
-        drawFrames()
     end
 end
 
@@ -4682,6 +4920,14 @@ function basalt.setActiveFrame(frame)
     return false
 end
 
+function basalt.onEvent(...)
+    for _,v in pairs(table.pack(...))do
+        if(type(v)=="function")then
+            eventSystem:registerEvent("basaltEventCycle", v)
+        end
+    end
+end
+
 function basalt.createFrame(name)
     for _, v in pairs(frames) do
         if (v.name == name) then
@@ -4701,8 +4947,8 @@ end
 if (basalt.debugger) then
     basalt.debugFrame = basalt.createFrame("basaltDebuggingFrame"):showBar():setBackground(colors.lightGray):setBar("Debug", colors.black, colors.gray)
     basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.width - 2, basalt.debugFrame.height - 3):setPosition(2, 3):setScrollable(true):show()
-    basalt.debugFrame:addButton("back"):setAnchor("right"):setSize(1, 1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
-    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = mainFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottom"):ignoreOffset():setZIndex(20):show()
+    basalt.debugFrame:addButton("back"):setAnchor("topRight"):setSize(1, 1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
+    basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = mainFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottomLeft"):ignoreOffset():setZIndex(20):show()
 end
 
 if (basalt.debugger) then

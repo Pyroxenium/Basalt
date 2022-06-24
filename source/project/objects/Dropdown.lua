@@ -140,7 +140,7 @@ local function Dropdown(name)
             if (base.draw(self)) then
                 local obx, oby = self:getAnchorPosition()
                 if (self.parent ~= nil) then
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor) end
                     local val = self:getValue()
                     local text = getTextHorizontalAlign((val~=nil and val.text or ""), self.width, align):sub(1, self.width - 1)  .. (isOpened and openedSymbol or closedSymbol)
                     self.parent:writeText(obx, oby, text, self.bgColor, self.fgColor)

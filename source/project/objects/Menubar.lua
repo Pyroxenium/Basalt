@@ -170,7 +170,9 @@ local function Menubar(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    end
                     local text = ""
                     local textBGCol = ""
                     local textFGCol = ""

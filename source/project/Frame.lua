@@ -10,7 +10,8 @@ local function Frame(name, parent)
     local monSide = ""
     local isMonitor = false
     local monitorAttached = false
-    local dragOffset = 0
+    local dragXOffset = 0
+    local dragYOffset = 0
 
     base:setZIndex(10)
 
@@ -107,6 +108,19 @@ local function Frame(name, parent)
                 obj:getFocusHandler()
             end
             return self
+        end;
+
+        setSize = function(self, w, h)
+            base.setSize(self, w, h)
+            for _, index in pairs(objZIndex) do
+                if (objects[index] ~= nil) then
+                    for _, value in pairs(objects[index]) do
+                        if (value.eventHandler ~= nil) then
+                            value:sendEvent("basalt_resize", value, self)
+                        end
+                    end
+                end
+            end
         end;
 
         setOffset = function(self, xO, yO)
@@ -208,7 +222,7 @@ local function Frame(name, parent)
         end;
 
         setMonitor = function(self, side)
-            if(side~=nil)or(side~=false)then
+            if(side~=nil)and(side~=false)then
                 if(peripheral.getType(side)=="monitor")then
                     termObject = peripheral.wrap(side)
                     monitorAttached = true
@@ -321,12 +335,19 @@ local function Frame(name, parent)
                     if (self.parent ~= nil) then
                         parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
                     end
-                    self:setPosition(x + dragOffset - (parentX - 1) + xO, y - (parentY - 1) + yO)
+                    self:setPosition(x + dragXOffset - (parentX - 1) + xO, y + dragYOffset - (parentY - 1) + yO)
                 end
                 if (event == "mouse_up") then
                     self.drag = false
                 end
                 return true
+            end
+
+            local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+            local yOff = false
+            if(objY-1 == y)and(self:getBorder("top"))then
+                y = y+1
+                yOff = true
             end
 
             if (base.mouseHandler(self, event, button, x, y)) then
@@ -343,13 +364,14 @@ local function Frame(name, parent)
                             end
                         end
                     end
-
-                if (self.isMoveable) then
-                    if (x >= fx) and (x <= fx + self.width - 1) and (y == fy) and (event == "mouse_click") then
-                        self.drag = true
-                        dragOffset = fx - x
+                    if (self.isMoveable) then
+                        local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
+                        if (x >= fx) and (x <= fx + self.width - 1) and (y == fy) and (event == "mouse_click") then
+                            self.drag = true
+                            dragXOffset = fx - x
+                            dragYOffset = yOff and 1 or 0
+                        end
                     end
-                end
                 if (focusedObject ~= nil) then
                     focusedObject:loseFocusHandler()
                     focusedObject = nil
@@ -364,9 +386,9 @@ local function Frame(name, parent)
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
                     local parentX, parentY = self.parent:getAnchorPosition()
-                    self.parent:setText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
+                    self.parent:setText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 else
-                    drawHelper.setText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), self.width - x + 1))
+                    drawHelper.setText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1))) -- math.max(self.width - x + 1,1) now, before: self.width - x + 1
                 end
             end
         end;
@@ -376,9 +398,9 @@ local function Frame(name, parent)
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
                     local parentX, parentY = self.parent:getAnchorPosition()
-                    self.parent:setBG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    self.parent:setBG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(bgCol, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 else
-                    drawHelper.setBG(math.max(x + (obx - 1), obx), oby + y - 1, sub(bgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    drawHelper.setBG(math.max(x + (obx - 1), obx), oby + y - 1, sub(bgCol, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 end
             end
         end;
@@ -388,9 +410,9 @@ local function Frame(name, parent)
             if (y >= 1) and (y <= self.height) then
                 if (self.parent ~= nil) then
                     local parentX, parentY = self.parent:getAnchorPosition()
-                    self.parent:setFG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    self.parent:setFG(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(fgCol, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 else
-                    drawHelper.setFG(math.max(x + (obx - 1), obx), oby + y - 1, sub(fgCol, math.max(1 - x + 1, 1), self.width - x + 1))
+                    drawHelper.setFG(math.max(x + (obx - 1), obx), oby + y - 1, sub(fgCol, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)))
                 end
             end
         end;
@@ -402,7 +424,7 @@ local function Frame(name, parent)
                     local parentX, parentY = self.parent:getAnchorPosition()
                     self.parent:writeText(math.max(x + (obx - 1), obx) - (parentX - 1), oby + y - 1 - (parentY - 1), sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
                 else
-                    drawHelper.writeText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), self.width - x + 1), bgCol, fgCol)
+                    drawHelper.writeText(math.max(x + (obx - 1), obx), oby + y - 1, sub(text, math.max(1 - x + 1, 1), math.max(self.width - x + 1,1)), bgCol, fgCol)
                 end
             end
         end;
@@ -450,13 +472,17 @@ local function Frame(name, parent)
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                     local anchx, anchy = self:getAnchorPosition()
                     if (self.parent ~= nil) then
-                        self.parent:drawBackgroundBox(anchx, anchy, self.width, self.height, self.bgColor)
-                        self.parent:drawForegroundBox(anchx, anchy, self.width, self.height, self.fgColor)
-                        self.parent:drawTextBox(anchx, anchy, self.width, self.height, " ")
+                        if(self.bgColor~=false)then
+                            self.parent:drawBackgroundBox(anchx, anchy, self.width, self.height, self.bgColor)
+                            self.parent:drawTextBox(anchx, anchy, self.width, self.height, " ")
+                        end
+                        if(self.bgColor~=false)then self.parent:drawForegroundBox(anchx, anchy, self.width, self.height, self.fgColor) end
                     else
-                        drawHelper.drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                        drawHelper.drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
-                        drawHelper.drawTextBox(obx, oby, self.width, self.height, " ")
+                        if(self.bgColor~=false)then
+                            drawHelper.drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                            drawHelper.drawTextBox(obx, oby, self.width, self.height, " ")
+                        end
+                        if(self.fgColor~=false)then drawHelper.drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
                     end
                     termObject.setCursorBlink(false)
                     if (self.barActive) then
@@ -464,6 +490,19 @@ local function Frame(name, parent)
                             self.parent:writeText(anchx, anchy, getTextHorizontalAlign(self.barText, self.width, self.barTextAlign), self.barBackground, self.barTextcolor)
                         else
                             drawHelper.writeText(obx, oby, getTextHorizontalAlign(self.barText, self.width, self.barTextAlign), self.barBackground, self.barTextcolor)
+                        end
+                        if(self:getBorder("left"))then
+                            if (self.parent ~= nil) then
+                                self.parent:drawBackgroundBox(anchx-1, anchy, 1, 1, self.barBackground)
+                                if(self.bgColor~=false)then
+                                    self.parent:drawBackgroundBox(anchx-1, anchy+1, 1, self.height-1, self.bgColor)
+                                end
+                            end
+                        end
+                        if(self:getBorder("top"))then
+                            if (self.parent ~= nil) then
+                                self.parent:drawBackgroundBox(anchx-1, anchy-1, self.width+1, 1, self.barBackground)
+                            end
                         end
                     end
 

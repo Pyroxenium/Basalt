@@ -312,8 +312,12 @@ local function Textfield(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                    self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    end
+                    if(self.fgColor~=false)then
+                        self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
+                    end
                     for n = 1, self.height do
                         local text = ""
                         if (lines[n + hIndex - 1] ~= nil) then

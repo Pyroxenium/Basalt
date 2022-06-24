@@ -37,7 +37,7 @@ local function Checkbox(name)
                     local obx, oby = self:getAnchorPosition()
                     local verticalAlign = getTextVerticalAlign(self.height, "center")
 
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor) end
                     for n = 1, self.height do
                         if (n == verticalAlign) then
                             if (self:getValue() == true) then

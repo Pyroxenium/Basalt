@@ -78,7 +78,7 @@ local function Input(name)
                 local obx, oby = self:getAnchorPosition()
                 showingText = ""
                 if (self.parent ~= nil) then
-                    self.parent:setCursor(true, obx + textX - wIndex, oby, self.fgColor)
+                    self.parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self.height/2), self.fgColor)
                 end
             end
         end;
@@ -181,7 +181,7 @@ local function Input(name)
                     cursorX = self.x + self.width - 1
                 end
                 if (self.parent ~= nil) then
-                    self.parent:setCursor(true, obx + cursorX, oby, self.fgColor)
+                    self.parent:setCursor(true, obx + cursorX, oby+math.floor(self.height/2), self.fgColor)
                 end
                 internalValueChange = false
             end
@@ -203,7 +203,7 @@ local function Input(name)
                     local obx, oby = self:getAnchorPosition()
                     local verticalAlign = getTextVerticalAlign(self.height, "center")
 
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor) end
                     for n = 1, self.height do
                         if (n == verticalAlign) then
                             local val = tostring(base.getValue())

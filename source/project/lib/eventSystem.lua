@@ -19,13 +19,19 @@ local function BasaltEvents()
         end;
 
         sendEvent = function(self, _event, ...)
+            local returnValue
             if (events[_event] ~= nil) then
                 for _, value in pairs(events[_event]) do
-                    value(...)
+                    local val = value(...)
+                    if(val==false)then
+                        returnValue = val
+                    end
                 end
             end
+            return returnValue
         end;
     }
     event.__index = event
     return event
 end
+local eventSystem = BasaltEvents()

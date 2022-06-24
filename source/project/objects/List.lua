@@ -135,7 +135,9 @@ local function List(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    end
                     for n = 1, self.height do
                         if (list[n + yOffset] ~= nil) then
                             if (list[n + yOffset] == self:getValue()) then

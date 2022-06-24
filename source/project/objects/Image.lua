@@ -142,7 +142,7 @@ local function Image(name)
 
         loadBlittleImage = function(self, path) -- not done yet
             --image = paintutils.loadImage(path)
-            imageGotShrinked = true
+            --imageGotShrinked = true
             return self
         end;
 

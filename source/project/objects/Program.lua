@@ -543,6 +543,7 @@ local function Program(name)
                     if not (paused) then
                         local absX, absY = self:getAbsolutePosition(self:getAnchorPosition(nil, nil, true))
                         curProcess:resume(event, button, x - (absX - 1), y - (absY - 1))
+                        basalt.debug(event, button, x - (absX - 1), y - (absY - 1))
                     end
                 end
                 return true
@@ -630,7 +631,9 @@ local function Program(name)
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
                     pWindow.basalt_reposition(obx, oby)
-                    self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    if(self.bgColor~=false)then
+                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                    end
                     pWindow.basalt_update()
                 end
                 self:setVisualChanged(false)

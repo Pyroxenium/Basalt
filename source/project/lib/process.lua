@@ -8,7 +8,7 @@ function process:new(path, window, ...)
     newP.window = window
     newP.processId = processId
     newP.coroutine = coroutine.create(function()
-        os.run({ basalt = basalt }, path, table.unpack(args))
+        os.run({ }, path, table.unpack(args))
     end)
     processes[processId] = newP
     processId = processId + 1
