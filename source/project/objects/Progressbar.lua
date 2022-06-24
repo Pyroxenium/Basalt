@@ -62,7 +62,7 @@ local function Progressbar(name)
         end;
 
         progressDoneHandler = function(self)
-            self:sendEvent("progress_done")
+            self:sendEvent("progress_done", self)
         end;
 
         draw = function(self)

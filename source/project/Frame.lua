@@ -121,6 +121,7 @@ local function Frame(name, parent)
                     end
                 end
             end
+            return self
         end;
 
         setOffset = function(self, xO, yO)

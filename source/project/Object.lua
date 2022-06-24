@@ -151,6 +151,7 @@ local function Object(name)
 
         setSize = function(self, width, height)
             self.width, self.height = width, height
+            eventSystem:sendEvent("basalt_resize", self)
             visualsChanged = true
             return self
         end;

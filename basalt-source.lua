@@ -766,6 +766,7 @@ local function Object(name)
 
         setSize = function(self, width, height)
             self.width, self.height = width, height
+            eventSystem:sendEvent("basalt_resize", self)
             visualsChanged = true
             return self
         end;
@@ -2060,15 +2061,15 @@ local function Label(name)
                     if(self.bgColor~=false)then 
                         self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
                         self.parent:drawTextBox(obx, oby, self.width, self.height, " ") end
-                    if(self.bgColor~=false)then self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
+                    if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
                     if(fontsize==0)then
                         for n = 1, self.height do
                             if (n == verticalAlign) then
-                                self.parent:writeText(obx, oby + (n - 1), getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign), self.bgColor, self.fgColor)
+                                self.parent:setText(obx, oby + (n - 1), getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign))
                             end
                         end
                     else
-                        local tData = makeText(fontsize, self:getValue(), self.fgColor, self.bgColor)
+                        local tData = makeText(fontsize, self:getValue(), self.fgColor, self.bgColor or colors.black)
                         if(autoSize)then
                             self.height = #tData[1]-1
                             self.width = #tData[1][1]
@@ -2082,7 +2083,7 @@ local function Label(name)
                             
                                 for i = 1, cY do
                                     self.parent:setFG(obx, oby + i + n - 2, getTextHorizontalAlign(tData[2][i], self.width, textHorizontalAlign))
-                                    self.parent:setBG(obx, oby + i + n - 2, getTextHorizontalAlign(tData[3][i], self.width, textHorizontalAlign, tHex[self.bgColor]))
+                                    self.parent:setBG(obx, oby + i + n - 2, getTextHorizontalAlign(tData[3][i], self.width, textHorizontalAlign, tHex[self.bgColor or colors.black]))
                                     self.parent:setText(obx, oby + i + n - 2, getTextHorizontalAlign(tData[1][i], self.width, textHorizontalAlign))
                                 end
                             end
@@ -3194,7 +3195,7 @@ local function Progressbar(name)
         end;
 
         progressDoneHandler = function(self)
-            self:sendEvent("progress_done")
+            self:sendEvent("progress_done", self)
         end;
 
         draw = function(self)
@@ -4290,6 +4291,7 @@ local function Frame(name, parent)
                     end
                 end
             end
+            return self
         end;
 
         setOffset = function(self, xO, yO)
