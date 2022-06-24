@@ -48,3 +48,28 @@ end
 
 aButton:onResize(onButtonResize)
 ```
+## onLoseFocus
+`onLoseFocus(self)`<br>
+This event gets triggered as soon as the object loses its focus.
+
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local aButton = mainFrame:addButton("exampleButton"):setPosition(3,3):onLoseFocus(
+        function(self) 
+            basalt.debug("Please come back... :(") 
+        end
+):show()
+```
+
+## onGetFocus
+`onGetFocus(self)`<br>
+This event gets triggered as soon as the object is the currently focused object.
+
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local aButton = mainFrame:addButton("exampleButton"):setPosition(3,3):onGetFocus(
+        function(self) 
+            basalt.debug("Welcome back!") 
+        end
+):show()
+```
