@@ -1,9 +1,9 @@
 --Basalt configurated installer
 local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
 if not(fs.exists(filePath))then
-shell.run("wget https://raw.githubusercontent.com/Pyroxenium/Basalt/master/basalt.lua "..filePath)
+    shell.run("pastebin run ESs1mg7P "..filePath) -- this is an alternative to the wget command
 end
-local basalt = dofile("basalt.lua") -- here you can change the variablename in any variablename you want default: basalt
+local basalt = dofile(filePath) -- here you can change the variablename in any variablename you want default: basalt
 
 local w, h = term.getSize()
 
@@ -54,8 +54,8 @@ objFrame:addLabel("radio1Label"):setPosition(37,10):setText("Radio 1"):show()
 objFrame:addLabel("radio2Label"):setPosition(37,12):setText("Radio 2"):show()
 objFrame:addLabel("radio3Label"):setPosition(37,14):setText("Radio 3"):show()
 
-objFrame:addScrollbar("exampleScrollbar"):setPosition(objFrame:getWidth(),1):setMaxValue(objFrame:getHeight()):setSize(1,objFrame:getHeight()):setSymbolSize(3):ignoreOffset():onChange(function(self) objFrame:setOffset(0, (self:getValue()-1)) end):setAnchor("right"):show():setZIndex(15)
-local prog = objFrame:addProgressbar("exampleProgressbar"):setAnchor("bottom"):setSize(30, 3):setBackground(colors.gray):setPosition(2,3):onProgressDone(function()
+objFrame:addScrollbar("exampleScrollbar"):setPosition(objFrame:getWidth(),1):setMaxValue(objFrame:getHeight()):setSize(1,objFrame:getHeight()):setSymbolSize(3):ignoreOffset():onChange(function(self) objFrame:setOffset(0, (self:getValue()-1)) end):setAnchor("topRight"):show():setZIndex(15)
+local prog = objFrame:addProgressbar("exampleProgressbar"):setAnchor("bottomLeft"):setSize(30, 3):setBackground(colors.gray):setPosition(2,3):onProgressDone(function()
 basalt.debug("Progress done!")
 end):show()
 
