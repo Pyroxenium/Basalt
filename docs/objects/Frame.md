@@ -39,7 +39,7 @@ local myFrame = mainFrame:addFrame("myFirstSubFrame")
 Sets the text, background, and foreground of the upper bar of the frame, accordingly.
 
 #### Parameters:
-1. `string` The text to set the bar to
+1. `string` The title text to set the bar to
 2. `number` The background color
 2. `number` The foreground color
 
@@ -47,20 +47,21 @@ Sets the text, background, and foreground of the upper bar of the frame, accordi
 1. `frame` The frame being used
 
 #### Usage:
-* Set the title to "My first frame!", with a background of gray and a foreground of light gray.
+* Set the title to "My first frame!", with a background of black and a foreground of light gray.
 ```lua
-frame:setBar("My first Frame!", colors.gray, colors.lightGray)
+frame:setBar("My first Frame!", colors.black, colors.lightGray)
 ```
 * Store the frame, use the named frame variable after assigning.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame")
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local myFrame = MainFrame:addFrame("myFirstSubFrame")
 myFrame:setBar("My first Frame!")
+myFrame:show()
 ```
 * This abuses the call-chaining that Basalt uses.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame")
-local myFrame = mainFrame:addFrame("myFirstSubFrame"):setBar("My first Frame!")
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local myFrame = mainFrame:addFrame("myFirstSubFrame"):setBar("My first Frame!"):show()
 ```
 
 ## setBarTextAlign
@@ -93,70 +94,22 @@ Toggles the frame's upper bar
 local mainFrame = myFrame:setBar("Hello World!"):showBar()
 ```
 
-## addMonitor
-adds a monitor to the active main frame.
+## setMonitor
+Sets this frame as a monitor frame
 
 #### Parameters: 
 1. `string` The monitor name ("right", "left",... "monitor_1", "monitor_2",...)
 
 #### Returns:
-1. `frame` returns a frame which you can use like normal frames
+1. `frame` The frame being used
 
 #### Usage:
-* Adds a monitor to the mainFrame. Only as long as this frame is also the active Frame, the monitor will be shown
+* Creates a new monitor frame, you can use to show objects on a monitor.
 ```lua
 local mainFrame = basalt.createFrame("mainFrame"):show()
-local monitor1 = mainFrame:addMonitor("right"):show()
-monitor1:setBar("Monitor 1"):showBar()
+local monitorFrame = basalt.createFrame("mainFrame"):setMonitor("right"):show()
+monitorFrame:setBar("Monitor 1"):showBar()
 ```
-
-
-### setMonitorScale
-Changes the monitor scale (almost the same as setTextScale())
-
-#### Parameters: 
-1. `number` Possible values are: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 (1 is the same as 0.5 by setTextScale, and 10 is the same as 5)
-
-#### Returns:
-1. `monitor` The monitor being used
-
-#### Usage:
-* Changes the monitor scale to 2
-```lua
-local mainFrame = basalt.createFrame("mainFrame"):show()
-local monitor1 = mainFrame:addMonitor("right"):setMonitorScale(2):show()
-monitor1:setBar("Monitor 1"):showBar()
-```
-
-## ~~isModifierActive~~ 
-### _Disabled, this function is a WIP_
-Returns true if the user is currently holding the respective key down
-
-#### Parameters: 
-1. `number | string` - Any os.queueEvent("key") key, or you can use the following strings: "shift", "ctrl", "alt"
-
-#### Returns: 
-1. `boolean` - Whether the user is holding the key down
-
-#### Usage:
-* Checks if the "shift" modifier is active on the myFrame frame
-```lua
-local isActive = myFrame:isModifierActive("shift")
-```
-* Creates a label, changing the text to "Shift is inactive oh no :(" and "Shift is active yay!", accordingly.
-```lua
-local aLabel = myFrame:addLabel("myFirstLabel"):setText("Shift is inactive oh no :(")
-myFrame:addButton("myFirstButton"):setText("Click"):onClick(
-        function() 
-            if myFrame:isModifierActive("shift") then 
-                aLabel:setText("Shift is active yay!") 
-            else 
-                aLabel:setText("Shift is inactive oh no :(") 
-            end 
-        end
-)
-```
-
 ## getObject 
 Returns a child object of the frame
 
@@ -245,24 +198,8 @@ Sets whether the frame can be moved. _In order to move the frame click and drag 
 local myFrame = basalt.createFrame("myFirstFrame"):setMovable(true)
 ```
 
-## ~~setMoveable~~
-### _Deprecated in favor of setMovable_
-
-Sets whether the frame can be moved. _In order to move the frame use the upper bar of the frame_
-#### Parameters:
-1. `boolean` Whether the object is movable
-
-#### Returns:
-1. `frame` The frame being used
-
-#### Usage:
-* Creates a frame with id "myFirstFrame" and makes it movable
-```lua
-local myFrame = basalt.createFrame("myFirstFrame"):setMoveable(true)
-```
-
 ## setOffset
-Sets the frame's coordinate offset. The frame's child objects will receive the frame's coordinate offset. For example, when using the scrollbar, if you use its value to add an offset to a frame, you will get a scrollable frame.
+Sets the frame's coordinate offset. The frame's child objects will receive the frame's coordinate offset. For example, when using a scrollbar, if you use its value to add an offset to a frame, you will get a scrollable frame.
 Objects are also able to ignore the offset by using :ignoreOffset() (For example, you may want to ignore the offset on the scrollbar itself)
 
 The function can be supplied negative offsets
