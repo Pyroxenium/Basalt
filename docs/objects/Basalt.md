@@ -4,10 +4,10 @@ To start using Basalt you have to do the following line of code:
 
 remember you need the basalt.lua file on your computer!
 
-Now you are able to call all these functions:
+Now you are able to use the following functions:
 
 ## basalt.createFrame
-Create a frame without a parent
+Create a base-frame (main frame)
 #### Parameters: 
 1. `string` name
 
@@ -21,7 +21,7 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 ```
 
 ## basalt.removeFrame
-Removes a frame (only possible for non-parent frames)
+Removes a base frame
 
 #### Parameters: 
 1. `string` name
@@ -34,7 +34,7 @@ basalt.removeFrame("myFirstFrame")
 ```
 
 ## basalt.getFrame
-With that function you can get frames, but only frames without a parent!
+Returns a base frame with the given name
 #### Parameters: 
 1. `string` name
 
@@ -50,7 +50,7 @@ basalt.getFrame("myFirstFrame"):show()
 
 
 ## basalt.getActiveFrame
-Returns the currently active (without a parent) frame
+Returns the currently active base frame
 
 #### Returns: 
 1. `frame` The current frame
@@ -74,43 +74,48 @@ basalt.autoUpdate()
 
 
 ## basalt.update
-Calls the draw and event handler method once
+Calls the draw and event handler once - this gives more flexibility about which events basalt should process. For example you could filter the terminate event.
 
 #### Parameters: 
 1. `string` The event to be received 
 2. `...` Additional event variables to capture
 
 #### Usage:
-* Prints "Left Mouse Button clicked!" when clicked
+* Creates and starts a custom update cycle
 ```lua
-quitButton:onClick(
-        function(obj, event, x, y) 
-            if(event == "mouse_click") and (button == 1) then --> The button at index 1 is left
-                basalt.debug("Left Mouse Button clicked!")
-            end
-        end
-)
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local aButton = mainFrame:addButton("myButton"):setPosition(2,2):show()
+
+while true do
+        basalt.update(os.pullEventRaw())
+end
 ```
 
 ## basalt.stopUpdate
-Stops the draw and event handler _(including, but not limited to mouse clicks)_
+Stops the automatic draw and event handler which got started by basalt.autoUpdate()
 
 #### Usage:
 * When the quit button is clicked, the button stops basalt updates and clears the terminal
 ```lua
-quitButton:onClick(
-        function(obj, event)
-            if (event == "mouse_click") and (obj == quitButton) then --> The button at index 1 is left
-                basalt.stopUpdate()
-                term.clear()
-            end
-        end
-)
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local aButton = mainFrame:addButton("myButton"):setPosition(2,2):setText("Stop Basalt!"):show()
+
+aButton:onClick(function()
+basalt.stopUpdate()
+end)
+
+basalt.autoUpdate()
 ```
 
 
 ## basalt.debug
-creates a label with some information on the main frame on the bottom left, if you click on that label it will open a log view for you see it as the new print for debugging
+creates a label with some information on the main frame on the bottom left, if you click on that label it will open a log view for you. See it as the new print for debugging
+
+You can also edit the default debug Label (change position, change color or whatever you want) by accessing the variable basalt.debugLabel
+which returns the debug Label.
+
+Also basalt.debugFrame and basalt.debugList are available.
 
 #### Parameters: 
 1. `...` (multiple parameters are possible, like print does)<br>
@@ -118,6 +123,6 @@ creates a label with some information on the main frame on the bottom left, if y
 #### Usage:
 * Prints "Hello! ^-^" to the debug console
 ```lua
-basalt.debug("Hello! ^-^")
+basalt.debug("Hello! ", "^-^")
 ```
 
