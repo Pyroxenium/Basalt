@@ -38,9 +38,10 @@ Changes the position relative to its parent frame
 1. `object` The object in use
 
 #### Usage:
-* Sets the frame's position to an x coordinate of 2 with a y coordinate of 3
+* Sets the Buttons position to an x coordinate of 2 with a y coordinate of 3
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):setPosition(2,3)
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+mainFrame:addButton("myFirstButton"):setPosition(2,3)
 ```
 
 ## setBackground
@@ -52,9 +53,9 @@ Changes the object background color, if you set the value to false the backgroun
 1. `object` The object in use
 
 #### Usage:
-* Creates a frame, and sets its background color to `colors.lightGray`
+* Creates a frame, and sets its background color to `colors.gray`
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):setBackground(colors.lightGray)
+local mainFrame = basalt.createFrame("myFirstFrame"):setBackground(colors.gray)
 ```
 
 ## setForeground
@@ -66,9 +67,9 @@ Changes the object text color
 1. `object` The object in use
 
 #### Usage:
-* Creates a frame, and sets its foreground color to `colors.black`
+* Creates a frame, and sets its foreground color to `colors.green`
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):setForeground(colors.black)
+local mainFrame = basalt.createFrame("myFirstFrame"):setForeground(colors.green)
 ```
 
 ## setSize
@@ -81,15 +82,16 @@ Changes the object size
 1. `object` The object in use
 
 #### Usage:
-* Sets the frame to have a width of 15 and a height of 5
+* Sets the frame to have a width of 15 and a height of 12
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):setSize(15,5)
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local subFrame = mainFrame:addFrame("myFirstSubFrame"):setSize(15,12):show()
 ```
 
 ## setFocus    
 Sets the object to be the focused object.
 If you click on an object, it's normally automatically the focused object. For example, if you call :show() on a frame, and you want this particular frame to be in
-the foreground, you should use :setFocus()
+the foreground, you should also use :setFocus()
 #### Returns:
 1. `object` The object in use
 
@@ -101,7 +103,7 @@ local aButton = mainFrame:addButton("myFirstButton"):setFocus():show()
 ```
 
 ## setZIndex
-Sets the z index where a higher z index has higher draw/event priority, with higher values higher priority. You are also able to add multiple objects to the same z index. On the same z index: the last created object has the highest priority.
+Sets the z-index. Higher value means higher draw/event priority. You can also add multiple objects to the same z-index, if so the last added object will have the highest priority.
 #### Parameters: 
 1. `number` z-index
 
@@ -109,10 +111,11 @@ Sets the z index where a higher z index has higher draw/event priority, with hig
 1. `object` The object in use
 
 #### Usage:
-* Sets the z-index of "myFirstButton" to `1`
+* Sets the z-index of "myFirstButton" to `1` and the z-index of "myFirstLabel" to `1`
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setZIndex(1):show()
+local aButton = mainFrame:addButton("myFirstButton"):setZIndex(1):setPosition(2,2):show()
+local aLabel = mainFrame:addButton("myFirstLabel"):setZIndex(2):setPosition(2,2):setText("I am a label!"):show()
 ```
 
 ## setParent
@@ -165,7 +168,7 @@ Converts the x and y coordinates into the anchor coordinates of the object
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):setSize(15,15):show()
 local aButton = mainFrame:addButton("myFirstButton")
-        :setAnchor("right","bottom")
+        :setAnchor("bottomRight")
         :setSize(8,1)
         :setPosition(1,1)
         :show()
@@ -182,7 +185,7 @@ Sets the anchor of the object
 1. `object` The object in use
 
 #### Usage:
-* Sets the mainFrame to have an anchor of `right` and aButton to have an anchor of `bottom, right`
+* Sets the button to have an anchor of `bottomRight`
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("myFirstButton")
