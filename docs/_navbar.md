@@ -1,4 +1,4 @@
 - Getting Started
   - [Home](Home.md)
   - [Quick Start](home/Quick-Start.md)
-  - [Installer](objects/Installer.md)
+  - [Installer](home/Installer.md)
