@@ -1,13 +1,20 @@
-With checkbox, the user can set a bool to true or false
+With checkbox objects the user can set a bool to true or false
 
-Here are all possible functions available for checkbox:<be>
-Remember button also inherits from [Object](objects/Object.md)
+Remember checkbox also inherits from [Object](objects/Object.md)
 
+A checkbox does not have any custom methods. All required methods are provided by the base [object](objects/Object.md) class.
 
-Create a onChange event:
+# Example
+This is how you would create a event which gets fired as soon as the value gets changed.
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aCheckbox = mainFrame:addCheckbox("myFirstCheckbox"):onChange(function(self) basalt.debug("The value got changed into "..self:getValue()) end):show()
+local aCheckbox = mainFrame:addCheckbox("myFirstCheckbox"):show()
+
+local function checkboxChange(self)
+   local checked = self:getValue()
+   basalt.debug("The value got changed into ", checked) end)
+end
+aCheckbox:onChange(checkboxChange)
 
 ```
 
