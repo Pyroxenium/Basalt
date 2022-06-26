@@ -1,7 +1,7 @@
-Here we will talk about mouse events and how you can manipulate them. There are 2 possible mouse events you can add to almost every visual object.
+Here we will talk about mouse events and how you can use them. You can register custom mouse events to all visual objects
 
 # onClick
-`onClick(self, button, x, y)`<br>
+`onClick(self, event, button, x, y)`<br>
 The computercraft event which triggers this method is `mouse_click` and `monitor_touch`.
 Any visual object can register onClick events.
 
@@ -20,7 +20,7 @@ button:onClick(buttonOnClick())
 ```
 
 # onClickUp
-`onClickUp(self, button, x, y)`<br>
+`onClickUp(self, event, button, x, y)`<br>
 The computercraft event which triggers this method is `mouse_up`.
 Any visual object can register onClickUp events.
 
@@ -44,7 +44,7 @@ button:onClickUp(buttonOnRelease)
 ```
 
 # onScroll
-`onScroll(self, direction, x, y)`<br>
+`onScroll(self, event, direction, x, y)`<br>
 The computercraft event which triggers this method is `mouse_scroll`.
 Any visual object can register onScroll events.
 
@@ -63,7 +63,7 @@ button:onScroll(buttonOnScroll)
 ```
 
 # onDrag
-`onDrag(self, button, x, y)`<br>
+`onDrag(self, event, button, x, y)`<br>
 The computercraft event which triggers this method is `mouse_drag`.
 Any visual object can register onDrag events.
 
