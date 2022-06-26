@@ -11,16 +11,16 @@ item = {
 }
 ```
 
-Here are all possible functions available for menubars. Remember menubar inherits from [Object](objects/Object.md)
+Remember menubar inherits from [Object](objects/Object.md)
 
 ## addItem
 Adds a item into the menubar
 
 #### Parameters: 
 1. `string` The entry name
-2. `number|color` unique default background color
-3. `number|color` unique default text color
-4. `any` any value - you could access this later in a :onChange() event (you need to use :getValue()).
+2. `number|color` unique default background color - optional
+3. `number|color` unique default text color - optional
+4. `any` any value - you could access this later in a :onChange() event (you need to use :getValue()) - optional
 
 #### Returns:
 1. `object` The object in use
@@ -56,14 +56,14 @@ aMenubar:removeItem(2)
 ```
 
 ## editItem
-Edits item from the menubar
+Edits a item from the menubar
 
 #### Parameters: 
 1. `number` The index which should be edited
 2. `string` The new item name
-3. `number` the new item background color
-4. `number` The new item text color
-5. `any` New additional information
+3. `number` the new item background color - optional
+4. `number` The new item text color - optional
+5. `any` New additional information - optional
 
 #### Returns:
 1. `object` The object in use
@@ -96,7 +96,7 @@ local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
-aMenubar:editItem(2, "Still 2. Entry", colors.red)
+basalt.debug(aMenubar:getItem(2).text)
 ```
 
 ## getItemCount
@@ -194,6 +194,8 @@ aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
 aMenubar:selectItem(2)
 ```
+
+
 ## clear
 Removes all items.
 
@@ -281,7 +283,7 @@ returns the current offset
 1. `number` Current offset
 
 #### Usage:
-* Creates a default menubar with 6 entries and sets the offset to 3.
+* Creates a default menubar with 6 entries and sets the offset to 3, prints the current offset.
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
