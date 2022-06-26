@@ -1,36 +1,35 @@
 The image object is for adding more advanced backgrounds.
 It also provides a :shrink() function, where you can shrink the images to smaller ones. This functionallity is fully provided by the blittle library created by Bomb Bloke. I did not ask for permission to add it into the framework. If the creator wants me to remove the blittle part, just text me on discord!
 
-Here are all possible functions available for image:<be>
-Remember Image inherits from [Object](objects/Object.md)
+The image object is still not done. in the future i will provide more image formats.
 
+Remember image inherits from [Object](objects/Object.md)
 
 ## loadImage
-loads a image into the memory.
+loads a default .nfp file into the object. 
+
+#### Parameters: 
+1. `string` the absolute file path
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default image and loads a test.nfp file
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aImage = mainFrame:addImage("myFirstImage"):loadImage("randomImage.nfp"):show()
+local aImage = mainFrame:addImage("myFirstImage"):loadImage("test.nfp"):show()
 ```
-#### Parameters: string path<br>
-#### Returns: self<br>
-
-
-## loadBlittleImage -- not finished yet
-loads a blittle image into the memory.
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aImage = mainFrame:addImage("myFirstImage"):loadBlittleImage("blittleImage.blt"):show()
-```
-#### Parameters: string path<br>
-#### Returns: self<br>
 
 ## shrink
-If you were loading a normal (paint) image into the memory, this function would shrink it to a
-blittle image and immediatly draws it (if it's visible)
+Shrinks the current image into a blittle image.
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default image and loads a test.nfp file
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aImage = mainFrame:addImage("myFirstImage"):loadBlittleImage("randomImage.nfp"):shrink():show()
+local aImage = mainFrame:addImage("myFirstImage"):loadImage("test.nfp"):shrink():show()
 ```
-#### Parameters: -<br>
-#### Returns: self<br>
-
