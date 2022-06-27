@@ -95,8 +95,7 @@ end
 Stops the automatic draw and event handler which got started by basalt.autoUpdate()
 
 #### Usage:
-* When the quit button is clicked, the button stops basalt updates and clears the terminal
-```lua
+* When the quit button is clicked, the button stops basalt auto updates
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("myButton"):setPosition(2,2):setText("Stop Basalt!"):show()
