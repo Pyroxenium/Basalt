@@ -1,72 +1,95 @@
 Textfields are objects, where the user can write something on multiple lines. it act's like the default edit script (without coloring)<br>
-Here is a example of how to create a default textfield:
 
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
-```
-
-This will create a default textfield with the size 10 width and 4 height on position 1 1 (relative to its parent frame), the default background is colors.gray, the default text color is colors.black and the default zIndex is 5.
-
-A list of all possible functions available for textfields. Remember Textfield inherits from [Object](objects/Object.md)
-
+Remember textfield inherits from [Object](objects/Object.md)
 
 ## getLines
-returns all lines
+Returns all lines
+
+#### Returns:
+1. `table` lines
+
+#### Usage:
+* Prints all lines
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 basalt.debug(aTextfield:getLines())
 ```
-#### Parameters: -<br>
-#### Returns: table lines<br>
 
 ## getLine
-returns the line on index position
+Returns the line on index position
+
+#### Parameteres:
+1. `number` index
+
+#### Returns:
+1. `string` line
+
+#### Usage:
+* Prints one line
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
-basalt.debug(aTextfield:getLine(2))
+basalt.debug(aTextfield:getLine(1))
 ```
-#### Parameters: number index<br>
-#### Returns: string line<br>
 
 ## editLine
-edits line on index position
+Edits the line on index position
+
+#### Parameteres:
+1. `number` index
+2. `string` text
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Edits the line
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
-aTextfield:editLine(2, "hellow")
+basalt.debug(aTextfield:editLine(1, "Hello!"))
 ```
-#### Parameters: number index, string text<br>
-#### Returns: self<br>
 
 ## addLine
-adds a line on index position (if index is nil it just adds the line on the bottom)
+Adds a line on index position
+
+#### Parameteres:
+1. `number` index
+2. `string` text
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Adds a line
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
-aTextfield:addLine("hellow")
+basalt.debug(aTextfield:addLine(1, "Hello!"))
 ```
-#### Parameters: string text, number index<br>
-#### Returns: self<br>
 
 ## removeLine
-removes the line on index position
+Removes the line on index position
+
+#### Parameteres:
+1. `number` index
+2. `string` text
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Removes a line
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
-aTextfield:removeLine(1)
+basalt.debug(aTextfield:removeLine())
 ```
-#### Parameters: number index<br>
-#### Returns: self<br>
 
 ## getTextCursor
-returns the cursor position
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
-basalt.debug(aTextfield:getTextCursor())
-```
-#### Parameters: -<br>
-#### Returns: number x, number y<br>
+Gets text cursor position
+
+#### Returns:
+1. `number` x position
+2. `number` y position
