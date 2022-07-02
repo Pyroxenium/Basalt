@@ -1,103 +1,162 @@
-With a program object you are able to open programs like shell or worm or any custom program you've made. There is only 1 thing you have to remember: the program needs at least one os.sleep() or coroutine.yield() somewhere.
+
+Program objects are here for opening other executable programs in your main program. You can execute worms, shell or any custom program you've made. 
 <br>
-Here is a list of all available functions for programs: <br>
 Remember Program inherits from [Object](objects/Object.md)
 
+
 ## getStatus
-returns the current status
+returns the current process status
+
+#### Returns:
+1. `string` current status ("running", "normal, "suspended", or "dead")
+
+#### Usage:
+* Prints current status
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):show()
-basalt.debug(aProgram:getStatus()) -- returns "running", "normal", "suspended" or "dead" 
+basalt.debug(aProgram:getStatus())
 ```
-#### Parameters:-<br>
-#### Returns: string "running" - if its running, "normal" - is active but not running (waiting for a event), "suspended" - is suspended or not started, "dead" - has finished or stopped with an error<br>
 
 ## execute
-executes the given path (-program)
+Executes the given path or program
+
+#### Parameters: 
+1. `string|function` the path to your file as string, or function which should be called
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Executes worm
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):show()
 aProgram:execute("rom/programs/fun/worm.lua") -- executes worm
 ```
-#### Parameters: string filepath - (the path to the program you want to execute)<br>
-#### Returns: self<br>
 
 ## stop
-gives a terminate event to the program, which means if you are running a shell, and the shell executes a program by itself you have to call stop 2 times to entirely close the running program
+Stops a currently running program
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Stops worm by clicking a button
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/shell.lua"):show()
-mainFrame:addButton("myFirstButton"):setText("close"):onClick(function() aProgram:stop() end):show()
-
+local aProgram = mainFrame:addProgram("myFirstProgram"):show()
+aProgram:execute("rom/programs/fun/worm.lua") -- executes worm
+mainFrame:addButton("myFirstButton"):setText("Pause"):onClick(function() aProgram:stop() end):show()
 ```
-#### Parameters:-<br>
-#### Returns: self<br>
 
 ## pause
-pauses the program (prevents the program from receiving events)
+pauses the current program (prevents the program from receiving events)
+
+#### Parameters: 
+1. `boolean` true, false or nothing
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Pauses worm by clicking a button
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/shell.lua"):show()
-mainFrame:addButton("myFirstButton"):setText("close"):onClick(function() aProgram:pause(true) end):show()
-
+mainFrame:addButton("myFirstButton"):setText("Pause"):onClick(function() aProgram:pause(true) end):show()
 ```
-#### Parameters: boolean pause<br>
-#### Returns: self<br>
 
 ## isPaused
-returns if the program is currently paused
+returns if the program is paused
+
+#### Returns:
+1. `boolean` pause status
+
+#### Usage:
+* Prints the pause status of the program
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/shell.lua"):show()
-mainFrame:addButton("myFirstButton"):setText("pause"):onClick(function() basalt.debug(aProgram:isPaused()) end):show()
-
+basalt.debug(aProgram:isPaused())
 ```
-#### Parameters: -<br>
-#### Returns: boolean isPaused<br>
 
 ## injectEvent
-injects a event into the program manually
+injects a event into the program manually. For example you could inject w a s and d for worm, by clicking buttons.
+
+#### Parameters: 
+1. `string` event
+2. `any` parameter
+3. `any` parameter
+4. `any` parameter
+5. `any` parameter
+6. `boolean` if this is true, the injected event will be executed even if the program is paused
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* injects a event by clicking a button
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/shell.lua"):show()
 mainFrame:addButton("myFirstButton"):setText("inject"):onClick(function() aProgram:injectEvent("char", "w") end):show()
-
 ```
-#### Parameters: string event, any parameter, any parameter, any parameter, any parameter, boolean ignorePause<br>
-#### Returns: self<br>
 
 ## injectEvents
-injects a event table into the program manually
+Injects multiple events
+
+#### Parameters: 
+1. `table` a table, items should be {event="event", args={para1, para2, para3, para4}}
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* injects a multiple char events by clicking a button
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/shell.lua"):show()
---example will follow
 
+local events = {
+{event="char", args={"h"}},
+{event="char", args={"e"}},
+{event="char", args={"y"}}
+}
+mainFrame:addButton("myFirstButton"):setText("inject"):onClick(function() aProgram:injectEvents(events) end):show()
 ```
-#### Parameters: string event, any parameter, any parameter, any parameter, any parameter, boolean ignorePause<br>
-#### Returns: self<br>
 
 ## getQueuedEvents
-returns a table of all currently queued events (while pause is active incomming events will go into a queueEvents table) as soon as the program gets unpaused
-it will inject these events
+If the program is paused, incomming events will be inserted into a queued events table. As soon as the program is unpaused, the queued events table will be empty
+
+#### Returns:
+1. `table` a table - {event="event", args={"a", "b",...}}
+
+#### Usage:
+* prints the queued events table
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/shell.lua"):show()
 mainFrame:addButton("myFirstButton"):setText("inject"):onClick(function() basalt.debug(aProgram:getQueuedEvents()) end):show()
-
 ```
-#### Parameters: -<br>
-#### Returns: table queuedEvents<br>
 
 ## updateQueuedEvents
-here you can manipulate the queuedEvents table with your own events table
+Here you can manipulate the queued events table
+
+#### Parameters: 
+1. `table` a table, items should be {event="event", args={para1, para2, para3, para4}}
+
+#### Returns:
+1. `object` The object in use
+
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/shell.lua"):show()
---example will follow
 
+mainFrame:addButton("myFirstButton"):setText("inject"):onClick(function() 
+local events = aProgram:getQueuedEvents()
+table.insert(events,1,{event="char", args={"w"}}
+aProgram:updateQueuedEvents(events) 
+end):show()
 ```
-#### Parameters: table queuedEvents<br>
-#### Returns: self<br>
 
