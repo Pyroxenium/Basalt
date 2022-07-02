@@ -1,9 +1,16 @@
-Threads are "functions" you can execute simultaneously. Ofc the reality is, i am just using coroutine for that. But it works pretty good AND is very easy to use.
+Threads are being executed simultaneously.
 <br>
-Here is a list of all available functions for threads: <br>
 
 ## start
 starts a new thread and executes the function
+#### Parameters: 
+1. `function` the function which should be executed
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Starts a new thread
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aThread = mainFrame:addThread("myFirstThread"):show()
@@ -15,21 +22,15 @@ local function randomThreadFunction()
 end
 aThread:start(randomThreadfunction)
 ```
-#### Parameters:function func<br>
-#### Returns: self<br>
-
-## getStatus
-gets the thread status
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aThread = mainFrame:addThread("myFirstThread"):show()
-basalt.debug(aThread:getStatus()) -- returns "running", "normal", "suspended" or "dead" 
-```
-#### Parameters: -<br>
-#### Returns: string "running" - if its running, "normal" - is active but not running (waiting for a event), "suspended" - is suspended<br>
 
 ## stop
 stops the thread
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Stops the current running thread by clicking on a button
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aThread = mainFrame:addThread("myFirstThread"):show()
@@ -41,7 +42,17 @@ local function randomThreadFunction()
 end
 aThread:start(randomThreadfunction)
 local aButton = mainFrame:addButton("myFirstButton"):setText("Stop Thread"):onClick(function() aThread:stop() end):show()
-
 ```
-#### Parameters: -<br>
-#### Returns: self<br>
+
+## getStatus
+gets the current thread status
+
+#### Returns:
+1. `string` current status - ("running", "normal", "suspended", "dead")
+
+#### Usage:
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local aThread = mainFrame:addThread("myFirstThread"):show()
+basalt.debug(aThread:getStatus())
+```
