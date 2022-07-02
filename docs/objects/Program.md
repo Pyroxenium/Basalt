@@ -114,6 +114,7 @@ Injects multiple events
 
 #### Usage:
 * injects a multiple char events by clicking a button
+
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):execute("rom/programs/shell.lua"):show()
@@ -125,6 +126,7 @@ local events = {
 }
 mainFrame:addButton("myFirstButton"):setText("inject"):onClick(function() aProgram:injectEvents(events) end):show()
 ```
+
 
 ## getQueuedEvents
 If the program is paused, incomming events will be inserted into a queued events table. As soon as the program is unpaused, the queued events table will be empty
