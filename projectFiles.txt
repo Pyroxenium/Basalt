@@ -5,7 +5,7 @@ libraries/logSystem.lua
 libraries/process.lua
 libraries/tHex.lua
 libraries/utils.lua
-objects/Animations.lua
+objects/Animation.lua
 objects/Button.lua
 objects/Checkbox.lua
 objects/Dropdown.lua
