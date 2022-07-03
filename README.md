@@ -11,7 +11,7 @@ Check out the [wiki](https://basalt.madefor.cc/) for information<br>
 If you have questions, feel free to join the discord server: [https://discord.gg/yM7kndJdJJ](https://discord.gg/yM7kndJdJJ)
 
 ## Changelogs
-From now on we will add changelogs to every changes:
+From now on we will add changes:
 
 #### Version 2:
 Note: You won't get any changes for now, so don't redownload the project! (:
