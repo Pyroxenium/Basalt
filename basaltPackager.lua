@@ -1,3 +1,9 @@
+-- This file is able to minify and create a single file out of a project folder
+-- only works for basalt
+
+
+
+
 -- The minify part is fully made by stravant and can be found here: https://github.com/stravant/LuaMinify/blob/master/RobloxPlugin/Minify.lua
 -- Thanks to him for his awesome work!
 
@@ -402,8 +408,12 @@ local minify = function(cd)local dd,__a=ParseLua(cd)if not dd then return false,
 return true,Format_Mini(__a)end
 
 -- Packaging part:
-local projectPath = "Basalt"
+local args = table.pack(...)
+local projectPath = args[1] or "Basalt"
+local minifyProject = args[2]=="true" and true or false
 local outputFileName = "basalt.lua"
+
+assert(fs.isDir(projectPath), "Unable to find directory: "..projectPath)
 
 local projectFiles = {
     "objects",
@@ -417,7 +427,6 @@ local subDirs = {
     "objects", "libraries"
 }
 local mainFile = "main.lua"
-local minifyProject = true
 
 local outputFile = io.open(outputFileName, "w")
 
