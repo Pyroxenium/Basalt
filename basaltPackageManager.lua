@@ -19,19 +19,66 @@ local getProject = function(subDir)
 end
 project['objects'] = {}project['libraries'] = {}project['default'] = {}project['objects']['Animation'] = function(...)
 return
-function(a)local b={}local c="Animation"local d;local _a={}local aa=1;local ba=0;local ca
-local function da()if(_a[aa]~=nil)then
-_a[aa].f(b,aa)end;aa=aa+1;if(_a[aa]~=nil)then if(_a[aa].t>0)then
-d=os.startTimer(_a[aa].t)else da()end end end
-b={name=a,getType=function(_b)return c end,getZIndex=function(_b)return 1 end,getName=function(_b)return _b.name end,add=function(_b,ab,bb)ca=ab;table.insert(_a,{f=ab,t=
-bb or ba})return _b end,wait=function(_b,ab)
-ba=ab;return _b end,rep=function(_b,ab)
-for x=1,ab do table.insert(_a,{f=ca,t=ba})end;return _b end,clear=function(_b)_a={}ca=nil;ba=0;aa=1;return _b end,play=function(_b)
-aa=1;if(_a[aa]~=nil)then
-if(_a[aa].t>0)then d=os.startTimer(_a[aa].t)else da()end end;return _b end,cancel=function(_b)
-os.cancelTimer(d)return _b end,eventHandler=function(_b,ab,bb)if(ab=="timer")and(bb==d)then
-if(_a[aa]~=nil)then da()end end end}b.__index=b;return b end
-end; 
+function(a)local b={}local c="Animation"local d;local _a={}local aa=1;local ba=false;local ca=0;local da;local _b
+local function ab()if(_a[aa]~=nil)then
+_a[aa].f(b,aa)end;aa=aa+1
+if(_a[aa]==nil)then if(ba)then aa=1 else return end end
+if(_a[aa].t>0)then d=os.startTimer(_a[aa].t)else ab()end end
+b={name=a,getType=function(bb)return c end,getZIndex=function(bb)return 1 end,getName=function(bb)return bb.name end,add=function(bb,cb,db)da=cb;table.insert(_a,{f=cb,t=
+db or ca})return bb end,setObject=function(bb,cb)
+_b=cb;return bb end,move=function(bb,cb,db,_c,ac,bc)if(bc~=nil)then _b=bc end;if(_b.setPosition==nil)or(_b.getPosition==
+nil)then return bb end
+local cc,dc=_b:getPosition()if(cc==cb)and(dc==db)then return bb end;local _d=cc<=cb and(cb-cc)/ac or
+(cc-cb)/ac;local ad=dc<=db and(db-dc)/ac or
+(dc-db)/ac;local bd,cd=cc>cb and true or false,
+dc>db and true or false
+for n=1,math.floor(ac)do local dd
+if
+(n==ac)then dd=function()_b:setPosition(cb,db)end else
+dd=function()
+_b:setPosition(math.floor(
+bd and cc+ (-_d*n)or cc+_d*n),math.floor(cd and dc+ (-
+ad*n)or dc+ad*n))end end;table.insert(_a,{f=dd,t=_c/ac})end;return bb end,offset=function(bb,cb,db,_c,ac,bc)if(
+bc~=nil)then _b=bc end;if
+(_b.setOffset==nil)or(_b.getOffset==nil)then return bb end;local cc,dc=_b:getOffset()
+cc=math.abs(cc)dc=math.abs(dc)if(cc==cb)and(dc==db)then return bb end;local _d=cc<=cb and
+(cb-cc)/ac or(cc-cb)/ac;local ad=dc<=db and
+(db-dc)/ac or(dc-db)/ac;local bd,cd=
+cc>cb and true or false,dc>db and true or false
+for n=1,math.floor(ac)
+do local dd
+if(n==ac)then dd=function()_b:setOffset(cb,db)end else
+dd=function()
+_b:setOffset(math.floor(
+bd and cc+ (-_d*n)or cc+_d*n),math.floor(cd and dc+ (-
+ad*n)or dc+ad*n))end end;table.insert(_a,{f=dd,t=_c/ac})end;return bb end,textColoring=function(bb,cb,...)
+local db=table.pack(...)for n=1,#db do
+table.insert(_a,{f=function()_b:setForeground(db[n])end,t=cb/#db})end;return bb end,backgroundColoring=function(bb,cb,...)
+local db=table.pack(...)for n=1,#db do
+table.insert(_a,{f=function()_b:setBackground(db[n])end,t=cb/#db})end;return bb end,setText=function(bb,cb,db)
+if(
+_b.setText~=nil)then for n=1,db:len()do
+table.insert(_a,{f=function()_b:setText(db:sub(1,n))end,t=
+cb/db:len()})end end;return bb end,changeText=function(bb,cb,...)
+if(
+_b.setText~=nil)then local db=table.pack(...)for n=1,#db do
+table.insert(_a,{f=function()
+_b:setText(db[n])end,t=cb/#db})end end;return bb end,coloring=function(bb,cb,...)
+local db=table.pack(...)
+for n=1,#db do
+if(type(db[n]=="table"))then
+table.insert(_a,{f=function()if(db[n][1]~=nil)then
+_b:setBackground(db[n][1])end;if(db[n][2]~=nil)then
+_b:setForeground(db[n][2])end end,t=
+cb/#db})end end;return bb end,wait=function(bb,cb)
+ca=cb;return bb end,rep=function(bb,cb)
+for n=1,cb do table.insert(_a,{f=da,t=ca})end;return bb end,clear=function(bb)_a={}da=nil;ca=0;aa=1;ba=false;return bb end,play=function(bb,cb)ba=
+cb and true or false;aa=1;if(_a[aa]~=nil)then if(_a[aa].t>0)then
+d=os.startTimer(_a[aa].t)else ab()end end
+return bb end,cancel=function(bb)
+os.cancelTimer(d)ba=false;return bb end,eventHandler=function(bb,cb,db)if(cb=="timer")and(db==d)then if
+(_a[aa]~=nil)then ab()end end end}b.__index=b;return b end
+end;
 project['objects']['Button'] = function(...)local d=require("Object")local _a=require("theme")
 local aa=require("utils")
 return
@@ -632,7 +679,7 @@ cc end,setOffset=function(_ca,aca,bca)
 _ba=aca~=nil and
 math.floor(aca<0 and math.abs(aca)or-aca)or _ba
 aba=bca~=nil and
-math.floor(bca<0 and math.abs(bca)or-bca)or aba;return _ca end,getFrameOffset=function(_ca)return
+math.floor(bca<0 and math.abs(bca)or-bca)or aba;return _ca end,getOffset=function(_ca)return
 _ba,aba end,removeFocusedObject=function(_ca)if(cc.getFocusedObject()~=nil)then
 cc.getFocusedObject():loseFocusHandler()end;cc.setFocusedObject(nil)return
 _ca end,getFocusedObject=function(_ca)return
@@ -908,15 +955,14 @@ _d.parent.height+bd-1 elseif(ba=="left")then bd=
 math.floor(_d.parent.height/2)+bd-1 elseif(ba=="center")then
 ad=math.floor(
 _d.parent.width/2)+ad-1
-bd=math.floor(_d.parent.height/2)+bd-1 end;local dd,__a=_d:getOffset()
-if not(ca or cd)then return ad+dd,bd+__a end;return ad,bd end,getOffset=function(_d)
-if(
-_d.parent~=nil)then return _d.parent:getFrameOffset()end;return 0,0 end,ignoreOffset=function(_d,ad)ca=ad
-if(ad==nil)then ca=true end;return _d end,getBaseFrame=function(_d)if(_d.parent~=nil)then return
-_d.parent:getBaseFrame()end;return _d end,setAnchor=function(_d,ad)
-ba=ad;bc=true;return _d end,getAnchor=function(_d)return ba end,onChange=function(_d,...)
-for ad,bd in
-pairs(table.pack(...))do if(type(bd)=="function")then
+bd=math.floor(_d.parent.height/2)+bd-1 end
+if(_d.parent~=nil)then local dd,__a=_d.parent:getOffset()if not(ca or cd)then return
+ad+dd,bd+__a end end;return ad,bd end,ignoreOffset=function(_d,ad)
+ca=ad;if(ad==nil)then ca=true end;return _d end,getBaseFrame=function(_d)if
+(_d.parent~=nil)then return _d.parent:getBaseFrame()end
+return _d end,setAnchor=function(_d,ad)ba=ad;bc=true;return _d end,getAnchor=function(_d)return
+ba end,onChange=function(_d,...)
+for ad,bd in pairs(table.pack(...))do if(type(bd)=="function")then
 _d:registerEvent("value_changed",bd)end end;return _d end,onClick=function(_d,...)
 for ad,bd in
 pairs(table.pack(...))do if(type(bd)=="function")then _d:registerEvent("mouse_click",bd)
@@ -1008,59 +1054,79 @@ pairs(a_a)do if(_ca.name==bba)then return nil end end;local cba=_d(bba,
 nil,nil,caa)table.insert(a_a,cba)return cba end,removeFrame=function(bba)a_a[bba]=
 nil end,setProjectDir=function(bba)dd=bba end}
 
-local basalt = aba
-
-
 -- Basalt installer beginns here:
-local function split(inputstr, sep)
-    if sep == nil then
-       sep = "%s"
-    end
-    local t={}
-    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-       table.insert(t, str)
-    end
-    return t
- end
+local basalt = aba
+local projectDir = "Basalt"
 
-local projectFiles = {}
-local pFile = fs.open("projectFiles.txt", "r")
+local animTime = 0.2
+local animFrames = 8
 
-for line in pFile.readLine do
-    local t = split(line, "/")
-    if(#t>1)then
-        if(projectFiles[t[1]]==nil)then projectFiles[t[1]] = {} end
-        table.insert(projectFiles[t[1]], t[2])
-    else
-        if(projectFiles[t[1]]==nil)then projectFiles["default"] = {} end
-        table.insert(projectFiles["default"], line)
+local function download(url, file)
+local httpReq = http.get(url)
+    if(httpReq~=nil)then
+    local content = httpReq.readAll()
+        if not content then
+        error("Could not connect to website")
+        end
+        local f = fs.open(file, "w")
+        f.write(content)
+        f.close()
     end
 end
+
+local function createTree(page)
+local tree = {}
+    local request = http.get(page)
+    if not(request)then return end
+    for k,v in pairs(textutils.unserialiseJSON(request.readAll()).tree)do
+        if(v.type=="blob")then
+            table.insert(tree, v.path)
+        elseif(v.type=="tree")then
+            tree[v.path] = createTree(page.."/"..v.path)
+        end
+    end
+    return tree
+end
+
+local projectFiles = {base={}}
+
 local w, h = term.getSize()
 local main = basalt.createFrame("InstallerFrame"):show()
 local anim = main:addAnimation("movingFrameAnimation")
 local libFrame = main:addFrame("LibraryFrame"):setBackground(colors.lightGray):setForeground(colors.black):show()
 local objFrame = main:addFrame("ObjectFrame"):setBackground(colors.lightGray):setForeground(colors.black):setPosition(w+1,1):show()
 local configFrame = main:addFrame("ConfigFrame"):setBackground(colors.lightGray):setForeground(colors.black):setPosition(w+w+1,1):show()
+local installFrame = main:addFrame("installFrame"):setBackground(colors.lightGray):setForeground(colors.black):setPosition(w+w+w+1,1):show()
 
+local fileTreeInfo = main:addLabel("getFileTree"):setText("Downloading file structure..."):setForeground(colors.red):ignoreOffset():setAnchor("bottomLeft"):setPosition(2,1):setZIndex(15):show()
 
-libFrame:addLabel("setupMessage"):setText("Setup the Project's libraries:"):setPosition(2, 2):show()
-libFrame:addLabel("included"):setText("Included"):setPosition(2, 4):show()
-local libInc = libFrame:addList("includedLibList"):setPosition(2,5):setSize(14,10):show()
-for _,v in pairs(projectFiles["libraries"])do
-    libInc:addItem(v)
-end
-
-local libExc = libFrame:addList("exludedLibList"):setPosition(20,5):setSize(14,10):show()
-libFrame:addLabel("excluded"):setText("Excluded"):setPosition(26, 4):show()
-libFrame:addButton("excludeItem"):setPosition(13,4):setSize(3,1):setText(">"):onClick(function()
+libFrame:addLabel("setupMessage"):setText("Basalt Libary List:"):setPosition(2, 1):show()
+libFrame:addLabel("included"):setText("Included"):setPosition(2, 3):show()
+local libInc = libFrame:addList("includedLibList"):setPosition(2,4):setSize(20,11):show()
+local libExc = libFrame:addList("exludedLibList"):setPosition(31,4):setSize(20,11):show()
+libFrame:addLabel("excluded"):setText("Excluded"):setPosition(43, 3):show()
+libFrame:addButton("excludeItem"):setPosition(25,5):setSize(3,1):setText(">"):onClick(function()
     local item = libInc:getItem(libInc:getItemIndex())
     if(item~=nil)then
         libInc:removeItem(libInc:getItemIndex())
         libExc:addItem(item.text)
     end
 end):show()
-libFrame:addButton("includeItem"):setSize(3,1):setText("<"):setPosition(20,4):onClick(function()
+libFrame:addButton("includeItem"):setSize(3,1):setText("<"):setPosition(25,7):onClick(function()
+    local item = libExc:getItem(libExc:getItemIndex())
+    if(item~=nil)then
+        libExc:removeItem(libExc:getItemIndex())
+        libInc:addItem(item.text)
+    end
+end):show()
+libFrame:addButton("includeItems"):setSize(5,1):setText("<<<"):setPosition(24,10):onClick(function()
+    local item = libExc:getItem(libExc:getItemIndex())
+    if(item~=nil)then
+        libExc:removeItem(libExc:getItemIndex())
+        libInc:addItem(item.text)
+    end
+end):show()
+libFrame:addButton("excludeItems"):setSize(5,1):setText(">>>"):setPosition(24,12):onClick(function()
     local item = libExc:getItem(libExc:getItemIndex())
     if(item~=nil)then
         libExc:removeItem(libExc:getItemIndex())
@@ -1068,114 +1134,149 @@ libFrame:addButton("includeItem"):setSize(3,1):setText("<"):setPosition(20,4):on
     end
 end):show()
 libFrame:addButton("nextBtn"):setAnchor("bottomRight"):setPosition(-11,-2):setSize(10,3):setText("Next"):onClick(function()
-    anim:clear()
-    anim:add(function()
-        main:setOffset(w/4,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset(w/2,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset(w/2+w/4,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset(w,0)
-    end):play()
+    anim:clear():setObject(main):offset(w,0,animTime,animFrames):play()
 end):show()
 
+objFrame:addLabel("setupMessage"):setText("Basalt Object List:"):setPosition(2, 1):show()
+objFrame:addLabel("included"):setText("Included"):setPosition(2, 3):show()
+local objInc = objFrame:addList("includedObjList"):setPosition(2,4):setSize(20,11):show()
 
+local objExc = objFrame:addList("exludedObjList"):setPosition(31,4):setSize(20,11):show()
+objFrame:addLabel("excluded"):setText("Excluded"):setPosition(43, 3):show()
 
-objFrame:addLabel("setupMessage"):setText("Setup the Project's objects:"):setPosition(2, 2):show()
-objFrame:addLabel("included"):setText("Included"):setPosition(2, 4):show()
-local objInc = objFrame:addList("includedObjList"):setPosition(2,5):setSize(14,10):show()
-for _,v in pairs(projectFiles["objects"])do
-    objInc:addItem(v)
-end
-
-local objExc = objFrame:addList("exludedObjList"):setPosition(20,5):setSize(14,10):show()
-objFrame:addLabel("excluded"):setText("Excluded"):setPosition(26, 4):show()
-objFrame:addButton("excludeItem"):setPosition(13,4):setSize(3,1):setText(">"):onClick(function()
+objFrame:addButton("excludeItem"):setPosition(25,5):setSize(3,1):setText(">"):onClick(function()
     local item = objInc:getItem(objInc:getItemIndex())
     if(item~=nil)then
         objInc:removeItem(objInc:getItemIndex())
         objExc:addItem(item.text)
     end
 end):show()
-objFrame:addButton("includeItem"):setSize(3,1):setText("<"):setPosition(20,4):onClick(function()
+objFrame:addButton("includeItem"):setSize(3,1):setText("<"):setPosition(25,7):onClick(function()
     local item = objExc:getItem(objExc:getItemIndex())
     if(item~=nil)then
         objExc:removeItem(objExc:getItemIndex())
         objInc:addItem(item.text)
     end
 end):show()
+
+objFrame:addButton("includeItems"):setSize(5,1):setText("<<<"):setPosition(24,10):onClick(function()
+    local item = libExc:getItem(libExc:getItemIndex())
+    if(item~=nil)then
+        libExc:removeItem(libExc:getItemIndex())
+        libInc:addItem(item.text)
+    end
+end):show()
+
+objFrame:addButton("excludeItems"):setSize(5,1):setText(">>>"):setPosition(24,12):onClick(function()
+    local item = libExc:getItem(libExc:getItemIndex())
+    if(item~=nil)then
+        libExc:removeItem(libExc:getItemIndex())
+        libInc:addItem(item.text)
+    end
+end):show()
+
 objFrame:addButton("nextBtn"):setAnchor("bottomRight"):setPosition(-11,-2):setSize(10,3):setText("Next"):onClick(function()
-    anim:clear()
-    anim:add(function()
-        main:setOffset((w*2)/4,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset((w*2)/2,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset((w*2)/2+(w*2)/4,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset((w*2),0)
-    end):play()
+    anim:clear():setObject(main):offset(w*2,0,animTime,animFrames):play()
 end):show()
 objFrame:addButton("backBtn"):setAnchor("bottomLeft"):setPosition(2,-2):setSize(10,3):setText("Back"):onClick(function()
-    anim:clear()
-    anim:add(function()
-        main:setOffset(w/2+w/4,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset(w/2,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset(w/4,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset(0,0)
-    end):play()
+    anim:clear():setObject(main):offset(0,0,animTime,animFrames):play()
 end):show()
 
 configFrame:addButton("backBtn"):setAnchor("bottomLeft"):setPosition(2,-2):setSize(10,3):setText("Back"):onClick(function()
-    anim:clear()
-    anim:add(function()
-        main:setOffset((w*2)/2+(w*2)/4,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset((w*2)/2,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset((w*2)/4,0)
-    end)
-    :wait(0.1)
-    :add(function()
-        main:setOffset(w,0)
-    end):play()
+    anim:clear():setObject(main):offset(w,0,animTime,animFrames):play()
 end):show()
 
+
 configFrame:addLabel("configInfo"):setPosition(2,2):setText("Setup the configuration:"):show()
-configFrame:addRadio("singleOrMultiFile"):setPosition(2,4):addItem("Single file project",1,1,colors.lightGray,colors.black):addItem("Multiple files project",1,3,colors.lightGray,colors.black):setSelectedItem(colors.lightGray,colors.black):show()
-configFrame:addCheckbox("minify"):setPosition(2,8):show()
+local sOrM = configFrame:addRadio("singleOrMultiFile"):setPosition(2,4):addItem("Single file project",1,1,colors.lightGray,colors.black,true):addItem("Multiple files project",1,3,colors.lightGray,colors.black,false):setSelectedItem(colors.lightGray,colors.black):show()
+local minProject = configFrame:addCheckbox("minify"):setPosition(2,8):show()
 configFrame:addLabel("minifyInfo"):setPosition(4,8):setText("Minify the project"):show()
 configFrame:addLabel("betaInfo"):setPosition(2,11):setText("The Basalt Package Manager is still in alpha!"):setForeground(colors.red):show()
 configFrame:addLabel("discord"):setPosition(2,12):setText("Checkout discord.com/invite/yNNnmBVBpE if you get"):setForeground(colors.red):show()
 configFrame:addLabel("discord2"):setPosition(2,13):setText("into errors."):setForeground(colors.red):show()
-configFrame:addButton("installBtn"):setAnchor("bottomRight"):setPosition(-11,-2):setSize(11,3):setText("Install"):onClick(function()
 
-end):show()
+installFrame:addLabel("installingInfo"):setPosition(2,2):setText("Installing Menu:"):show()
+local state = installFrame:addLabel("installStatus"):setAnchor("bottomLeft"):setPosition(2,-1):setText("Currently installing..."):show()
+local installLog = installFrame:addList("installLog"):setPosition(2,4):setSize(w-2, 11):show()
+local doneButton = installFrame:addButton("doneButton"):setText("Done"):setAnchor("bottomRight"):setPosition(-13,-2):setSize(12, 3):onClick(function()
+    basalt.stop()
+    term.clear()
+end)
+installLog:addItem("Installing Basalt...")
+
+local function addToInstallLog(text)
+    installLog:addItem(text)
+    installLog:setValue(installLog:getItem(installLog:getItemCount()))
+    if(installLog.getItemCount() > installLog:getHeight())then
+        installLog:setIndexOffset(installLog:getItemCount() - installLog:getHeight())
+    end
+end
+
+local installThread = installFrame:addThread("installingThread")
+local function installProject()
+    fs.makeDir(projectDir)
+    fs.makeDir(projectDir.."/objects")
+    fs.makeDir(projectDir.."/libraries")
+    for _,v in pairs(libInc:getAll())do
+        download("https://raw.githubusercontent.com/Pyroxenium/Basalt/master/Basalt/libraries/"..v.text, projectDir.."/libraries/"..v.text)
+        addToInstallLog("Installed: "..projectDir.."/libraries/"..v.text)
+    end
+    for _,v in pairs(objInc:getAll())do
+        download("https://raw.githubusercontent.com/Pyroxenium/Basalt/master/Basalt/objects/"..v.text, projectDir.."/objects/"..v.text)
+        addToInstallLog("Installed: "..projectDir.."/objects/"..v.text)
+    end
+    for _,v in pairs(projectFiles.base)do        
+        download("https://raw.githubusercontent.com/Pyroxenium/Basalt/master/Basalt/"..v, projectDir.."/"..v)
+        addToInstallLog("Installed: "..projectDir.."/"..v)
+    end
+    addToInstallLog("Finished downloading!")
+    if(sOrM:getValue().args)then
+        if(minProject:getValue())then
+            addToInstallLog("Packaging and minifying project to a single file...")
+        else
+            addToInstallLog("Packaging project to a single file...")
+        end
+        download("https://raw.githubusercontent.com/Pyroxenium/Basalt/master/basaltPackager.lua", "basaltPackager.lua")
+        shell.run("basaltPackager.lua "..projectDir.." "..tostring(minProject:getValue()))
+        fs.delete("basaltPackager.lua")
+        fs.delete("Basalt")
+    end
+    addToInstallLog("Done!")
+    state:setText("Finished installing!")
+    doneButton:show()
+end
+
+local installBtn = configFrame:addButton("installBtn"):setAnchor("bottomRight"):setPosition(-11,-2):setSize(11,3):setText("Install"):onClick(function()
+    installLog:addItem("Creating directory: "..projectDir)
+    anim:clear():setObject(main):offset(w*3,0,animTime,animFrames):play()
+    installThread:start(installProject)
+end)
+
+
+local function getProjectFileTree()
+    local projTree = createTree("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/master:Basalt")
+    if(projTree~=nil)then
+        for k,v in pairs(projTree)do
+            if(k=="objects")then
+                projectFiles.objects = v
+            elseif(k=="libraries")then
+                projectFiles.libraries = v
+            else
+                table.insert(projectFiles.base, v)
+            end
+        end
+        for _,v in pairs(projectFiles.libraries)do
+            libInc:addItem(v)
+        end
+        for _,v in pairs(projectFiles.objects)do
+            objInc:addItem(v)
+        end
+        fileTreeInfo:hide()
+        installBtn:show()
+    else
+        fileTreeInfo:setText("Error: Unable to download file structure...")
+    end
+end
+main:addThread("fileTreeThread"):start(getProjectFileTree)
 
 basalt.autoUpdate()

@@ -320,7 +320,7 @@ if
 ad[baa]or _d[baa]or baa=='_'then
 if not
 (ad[caa]or _d[caa]or caa=='_'or bd[caa])then return d_a.._aa elseif caa=='('then
-print("==============>>>",baa,caa)return d_a..aaa.._aa else return d_a..aaa.._aa end elseif bd[baa]then
+return d_a..aaa.._aa else return d_a..aaa.._aa end elseif bd[baa]then
 if caa=='('then return d_a.._aa else return d_a..aaa.._aa end elseif baa==''then return d_a.._aa else
 if caa=='('then return d_a..aaa.._aa else return d_a.._aa end end end
 __a=function(d_a)local _aa=string.rep('(',d_a.ParenCount or 0)
@@ -390,7 +390,7 @@ _aa.."("
 if#d_a.Arguments>0 then
 for i=1,#d_a.Arguments do _aa=_aa..
 d_a.Arguments[i].Name;if i~=#d_a.Arguments then _aa=_aa..","elseif d_a.VarArg then
-print("Apply vararg")_aa=_aa..",..."end end elseif d_a.VarArg then _aa=_aa.."..."end;_aa=_aa..")"_aa=b_a(_aa,dd(d_a.Body))
+_aa=_aa..",..."end end elseif d_a.VarArg then _aa=_aa.."..."end;_aa=_aa..")"_aa=b_a(_aa,dd(d_a.Body))
 _aa=b_a(_aa,"end")elseif d_a.AstType=='GenericForStatement'then d_a.Scope:RenameVars()
 _aa="for "
 for i=1,#d_a.VariableList do
