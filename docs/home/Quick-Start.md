@@ -1,26 +1,49 @@
-Basalt aims to be a relatively small, easy to use framework. 
+## HowTo Use
 
-Accordingly, we have provided an installation script.
+To load the framework into your project, make use of the following code on top of your code.
+```lua
+local basalt = require("Basalt")
+```
 
+It does not matter if you have installed the single file version or the full folder project. <br>
+Both versions can be loaded by using `require("Basalt")`, you dont need to add `.lua`.
 
-Just use the following command in any CC:Tweaked shell:
+## Download
+
+### Download the folder version
+This version is for people who'd like to work with Basalt, change something in Basalt or checkout the project.<br>
+But you are also able to just use it to create your own UI.<br>
+
+To install the full project to your CC:Tweaked Computer, use the following command on your CC:Tweaked shell:
 
 `pastebin run ESs1mg7P`
 
-This will download `basalt.lua` to your local directory
+This will download the project as a folder called "Basalt". You are immediatly after the download is done able to use it in your projects.
 
-To load the framework, make use of the following snippet
-```lua
---> For those who are unfamiliar with lua, dofile executes the code in the referenced file
-local basalt = dofile("basalt.lua")
-```
+### Download the single file version
+This is the version you should use if you're done with programming. It is a little bit faster and it is also minified, which makes the project smaller.
+To install the single filed project to your CC:Tweaked Computer, use the following command on your CC:Tweaked shell:
 
+`pastebin run ESs1mg7P packed`
 
+This will download the project as a single file called "basalt.lua". You are immediatly after the download is done able to use it in your projects.
 
+### Basalt Package Manager
+
+The Basalt Package Manager is still in alpha!<br><br>
+The Basalt Package Manager is a visual installer, you are able to change some settings, also to choose which objects are necessary for your projects and which are not. 
+
+To install the BPM (Basalt Package Manager) use the following command on your CC:Tweaked shell:
+
+`pastebin run ESs1mg7P bpm true`
+
+The true keyword in the end is optional and would simply start BPM immediately.
+
+## Example
 Here is a fully functioning example of Basalt code
 
 ```lua
-local basalt = dofile("basalt.lua") --> Load the Basalt framework
+local basalt = require("Basalt") --> Load the Basalt framework
 
 --> Create the first frame. Please note that Basalt needs at least one active "non-parent" frame to properly supply events
 --> When Basalt#createFrame makes use of unique identifiers (commonly referred to as UIDs), meaning that the supplied value must be UNIQUE
@@ -53,7 +76,7 @@ basalt.autoUpdate() --> Basalt#autoUpdate starts the event listener to detect us
 ```
 If you're like us and strive for succinct and beautiful code, here is a cleaner implementation of the code above:
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("mainFrame"):show()
 local button = mainFrame --> Basalt returns an instance of the object on most methods, to make use of "call-chaining"
