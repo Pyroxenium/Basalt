@@ -8,7 +8,7 @@ Any visual object can register onClick events.
 Here is a example on how to add a onClick event to your button:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):setText("Click"):show()
@@ -27,7 +27,7 @@ Any visual object can register onClickUp events.
 Here is a example on how to add a onClickUp event to your button:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):setText("Click"):show()
@@ -51,7 +51,7 @@ Any visual object can register onScroll events.
 Here is a example on how to add a onScroll event to your button:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):setText("Click"):show()
@@ -70,7 +70,7 @@ Any visual object can register onDrag events.
 Here is a example on how to add a onDrag event to your button:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):setText("Click"):show()
