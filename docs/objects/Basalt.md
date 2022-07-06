@@ -1,6 +1,6 @@
 To start using Basalt you have to do the following line of code:
 
-`local basalt = dofile("basalt.lua")`
+`local basalt = require("Basalt")`
 
 remember you need the basalt.lua file on your computer!
 
