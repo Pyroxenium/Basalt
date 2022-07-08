@@ -118,7 +118,7 @@ Checks if the user is currently holding a key
 * Shows a debug message with true or false if the left ctrl key is down, as soon as you click on the button.
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myButton"):setPosition(2,2):setText("Stop Basalt!"):show()
+local aButton = mainFrame:addButton("myButton"):setPosition(2,2):setText("Check Ctrl"):show()
 
 aButton:onClick(function()
 basalt.debug(basalt.isKeyDown(keys.leftCtrl))
