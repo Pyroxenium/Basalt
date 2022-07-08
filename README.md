@@ -13,6 +13,11 @@ If you have questions, feel free to join the discord server: [https://discord.gg
 ## Changelogs
 From now on we will add changes:
 
+#### Version 3:
+- fixed monitor support
+- added :setIndex() for scrollbars
+- added dynamic value system (not fully done)
+
 #### Version 2:
 Note: You won't get any changes for now, so don't redownload the project! (:
 - reworked the filesystem, now we use require instead of loadfile
