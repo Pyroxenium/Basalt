@@ -89,11 +89,12 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
         elseif (event == "mouse_scroll") then
             mainFrame:mouseHandler(event, p1, p2, p3, p4)
             activeFrame = mainFrame
-        elseif (event == "monitor_touch") then
-            if(monFrames[p1]~=nil)then
-                monFrames[p1]:mouseHandler(event, p1, p2, p3, p4)
-                activeFrame = monFrames[p1]
-            end
+        end
+    end
+    if (event == "monitor_touch") then
+        if(monFrames[p1]~=nil)then
+            monFrames[p1]:mouseHandler(event, p1, p2, p3, p4)
+            activeFrame = monFrames[p1]
         end
     end
 
