@@ -1,10 +1,8 @@
-To start using Basalt you have to do the following line of code:
+Before you can access Basalt, you need to add the following code on top of your file:
 
 `local basalt = require("Basalt")`
 
-remember you need the basalt.lua file on your computer!
-
-Now you are able to use the following functions:
+Now you are able to access the following methods:
 
 ## basalt.createFrame
 Create a base-frame (main frame)
@@ -107,6 +105,27 @@ end)
 basalt.autoUpdate()
 ```
 
+## basalt.isKeyDown
+Checks if the user is currently holding a key
+
+#### Parameters: 
+1. `number` key code (use the keys table for that)
+
+#### Returns: 
+1. `boolean` true or false
+
+#### Usage:
+* Shows a debug message with true or false if the left ctrl key is down, as soon as you click on the button.
+```lua
+local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local aButton = mainFrame:addButton("myButton"):setPosition(2,2):setText("Stop Basalt!"):show()
+
+aButton:onClick(function()
+basalt.debug(basalt.isKeyDown(keys.leftCtrl)
+end)
+
+basalt.autoUpdate()
+```
 
 ## basalt.debug
 creates a label with some information on the main frame on the bottom left, if you click on that label it will open a log view for you. See it as the new print for debugging
