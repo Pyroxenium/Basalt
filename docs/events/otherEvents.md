@@ -7,7 +7,7 @@ This is a custom event which gets triggered as soon as the function :setValue() 
 Here is a example on how to add a onChange event to your input, and also another example for your checkbox:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local aInput = mainFrame:addInput("specialInput"):setPosition(3,3):show()
@@ -36,7 +36,7 @@ This is a custom event which gets triggered as soon as the parent frame gets res
 Here is a example on how to add a onResize event to your button:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local aButton = mainFrame:addButton("myButton"):setPosition(3,3):show()
@@ -53,6 +53,8 @@ aButton:onResize(onButtonResize)
 This event gets triggered as soon as the object loses its focus.
 
 ```lua
+local basalt = require("Basalt")
+
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("exampleButton"):setPosition(3,3):onLoseFocus(
         function(self) 
@@ -66,6 +68,8 @@ local aButton = mainFrame:addButton("exampleButton"):setPosition(3,3):onLoseFocu
 This event gets triggered as soon as the object is the currently focused object.
 
 ```lua
+local basalt = require("Basalt")
+
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("exampleButton"):setPosition(3,3):onGetFocus(
         function(self) 

@@ -8,7 +8,7 @@ Any visual object can register onKey events.
 Here is a example on how to add a onKey event to your frame:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local subFrame = mainFrame:addFrame("subFrame"):setPosition(3,3):setSize(18,6):setBar("Sub Frame",colors.black):showBar():show()
@@ -27,7 +27,7 @@ Any visual object can register onKeyUp events.
 Here is a example on how to add a onKeyUp event to your frame:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
 local mainFrame = basalt.createFrame("myMainFrame"):show()
 local subFrame = mainFrame:addFrame("subFrame"):setPosition(3,3):setSize(18,6):setBar("Sub Frame",colors.black):showBar():show()
