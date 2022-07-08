@@ -1230,7 +1230,7 @@ local function installProject()
         addToInstallLog("Installed: "..projectDir.."/"..v)
     end
     addToInstallLog("Finished downloading!")
-    if(sOrM:getValue().args)then
+    if(sOrM:getValue().args[1])then
         if(minProject:getValue())then
             addToInstallLog("Packaging and minifying project to a single file...")
         else
