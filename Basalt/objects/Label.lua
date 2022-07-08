@@ -86,9 +86,10 @@ return function(name)
                             local splittedText = utils.splitString(self:getValue(), " ")
                             local text = {}
                             local line = ""
-                            for _,v in pairs(splittedText)do
+                            for k,v in pairs(splittedText)do
                                 if(line:len()+v:len()<=self.width)then
                                     line = line=="" and v or line.." "..v
+                                    if(k==#splittedText)then table.insert(text, line) end
                                 else
                                     table.insert(text, line)
                                     line = v:sub(1,self.width)
@@ -98,11 +99,7 @@ return function(name)
                                 self.parent:setText(obx, oby+k-1, v)
                             end
                         else
-                            for n = 1, self.height do
-                                if (n == verticalAlign) then
-                                    self.parent:setText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign))
-                                end
-                            end
+                            self.parent:setText(obx, oby, utils.getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign))
                         end
                     else
                         local tData = bigFont(fontsize, self:getValue(), self.fgColor, self.bgColor or colors.black)

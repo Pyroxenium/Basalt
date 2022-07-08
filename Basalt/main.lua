@@ -64,8 +64,10 @@ local bInstance = {
 }
 
 local function drawFrames()
-    mainFrame:draw()
-    mainFrame:drawUpdate()
+    if(mainFrame~=nil)then
+        mainFrame:draw()
+        mainFrame:drawUpdate()
+    end
     for _,v in pairs(monFrames)do
         v:draw()
         v:drawUpdate()
