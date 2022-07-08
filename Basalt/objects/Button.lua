@@ -37,16 +37,17 @@ return function(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    local verticalAlign = utils.getTextVerticalAlign(self.height, textVerticalAlign)
+                    local w,h = self:getSize()
+                    local verticalAlign = utils.getTextVerticalAlign(h, textVerticalAlign)
 
                     if(self.bgColor~=false)then
-                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                        self.parent:drawTextBox(obx, oby, self.width, self.height, " ")
+                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
+                        self.parent:drawTextBox(obx, oby, w, h, " ")
                     end
-                    if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
-                    for n = 1, self.height do
+                    if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, w, h, self.fgColor) end
+                    for n = 1, h do
                         if (n == verticalAlign) then
-                            self.parent:setText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign))
+                            self.parent:setText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self:getValue(), w, textHorizontalAlign))
                         end
                     end
                 end

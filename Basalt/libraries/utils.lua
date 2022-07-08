@@ -37,6 +37,22 @@ rpairs = function(t)
     end, t, #t + 1
 end,
 
+splitString = function(str, sep)
+    if sep == nil then
+            sep = "%s"
+    end
+    local t={}
+    for v in string.gmatch(str, "([^"..sep.."]+)") do
+            table.insert(t, v)
+    end
+    return t
+end,
+
+numberFromString = function(str)
+    print(str)
+    return load("return " .. str)()
+end,
+
 -- shrink system is copy pasted (and slightly changed) from blittle by Bomb Bloke: http://www.computercraft.info/forums2/index.php?/topic/25354-cc-176-blittle-api/
 shrink = function(bLittleData, bgColor)
     local relations = { [0] = { 8, 4, 3, 6, 5 }, { 4, 14, 8, 7 }, { 6, 10, 8, 7 }, { 9, 11, 8, 0 }, { 1, 14, 8, 0 }, { 13, 12, 8, 0 }, { 2, 10, 8, 0 }, { 15, 8, 10, 11, 12, 14 },

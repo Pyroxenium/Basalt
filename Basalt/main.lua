@@ -2,13 +2,17 @@ local basaltEvent = require("basaltEvent")()
 local Frame = require("Frame")
 
 local baseTerm = term.current()
-local version = 2
+local version = 3
 local debugger = true
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
 
 local activeKey, frames, monFrames = {}, {}, {}
 local mainFrame, activeFrame, focusedObject, updaterActive
+
+if not  term.isColor or not term.isColor() then
+    error('Basalt requires an advanced (golden) comptuer to run.', 0)
+end
 
 local function stop()
     updaterActive = false
@@ -112,6 +116,9 @@ end
 
 local basalt = {}
 basalt = {
+    getVersion = function()
+        return version
+    end,
 
     setBaseTerm = function(_baseTerm)
         baseTerm = _baseTerm

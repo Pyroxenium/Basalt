@@ -1,8 +1,11 @@
 local basaltEvent = require("basaltEvent")
+local split = require("utils").splitString
+local numberFromString = require("utils").numberFromString
 
 return function(name)
     -- Base object
     local objectType = "Object" -- not changeable
+    local object = {}
     local value
     local zIndex = 1
     local anchor = "topLeft"
@@ -22,7 +25,46 @@ return function(name)
 
     local eventSystem = basaltEvent()
 
-    local object = {
+    local dynamicValue = {}
+    local dynamicValueResult = {}
+
+    local function replacePercentage(str, parentValue)
+        local _fullStr = str
+        for v in _fullStr:gmatch("%d+%%") do
+            local pValue = v:gsub("%%", "")
+            print(str)
+            str = str:gsub(v.."%", parentValue / 100 * math.max(math.min(tonumber(pValue),100),0))
+        end
+        return str
+    end
+
+    local function fToNumber(str, fTable)
+        for k,v in pairs(fTable)do
+            if(type(v)=="function")then
+                local nmb = v()
+                for _ in str:gmatch("f"..k)do
+                    str = string.gsub(str, "f"..k, nmb)
+                end
+            end
+        end
+        str = str:gsub("f%d+", "")
+        return str
+    end
+
+    local calcDynamicValue = function(newDValue)
+        local val = dynamicValue[newDValue][1]
+        if(val~=nil)then
+            if(type(val)=="string")then
+                if(dynamicValue[newDValue][3]~=nil)then
+                    dynamicValueResult[newDValue] = numberFromString(replacePercentage(fToNumber(val, dynamicValue[newDValue][3]), dynamicValue[newDValue][2]() or 1))
+                else
+                    dynamicValueResult[newDValue] = numberFromString(replacePercentage(val, dynamicValue[newDValue][2]() or 1))
+                end
+            end
+        end
+    end
+
+    object = {
         x = 1,
         y = 1,
         width = 1,
@@ -133,12 +175,36 @@ return function(name)
             else
                 self.x, self.y = math.floor(xPos), math.floor(yPos)
             end
+
+
+            if(type(xPos)=="number")then
+                self.x = rel and self.x+xPos or xPos
+            end
+            if(type(yPos)=="number")then
+                self.y = rel and self.y+yPos or yPos
+            end
+            if(type(xPos)=="string")or(type(xPos)=="table")then
+                dynamicValue.x = {xPos, function() return self:getParent():getX() end}
+            end
+            if(type(yPos)=="string")or(type(yPos)=="table")then
+                dynamicValue.y = {yPos, function() return self:getParent():getY() end}
+            end
+            self:recalculateDynamicValue()
+            eventSystem:sendEvent("basalt_reposition", self)
             visualsChanged = true
             return self
         end;
 
+        getX = function(self)
+            return dynamicValue.x or self.x
+        end,
+
+        getY = function(self)
+            return dynamicValue.y or self.y
+        end,
+
         getPosition = function(self)
-            return self.x, self.y
+            return self:getX(), self:getY()
         end;
 
         getVisibility = function(self)
@@ -151,23 +217,45 @@ return function(name)
             return self
         end;
 
-        setSize = function(self, width, height)
-            self.width, self.height = width, height
+        setSize = function(self, width, height, rel)
+            if(type(width)=="number")then
+                self.width = rel and self.width+width or width
+            end
+            if(type(height)=="number")then
+                self.height = rel and self.height+height or height
+            end
+            if(type(width)=="string")then
+                dynamicValue.width = {width, function() return self:getParent():getWidth() end}
+            end
+            if(type(width)=="table")then
+                dynamicValue.width = {width[1], function() return self:getParent():getWidth() end}
+                table.remove(width, 1)
+                dynamicValue.width[3] = width
+            end
+            if(type(height)=="string")then
+                dynamicValue.height = {height, function() return self:getParent():getHeight() end}
+            end
+            if(type(height)=="table")then
+                dynamicValue.height = {height[1], function() return self:getParent():getHeight() end}
+                table.remove(height, 1)
+                dynamicValue.height[3] = height
+            end
+            self:recalculateDynamicValue()
             eventSystem:sendEvent("basalt_resize", self)
             visualsChanged = true
             return self
         end;
 
         getHeight = function(self)
-            return self.height
+            return dynamicValueResult["height"] or self.height
         end;
 
         getWidth = function(self)
-            return self.width
+            return dynamicValueResult["width"] or self.width
         end;
 
         getSize = function(self)
-            return self.width, self.height
+            return self:getWidth(), self:getHeight()
         end;
 
         setBackground = function(self, color)
@@ -246,16 +334,17 @@ return function(name)
             if (isVisible) then
                 if(self.parent~=nil)then
                     local x, y = self:getAnchorPosition()
+                    local w,h = self:getSize()
                     if(shadow)then                        
-                        self.parent:drawBackgroundBox(x+1, y+self.height, self.width, 1, shadowColor)
-                        self.parent:drawBackgroundBox(x+self.width, y+1, 1, self.height, shadowColor)
-                        self.parent:drawForegroundBox(x+1, y+self.height, self.width, 1, shadowColor)
-                        self.parent:drawForegroundBox(x+self.width, y+1, 1, self.height, shadowColor)
+                        self.parent:drawBackgroundBox(x+1, y+h, w, 1, shadowColor)
+                        self.parent:drawBackgroundBox(x+w, y+1, 1, h, shadowColor)
+                        self.parent:drawForegroundBox(x+1, y+h, w, 1, shadowColor)
+                        self.parent:drawForegroundBox(x+w, y+1, 1, h, shadowColor)
                     end
                     if(borderLeft)then
-                        self.parent:drawTextBox(x-1, y, 1, self.height, "\149")
-                        self.parent:drawForegroundBox(x-1, y, 1, self.height, borderColor)
-                        if(self.bgColor~=false)then self.parent:drawBackgroundBox(x-1, y, 1, self.height, self.bgColor) end
+                        self.parent:drawTextBox(x-1, y, 1, h, "\149")
+                        self.parent:drawForegroundBox(x-1, y, 1, h, borderColor)
+                        if(self.bgColor~=false)then self.parent:drawBackgroundBox(x-1, y, 1, h, self.bgColor) end
                     end
                     if(borderLeft)and(borderTop)then
                         self.parent:drawTextBox(x-1, y-1, 1, 1, "\151")
@@ -263,29 +352,29 @@ return function(name)
                         if(self.bgColor~=false)then self.parent:drawBackgroundBox(x-1, y-1, 1, 1, self.bgColor) end
                     end
                     if(borderTop)then
-                        self.parent:drawTextBox(x, y-1, self.width, 1, "\131")
-                        self.parent:drawForegroundBox(x, y-1, self.width, 1, borderColor)
-                        if(self.bgColor~=false)then self.parent:drawBackgroundBox(x, y-1, self.width, 1, self.bgColor) end
+                        self.parent:drawTextBox(x, y-1, w, 1, "\131")
+                        self.parent:drawForegroundBox(x, y-1, w, 1, borderColor)
+                        if(self.bgColor~=false)then self.parent:drawBackgroundBox(x, y-1, w, 1, self.bgColor) end
                     end
                     if(borderTop)and(borderRight)then
-                        self.parent:drawTextBox(x+self.width, y-1, 1, 1, "\149")
-                        self.parent:drawForegroundBox(x+self.width, y-1, 1, 1, borderColor)
+                        self.parent:drawTextBox(x+w, y-1, 1, 1, "\149")
+                        self.parent:drawForegroundBox(x+w, y-1, 1, 1, borderColor)
                     end
                     if(borderRight)then
-                        self.parent:drawTextBox(x+self.width, y, 1, self.height, "\149")
-                        self.parent:drawForegroundBox(x+self.width, y, 1, self.height, borderColor)
+                        self.parent:drawTextBox(x+w, y, 1, h, "\149")
+                        self.parent:drawForegroundBox(x+w, y, 1, h, borderColor)
                     end
                     if(borderRight)and(borderBottom)then
-                        self.parent:drawTextBox(x+self.width, y+self.height, 1, 1, "\129")
-                        self.parent:drawForegroundBox(x+self.width, y+self.height, 1, 1, borderColor)
+                        self.parent:drawTextBox(x+w, y+h, 1, 1, "\129")
+                        self.parent:drawForegroundBox(x+w, y+h, 1, 1, borderColor)
                     end
                     if(borderBottom)then
-                        self.parent:drawTextBox(x, y+self.height, self.width, 1, "\131")
-                        self.parent:drawForegroundBox(x, y+self.height, self.width, 1, borderColor)
+                        self.parent:drawTextBox(x, y+h, w, 1, "\131")
+                        self.parent:drawForegroundBox(x, y+h, w, 1, borderColor)
                     end
                     if(borderBottom)and(borderLeft)then
-                        self.parent:drawTextBox(x-1, y+self.height, 1, 1, "\131")
-                        self.parent:drawForegroundBox(x-1, y+self.height, 1, 1, borderColor)
+                        self.parent:drawTextBox(x-1, y+h, 1, 1, "\131")
+                        self.parent:drawForegroundBox(x-1, y+h, 1, 1, borderColor)
                     end
                 end
                 return true
@@ -336,18 +425,13 @@ return function(name)
                 x = math.floor(self.parent.width/2) + x - 1
                 y = math.floor(self.parent.height/2) + y - 1
             end
-            local xO, yO = self:getOffset()
-            if not(ignOffset or ignOff) then
-                return x+xO, y+yO
+            if(self.parent~=nil)then
+                local xO, yO = self.parent:getOffset()
+                if not(ignOffset or ignOff) then
+                    return x+xO, y+yO
+                end
             end
             return x, y
-        end;
-
-        getOffset = function(self)
-            if (self.parent ~= nil) then
-                return self.parent:getFrameOffset()
-            end
-            return 0, 0
         end;
 
         ignoreOffset = function(self, ignore)
@@ -439,7 +523,19 @@ return function(name)
             return self
         end;
 
+        recalculateDynamicValue = function(self, special)
+            if(special==nil)then
+                for k in pairs(dynamicValue)do
+                    calcDynamicValue(k)
+                end
+            else
+                calcDynamicValue(special)
+            end
+            return self
+        end,
+
         onResize = function(self, ...)
+            self:recalculateValues()
             for _,v in pairs(table.pack(...))do
                 if(type(v)=="function")then
                     self:registerEvent("basalt_resize", v)
@@ -515,13 +611,14 @@ return function(name)
 
         mouseHandler = function(self, event, button, x, y)
             local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+            local w, h = self:getSize()
             local yOff = false
             if(objY-1 == y)and(self:getBorder("top"))then
                 y = y+1
                 yOff = true
             end
 
-            if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (isVisible) then
+            if (objX <= x) and (objX + w > x) and (objY <= y) and (objY + h > y) and (isVisible) then
                 if (self.parent ~= nil) then
                     self.parent:setFocusedObject(self)
                 end

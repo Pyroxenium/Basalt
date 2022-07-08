@@ -1,5 +1,5 @@
 return function(name)
-    -- Pane
+    -- Image
     local base = Object(name)
     local objectType = "Image"
     base:setZIndex(2)

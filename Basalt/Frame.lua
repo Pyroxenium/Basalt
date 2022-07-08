@@ -144,7 +144,7 @@ return function(name, parent, pTerm, basalt)
             return self
         end;
 
-        getFrameOffset = function(self) -- internal
+        getOffset = function(self) -- internal
             return xOffset, yOffset
         end;
 
@@ -250,7 +250,7 @@ return function(name, parent, pTerm, basalt)
                     basalt.setMonitorFrame(monSide, nil)
                 end
             end
-            basaltDraw = basaltDraw(termObject)
+            basaltDraw = BasaltDraw(termObject)
             monSide = side or nil
             return self;
         end;

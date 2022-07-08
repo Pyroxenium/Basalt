@@ -1,3 +1,5 @@
+local lerp = require("Lerp")
+
 return function(name)
     local object = {}
     local objectType = "Animation"

@@ -31,6 +31,20 @@ return function(name)
             return self
         end;
 
+        setIndex = function(self, _index)
+            index = _index
+            if (index < 1) then
+                index = 1
+            end
+            index = math.min(index, (barType == "vertical" and self.height or self.width) - (symbolSize - 1))
+            self:setValue(maxValue / (barType == "vertical" and self.height or self.width) * index)
+            return self
+        end,
+
+        getIndex = function(self)
+            return index
+        end,
+
         setSymbolSize = function(self, size)
             symbolSize = tonumber(size) or 1
             if (barType == "vertical") then

@@ -82,9 +82,26 @@ return function(name)
                         self.parent:drawTextBox(obx, oby, self.width, self.height, " ") end
                     if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
                     if(fontsize==0)then
-                        for n = 1, self.height do
-                            if (n == verticalAlign) then
-                                self.parent:setText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign))
+                        if not(autoSize)then
+                            local splittedText = utils.splitString(self:getValue(), " ")
+                            local text = {}
+                            local line = ""
+                            for _,v in pairs(splittedText)do
+                                if(line:len()+v:len()<=self.width)then
+                                    line = line=="" and v or line.." "..v
+                                else
+                                    table.insert(text, line)
+                                    line = v:sub(1,self.width)
+                                end
+                            end
+                            for k,v in pairs(text)do
+                                self.parent:setText(obx, oby+k-1, v)
+                            end
+                        else
+                            for n = 1, self.height do
+                                if (n == verticalAlign) then
+                                    self.parent:setText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign))
+                                end
                             end
                         end
                     else
