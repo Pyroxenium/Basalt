@@ -121,7 +121,7 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("myButton"):setPosition(2,2):setText("Stop Basalt!"):show()
 
 aButton:onClick(function()
-basalt.debug(basalt.isKeyDown(keys.leftCtrl)
+basalt.debug(basalt.isKeyDown(keys.leftCtrl))
 end)
 
 basalt.autoUpdate()
