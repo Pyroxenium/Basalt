@@ -411,7 +411,7 @@ return true,Format_Mini(__a)end
 local args = table.pack(...)
 local projectPath = args[1] or "Basalt"
 local minifyProject = args[2]=="true" and true or false
-local outputFileName = "basalt.lua"
+local outputFileName = args[3] or "basalt.lua"
 
 assert(fs.isDir(projectPath), "Unable to find directory: "..projectPath)
 
