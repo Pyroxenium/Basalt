@@ -85,7 +85,7 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("myButton"):setPosition(2,2):show()
 
 while true do
-        basalt.update(os.pullEventRaw())
+basalt.update(os.pullEventRaw())
 end
 ```
 
