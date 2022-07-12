@@ -143,4 +143,3 @@ Also basalt.debugFrame and basalt.debugList are available.
 ```lua
 basalt.debug("Hello! ", "^-^")
 ```
-
