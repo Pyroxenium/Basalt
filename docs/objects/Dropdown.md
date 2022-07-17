@@ -34,11 +34,13 @@ aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
 ```
+```xml
 <dropdown>
   <item><text>1. Entry</text></item>
   <item><text>2. Entry</text><bg>yellow</bg></item>
   <item><text>3. Entry</text><bg>yellow</bg><fg>green</fg></item>
 </dropdown>
+```
 
 ## removeItem
 Removes a item from the dropdown
@@ -214,7 +216,6 @@ aDropdown:addItem("3. Entry",colors.yellow,colors.green)
 aDropdown:addItem("4. Entry")
 aDropdown:setSelectedItem(colors.green, colors.red)
 ```
-
 ```xml
 <dropdown selectionBG="green" selectionFG="red">
   <item><text>1. Entry</text></item>
@@ -245,7 +246,6 @@ local aDropdown = mainFrame:addDropdown()
       :addItem("6. Entry")
       :setOffset(3)
 ```
-
 ```xml
 <dropdown offset="3">
   <item><text>1. Entry</text></item>
@@ -297,7 +297,6 @@ aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry")
 aDropdown:addItem("3. Entry")
 ```
-
 ```xml
 <dropdown dropdownWidth="15" dropdownHeight="8">
   <item><text>1. Entry</text></item>

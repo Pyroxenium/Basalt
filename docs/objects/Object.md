@@ -6,14 +6,12 @@ Shows the object (only if the parent frame is already visible)
 1. `object` The object in use
 
 #### Usage:
-* Shows a frame named "myFirstFrame"
+* Shows a frame
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local button = mainFrame:addButton("myFirstButton")
+local mainFrame = basalt.createFrame():show()
+local button = mainFrame:addButton()
 button:show()
 ```
-
-#### XML:
 ```xml
 <button visible="true"></button>
 ```
@@ -25,14 +23,12 @@ Hides the object
 1. `object` The object in use
 
 #### Usage:
-* Hides a frame named "myFirstFrame"
+* Hides a frame
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local button = mainFrame:addButton("myFirstButton"):setText("Close"):onClick(function() mainFrame:hide() end)
-button:show()
+local mainFrame = basalt.createFrame()
+local button = mainFrame:addButton():setText("Close"):onClick(function() mainFrame:hide() end)
+button
 ```
-
-#### XML:
 ```xml
 <button visible="false"></button>
 ```
@@ -50,11 +46,9 @@ Changes the position relative to its parent frame
 #### Usage:
 * Sets the Buttons position to an x coordinate of 2 with a y coordinate of 3
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-mainFrame:addButton("myFirstButton"):setPosition(2,3)
+local mainFrame = basalt.createFrame()
+mainFrame:addButton():setPosition(2,3)
 ```
-
-#### XML:
 ```xml
 <button x="2" y="3"></button>
 ```
@@ -70,10 +64,8 @@ Changes the object background color, if you set the value to false the backgroun
 #### Usage:
 * Creates a frame, and sets its background color to `colors.gray`
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):setBackground(colors.gray)
+local mainFrame = basalt.createFrame():setBackground(colors.gray)
 ```
-
-#### XML:
 ```xml
 <button bg="gray"></button>
 ```
@@ -89,10 +81,8 @@ Changes the object text color
 #### Usage:
 * Creates a frame, and sets its foreground color to `colors.green`
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):setForeground(colors.green)
+local mainFrame = basalt.createFrame():setForeground(colors.green)
 ```
-
-#### XML:
 ```xml
 <button fg="green"></button>
 ```
@@ -109,11 +99,9 @@ Changes the object size
 #### Usage:
 * Sets the frame to have a width of 15 and a height of 12
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local subFrame = mainFrame:addFrame("myFirstSubFrame"):setSize(15,12):show()
+local mainFrame = basalt.createFrame()
+local subFrame = mainFrame:addFrame():setSize(15,12)
 ```
-
-#### XML:
 ```xml
 <frame width="15" height="12"></frame>
 ```
@@ -128,8 +116,8 @@ the foreground, you should also use :setFocus()
 #### Usage:
 * Sets the button to the focused object
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setFocus():show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setFocus()
 ```
 
 ## setZIndex
@@ -141,14 +129,12 @@ Sets the z-index. Higher value means higher draw/event priority. You can also ad
 1. `object` The object in use
 
 #### Usage:
-* Sets the z-index of "myFirstButton" to `1` and the z-index of "myFirstLabel" to `1`
+* Sets the buttons z-index to `1` and the labels z-index to `2`
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setZIndex(1):setPosition(2,2):show()
-local aLabel = mainFrame:addButton("myFirstLabel"):setZIndex(2):setPosition(2,2):setText("I am a label!"):show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setZIndex(1):setPosition(2,2)
+local aLabel = mainFrame:addButton():setZIndex(2):setPosition(2,2):setText("I am a label!")
 ```
-
-#### XML:
 ```xml
 <button x="2" y="2" zIndex="1"></button>
 <label x="2" y="2" text="I am a label!" zIndex="2"></label>
@@ -165,13 +151,13 @@ Sets the parent frame of the object
 #### Usage:
 * Sets the parent frame of the random frame, adding it to the main frame when the button is clicked"
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aRandomFrame = basalt.createFrame("aRandomFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):onClick(
+local mainFrame = basalt.createFrame()
+local aRandomFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():onClick(
         function() 
             aRandomFrame:setParent(mainFrame) 
         end
-):show()
+)
 ```
 
 ## isFocused
@@ -183,8 +169,8 @@ Returns if the object is currently the focused object of the parent frame
 #### Usage:
 * Prints whether the button is focused to the debug console
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton()
 basalt.debug(aButton:isFocused()) -- shows true or false as a debug message
 ```
 
@@ -202,12 +188,11 @@ Converts the x and y coordinates into the anchor coordinates of the object
 #### Usage:
 * Prints the anchor position to the debug console
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):setSize(15,15):show()
-local aButton = mainFrame:addButton("myFirstButton")
+local mainFrame = basalt.createFrame():setSize(15,15)
+local aButton = mainFrame:addButton()
         :setAnchor("bottomRight")
         :setSize(8,1)
         :setPosition(1,1)
-        :show()
 basalt.debug(aButton:getAnchorPosition()) -- returns 7,14 (framesize - own size) instead of 1,1
 ```
 
@@ -223,12 +208,11 @@ Sets the anchor of the object
 #### Usage:
 * Sets the button to have an anchor of `bottomRight`
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton")
+local mainFrame = basalt.createFrame():show()
+local aButton = mainFrame:addButton()
         :setAnchor("bottomRight")
         :setSize(8,1)
         :setPosition(-8,1)
-        :show()
 ```
 
 #### XML:
@@ -248,8 +232,8 @@ Converts the relative coordinates into absolute coordinates
 #### Usage:
 * Creates a frame and a button and prints the button's absolute position to the debug console
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):setPosition(3,3):show()
-local aButton = mainFrame:addButton("myFirstButton"):setSize(8,1):setPosition(4,2):show()
+local mainFrame = basalt.createFrame():setPosition(3,3)
+local aButton = mainFrame:addButton():setSize(8,1):setPosition(4,2)
 basalt.debug(aButton:getAbsolutePosition()) -- returns 7,5 (frame coords + own coords) instead of 4,2
 ```
 
@@ -264,11 +248,9 @@ Sets the value of that object (input, label, checkbox, textfield, scrollbar,...)
 #### Usage:
 * Creates a checkbox and ticks it
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aCheckbox = mainFrame:addCheckbox("myFirstCheckbox"):setValue(true):show()
+local mainFrame = basalt.createFrame()
+local aCheckbox = mainFrame:addCheckbox():setValue(true)
 ```
-
-#### XML:
 ```xml
 <checkbox value="true"></checkbox>
 ```
@@ -281,8 +263,8 @@ Returns the currently saved value
 #### Usage:
 * Prints the value of the checkbox to the debug console
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aCheckbox = mainFrame:addCheckbox("myFirstCheckbox"):setValue(true):show()
+local mainFrame = basalt.createFrame()
+local aCheckbox = mainFrame:addCheckbox():setValue(true)
 basalt.debug(aCheckbox:getValue()) -- returns true
 ```
 
@@ -294,8 +276,8 @@ Returns the respective height/width of the object
 #### Usage:
 * Prints the height of the object to the debug console
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setSize(5,8):show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setSize(5,8)
 basalt.debug(aButton:getHeight()) -- returns 8
 ```
 
@@ -307,8 +289,8 @@ Returns if the object is currently visible
 #### Usage:
 * Prints boolean visibility of object to debug console
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setSize(5,8):show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setSize(5,8)
 basalt.debug(aButton:isVisible()) -- returns true
 ```
 
@@ -321,7 +303,7 @@ Returns the given name of the object
 #### Usage:
 * Prints name of object to debug window
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local mainFrame = basalt.createFrame()
 basalt.debug(mainFrame:getName()) -- returns myFirstFrame
 ```
 
@@ -337,15 +319,13 @@ Sets the shadow color - default: colors.black
 #### Usage:
 * Sets the shadow to green and shows it:
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local subFrame = mainFrame:addFrame("mySubFrame")
+local mainFrame = basalt.createFrame()
+local subFrame = mainFrame:addFrame()
         :setMoveable()
         :setSize(18,6)
         :setShadow(colors.green)
         :showShadow(true)
 ```
-
-#### XML:
 ```xml
 <frame width="18" height="6" shadow="true" shadowColor="green" moveable="true"></frame>
 ```
@@ -362,15 +342,12 @@ Shows or hides the shadow
 #### Usage:
 * Shows the shadow:
 ```lua
-local mainFrame = basalt.createFrame():show()
+local mainFrame = basalt.createFrame()
 local subFrame = mainFrame:addFrame()
         :setMoveable()
         :setSize(18,6)
         :showShadow(true)
-        :show()
 ```
-
-#### XML:
 ```xml
 <frame width="18" height="6" shadow="true" moveable="true"></frame>
 ```
@@ -387,16 +364,13 @@ Sets the border color - default: colors.black
 #### Usage:
 * Sets the border to green and shows it:
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local subFrame = mainFrame:addFrame("mySubFrame")
+local mainFrame = basalt.createFrame()
+local subFrame = mainFrame:addFrame()
         :setMoveable()
         :setSize(18,6)
         :setBorder(colors.green)
         :showBorder("left", "top", "right", "bottom")
-        :show()
 ```
-
-#### XML:
 ```xml
 <frame width="18" height="6" border="true" borderColor="green" moveable="true"></frame>
 ```
@@ -413,15 +387,12 @@ Shows or hides the border
 #### Usage:
 * Shows the border:
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local subFrame = mainFrame:addFrame("mySubFrame")
+local mainFrame = basalt.createFrame()
+local subFrame = mainFrame:addFrame()
         :setMoveable()
         :setSize(18,6)
         :showBorder("left", "top", "bottom")
-        :show()
 ```
-
-#### XML:
 ```xml
 <frame width="18" height="6" border="true" borderColor="green" borderRight="false" moveable="true"></frame>
 ```

@@ -19,10 +19,9 @@ Sets the text which gets displayed.
 #### Usage:
 * Creates a default label with text "Some random text".
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aLabel = mainFrame:addLabel("myFirstLabel"):setText("Some random text"):show()
+local mainFrame = basalt.createFrame()
+local aLabel = mainFrame:addLabel():setText("Some random text")
 ```
-
 ```xml
 <label text="Some random text" />
 ```
@@ -39,10 +38,9 @@ Sets the font size, calculated by bigfonts. Default size is 1.
 #### Usage:
 * Creates a default label, sets the text to "Basalt!" and its font size to 2.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aLabel = mainFrame:addLabel("myFirstLabel"):setText("Basalt!"):setFontSize(2):show()
+local mainFrame = basalt.createFrame()
+local aLabel = mainFrame:addLabel():setText("Basalt!"):setFontSize(2)
 ```
-
 ```xml
 <label font="2" />
 ```
@@ -56,8 +54,8 @@ Returns the current font size
 #### Usage:
 * Creates a default label, sets the text to "Basalt!" and its font size to 2. Also prints the current fontsize.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aLabel = mainFrame:addLabel("myFirstLabel"):setText("Basalt!"):setFontSize(2):show()
+local mainFrame = basalt.createFrame()
+local aLabel = mainFrame:addLabel():setText("Basalt!"):setFontSize(2)
 basalt.debug(aLabel:getFontSize())
 ```
 
@@ -74,7 +72,6 @@ Changes the text align
 local mainFrame = basalt.createFrame()
 local aLabel = mainFrame:addLabel():setText("Basalt!"):setTextAlign("right")
 ```
-
 ```xml
 <label horizontalAlign="right" verticalAlign="center" />
 ```

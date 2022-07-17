@@ -34,8 +34,6 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aProgram = mainFrame:addProgram("myFirstProgram"):show()
 aProgram:execute("rom/programs/fun/worm.lua") -- executes worm
 ```
-
-#### XML:
 ```xml
 <program path="rom/programs/fun/worm.lua" execute="true" />
 ```

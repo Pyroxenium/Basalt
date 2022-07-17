@@ -68,7 +68,6 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aTextfield = mainFrame:addTextfield("myFirstTextfield"):show()
 basalt.debug(aTextfield:addLine("Hello!", 1))
 ```
-
 ```xml
 <textfield>
     <lines>
@@ -118,7 +117,6 @@ Adds keywords for special coloring
 local mainFrame = basalt.createFrame()
 local aTextfield = mainFrame:addTextfield():addKeywords(colors.purple, {"if", "else", "then", "while", "do", "hello"})
 ```
-
 ```xml
 <textfield>
     <keywords>
@@ -151,7 +149,6 @@ Adds a new rule for special coloring
 local mainFrame = basalt.createFrame()
 local aTextfield = mainFrame:addTextfield():addRule("%d", colors.lightBlue)
 ```
-
 ```xml
 <textfield>
     <rules>

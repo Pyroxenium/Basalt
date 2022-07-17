@@ -34,7 +34,6 @@ aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
 ```
-
 ```xml
 <menubar>
 <item><text>1. Entry</text></item>
@@ -160,7 +159,6 @@ aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
 aMenubar:setSpace(3)
 ```
-
 ```xml
 <menubar space="3">
 <item><text>1. Entry</text></item>
@@ -190,7 +188,6 @@ aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
 aMenubar:setScrollable(true)
 ```
-
 ```xml
 <menubar scrollable="true">
 <item><text>1. Entry</text></item>
@@ -276,7 +273,6 @@ aMenubar:addItem("3. Entry")
 aMenubar:addItem("4. Entry")
 aMenubar:setSelectedItem(colors.green, colors.yellow)
 ```
-
 ```xml
 <menubar selectionBG="green" selectionFG="yellow">
 <item><text>1. Entry</text></item>
@@ -308,7 +304,6 @@ aMenubar:addItem("5. Entry")
 aMenubar:addItem("6. Entry")
 aMenubar:setOffset(3)
 ```
-
 ```xml
 <menubar offset="3">
 <item><text>1. Entry</text></item>

@@ -33,7 +33,7 @@ Sets the horizontal align of the button text
 #### Usage:
 * Sets the button's horizontal text align to right. 
 ```lua
-local mainFrame = basalt.createFrame():show()
+local mainFrame = basalt.createFrame()
 local button = mainFrame:addButton()
        :setText("Click me!")
        :setHorizontalAlign("right")
@@ -55,13 +55,12 @@ Sets the vertical align of the button text
 #### Usage:
 * Sets the button's horizontal text align to right and the vertical text align to bottom. 
 ```lua
-local mainFrame = basalt.createFrame():show()
+local mainFrame = basalt.createFrame()
 local button = mainFrame:addButton()
        :setText("Click me!")
        :setHorizontalAlign("right")
        :setVerticalAlign("bottom")
 ```
-
 ```xml
 <button text="Click me!" horizontalAlign="right" verticalAlign="bottom" />
 ```
@@ -69,8 +68,8 @@ local button = mainFrame:addButton()
 # Example
 This is a example on how you would create a fully working button:
 ```lua
-local mainFrame = basalt.createFrame():show()
-local aButton = mainFrame:addButton():setText("Click"):show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setText("Click")
 
 aButton:onClick(function(self,event,button,x,y)
   if(event=="mouse_click")and(button==1)then
@@ -79,7 +78,7 @@ aButton:onClick(function(self,event,button,x,y)
 end)
 ```
 
-## Lua and XML:
+and this would be the xml way to do it:
 ```lua
 local mainFrame = basalt.createFrame():addLayout("example.xml")
 
@@ -91,5 +90,5 @@ end)
 ```
 
 ```xml
-<button onClick="buttonClick" text="Click me!" horizontalAlign="right" verticalAlign="bottom" />
+<button onClick="buttonClick" text="Click" />
 ```

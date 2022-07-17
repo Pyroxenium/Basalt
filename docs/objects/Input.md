@@ -54,7 +54,6 @@ Sets the default text. This will only be displayed if there is no input set by t
 local mainFrame = basalt.createFrame()
 local aInput = mainFrame:addInput():setDefaultText("...")
 ```
-
 ```xml
 <input default="..." />
 ```
@@ -74,7 +73,6 @@ Sets a character limit to the input.
 local mainFrame = basalt.createFrame()
 local aInput = mainFrame:addInput():setInputLimit(8)
 ```
-
 ```xml
 <input limit="8" />
 ```

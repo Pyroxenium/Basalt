@@ -19,7 +19,6 @@ local mainFrame = basalt.createFrame():show()
 local aProgressbar = mainFrame:addProgressbar():show()
 aProgressbar:setDirection(3)
 ```
-
 ```xml
 <frame direction="3"></frame>
 ```
@@ -74,7 +73,6 @@ local mainFrame = basalt.createFrame():show()
 local aProgressbar = mainFrame:addProgressbar():show()
 aProgressbar:setProgressBar(colors.green, colors.yellow, colors.red)
 ```
-
 ```xml
 <progressbar progressColor="green" progressSymbol="yellow" progressSymbolColor="red" />
 ```
@@ -95,7 +93,6 @@ local mainFrame = basalt.createFrame():show()
 local aProgressbar = mainFrame:addProgressbar():show()
 aProgressbar:setBackgroundSymbol("X")
 ```
-
 ```xml
 <progressbar backgroundSymbol="X" />
 ```
@@ -120,7 +117,7 @@ end
 aProgressbar:onProgressDone(progressDone)
 ```
 
-## XML Example
+Here is also a example how this is done with xml:
 
 ```lua
 local basalt = require("Basalt")
@@ -131,7 +128,6 @@ basalt.setVariable("progressDone", function()
   basalt.debug("The Progressbar reached 100%!")
 end)
 ```
-
 ```xml
 <progressbar onDone="progressDone" />
 ```

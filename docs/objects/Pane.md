@@ -14,7 +14,6 @@ aPane:setSize(30, 10)
 aPane:setBackground(colors.yellow)
 aPane:show()
 ```
-
 ```xml
 <pane width="30" height="10" bg="yellow" />
 ```

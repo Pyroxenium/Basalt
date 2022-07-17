@@ -28,7 +28,6 @@ aThread:start(randomThreadfunction)
 ```
 ```xml
 <thread thread="myThread" start="true"/>
-
 ```
 
 ## stop

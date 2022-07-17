@@ -34,7 +34,6 @@ Creates a child frame on the frame, the same as [basalt.createFrame](https://git
 local mainFrame = basalt.createFrame()
 local myFrame = mainFrame:addFrame()
 ```
-
 ```xml
 <frame></frame>
 ```
@@ -66,7 +65,6 @@ myFrame:setBar("My first Frame!")
 local mainFrame = basalt.createFrame()
 local myFrame = mainFrame:addFrame():setBar("My first Frame!")
 ```
-
 ```xml
 <frame barText="My first Frame!" barBG="black" barFG="lightGray"></frame>
 ```
@@ -85,7 +83,6 @@ Sets the frame's bar-text alignment
 ```lua
 myFrame:setBar("My first Frame!"):setBarTextAlign("right")
 ```
-
 ```xml
 <frame barAlign="right"></frame>
 ```
@@ -104,7 +101,6 @@ Toggles the frame's upper bar
 ```lua
 myFrame:setBar("Hello World!"):showBar()
 ```
-
 ```xml
 <frame bar="true"></frame>
 ```
@@ -126,7 +122,6 @@ local mainFrame = basalt.createFrame()
 local monitorFrame = basalt.createFrame():setMonitor("right")
 monitorFrame:setBar("Monitor 1"):showBar()
 ```
-
 ```xml
 <frame monitor="right"></frame>
 ```
@@ -145,7 +140,6 @@ mirrors this frame to another peripheral monitor object.
 ```lua
 local mainFrame = basalt.createFrame():setMirror("left")
 ```
-
 ```xml
 <frame mirror="left"></frame>
 ```
@@ -241,7 +235,6 @@ Sets whether the frame can be moved. _In order to move the frame click and drag 
 ```lua
 local myFrame = basalt.createFrame():setMovable(true)
 ```
-
 ```xml
 <frame moveable="true"></frame>
 ```
@@ -268,7 +261,6 @@ local myFrame = basalt.createFrame():setOffset(5, 3)
 ```lua
 local myFrame = basalt.createFrame():setOffset(5, -5)
 ```
-
 ```xml
 <frame xOffset="5" yOffset="-5"></frame>
 ```
@@ -287,7 +279,6 @@ Adds a new XML Layout into your frame.
 ```lua
 local myFrame = basalt.createFrame():addLayout("mainframe.xml")
 ```
-
 ```xml
 <frame layout="mainframe.xml"></frame>
 ```
@@ -345,7 +336,6 @@ Makes the frame scrollable with mousewheel.
 ```lua
 local myFrame = basalt.createFrame():setScrollable()
 ```
-
 ```xml
 <frame scrollable="true"></frame>
 ```
@@ -364,7 +354,6 @@ Sets the minimum offset it is allowed to scroll (default 0)
 ```lua
 local myFrame = basalt.createFrame():setScrollable():setMinScroll(-5)
 ```
-
 ```xml
 <frame minScroll="-5"></frame>
 ```
@@ -383,7 +372,6 @@ Sets the maximum offset it is allowed to scroll (default 10)
 ```lua
 local myFrame = basalt.createFrame():setScrollable():setMaxScroll(25)
 ```
-
 ```xml
 <frame maxScroll="25"></frame>
 ```
@@ -402,14 +390,13 @@ By default if you hovering your mouse over children objects, you wont scroll the
 ```lua
 local myFrame = basalt.createFrame():setScrollable():setImportantScroll(true)
 ```
-
 ```xml
 <frame importantScroll="true"></frame>
 ```
 
-# XML
+# XML Example
 
-* A fully working example:
+*This is how you would implement frames via xml:
 ```xml
 <frame>
     <frame width="50%" bg="red">

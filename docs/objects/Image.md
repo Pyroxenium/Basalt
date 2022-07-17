@@ -20,7 +20,6 @@ loads a default .nfp file into the object.
 local mainFrame = basalt.createFrame():show()
 local aImage = mainFrame:addImage():loadImage("test.nfp")
 ```
-
 ```xml
 <image path="test.nfp" />
 ```
@@ -37,7 +36,6 @@ Shrinks the current image into a blittle image.
 local mainFrame = basalt.createFrame()
 local aImage = mainFrame:addImage():loadImage("test.nfp"):shrink()
 ```
-
 ```xml
 <image path="test.nfp" shrink="true" />
 ```
