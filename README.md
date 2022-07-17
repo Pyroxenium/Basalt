@@ -13,6 +13,14 @@ If you have questions, feel free to join the discord server: [https://discord.gg
 ## Changelogs
 From now on we will add changes:
 
+#### Version 4:
+- You can now mirror a frame to a monitor by using :setMirror(side)
+- with dynamic values you are able to use percentage values and even functions which get called everytime we need the size of that object
+- XML got added to make design and logic seperate (you don't have to) - you are now able to use xml to create your UI design.
+- Animations are now more advanced and provide many features to do cool stuff. They are also very easy to use now!
+- Also some smaller bugfixes
+- new bugs to explore
+
 #### Version 3:
 - fixed monitor support
 - added :setIndex() for scrollbars
