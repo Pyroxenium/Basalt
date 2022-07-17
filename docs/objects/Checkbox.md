@@ -7,14 +7,27 @@ A checkbox does not have any custom methods. All required methods are provided b
 # Example
 This is how you would create a event which gets fired as soon as the value gets changed.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aCheckbox = mainFrame:addCheckbox("myFirstCheckbox"):show()
+local mainFrame = basalt.createFrame()
+local aCheckbox = mainFrame:addCheckbox()
 
 local function checkboxChange(self)
    local checked = self:getValue()
-   basalt.debug("The value got changed into ", checked) end)
+   basalt.debug("The value got changed into ", checked)
 end
 aCheckbox:onChange(checkboxChange)
+```
 
+## Lua and XML:
+```lua
+local mainFrame = basalt.createFrame():addLayout("example.xml")
+
+basalt.setVariable("checkboxChange", function(self)
+  local checked = self:getValue()
+  basalt.debug("The value got changed into ", checked)
+end)
+```
+
+```xml
+<button onChange="checkboxChange" />
 ```
 

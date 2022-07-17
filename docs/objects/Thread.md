@@ -12,8 +12,8 @@ starts a new thread and executes the function
 #### Usage:
 * Starts a new thread
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aThread = mainFrame:addThread("myFirstThread"):show()
+local mainFrame = basalt.createFrame()
+local aThread = mainFrame:addThread()
 local function randomThreadFunction()
     while true do
         basalt.debug("Thread is active")
@@ -21,6 +21,14 @@ local function randomThreadFunction()
     end
 end
 aThread:start(randomThreadfunction)
+```
+```lua
+    basalt.setVariable("myThread", function() while true do os.sleep(1) end end)
+
+```
+```xml
+<thread thread="myThread" start="true"/>
+
 ```
 
 ## stop
@@ -32,8 +40,8 @@ stops the thread
 #### Usage:
 * Stops the current running thread by clicking on a button
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aThread = mainFrame:addThread("myFirstThread"):show()
+local mainFrame = basalt.createFrame()
+local aThread = mainFrame:addThread()
 local function randomThreadFunction()
     while true do
         basalt.debug("Thread is active")
@@ -41,7 +49,7 @@ local function randomThreadFunction()
     end
 end
 aThread:start(randomThreadfunction)
-local aButton = mainFrame:addButton("myFirstButton"):setText("Stop Thread"):onClick(function() aThread:stop() end):show()
+local aButton = mainFrame:addButton():setText("Stop Thread"):onClick(function() aThread:stop() end)
 ```
 
 ## getStatus
@@ -52,7 +60,7 @@ gets the current thread status
 
 #### Usage:
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aThread = mainFrame:addThread("myFirstThread"):show()
+local mainFrame = basalt.createFrame()
+local aThread = mainFrame:addThread()
 basalt.debug(aThread:getStatus())
 ```

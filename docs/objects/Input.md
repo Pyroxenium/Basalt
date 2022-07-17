@@ -15,8 +15,12 @@ Changes the input type. default: text
 #### Usage:
 * Creates a default input and sets it to numbers only.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aInput = mainFrame:addInput("myFirstInput"):setInputType("number"):show()
+local mainFrame = basalt.createFrame()
+local aInput = mainFrame:addInput():setInputType("number")
+```
+
+```xml
+<input type="number" />
 ```
 
 ## getInputType
@@ -28,8 +32,8 @@ Gets the current input type
 #### Usage:
 * Creates a default input and sets it to numbers only. Also prints the current input type to log.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aInput = mainFrame:addInput("myFirstInput"):setInputType("number"):show()
+local mainFrame = basalt.createFrame()
+local aInput = mainFrame:addInput():setInputType("number")
 basalt.debug(aInput:getInputType())
 ```
 
@@ -47,8 +51,12 @@ Sets the default text. This will only be displayed if there is no input set by t
 #### Usage:
 * Creates a default input and sets the default text to "...".
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aInput = mainFrame:addInput("myFirstInput"):setInputType("number"):setDefaultText(...):show()
+local mainFrame = basalt.createFrame()
+local aInput = mainFrame:addInput():setDefaultText("...")
+```
+
+```xml
+<input default="..." />
 ```
 
 ## setInputLimit
@@ -63,8 +71,12 @@ Sets a character limit to the input.
 #### Usage:
 * Creates a default input and sets the character limit to 8.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aInput = mainFrame:addInput("myFirstInput"):setInputLimit(8):show()
+local mainFrame = basalt.createFrame()
+local aInput = mainFrame:addInput():setInputLimit(8)
+```
+
+```xml
+<input limit="8" />
 ```
 
 ## getInputLimit
@@ -76,7 +88,7 @@ Returns the input limit.
 #### Usage:
 * Creates a default input and sets the character limit to 8. Prints the current limit.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aInput = mainFrame:addInput("myFirstInput"):setInputLimit(8):show()
+local mainFrame = basalt.createFrame()
+local aInput = mainFrame:addInput():setInputLimit(8)
 basalt.debug(aInput:getInputLimit())
 ```

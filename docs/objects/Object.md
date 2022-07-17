@@ -13,6 +13,11 @@ local button = mainFrame:addButton("myFirstButton")
 button:show()
 ```
 
+#### XML:
+```xml
+<button visible="true"></button>
+```
+
 ## hide
 Hides the object
 
@@ -25,6 +30,11 @@ Hides the object
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local button = mainFrame:addButton("myFirstButton"):setText("Close"):onClick(function() mainFrame:hide() end)
 button:show()
+```
+
+#### XML:
+```xml
+<button visible="false"></button>
 ```
 
 ## setPosition
@@ -44,6 +54,11 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 mainFrame:addButton("myFirstButton"):setPosition(2,3)
 ```
 
+#### XML:
+```xml
+<button x="2" y="3"></button>
+```
+
 ## setBackground
 Changes the object background color, if you set the value to false the background wont be visible. For example you could see trough a frame.
 #### Parameters: 
@@ -56,6 +71,11 @@ Changes the object background color, if you set the value to false the backgroun
 * Creates a frame, and sets its background color to `colors.gray`
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):setBackground(colors.gray)
+```
+
+#### XML:
+```xml
+<button bg="gray"></button>
 ```
 
 ## setForeground
@@ -72,6 +92,11 @@ Changes the object text color
 local mainFrame = basalt.createFrame("myFirstFrame"):setForeground(colors.green)
 ```
 
+#### XML:
+```xml
+<button fg="green"></button>
+```
+
 ## setSize
 Changes the object size
 #### Parameters: 
@@ -86,6 +111,11 @@ Changes the object size
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local subFrame = mainFrame:addFrame("myFirstSubFrame"):setSize(15,12):show()
+```
+
+#### XML:
+```xml
+<frame width="15" height="12"></frame>
 ```
 
 ## setFocus    
@@ -116,6 +146,12 @@ Sets the z-index. Higher value means higher draw/event priority. You can also ad
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aButton = mainFrame:addButton("myFirstButton"):setZIndex(1):setPosition(2,2):show()
 local aLabel = mainFrame:addButton("myFirstLabel"):setZIndex(2):setPosition(2,2):setText("I am a label!"):show()
+```
+
+#### XML:
+```xml
+<button x="2" y="2" zIndex="1"></button>
+<label x="2" y="2" text="I am a label!" zIndex="2"></label>
 ```
 
 ## setParent
@@ -195,6 +231,11 @@ local aButton = mainFrame:addButton("myFirstButton")
         :show()
 ```
 
+#### XML:
+```xml
+<button anchor="bottomRight"></button>
+```
+
 ## getAbsolutePosition
 Converts the relative coordinates into absolute coordinates
 #### Parameters: 
@@ -212,26 +253,6 @@ local aButton = mainFrame:addButton("myFirstButton"):setSize(8,1):setPosition(4,
 basalt.debug(aButton:getAbsolutePosition()) -- returns 7,5 (frame coords + own coords) instead of 4,2
 ```
 
-## setTextAlign
-Sets the text align of the object (for example buttons)
-#### Parameters: 
-1. `string` horizontal 
-2. `string` vertical ("left", "center", "right")
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Creates a button with text aligned to `right, center`
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton")
-        :setSize(12,3)
-        :setTextAlign("right", "center")
-        :setText("Don't...")
-        :show()
-```
-
 ## setValue
 Sets the value of that object (input, label, checkbox, textfield, scrollbar,...)
 #### Parameters: 
@@ -245,6 +266,11 @@ Sets the value of that object (input, label, checkbox, textfield, scrollbar,...)
 ```lua
 local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local aCheckbox = mainFrame:addCheckbox("myFirstCheckbox"):setValue(true):show()
+```
+
+#### XML:
+```xml
+<checkbox value="true"></checkbox>
 ```
 
 ## getValue
@@ -317,7 +343,11 @@ local subFrame = mainFrame:addFrame("mySubFrame")
         :setSize(18,6)
         :setShadow(colors.green)
         :showShadow(true)
-        :show()
+```
+
+#### XML:
+```xml
+<frame width="18" height="6" shadow="true" shadowColor="green" moveable="true"></frame>
 ```
 
 ## showShadow
@@ -332,12 +362,17 @@ Shows or hides the shadow
 #### Usage:
 * Shows the shadow:
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local subFrame = mainFrame:addFrame("mySubFrame")
+local mainFrame = basalt.createFrame():show()
+local subFrame = mainFrame:addFrame()
         :setMoveable()
         :setSize(18,6)
         :showShadow(true)
         :show()
+```
+
+#### XML:
+```xml
+<frame width="18" height="6" shadow="true" moveable="true"></frame>
 ```
 
 ## setBorder
@@ -361,6 +396,11 @@ local subFrame = mainFrame:addFrame("mySubFrame")
         :show()
 ```
 
+#### XML:
+```xml
+<frame width="18" height="6" border="true" borderColor="green" moveable="true"></frame>
+```
+
 ## showBorder
 Shows or hides the border
 
@@ -377,6 +417,11 @@ local mainFrame = basalt.createFrame("myFirstFrame"):show()
 local subFrame = mainFrame:addFrame("mySubFrame")
         :setMoveable()
         :setSize(18,6)
-        :showBorder("left", "top", "right", "bottom")
+        :showBorder("left", "top", "bottom")
         :show()
+```
+
+#### XML:
+```xml
+<frame width="18" height="6" border="true" borderColor="green" borderRight="false" moveable="true"></frame>
 ```

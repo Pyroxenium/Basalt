@@ -15,9 +15,13 @@ Sets the direction in which the bar should be expanding.
 #### Usage:
 * Creates a progressbar and sets the direction from bottom to top
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aProgressbar = mainFrame:addProgressbar("myFirstProgressbar"):show()
+local mainFrame = basalt.createFrame():show()
+local aProgressbar = mainFrame:addProgressbar():show()
 aProgressbar:setDirection(3)
+```
+
+```xml
+<frame direction="3"></frame>
 ```
 
 ## setProgress
@@ -32,14 +36,13 @@ This is the function you need to call if you want the progression to change.
 #### Usage:
 * Creates a progressbar and sets the current progress to 50
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aProgressbar = mainFrame:addProgressbar("myFirstProgressbar"):show()
+local mainFrame = basalt.createFrame():show()
+local aProgressbar = mainFrame:addProgressbar():show()
 aProgressbar:setProgress(50)
 ```
 
 ## getProgress
 Returns the current progress status
-
 
 #### Returns:
 1. `number` progress (0-100)
@@ -47,8 +50,8 @@ Returns the current progress status
 #### Usage:
 * Creates a progressbar, sets the current progress to 50 and prints the current progress
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aProgressbar = mainFrame:addProgressbar("myFirstProgressbar"):show()
+local mainFrame = basalt.createFrame():show()
+local aProgressbar = mainFrame:addProgressbar():show()
 aProgressbar:setProgress(50)
 basalt.debug(aProgressbar:getProgress())
 ```
@@ -67,9 +70,13 @@ This function will change the visual display of your progress bar
 #### Usage:
 * Creates a progressbar and sets the progressbar color to green
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aProgressbar = mainFrame:addProgressbar("myFirstProgressbar"):show()
-aProgressbar:setProgressBar(colors.green)
+local mainFrame = basalt.createFrame():show()
+local aProgressbar = mainFrame:addProgressbar():show()
+aProgressbar:setProgressBar(colors.green, colors.yellow, colors.red)
+```
+
+```xml
+<progressbar progressColor="green" progressSymbol="yellow" progressSymbolColor="red" />
 ```
 
 ## setBackgroundSymbol
@@ -84,9 +91,13 @@ Will change the default background symbol (default is " " - space)
 #### Usage:
 * Creates a progressbar and sets the progressbar background symbol to X
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aProgressbar = mainFrame:addProgressbar("myFirstProgressbar"):show()
+local mainFrame = basalt.createFrame():show()
+local aProgressbar = mainFrame:addProgressbar():show()
 aProgressbar:setBackgroundSymbol("X")
+```
+
+```xml
+<progressbar backgroundSymbol="X" />
 ```
 
 # Events
@@ -98,13 +109,30 @@ A custom event which gets triggered as soon as the progress reaches 100.
 Here is a example on how to add a onProgressDone event to your progressbar:
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("Basalt")
 
-local mainFrame = basalt.createFrame("myMainFrame"):show()
-local aProgressbar = mainFrame:addProgressbar("myFirstProgressbar"):show()
+local mainFrame = basalt.createFrame():show()
+local aProgressbar = mainFrame:addProgressbar():show()
 
 function progressDone()
   basalt.debug("The Progressbar reached 100%!")
 end
 aProgressbar:onProgressDone(progressDone)
 ```
+
+## XML Example
+
+```lua
+local basalt = require("Basalt")
+
+local mainFrame = basalt.createFrame()
+
+basalt.setVariable("progressDone", function()
+  basalt.debug("The Progressbar reached 100%!")
+end)
+```
+
+```xml
+<progressbar onDone="progressDone" />
+```
+

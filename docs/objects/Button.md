@@ -13,8 +13,12 @@ Sets the displayed button text
 #### Usage:
 * Creates a button with "Click me!" as text.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local button = mainFrame:addButton("myFirstButton"):setText("Click me!"):show()
+local mainFrame = basalt.createFrame()
+local button = mainFrame:addButton():setText("Click me!")
+```
+
+```xml
+<button text="Click me!" />
 ```
 
 ## setHorizontalAlign
@@ -29,11 +33,14 @@ Sets the horizontal align of the button text
 #### Usage:
 * Sets the button's horizontal text align to right. 
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local button = mainFrame:addButton("myFirstButton")
+local mainFrame = basalt.createFrame():show()
+local button = mainFrame:addButton()
        :setText("Click me!")
        :setHorizontalAlign("right")
-       :show()
+```
+
+```xml
+<button text="Click me!" horizontalAlign="right" />
 ```
 
 ## setVerticalAlign
@@ -48,23 +55,41 @@ Sets the vertical align of the button text
 #### Usage:
 * Sets the button's horizontal text align to right and the vertical text align to bottom. 
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local button = mainFrame:addButton("myFirstButton")
+local mainFrame = basalt.createFrame():show()
+local button = mainFrame:addButton()
        :setText("Click me!")
        :setHorizontalAlign("right")
        :setVerticalAlign("bottom")
-       :show()
+```
+
+```xml
+<button text="Click me!" horizontalAlign="right" verticalAlign="bottom" />
 ```
 
 # Example
 This is a example on how you would create a fully working button:
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myFirstButton"):setText("Click"):show()
+local mainFrame = basalt.createFrame():show()
+local aButton = mainFrame:addButton():setText("Click"):show()
 
 aButton:onClick(function(self,event,button,x,y)
   if(event=="mouse_click")and(button==1)then
     basalt.debug("Left mousebutton got clicked!")
   end
 end)
+```
+
+## Lua and XML:
+```lua
+local mainFrame = basalt.createFrame():addLayout("example.xml")
+
+basalt.setVariable("buttonClick", function(self,event,button,x,y)
+  if(event=="mouse_click")and(button==1)then
+    basalt.debug("Left mousebutton got clicked!")
+  end
+end)
+```
+
+```xml
+<button onClick="buttonClick" text="Click me!" horizontalAlign="right" verticalAlign="bottom" />
 ```

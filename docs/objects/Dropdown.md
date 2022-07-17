@@ -28,12 +28,17 @@ Adds a item into the dropdown
 #### Usage:
 * Creates a default dropdown with 3 entries
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
 ```
+<dropdown>
+  <item><text>1. Entry</text></item>
+  <item><text>2. Entry</text><bg>yellow</bg></item>
+  <item><text>3. Entry</text><bg>yellow</bg><fg>green</fg></item>
+</dropdown>
 
 ## removeItem
 Removes a item from the dropdown
@@ -47,8 +52,8 @@ Removes a item from the dropdown
 #### Usage:
 * Creates a default dropdown with 3 entries and removes the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
@@ -71,8 +76,8 @@ Edits a item from the dropdown
 #### Usage:
 * Creates a default dropdown with 3 entries and edits the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
@@ -91,8 +96,8 @@ Returns a item by index
 #### Usage:
 * Creates a default dropdown with 3 entries and edits the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
@@ -108,8 +113,8 @@ Returns the current item count
 #### Usage:
 * Creates a default dropdown with 3 entries and prints the current item count.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
@@ -125,32 +130,12 @@ Returns all items as table
 #### Usage:
 * Creates a default menubar with 3 entries and prints a table.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
 basalt.debug(aDropdown:getAll())
-```
-
-## setScrollable
-Makes the dropdown scrollable.
-
-#### Parameters: 
-1. `boolean` if the dropdown should be scrollable or not
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Creates a default dropdown with 3 entries and makes it scrollable.
-```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
-aDropdown:addItem("1. Entry")
-aDropdown:addItem("2. Entry",colors.yellow)
-aDropdown:addItem("3. Entry",colors.yellow,colors.green)
-aDropdown:setScrollable(true)
 ```
 
 ## selectItem
@@ -165,8 +150,8 @@ selects a item in the dropdown (same as a player would click on a item)
 #### Usage:
 * Creates a default dropdown with 3 entries and selects the second entry.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
@@ -182,8 +167,8 @@ Removes all items.
 #### Usage:
 * Creates a default dropdown with 3 entries and removes them immediatley. Which makes no sense.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
@@ -199,8 +184,8 @@ returns the item index of the currently selected item
 #### Usage:
 * Creates a default dropdown with 3 entries selects the second entry and prints the currently selected index.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
@@ -221,16 +206,24 @@ Sets the background and the foreground of the item which is currently selected
 #### Usage:
 * Creates a default dropdown with 4 entries and sets the selection background color to green.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry",colors.yellow)
 aDropdown:addItem("3. Entry",colors.yellow,colors.green)
 aDropdown:addItem("4. Entry")
-aDropdown:setSelectedItem(colors.green)
+aDropdown:setSelectedItem(colors.green, colors.red)
 ```
 
-## setIndexOffset
+```xml
+<dropdown selectionBG="green" selectionFG="red">
+  <item><text>1. Entry</text></item>
+  <item><text>2. Entry</text><bg>yellow</bg></item>
+  <item><text>2. Entry</text><bg>yellow</bg><fg>green</fg></item>
+</dropdown>
+```
+
+## setOffset
 Sets the offset of the dropdown (the same as you would scroll) - default is 0
 
 #### Parameters: 
@@ -242,19 +235,29 @@ Sets the offset of the dropdown (the same as you would scroll) - default is 0
 #### Usage:
 * Creates a default dropdown with 6 entries and sets the offset to 3.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
-aDropdown:addItem("1. Entry")
-aDropdown:addItem("2. Entry")
-aDropdown:addItem("3. Entry")
-aDropdown:addItem("4. Entry")
-aDropdown:addItem("5. Entry")
-aDropdown:addItem("6. Entry")
-aDropdown:setIndexOffset(3)
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
+      :addItem("1. Entry")
+      :addItem("2. Entry")
+      :addItem("3. Entry")
+      :addItem("4. Entry")
+      :addItem("5. Entry")
+      :addItem("6. Entry")
+      :setOffset(3)
 ```
 
+```xml
+<dropdown offset="3">
+  <item><text>1. Entry</text></item>
+  <item><text>2. Entry</text></item>
+  <item><text>3. Entry</text></item>
+  <item><text>4. Entry</text></item>
+  <item><text>5. Entry</text></item>
+  <item><text>6. Entry</text></item>
+</dropdown>
+```
 
-## getIndexOffset
+## getOffset
 Returns the current index offset
 
 #### Returns:
@@ -263,16 +266,16 @@ Returns the current index offset
 #### Usage:
 * Creates a default dropdown with 6 entries and sets the offset to 3, also prints the current offset.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
-aDropdown:addItem("1. Entry")
-aDropdown:addItem("2. Entry")
-aDropdown:addItem("3. Entry")
-aDropdown:addItem("4. Entry")
-aDropdown:addItem("5. Entry")
-aDropdown:addItem("6. Entry")
-aDropdown:setIndexOffset(3)
-basalt.debug(aDropdown:getIndexOffset())
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown()
+      :addItem("1. Entry")
+      :addItem("2. Entry")
+      :addItem("3. Entry")
+      :addItem("4. Entry")
+      :addItem("5. Entry")
+      :addItem("6. Entry")
+      :setOffset(3)
+basalt.debug(aDropdown:getOffset())
 ```
 
 ## setDropdownSize
@@ -288,10 +291,18 @@ Sets the size of the opened dropdown
 #### Usage:
 * Creates a default dropdown, adds 3 entries and sets the dropdown size to 15w, 8h
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):setDropdownSize(15,8):show()
+local mainFrame = basalt.createFrame()
+local aDropdown = mainFrame:addDropdown():setDropdownSize(15,8)
 aDropdown:addItem("1. Entry")
 aDropdown:addItem("2. Entry")
 aDropdown:addItem("3. Entry")
+```
+
+```xml
+<dropdown dropdownWidth="15" dropdownHeight="8">
+  <item><text>1. Entry</text></item>
+  <item><text>2. Entry</text></item>
+  <item><text>3. Entry</text></item>
+</dropdown>
 ```
 

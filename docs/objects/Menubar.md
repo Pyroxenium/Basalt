@@ -28,11 +28,19 @@ Adds a item into the menubar
 #### Usage:
 * Creates a default menubar with 3 entries
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
+```
+
+```xml
+<menubar>
+<item><text>1. Entry</text></item>
+<item><text>2. Entry</text><bg>yellow</bg></item>
+<item><text>3. Entry</text><bg>yellow</bg><fg>green</fg></item>
+</menubar>
 ```
 
 ## removeItem
@@ -47,8 +55,8 @@ Removes a item from the menubar
 #### Usage:
 * Creates a default menubar with 3 entries and removes the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
@@ -71,8 +79,8 @@ Edits a item from the menubar
 #### Usage:
 * Creates a default menubar with 3 entries and edits the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
@@ -91,8 +99,8 @@ Returns a item by index
 #### Usage:
 * Creates a default menubar with 3 entries and edits the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
@@ -108,8 +116,8 @@ Returns the current item count
 #### Usage:
 * Creates a default menubar with 3 entries and prints the current item count.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
@@ -125,8 +133,8 @@ Returns all items as table
 #### Usage:
 * Creates a default menubar with 3 entries and prints a table.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
@@ -145,12 +153,20 @@ Sets the space between entries
 #### Usage:
 * Creates a default menubar with 3 entries and changes the space to 3.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
 aMenubar:setSpace(3)
+```
+
+```xml
+<menubar space="3">
+<item><text>1. Entry</text></item>
+<item><text>2. Entry</text><bg>yellow</bg></item>
+<item><text>3. Entry</text><bg>yellow</bg><fg>green</fg></item>
+</menubar>
 ```
 
 
@@ -167,12 +183,20 @@ Makes the menubar scrollable. The menubar will be scrollable as soon as the menu
 #### Usage:
 * Creates a default menubar with 3 entries and makes it scrollable.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
 aMenubar:setScrollable(true)
+```
+
+```xml
+<menubar scrollable="true">
+<item><text>1. Entry</text></item>
+<item><text>2. Entry</text><bg>yellow</bg></item>
+<item><text>3. Entry</text><bg>yellow</bg><fg>green</fg></item>
+</menubar>
 ```
 
 ## selectItem
@@ -187,8 +211,8 @@ selects a item in the list (same as a player would click on a item)
 #### Usage:
 * Creates a default menubar with 3 entries and selects the second entry.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
@@ -205,8 +229,8 @@ Removes all items.
 #### Usage:
 * Creates a default menubar with 3 entries and removes them immediatley. Which makes no sense.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
@@ -222,8 +246,8 @@ returns the item index of the currently selected item
 #### Usage:
 * Creates a default menubar with 3 entries selects the second entry and prints the currently selected index.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry",colors.yellow)
 aMenubar:addItem("3. Entry",colors.yellow,colors.green)
@@ -244,16 +268,25 @@ Sets the background and the foreground of the item which is currently selected
 #### Usage:
 * Creates a default menubar with 4 entries and sets the selection background color to green.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry")
 aMenubar:addItem("3. Entry")
 aMenubar:addItem("4. Entry")
-aMenubar:setSelectedItem(colors.green)
+aMenubar:setSelectedItem(colors.green, colors.yellow)
 ```
 
-## setPositionOffset
+```xml
+<menubar selectionBG="green" selectionFG="yellow">
+<item><text>1. Entry</text></item>
+<item><text>2. Entry</text></item>
+<item><text>3. Entry</text></item>
+<item><text>4. Entry</text></item>
+</menubar>
+```
+
+## setOffset
 Sets the offset of the menubar (the same as you would scroll) - default is 0
 
 #### Parameters: 
@@ -265,18 +298,29 @@ Sets the offset of the menubar (the same as you would scroll) - default is 0
 #### Usage:
 * Creates a default menubar with 6 entries and sets the offset to 3.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry")
 aMenubar:addItem("3. Entry")
 aMenubar:addItem("4. Entry")
 aMenubar:addItem("5. Entry")
 aMenubar:addItem("6. Entry")
-aMenubar:setPositionOffset(3)
+aMenubar:setOffset(3)
 ```
 
-## getPositionOffset
+```xml
+<menubar offset="3">
+<item><text>1. Entry</text></item>
+<item><text>2. Entry</text></item>
+<item><text>3. Entry</text></item>
+<item><text>4. Entry</text></item>
+<item><text>5. Entry</text></item>
+<item><text>6. Entry</text></item>
+</menubar>
+```
+
+## getOffset
 returns the current offset
 
 #### Returns:
@@ -285,14 +329,14 @@ returns the current offset
 #### Usage:
 * Creates a default menubar with 6 entries and sets the offset to 3, prints the current offset.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aMenubar = mainFrame:addMenubar("myFirstMenubar"):show()
+local mainFrame = basalt.createFrame()
+local aMenubar = mainFrame:addMenubar()
 aMenubar:addItem("1. Entry")
 aMenubar:addItem("2. Entry")
 aMenubar:addItem("3. Entry")
 aMenubar:addItem("4. Entry")
 aMenubar:addItem("5. Entry")
 aMenubar:addItem("6. Entry")
-aMenubar:setPositionOffset(3)
-basalt.debug(aMenubar:getPositionOffset())
+aMenubar:getOffset(3)
+basalt.debug(aMenubar:getOffset())
 ```

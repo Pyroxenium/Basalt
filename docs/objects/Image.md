@@ -17,8 +17,12 @@ loads a default .nfp file into the object.
 #### Usage:
 * Creates a default image and loads a test.nfp file
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aImage = mainFrame:addImage("myFirstImage"):loadImage("test.nfp"):show()
+local mainFrame = basalt.createFrame():show()
+local aImage = mainFrame:addImage():loadImage("test.nfp")
+```
+
+```xml
+<image path="test.nfp" />
 ```
 
 ## shrink
@@ -30,6 +34,10 @@ Shrinks the current image into a blittle image.
 #### Usage:
 * Creates a default image and loads a test.nfp file
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aImage = mainFrame:addImage("myFirstImage"):loadImage("test.nfp"):shrink():show()
+local mainFrame = basalt.createFrame()
+local aImage = mainFrame:addImage():loadImage("test.nfp"):shrink()
+```
+
+```xml
+<image path="test.nfp" shrink="true" />
 ```

@@ -34,9 +34,9 @@ return function(name)
         return pos
     end
 
-    local function updateColors()
-        local fgLine = tHex[base.fgColor]:rep(fgLines[textY]:len())
-        local bgLine = tHex[base.bgColor]:rep(bgLines[textY]:len())
+    local function updateColors(self)
+        local fgLine = tHex[self.fgColor]:rep(fgLines[textY]:len())
+        local bgLine = tHex[self.bgColor]:rep(bgLines[textY]:len())
         for k,v in pairs(rules)do
             local pos = stringGetPositions(lines[textY], v[1])
             if(#pos>0)then
@@ -68,8 +68,8 @@ return function(name)
 
     local object = {
         init = function(self)
-            base.bgColor = self.parent:getTheme("TextfieldBG")
-            base.fgColor = self.parent:getTheme("TextfieldText")
+            self.bgColor = self.parent:getTheme("TextfieldBG")
+            self.fgColor = self.parent:getTheme("TextfieldText")
         end,
         getType = function(self)
             return objectType
@@ -78,8 +78,8 @@ return function(name)
         setValuesByXMLData = function(self, data)
             base.setValuesByXMLData(self, data)
             if(data["lines"]~=nil)then
-                for k,v in pairs(data["lines"])do
-                    self:addLine(xmlValue("line", v))
+                for k,v in pairs(data["lines"]["line"])do
+                    self:addLine(v:value())
                 end
             end
             if(data["keywords"]~=nil)then
@@ -100,13 +100,13 @@ return function(name)
                 end
             end
             if(data["rules"]~=nil)then
-                if(data["rules"]["item"]~=nil)then
-                    local tab = data["rules"]["item"]
-                    if(data["rules"]["item"].properties~=nil)then tab = {data["rules"]["item"]} end
+                if(data["rules"]["rule"]~=nil)then
+                    local tab = data["rules"]["rule"]
+                    if(data["rules"]["rule"].properties~=nil)then tab = {data["rules"]["rule"]} end
                     for k,v in pairs(tab)do
 
-                        if(xmlValue("rule", v)~=nil)then
-                            self:addRule(xmlValue("rule", v), colors[xmlValue("fg", v)], colors[xmlValue("bg", v)])
+                        if(xmlValue("pattern", v)~=nil)then
+                            self:addRule(xmlValue("pattern", v), colors[xmlValue("fg", v)], colors[xmlValue("bg", v)])
                         end
                     end
                 end
@@ -118,7 +118,7 @@ return function(name)
         end;
 
         getLine = function(self, index)
-            return lines[index] or ""
+            return lines[index]
         end;
 
         editLine = function(self, index, text)
@@ -127,10 +127,22 @@ return function(name)
         end;
 
         addLine = function(self, text, index)
-            if (index ~= nil) then
-                table.insert(lines, index, text)
-            else
-                table.insert(lines, text)
+            if(text~=nil)then
+                if(#lines==1)and(lines[1]=="")then
+                    lines[1] = text
+                    bgLines[1] = tHex[self.bgColor]:rep(text:len())
+                    fgLines[1] = tHex[self.fgColor]:rep(text:len())
+                    return self
+                end
+                if (index ~= nil) then
+                    table.insert(lines, index, text)
+                    table.insert(bgLines, index, tHex[self.bgColor]:rep(text:len()))
+                    table.insert(fgLines, tHex[self.fgColor]:rep(text:len()))
+                else
+                    table.insert(lines, text)
+                    table.insert(bgLines, tHex[self.bgColor]:rep(text:len()))
+                    table.insert(fgLines, tHex[self.fgColor]:rep(text:len()))
+                end
             end
             return self
         end;
@@ -253,7 +265,7 @@ return function(name)
                         if (textY < hIndex) then
                             hIndex = hIndex - 1
                         end
-                        updateColors()
+                        updateColors(self)
                         self:setValue("")
                     end
 
@@ -271,7 +283,7 @@ return function(name)
                             fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. fgLines[textY]:sub(textX + 1, fgLines[textY]:len())
                             bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. bgLines[textY]:sub(textX + 1, bgLines[textY]:len())
                         end
-                        updateColors()
+                        updateColors(self)
                     end
 
                     if (key == keys.enter) then
@@ -380,7 +392,7 @@ return function(name)
                     if (textX >= w + wIndex) then
                         wIndex = wIndex + 1
                     end
-                    updateColors()
+                    updateColors(self)
                     self:setValue("")
                 end
 

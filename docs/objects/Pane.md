@@ -8,9 +8,13 @@ Pane doesn't have any custom functionallity. If you want to change the color/pos
 ## Example:
 
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aPane = mainFrame:addPane("myFirstBackground")
+local mainFrame = basalt.createFrame()
+local aPane = mainFrame:addPane()
 aPane:setSize(30, 10)
 aPane:setBackground(colors.yellow)
 aPane:show()
+```
+
+```xml
+<pane width="30" height="10" bg="yellow" />
 ```
