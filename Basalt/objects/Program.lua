@@ -1,6 +1,7 @@
 local Object = require("Object")
 local tHex = require("tHex")
 local process = require("process")
+local xmlValue = require("utils").getValueFromXML
 
 local sub = string.sub
 
@@ -9,6 +10,7 @@ return function(name, parent)
     local objectType = "Program"
     base:setZIndex(5)
     local object
+    local cachedPath
 
     local function createBasaltWindow(x, y, width, height)
         local xCursor, yCursor = 1, 1
@@ -416,6 +418,9 @@ return function(name, parent)
     local queuedEvent = {}
 
     object = {
+        init = function(self)
+            self.bgColor = self.parent:getTheme("ProgramBG")
+        end,
         getType = function(self)
             return objectType
         end;
@@ -440,6 +445,12 @@ return function(name, parent)
             return self
         end;
 
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("path", data)~=nil)then cachedPath = xmlValue("path", data) end
+            if(xmlValue("execute", data)~=nil)then if(xmlValue("execute", data))then if(cachedPath~=nil)then self:execute(cachedPath) end end end
+        end,
+
         getBasaltWindow = function()
             return pWindow
         end;
@@ -448,9 +459,9 @@ return function(name, parent)
             return curProcess
         end;
 
-        setSize = function(self, width, height)
-            base.setSize(self, width, height)
-            pWindow.basalt_resize(self.width, self.height)
+        setSize = function(self, width, height, rel)
+            base.setSize(self, width, height, rel)
+            pWindow.basalt_resize(self:getSize())
             return self
         end;
 
@@ -462,11 +473,15 @@ return function(name, parent)
         end;
 
         execute = function(self, path, ...)
+            cachedPath = path
             curProcess = process:new(path, pWindow, ...)
             pWindow.setBackgroundColor(colors.black)
             pWindow.setTextColor(colors.white)
             pWindow.clear()
             pWindow.setCursorPos(1, 1)
+            pWindow.setBackgroundColor(self.bgColor)
+            pWindow.setTextColor(self.fgColor)
+            pWindow.basalt_setVisible(true)
             curProcess:resume()
             paused = false
             return self
@@ -576,7 +591,8 @@ return function(name, parent)
                             local xCur, yCur = pWindow.getCursorPos()
                             local obx, oby = self:getAnchorPosition()
                             if (self.parent ~= nil) then
-                                if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + self.width - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + self.height - 1) then
+                                local w,h = self:getSize()
+                                if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
                                     self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
                                 end
                             end
@@ -610,7 +626,8 @@ return function(name, parent)
                         local obx, oby = self:getAnchorPosition()
                         local xCur, yCur = pWindow.getCursorPos()
                         if (self.parent ~= nil) then
-                            if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + self.width - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + self.height - 1) then
+                            local w,h = self:getSize()
+                            if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
                                 self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
                             end
                         end
@@ -631,9 +648,10 @@ return function(name, parent)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
+                    local w,h = self:getSize()
                     pWindow.basalt_reposition(obx, oby)
                     if(self.bgColor~=false)then
-                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
                     end
                     pWindow.basalt_update()
                 end

@@ -4,6 +4,8 @@ For now the animation class is very basic, it will be expanded in the future, bu
 Right now animation is a class which makes use of the timer event.<br>
 You can find more information below:
 
+`The animation object is still a WIP and the way you use it right now could change in the future!`
+
 ## add
 Adds a new function to an animation
 #### Parameters:
@@ -16,9 +18,9 @@ Adds a new function to an animation
 #### Usage:
 * This will set the button position to 3,3, waits 1 second, then sets position to 4,4, waits 2 seconds, and then sets the position to 5,5
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local testButton = mainFrame:addButton("myTestButton"):show()
-local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setPosition(3,3) end):wait(1):add(function() testButton:setPosition(1,1,"r") end):wait(2):add(function() testButton:setPosition(1,1,"r") end)
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():add(function() testButton:setPosition(3,3) end):wait(1):add(function() testButton:setPosition(1,1,"r") end):wait(2):add(function() testButton:setPosition(1,1,"r") end)
 aAnimation:play()
 ```
 
@@ -32,9 +34,9 @@ Sets a wait timer for the next function after the previous function got executed
 
 #### Usage:
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local testButton = mainFrame:addButton("myTestButton"):show()
-local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setPosition(3,3) end):wait(1):add(function() testButton:setPosition(1,1,"r") end):wait(2):add(function() testButton:setPosition(1,1,"r") end)
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():add(function() testButton:setPosition(3,3) end):wait(1):add(function() testButton:setPosition(1,1,"r") end):wait(2):add(function() testButton:setPosition(1,1,"r") end)
 
 aAnimation:play()
 ```
@@ -49,9 +51,9 @@ Plays the animation
 
 #### Usage:
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local testButton = mainFrame:addButton("myTestButton"):show()
-local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setBackground(colors.black) end):wait(1):add(function() testButton:setBackground(colors.gray) end):wait(1):add(function() testButton:setBackground(colors.lightGray) end)
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():add(function() testButton:setBackground(colors.black) end):wait(1):add(function() testButton:setBackground(colors.gray) end):wait(1):add(function() testButton:setBackground(colors.lightGray) end)
 
 aAnimation:play() -- changes the background color of that button from black to gray and then to lightGray 
 ```
@@ -65,9 +67,128 @@ Cancels the animation
 #### Usage:
 
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local testButton = mainFrame:addButton("myTestButton"):show()
-local aAnimation = mainFrame:addAnimation("anim1"):add(function() testButton:setBackground(colors.black) end):wait(1):add(function() aAnimation:cancel() end):wait(1):add(function() testButton:setBackground(colors.lightGray) end)
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():add(function() testButton:setBackground(colors.black) end):wait(1):add(function() aAnimation:cancel() end):wait(1):add(function() testButton:setBackground(colors.lightGray) end)
 
 aAnimation:play()
+```
+
+
+## setObject
+Sets the object which the animation should reposition/resize
+
+#### Parameters: 
+1. `table` object
+
+#### Returns: 
+1. `animation` Animation in use
+
+#### Usage:
+
+```lua
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():setObject(testButton)
+```
+
+## move
+Moves the object which got defined by setObject
+
+#### Parameters: 
+1. `number` x coordinate
+2. `number` y coordinate
+1. `number` time in seconds
+1. `number` frames (how fluid it should look like)
+1. `table` object - optional, you could also define the object here
+
+#### Returns: 
+1. `animation` Animation in use
+
+#### Usage:
+
+```lua
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():setObject(testButton):move(15,3,1,5):play()
+```
+
+## move
+Moves the object which got defined by setObject
+
+#### Parameters: 
+1. `number` x coordinate
+2. `number` y coordinate
+1. `number` time in seconds
+1. `number` frames (how fluid it should look like)
+1. `table` object - optional, you could also define the object here
+
+#### Returns: 
+1. `animation` Animation in use
+
+#### Usage:
+
+```lua
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():setObject(testButton):move(15,3,1,5):play()
+```
+
+## offset
+Changes the offset on the object which got defined by setObject
+
+#### Parameters: 
+1. `number` x offset
+2. `number` y offset
+1. `number` time in seconds
+1. `number` frames (how fluid it should look like)
+1. `table` object - optional, you could also define the object here
+
+#### Returns: 
+1. `animation` Animation in use
+
+#### Usage:
+
+```lua
+local mainFrame = basalt.createFrame():show()
+local subFrame = mainFrame:addFrame():show()
+local aAnimation = mainFrame:addAnimation():setObject(subFrame):offset(1,12,1,5):play()
+```
+
+## size
+Changes the size on the object which got defined by setObject
+
+#### Parameters: 
+1. `number` width
+2. `number` height
+1. `number` time in seconds
+1. `number` frames (how fluid it should look like)
+1. `table` object - optional, you could also define the object here
+
+#### Returns: 
+1. `animation` Animation in use
+
+#### Usage:
+
+```lua
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():setObject(testButton):size(15,3,1,5):play()
+```
+
+## textColoring
+Changes the text colors of an object
+
+#### Parameters: 
+1. `color|number` multiple colors
+
+#### Returns: 
+1. `animation` Animation in use
+
+#### Usage:
+
+```lua
+local mainFrame = basalt.createFrame():show()
+local testButton = mainFrame:addButton():show()
+local aAnimation = mainFrame:addAnimation():setObject(testButton):textColoring(colors.black, colors.gray, colors.lightGray):play()
 ```

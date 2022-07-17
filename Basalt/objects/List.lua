@@ -1,25 +1,29 @@
 local Object = require("Object")
-local theme = require("theme")
 local utils = require("utils")
+local xmlValue = utils.getValueFromXML
 
 return function(name)
     local base = Object(name)
     local objectType = "List"
     base.width = 16
     base.height = 6
-    base.bgColor = theme.listBG
-    base.fgColor = theme.listFG
     base:setZIndex(5)
 
     local list = {}
-    local itemSelectedBG = theme.selectionBG
-    local itemSelectedFG = theme.selectionFG
+    local itemSelectedBG
+    local itemSelectedFG
     local selectionColorActive = true
     local align = "left"
     local yOffset = 0
     local scrollable = true
 
     local object = {
+        init = function(self)
+            self.bgColor = self.parent:getTheme("ListBG")
+            self.fgColor = self.parent:getTheme("ListText")
+            itemSelectedBG = self.parent:getTheme("SelectionBG")
+            itemSelectedFG = self.parent:getTheme("SelectionText")
+        end,
         getType = function(self)
             return objectType
         end;
@@ -32,12 +36,12 @@ return function(name)
             return self
         end;
 
-        setIndexOffset = function(self, yOff)
+        setOffset = function(self, yOff)
             yOffset = yOff
             return self
         end;
 
-        getIndexOffset = function(self)
+        getOffset = function(self)
             return yOffset
         end;
 
@@ -96,14 +100,31 @@ return function(name)
             return self
         end;
 
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("selectionBG", data)~=nil)then itemSelectedBG = colors[xmlValue("selectionBG", data)] end
+            if(xmlValue("selectionFG", data)~=nil)then itemSelectedFG = colors[xmlValue("selectionFG", data)]  end
+            if(xmlValue("scrollable", data)~=nil)then if(xmlValue("scrollable", data))then self:setScrollable(true) else self:setScrollable(false) end end
+            if(xmlValue("offset", data)~=nil)then yOffset = xmlValue("offset", data) end
+            if(data["item"]~=nil)then
+                local tab = data["item"]
+                if(tab.properties~=nil)then tab = {tab} end
+                for k,v in pairs(tab)do
+                    self:addItem(xmlValue("text", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
+                end
+            end
+            return self
+        end,
+
         mouseHandler = function(self, event, button, x, y)
             local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-            if (obx <= x) and (obx + self.width > x) and (oby <= y) and (oby + self.height > y) and (self:isVisible()) then
+            local w,h = self:getSize()
+            if (obx <= x) and (obx + w > x) and (oby <= y) and (oby + h > y) and (self:isVisible()) then
                 if (((event == "mouse_click") or (event == "mouse_drag"))and(button==1))or(event=="monitor_touch") then
                     if (#list > 0) then
-                        for n = 1, self.height do
+                        for n = 1, h do
                             if (list[n + yOffset] ~= nil) then
-                                if (obx <= x) and (obx + self.width > x) and (oby + n - 1 == y) then
+                                if (obx <= x) and (obx + w > x) and (oby + n - 1 == y) then
                                     self:setValue(list[n + yOffset])
                                     self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", 0, x, y, list[n + yOffset])
                                 end
@@ -118,9 +139,9 @@ return function(name)
                         yOffset = 0
                     end
                     if (button >= 1) then
-                        if (#list > self.height) then
-                            if (yOffset > #list - self.height) then
-                                yOffset = #list - self.height
+                        if (#list > h) then
+                            if (yOffset > #list - h) then
+                                yOffset = #list - h
                             end
                             if (yOffset >= #list) then
                                 yOffset = #list - 1
@@ -139,19 +160,20 @@ return function(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
+                    local w,h = self:getSize()
                     if(self.bgColor~=false)then
-                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
                     end
-                    for n = 1, self.height do
+                    for n = 1, h do
                         if (list[n + yOffset] ~= nil) then
                             if (list[n + yOffset] == self:getValue()) then
                                 if (selectionColorActive) then
-                                    self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, self.width, align), itemSelectedBG, itemSelectedFG)
+                                    self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, w, align), itemSelectedBG, itemSelectedFG)
                                 else
-                                    self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, self.width, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
+                                    self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, w, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
                                 end
                             else
-                                self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, self.width, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
+                                self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, w, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
                             end
                         end
                     end

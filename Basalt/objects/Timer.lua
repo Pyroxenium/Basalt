@@ -1,4 +1,5 @@
 local basaltEvent = require("basaltEvent")
+local xmlValue = require("utils").getValueFromXML
 
 return function(name)
     local objectType = "Timer"
@@ -14,6 +15,22 @@ return function(name)
         name = name,
         getType = function(self)
             return objectType
+        end;
+
+        setValuesByXMLData = function(self, data)
+            local f
+            if(xmlValue("time", data)~=nil)then  timer = xmlValue("time", data) end
+            if(xmlValue("repeat", data)~=nil)then  timer = xmlValue("repeat", data) end
+            if(xmlValue("start", data)~=nil)then  if(xmlValue("start", data))then self:start() end end
+            if(xmlValue("onCall", data)~=nil)then self:onCall(getBaseFrame():getVariable(xmlValue("onCall", data))) end
+            return self
+        end,
+
+        getBaseFrame = function(self)
+            if(self.parent~=nil)then
+                return self.parent:getBaseFrame()
+            end
+            return self
         end;
 
         getZIndex = function(self)

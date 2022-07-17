@@ -1,6 +1,6 @@
 local Object = require("Object")
-local theme = require("theme")
 local utils = require("utils")
+local xmlValue = utils.getValueFromXML
 
 return function(name)
     -- Input
@@ -13,8 +13,6 @@ return function(name)
     base:setValue("")
     base.width = 10
     base.height = 1
-    base.bgColor = theme.InputBG
-    base.fgColor = theme.InputFG
 
     local textX = 1
     local wIndex = 1
@@ -26,7 +24,10 @@ return function(name)
     local internalValueChange = false
 
     local object = {
-
+        init = function(self)
+            self.bgColor = self.parent:getTheme("InputBG")
+            self.fgColor = self.parent:getTheme("InputFG")
+        end,
         getType = function(self)
             return objectType
         end;
@@ -76,6 +77,17 @@ return function(name)
             return inputLimit
         end;
 
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            local dBG,dFG
+            if(xmlValue("defaultBG", data)~=nil)then dBG = xmlValue("defaultBG", data) end
+            if(xmlValue("defaultFG", data)~=nil)then dFG = xmlValue("defaultFG", data) end
+            if(xmlValue("default", data)~=nil)then self:setDefaultText(xmlValue("default", data), dFG~=nil and colors[dFG], dBG~=nil and colors[dBG]) end
+            if(xmlValue("limit", data)~=nil)then self:setInputLimit(xmlValue("limit", data)) end
+            if(xmlValue("type", data)~=nil)then self:setInputType(xmlValue("type", data)) end
+            return self
+        end,
+
         getFocusHandler = function(self)
             base.getFocusHandler(self)
             if (self.parent ~= nil) then
@@ -97,6 +109,7 @@ return function(name)
 
         keyHandler = function(self, event, key)
             if (base.keyHandler(self, event, key)) then
+                local w,h = self:getSize()
                 internalValueChange = true
                 if (event == "key") then
                     if (key == keys.backspace) then
@@ -131,8 +144,8 @@ return function(name)
                         if (textX < 1) then
                             textX = 1
                         end
-                        if (textX < wIndex) or (textX >= self.width + wIndex) then
-                            wIndex = textX - self.width + 1
+                        if (textX < wIndex) or (textX >= w + wIndex) then
+                            wIndex = textX - w + 1
                         end
                         if (wIndex < 1) then
                             wIndex = 1
@@ -143,7 +156,7 @@ return function(name)
                         -- left arrow
                         textX = textX - 1
                         if (textX >= 1) then
-                            if (textX < wIndex) or (textX >= self.width + wIndex) then
+                            if (textX < wIndex) or (textX >= w + wIndex) then
                                 wIndex = textX
                             end
                         end
@@ -172,7 +185,7 @@ return function(name)
                             self:setValue(text:sub(1, textX - 1) .. key .. text:sub(textX, text:len()))
                             textX = textX + 1
                         end
-                        if (textX >= self.width + wIndex) then
+                        if (textX >= w + wIndex) then
                             wIndex = wIndex + 1
                         end
                     end
@@ -181,11 +194,11 @@ return function(name)
                 local val = tostring(base.getValue())
                 local cursorX = (textX <= val:len() and textX - 1 or val:len()) - (wIndex - 1)
 
-                if (cursorX > self.x + self.width - 1) then
-                    cursorX = self.x + self.width - 1
+                if (cursorX > self.x + w - 1) then
+                    cursorX = self.x + w - 1
                 end
                 if (self.parent ~= nil) then
-                    self.parent:setCursor(true, obx + cursorX, oby+math.floor(self.height/2), self.fgColor)
+                    self.parent:setCursor(true, obx + cursorX, oby+math.floor(h/2), self.fgColor)
                 end
                 internalValueChange = false
             end
@@ -194,7 +207,7 @@ return function(name)
         mouseHandler = function(self, event, button, x, y)
             if (base.mouseHandler(self, event, button, x, y)) then
                 if (event == "mouse_click") and (button == 1) then
-
+                    
                 end
                 return true
             end
@@ -205,10 +218,11 @@ return function(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    local verticalAlign = utils.getTextVerticalAlign(self.height, "center")
+                    local w,h = self:getSize()
+                    local verticalAlign = utils.getTextVerticalAlign(h, "center")
 
-                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor) end
-                    for n = 1, self.height do
+                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor) end
+                    for n = 1, h do
                         if (n == verticalAlign) then
                             local val = tostring(base.getValue())
                             local bCol = self.bgColor
@@ -224,8 +238,8 @@ return function(name)
                             if (val ~= "") then
                                 text = val
                             end
-                            text = text:sub(wIndex, self.width + wIndex - 1)
-                            local space = self.width - text:len()
+                            text = text:sub(wIndex, w + wIndex - 1)
+                            local space = w - text:len()
                             if (space < 0) then
                                 space = 0
                             end

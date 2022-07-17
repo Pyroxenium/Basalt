@@ -1,22 +1,24 @@
 local Object = require("Object")
-local theme = require("theme")
 local utils = require("utils")
+local xmlValue = utils.getValueFromXML
 
 return function(name)
     -- Button
     local base = Object(name)
     local objectType = "Button"
-
-    base:setValue("Button")
-    base:setZIndex(5)
-    base.width = 8
-    base.bgColor = theme.ButtonBG
-    base.fgColor = theme.ButtonFG
-
     local textHorizontalAlign = "center"
     local textVerticalAlign = "center"
 
+    base:setZIndex(5)
+    base:setValue("Button")
+    base.width = 12
+    base.height = 3
+
     local object = {
+        init = function(self)
+            self.bgColor = self.parent:getTheme("ButtonBG")
+            self.fgColor = self.parent:getTheme("ButtonText")        
+        end,
         getType = function(self)
             return objectType
         end;
@@ -32,6 +34,14 @@ return function(name)
             base:setValue(text)
             return self
         end;
+
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("text", data)~=nil)then self:setText(xmlValue("text", data)) end
+            if(xmlValue("horizontalAlign", data)~=nil)then textHorizontalAlign = xmlValue("horizontalAlign", data) end
+            if(xmlValue("verticalAlign", data)~=nil)then textVerticalAlign = xmlValue("verticalAlign", data) end
+            return self
+        end,
 
         draw = function(self)
             if (base.draw(self)) then

@@ -1,3 +1,6 @@
+local Object = require("Object")
+local xmlValue = require("utils").getValueFromXML
+
 return function(name)
     -- Image
     local base = Object(name)
@@ -8,7 +11,6 @@ return function(name)
     local imageGotShrinked = false
 
     local function shrink()
-
         -- shrinkSystem is copy pasted (and slightly changed) from blittle by Bomb Bloke: http://www.computercraft.info/forums2/index.php?/topic/25354-cc-176-blittle-api/
         local relations = { [0] = { 8, 4, 3, 6, 5 }, { 4, 14, 8, 7 }, { 6, 10, 8, 7 }, { 9, 11, 8, 0 }, { 1, 14, 8, 0 }, { 13, 12, 8, 0 }, { 2, 10, 8, 0 }, { 15, 8, 10, 11, 12, 14 },
                             { 0, 7, 1, 9, 2, 13 }, { 3, 11, 8, 7 }, { 2, 6, 7, 15 }, { 9, 3, 7, 15 }, { 13, 5, 7, 15 }, { 5, 12, 8, 7 }, { 1, 4, 7, 15 }, { 7, 10, 11, 12, 14 } }
@@ -130,6 +132,9 @@ return function(name)
     end
 
     local object = {
+        init = function(self)
+            self.bgColor = self.parent:getTheme("ImageBG")
+        end,
         getType = function(self)
             return objectType
         end;
@@ -147,11 +152,19 @@ return function(name)
             return self
         end;
 
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("shrink", data)~=nil)then if(xmlValue("shrink", data))then self:shrink() end end
+            if(xmlValue("path", data)~=nil)then self:loadImage(xmlValue("path", data)) end
+            return self
+        end,
+
         draw = function(self)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     if (image ~= nil) then
                         local obx, oby = self:getAnchorPosition()
+                        local w,h = self:getSize()
                         if (imageGotShrinked) then
                             -- this is copy pasted (and slightly changed) from blittle by Bomb Bloke: http://www.computercraft.info/forums2/index.php?/topic/25354-cc-176-blittle-api/
                             local t, tC, bC = shrinkedImage[1], shrinkedImage[2], shrinkedImage[3]
@@ -168,9 +181,9 @@ return function(name)
                                 end
                             end
                         else
-                            for yPos = 1, math.min(#image, self.height) do
+                            for yPos = 1, math.min(#image, h) do
                                 local line = image[yPos]
-                                for xPos = 1, math.min(#line, self.width) do
+                                for xPos = 1, math.min(#line, w) do
                                     if line[xPos] > 0 then
                                         self.parent:drawBackgroundBox(obx + xPos - 1, oby + yPos - 1, 1, 1, line[xPos])
                                     end

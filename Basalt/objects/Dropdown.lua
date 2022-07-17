@@ -1,19 +1,17 @@
 local Object = require("Object")
-local theme = require("theme")
 local utils = require("utils")
+local xmlValue = require("utils").getValueFromXML
 
 return function(name)
     local base = Object(name)
     local objectType = "Dropdown"
     base.width = 12
     base.height = 1
-    base.bgColor = theme.dropdownBG
-    base.fgColor = theme.dropdownFG
     base:setZIndex(6)
 
     local list = {}
-    local itemSelectedBG = theme.selectionBG
-    local itemSelectedFG = theme.selectionFG
+    local itemSelectedBG
+    local itemSelectedFG
     local selectionColorActive = true
     local align = "left"
     local yOffset = 0
@@ -28,13 +26,35 @@ return function(name)
         getType = function(self)
             return objectType
         end;
+        init = function(self)
+            self.bgColor = self.parent:getTheme("DropdownBG")
+            self.fgColor = self.parent:getTheme("DropdownText")
+            itemSelectedBG = self.parent:getTheme("SelectionBG")
+            itemSelectedFG = self.parent:getTheme("SelectionText")
+        end,
 
-        setIndexOffset = function(self, yOff)
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("selectionBG", data)~=nil)then itemSelectedBG = colors[xmlValue("selectionBG", data)] end
+            if(xmlValue("selectionFG", data)~=nil)then itemSelectedFG = colors[xmlValue("selectionFG", data)]  end
+            if(xmlValue("dropdownWidth", data)~=nil)then dropdownW = xmlValue("dropdownWidth", data) end
+            if(xmlValue("dropdownHeight", data)~=nil)then dropdownH = xmlValue("dropdownHeight", data) end
+            if(xmlValue("offset", data)~=nil)then yOffset = xmlValue("offset", data) end
+            if(data["item"]~=nil)then
+                local tab = data["item"]
+                if(tab.properties~=nil)then tab = {tab} end
+                for k,v in pairs(tab)do
+                    self:addItem(xmlValue("text", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
+                end
+            end
+        end,
+
+        setOffset = function(self, yOff)
             yOffset = yOff
             return self
         end;
 
-        getIndexOffset = function(self)
+        getOffset = function(self)
             return yOffset
         end;
 
@@ -126,7 +146,7 @@ return function(name)
                                 yOffset = #list - dropdownH
                             end
                         else
-                            yOffset = list - 1
+                            yOffset = math.min(#list - 1, 0)
                         end
                     end
                     return true
@@ -143,10 +163,11 @@ return function(name)
         draw = function(self)
             if (base.draw(self)) then
                 local obx, oby = self:getAnchorPosition()
+                local w,h = self:getSize()
                 if (self.parent ~= nil) then
-                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor) end
+                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor) end
                     local val = self:getValue()
-                    local text = utils.getTextHorizontalAlign((val~=nil and val.text or ""), self.width, align):sub(1, self.width - 1)  .. (isOpened and openedSymbol or closedSymbol)
+                    local text = utils.getTextHorizontalAlign((val~=nil and val.text or ""), w, align):sub(1, w - 1)  .. (isOpened and openedSymbol or closedSymbol)
                     self.parent:writeText(obx, oby, text, self.bgColor, self.fgColor)
 
                     if (isOpened) then

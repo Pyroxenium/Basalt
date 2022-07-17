@@ -1,5 +1,6 @@
 local Object = require("Object")
-local theme = require("theme")
+local tHex = require("tHex")
+local xmlValue = require("utils").getValueFromXML
 
 return function(name)
     local base = Object(name)
@@ -7,18 +8,110 @@ return function(name)
     local hIndex, wIndex, textX, textY = 1, 1, 1, 1
 
     local lines = { "" }
-    local keyWords = { [colors.purple] = { "break" } }
+    local bgLines = { "" }
+    local fgLines = { "" }
+    local keyWords = { }
+    local rules = { }
 
-    base.width = 20
-    base.height = 8
-    base.bgColor = theme.textfieldBG
-    base.fgColor = theme.textfieldFG
+    base.width = 30
+    base.height = 12
     base:setZIndex(5)
 
+    local function stringGetPositions(str, word)
+        local pos = {}
+        if(str:len()>0)then
+            for w in string.gmatch(str, word)do
+                local s, e = string.find(str, w)
+                if(s~=nil)and(e~=nil)then
+                    table.insert(pos,s)
+                    table.insert(pos,e)
+                    local startL = string.sub(str, 1, (s-1))
+                    local endL = string.sub(str, e+1, str:len())
+                    str = startL..(":"):rep(w:len())..endL
+                end
+            end
+        end
+        return pos
+    end
+
+    local function updateColors()
+        local fgLine = tHex[base.fgColor]:rep(fgLines[textY]:len())
+        local bgLine = tHex[base.bgColor]:rep(bgLines[textY]:len())
+        for k,v in pairs(rules)do
+            local pos = stringGetPositions(lines[textY], v[1])
+            if(#pos>0)then
+                for x=1,#pos/2 do
+                    local xP = x*2 - 1
+                    if(v[2]~=nil)then
+                        fgLine = fgLine:sub(1, pos[xP]-1)..tHex[v[2]]:rep(pos[xP+1]-(pos[xP]-1))..fgLine:sub(pos[xP+1]+1, fgLine:len())
+                    end
+                    if(v[3]~=nil)then
+                        bgLine = bgLine:sub(1, pos[xP]-1)..tHex[v[3]]:rep(pos[xP+1]-(pos[xP]-1))..bgLine:sub(pos[xP+1]+1, bgLine:len())
+                    end
+                end
+            end
+        end
+        for k,v in pairs(keyWords)do
+            for _,b in pairs(v)do
+                local pos = stringGetPositions(lines[textY], b)
+                if(#pos>0)then
+                    for x=1,#pos/2 do
+                        local xP = x*2 - 1
+                        fgLine = fgLine:sub(1, pos[xP]-1)..tHex[k]:rep(pos[xP+1]-(pos[xP]-1))..fgLine:sub(pos[xP+1]+1, fgLine:len())
+                    end
+                end
+            end
+        end
+        fgLines[textY] = fgLine
+        bgLines[textY] = bgLine
+    end
+
     local object = {
+        init = function(self)
+            base.bgColor = self.parent:getTheme("TextfieldBG")
+            base.fgColor = self.parent:getTheme("TextfieldText")
+        end,
         getType = function(self)
             return objectType
         end;
+
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(data["lines"]~=nil)then
+                for k,v in pairs(data["lines"])do
+                    self:addLine(xmlValue("line", v))
+                end
+            end
+            if(data["keywords"]~=nil)then
+                for k,v in pairs(data["keywords"])do
+                    if(colors[k]~=nil)then
+                        local entry = v
+                        if(entry.properties~=nil)then entry = {entry} end
+                        local tab = {}
+                        for a,b in pairs(entry)do
+                            local keywordList = b["keyword"]
+                            if(b["keyword"].properties~=nil)then keywordList = {b["keyword"]} end
+                            for c,d in pairs(keywordList)do
+                                table.insert(tab, d:value())
+                            end
+                        end
+                        self:addKeywords(colors[k], tab)
+                    end
+                end
+            end
+            if(data["rules"]~=nil)then
+                if(data["rules"]["item"]~=nil)then
+                    local tab = data["rules"]["item"]
+                    if(data["rules"]["item"].properties~=nil)then tab = {data["rules"]["item"]} end
+                    for k,v in pairs(tab)do
+
+                        if(xmlValue("rule", v)~=nil)then
+                            self:addRule(xmlValue("rule", v), colors[xmlValue("fg", v)], colors[xmlValue("bg", v)])
+                        end
+                    end
+                end
+            end
+        end,
 
         getLines = function(self)
             return lines
@@ -42,8 +135,43 @@ return function(name)
             return self
         end;
 
-        addKeyword = function(self, keyword, color)
+        addKeywords = function(self, color, tab)
+            if(keyWords[color]==nil)then
+                keyWords[color] = {}
+            end
+            for k,v in pairs(tab)do
+                table.insert(keyWords[color], v)
+            end
+            return self
+        end;
 
+        addRule = function(self, rule, fg, bg)
+            table.insert(rules, {rule, fg, bg})
+            return self
+        end;
+
+        editRule = function(self, rule, fg, bg)
+            for k,v in pairs(rules)do
+                if(v[1]==rule)then
+                    rules[k][2] = fg
+                    rules[k][3] = bg
+                end
+            end
+            return self
+        end;
+
+        removeRule = function(self, rule)
+            for k,v in pairs(rules)do
+                if(v[1]==rule)then
+                    table.remove(rules, k)
+                end
+            end
+            return self
+        end;
+
+        setKeywords = function(self, color, tab)
+            keyWords[color] = tab
+            return self
         end;
 
         removeLine = function(self, index)
@@ -78,14 +206,17 @@ return function(name)
         keyHandler = function(self, event, key)
             if (base.keyHandler(self, event, key)) then
                 local obx, oby = self:getAnchorPosition()
+                local w,h = self:getSize()
                 if (event == "key") then
                     if (key == keys.backspace) then
                         -- on backspace
                         if (lines[textY] == "") then
                             if (textY > 1) then
                                 table.remove(lines, textY)
+                                table.remove(fgLines, textY)
+                                table.remove(bgLines, textY)
                                 textX = lines[textY - 1]:len() + 1
-                                wIndex = textX - self.width + 1
+                                wIndex = textX - w + 1
                                 if (wIndex < 1) then
                                     wIndex = 1
                                 end
@@ -94,16 +225,22 @@ return function(name)
                         elseif (textX <= 1) then
                             if (textY > 1) then
                                 textX = lines[textY - 1]:len() + 1
-                                wIndex = textX - self.width + 1
+                                wIndex = textX - w + 1
                                 if (wIndex < 1) then
                                     wIndex = 1
                                 end
                                 lines[textY - 1] = lines[textY - 1] .. lines[textY]
+                                fgLines[textY - 1] = fgLines[textY - 1] .. fgLines[textY]
+                                bgLines[textY - 1] = bgLines[textY - 1] .. bgLines[textY]
                                 table.remove(lines, textY)
+                                table.remove(fgLines, textY)
+                                table.remove(bgLines, textY)
                                 textY = textY - 1
                             end
                         else
                             lines[textY] = lines[textY]:sub(1, textX - 2) .. lines[textY]:sub(textX, lines[textY]:len())
+                            fgLines[textY] = fgLines[textY]:sub(1, textX - 2) .. fgLines[textY]:sub(textX, fgLines[textY]:len())
+                            bgLines[textY] = bgLines[textY]:sub(1, textX - 2) .. bgLines[textY]:sub(textX, bgLines[textY]:len())
                             if (textX > 1) then
                                 textX = textX - 1
                             end
@@ -116,6 +253,7 @@ return function(name)
                         if (textY < hIndex) then
                             hIndex = hIndex - 1
                         end
+                        updateColors()
                         self:setValue("")
                     end
 
@@ -125,20 +263,29 @@ return function(name)
                             if (lines[textY + 1] ~= nil) then
                                 lines[textY] = lines[textY] .. lines[textY + 1]
                                 table.remove(lines, textY + 1)
+                                table.remove(bgLines, textY + 1)
+                                table.remove(fgLines, textY + 1)
                             end
                         else
                             lines[textY] = lines[textY]:sub(1, textX - 1) .. lines[textY]:sub(textX + 1, lines[textY]:len())
+                            fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. fgLines[textY]:sub(textX + 1, fgLines[textY]:len())
+                            bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. bgLines[textY]:sub(textX + 1, bgLines[textY]:len())
                         end
+                        updateColors()
                     end
 
                     if (key == keys.enter) then
                         -- on enter
                         table.insert(lines, textY + 1, lines[textY]:sub(textX, lines[textY]:len()))
+                        table.insert(fgLines, textY + 1, fgLines[textY]:sub(textX, fgLines[textY]:len()))
+                        table.insert(bgLines, textY + 1, bgLines[textY]:sub(textX, bgLines[textY]:len()))
                         lines[textY] = lines[textY]:sub(1, textX - 1)
+                        fgLines[textY] = fgLines[textY]:sub(1, textX - 1)
+                        bgLines[textY] = bgLines[textY]:sub(1, textX - 1)
                         textY = textY + 1
                         textX = 1
                         wIndex = 1
-                        if (textY - hIndex >= self.height) then
+                        if (textY - hIndex >= h) then
                             hIndex = hIndex + 1
                         end
                         self:setValue("")
@@ -153,7 +300,7 @@ return function(name)
                             end
                             if (wIndex > 1) then
                                 if (textX < wIndex) then
-                                    wIndex = textX - self.width + 1
+                                    wIndex = textX - w + 1
                                     if (wIndex < 1) then
                                         wIndex = 1
                                     end
@@ -174,7 +321,7 @@ return function(name)
                                 textX = lines[textY]:len() + 1
                             end
 
-                            if (textY >= hIndex + self.height) then
+                            if (textY >= hIndex + h) then
                                 hIndex = hIndex + 1
                             end
                         end
@@ -193,8 +340,8 @@ return function(name)
                         if (textX < 1) then
                             textX = 1
                         end
-                        if (textX < wIndex) or (textX >= self.width + wIndex) then
-                            wIndex = textX - self.width + 1
+                        if (textX < wIndex) or (textX >= w + wIndex) then
+                            wIndex = textX - w + 1
                         end
                         if (wIndex < 1) then
                             wIndex = 1
@@ -205,7 +352,7 @@ return function(name)
                         -- arrow left
                         textX = textX - 1
                         if (textX >= 1) then
-                            if (textX < wIndex) or (textX >= self.width + wIndex) then
+                            if (textX < wIndex) or (textX >= w + wIndex) then
                                 wIndex = textX
                             end
                         end
@@ -213,7 +360,7 @@ return function(name)
                             if (textX < 1) then
                                 textY = textY - 1
                                 textX = lines[textY]:len() + 1
-                                wIndex = textX - self.width + 1
+                                wIndex = textX - w + 1
                             end
                         end
                         if (textX < 1) then
@@ -227,18 +374,21 @@ return function(name)
 
                 if (event == "char") then
                     lines[textY] = lines[textY]:sub(1, textX - 1) .. key .. lines[textY]:sub(textX, lines[textY]:len())
+                    fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self.fgColor] .. fgLines[textY]:sub(textX, fgLines[textY]:len())
+                    bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self.bgColor] .. bgLines[textY]:sub(textX, bgLines[textY]:len())
                     textX = textX + 1
-                    if (textX >= self.width + wIndex) then
+                    if (textX >= w + wIndex) then
                         wIndex = wIndex + 1
                     end
+                    updateColors()
                     self:setValue("")
                 end
 
                 local cursorX = (textX <= lines[textY]:len() and textX - 1 or lines[textY]:len()) - (wIndex - 1)
-                if (cursorX > self.x + self.width - 1) then
-                    cursorX = self.x + self.width - 1
+                if (cursorX > self.x + w - 1) then
+                    cursorX = self.x + w - 1
                 end
-                local cursorY = (textY - hIndex < self.height and textY - hIndex or textY - hIndex - 1)
+                local cursorY = (textY - hIndex < h and textY - hIndex or textY - hIndex - 1)
                 if (cursorX < 1) then
                     cursorX = 0
                 end
@@ -251,6 +401,7 @@ return function(name)
             if (base.mouseHandler(self, event, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx, anchy = self:getAnchorPosition()
+                local w,h = self:getSize()
                 if (event == "mouse_click")or(event=="monitor_touch") then
                     if (lines[y - oby + hIndex] ~= nil) then
                         textX = x - obx + wIndex
@@ -290,8 +441,8 @@ return function(name)
 
                 if (event == "mouse_scroll") then
                     hIndex = hIndex + button
-                    if (hIndex > #lines - (self.height - 1)) then
-                        hIndex = #lines - (self.height - 1)
+                    if (hIndex > #lines - (h - 1)) then
+                        hIndex = #lines - (h - 1)
                     end
 
                     if (hIndex < 1) then
@@ -299,7 +450,7 @@ return function(name)
                     end
 
                     if (self.parent ~= nil) then
-                        if (obx + textX - wIndex >= obx and obx + textX - wIndex <= obx + self.width) and (oby + textY - hIndex >= oby and oby + textY - hIndex <= oby + self.height) then
+                        if (obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (oby + textY - hIndex >= oby and oby + textY - hIndex < oby + h) then
                             self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                         else
                             self.parent:setCursor(false)
@@ -315,24 +466,35 @@ return function(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
+                    local w,h = self:getSize()
                     if(self.bgColor~=false)then
-                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
                     end
                     if(self.fgColor~=false)then
-                        self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor)
+                        self.parent:drawForegroundBox(obx, oby, w, h, self.fgColor)
                     end
-                    for n = 1, self.height do
+                    for n = 1, h do
                         local text = ""
+                        local bg = ""
+                        local fg = ""
                         if (lines[n + hIndex - 1] ~= nil) then
                             text = lines[n + hIndex - 1]
+                            fg = fgLines[n + hIndex - 1]
+                            bg = bgLines[n + hIndex - 1]
                         end
-                        text = text:sub(wIndex, self.width + wIndex - 1)
-                        local space = self.width - text:len()
+                        text = text:sub(wIndex, w + wIndex - 1)
+                        bg = bg:sub(wIndex, w + wIndex - 1)
+                        fg = fg:sub(wIndex, w + wIndex - 1)
+                        local space = w - text:len()
                         if (space < 0) then
                             space = 0
                         end
                         text = text .. string.rep(" ", space)
+                        bg = bg .. string.rep(tHex[self.bgColor], space)
+                        fg = fg .. string.rep(tHex[self.fgColor], space)
                         self.parent:setText(obx, oby + n - 1, text)
+                        self.parent:setBG(obx, oby + n - 1, bg)
+                        self.parent:setFG(obx, oby + n - 1, fg)
                     end
                 end
                 self:setVisualChanged(false)

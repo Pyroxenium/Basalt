@@ -1,28 +1,52 @@
 local Object = require("Object")
-local theme = require("theme")
 local utils = require("utils")
 
 return function(name)
     local base = Object(name)
     local objectType = "Radio"
     base.width = 8
-    base.bgColor = theme.listBG
-    base.fgColor = theme.listFG
     base:setZIndex(5)
 
     local list = {}
-    local itemSelectedBG = theme.selectionBG
-    local itemSelectedFG = theme.selectionFG
-    local boxSelectedBG = base.bgColor
-    local boxSelectedFG = base.fgColor
+    local itemSelectedBG
+    local itemSelectedFG
+    local boxSelectedBG
+    local boxSelectedFG
     local selectionColorActive = true
     local symbol = "\7"
     local align = "left"
 
     local object = {
+
+        init = function(self)
+            self.bgColor = self.parent:getTheme("MenubarBG")
+            self.fgColor = self.parent:getTheme("MenubarFG")
+            itemSelectedBG = self.parent:getTheme("SelectionBG")
+            itemSelectedFG = self.parent:getTheme("SelectionText")
+            boxSelectedBG = self.parent:getTheme("MenubarBG")
+            boxSelectedFG = self.parent:getTheme("MenubarText")
+        end,
+
         getType = function(self)
             return objectType
         end;
+
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("selectionBG", data)~=nil)then itemSelectedBG = colors[xmlValue("selectionBG", data)] end
+            if(xmlValue("selectionFG", data)~=nil)then itemSelectedFG = colors[xmlValue("selectionFG", data)] end
+            if(xmlValue("boxBG", data)~=nil)then itemSelectedBG = colors[xmlValue("boxBG", data)] end
+            if(xmlValue("boxFG", data)~=nil)then itemSelectedFG = colors[xmlValue("boxFG", data)] end
+            if(xmlValue("symbol", data)~=nil)then symbol = xmlValue("symbol", data) end
+            if(data["item"]~=nil)then
+                local tab = data["item"]
+                if(tab.properties~=nil)then tab = {tab} end
+                for k,v in pairs(tab)do
+                    self:addItem(xmlValue("text", v), xmlValue("x", v), xmlValue("y", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
+                end
+            end
+            return self
+        end,
 
         addItem = function(self, text, x, y, bgCol, fgCol, ...)
             table.insert(list, { x = x or 1, y = y or 1, text = text, bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })

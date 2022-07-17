@@ -1,27 +1,49 @@
 local basaltEvent = require("basaltEvent")()
 local Frame = require("Frame")
+local theme = require("theme")
+local uuid = require("utils").uuid
 
 local baseTerm = term.current()
-local version = 3
+local version = 4
 local debugger = true
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
 
-local activeKey, frames, monFrames = {}, {}, {}
+local activeKey, frames, monFrames, variables = {}, {}, {}, {}
 local mainFrame, activeFrame, focusedObject, updaterActive
 
 if not  term.isColor or not term.isColor() then
-    error('Basalt requires an advanced (golden) comptuer to run.', 0)
+    error('Basalt requires an advanced (golden) computer to run.', 0)
 end
 
 local function stop()
     updaterActive = false
 end
 
+local setVariable = function(name, var)
+    variables[name] = var
+end
+
+local getVariable = function(name)
+    return variables[name]
+end
+
+local setTheme = function(_theme)
+    theme = _theme
+end
+
+local getTheme = function(name)
+    return theme[name]
+end
+
 local bInstance = {
     getMainFrame = function()
         return mainFrame
     end,
+
+    setVariable = setVariable,
+    getVariable = getVariable,
+    getTheme = getTheme,
 
     setMainFrame = function(mFrame)
         mainFrame = mFrame
@@ -64,13 +86,15 @@ local bInstance = {
 }
 
 local function drawFrames()
-    if(mainFrame~=nil)then
-        mainFrame:draw()
-        mainFrame:drawUpdate()
-    end
-    for _,v in pairs(monFrames)do
-        v:draw()
-        v:drawUpdate()
+    if(updaterActive)then
+        if(mainFrame~=nil)then
+            mainFrame:draw()
+            mainFrame:drawUpdate()
+        end
+        for _,v in pairs(monFrames)do
+            v:draw()
+            v:drawUpdate()
+        end
     end
 end
 
@@ -89,18 +113,19 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
         elseif (event == "mouse_scroll") then
             mainFrame:mouseHandler(event, p1, p2, p3, p4)
             activeFrame = mainFrame
-        end
-    end
-    if (event == "monitor_touch") then
-        if(monFrames[p1]~=nil)then
-            monFrames[p1]:mouseHandler(event, p1, p2, p3, p4)
-            activeFrame = monFrames[p1]
+        elseif (event == "monitor_touch") then
+            if(monFrames[p1]~=nil)then
+                monFrames[p1]:mouseHandler(event, p1, p2, p3, p4)
+                activeFrame = monFrames[p1]
+            end
         end
     end
 
     if(event == "key") or (event == "char") then
-        activeFrame:keyHandler(event, p1)
-        activeFrame:backgroundKeyHandler(event, p1)
+        if(activeFrame~=nil)then
+            activeFrame:keyHandler(event, p1)
+            activeFrame:backgroundKeyHandler(event, p1)
+        end
     end
 
     if(event == "key")then
@@ -119,9 +144,14 @@ end
 
 local basalt = {}
 basalt = {
+    setTheme = setTheme,
+    getTheme = getTheme,
     getVersion = function()
         return version
     end,
+
+    setVariable = setVariable,
+    getVariable = getVariable,
 
     setBaseTerm = function(_baseTerm)
         baseTerm = _baseTerm
@@ -179,6 +209,7 @@ basalt = {
     end,
     
     createFrame = function(name)
+        name = name or uuid()
         for _, v in pairs(frames) do
             if (v.name == name) then
                 return nil
@@ -186,6 +217,9 @@ basalt = {
         end
         local newFrame = Frame(name,nil,nil,bInstance)
         table.insert(frames, newFrame)
+        if(mainFrame==nil)and(newFrame:getName()~="basaltDebuggingFrame")then
+            newFrame:show()
+        end
         return newFrame
     end,
     
@@ -222,7 +256,7 @@ basalt = {
 }
 
 basalt.debugFrame = basalt.createFrame("basaltDebuggingFrame"):showBar():setBackground(colors.lightGray):setBar("Debug", colors.black, colors.gray)
-basalt.debugFrame:addButton("back"):setAnchor("topRight"):setSize(1, 1):setText("\22"):onClick(function() basalt.oldFrame:show() end):setBackground(colors.red):show()
+basalt.debugFrame:addButton("back"):setAnchor("topRight"):setSize(1, 1):setText("\22"):onClick(function() if(basalt.oldFrame~=nil)then basalt.oldFrame:show() end end):setBackground(colors.red):show()
 basalt.debugList = basalt.debugFrame:addList("debugList"):setSize(basalt.debugFrame.width - 2, basalt.debugFrame.height - 3):setPosition(2, 3):setScrollable(true):show()
 basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = mainFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottomLeft"):ignoreOffset():setZIndex(20):show()
 

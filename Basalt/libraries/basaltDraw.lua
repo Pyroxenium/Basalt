@@ -3,6 +3,7 @@ local sub,rep = string.sub,string.rep
 
 return function(drawTerm)
     local terminal = drawTerm or term.current()
+    local mirrorTerm
     local width, height = terminal.getSize()
     local cacheT = {}
     local cacheBG = {}
@@ -125,6 +126,9 @@ return function(drawTerm)
     end
 
     local drawHelper = {
+        setMirror = function(mirror)
+            mirrorTerm = mirror
+        end,
         setBG = function(x, y, colorStr)
             setBG(x, y, colorStr)
         end;
@@ -167,13 +171,24 @@ return function(drawTerm)
                 isBlinking = terminal.getCursorBlink()
             end
             terminal.setCursorBlink(false)
+            if(mirrorTerm~=nil)then terminal.setCursorBlink(false) end
             for n = 1, height do
                 terminal.setCursorPos(1, n)
                 terminal.blit(cacheT[n], cacheFG[n], cacheBG[n])
+                if(mirrorTerm~=nil)then 
+                    mirrorTerm.setCursorPos(1, n) 
+                    mirrorTerm.blit(cacheT[n], cacheFG[n], cacheBG[n])
+                end
             end
             terminal.setBackgroundColor(colors.black)
             terminal.setCursorBlink(isBlinking)
             terminal.setCursorPos(xC, yC)
+            if(mirrorTerm~=nil)then 
+                mirrorTerm.setBackgroundColor(colors.black)
+                mirrorTerm.setCursorBlink(isBlinking)
+                mirrorTerm.setCursorPos(xC, yC)
+            end
+            
         end;
 
         setTerm = function(newTerm)

@@ -1,6 +1,6 @@
 local Object = require("Object")
-local theme = require("theme")
 local utils = require("utils")
+local xmlValue = utils.getValueFromXML
 local tHex = require("tHex")
 local bigFont = require("bigfont")
 
@@ -12,7 +12,8 @@ return function(name)
     base:setZIndex(3)
 
     local autoSize = true
-    base:setValue("")
+    base:setValue("Label")
+    base.width = 5
 
     local textHorizontalAlign = "left"
     local textVerticalAlign = "top"
@@ -24,6 +25,7 @@ return function(name)
         getType = function(self)
             return objectType
         end;
+        
         setText = function(self, text)
             text = tostring(text)
             base:setValue(text)
@@ -65,6 +67,15 @@ return function(name)
             return fontsize+1
         end;
 
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("text", data)~=nil)then self:setText(xmlValue("text", data)) end
+            if(xmlValue("verticalAlign", data)~=nil)then textVerticalAlign = xmlValue("verticalAlign", data) end
+            if(xmlValue("horizontalAlign", data)~=nil)then textHorizontalAlign = xmlValue("horizontalAlign", data) end
+            if(xmlValue("font", data)~=nil)then self:setFontSize(xmlValue("font", data)) end
+            return self
+        end,
+
         setSize = function(self, width, height)
             base.setSize(self, width, height)
             autoSize = false
@@ -76,38 +87,41 @@ return function(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
-                    local verticalAlign = utils.getTextVerticalAlign(self.height, textVerticalAlign)
+                    local w,h = self:getSize()
+                    local verticalAlign = utils.getTextVerticalAlign(h, textVerticalAlign)
                     if(self.bgColor~=false)then 
-                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
-                        self.parent:drawTextBox(obx, oby, self.width, self.height, " ") end
-                    if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, self.width, self.height, self.fgColor) end
+                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
+                        self.parent:drawTextBox(obx, oby, w, h, " ") end
+                    if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, w, h, self.fgColor) end
                     if(fontsize==0)then
                         if not(autoSize)then
                             local splittedText = utils.splitString(self:getValue(), " ")
                             local text = {}
                             local line = ""
-                            for k,v in pairs(splittedText)do
-                                if(line:len()+v:len()<=self.width)then
+                            for _,v in pairs(splittedText)do
+                                if(line:len()+v:len()<=w)then
                                     line = line=="" and v or line.." "..v
-                                    if(k==#splittedText)then table.insert(text, line) end
                                 else
                                     table.insert(text, line)
-                                    line = v:sub(1,self.width)
+                                    line = v:sub(1,w)
                                 end
                             end
                             for k,v in pairs(text)do
                                 self.parent:setText(obx, oby+k-1, v)
                             end
                         else
-                            self.parent:setText(obx, oby, utils.getTextHorizontalAlign(self:getValue(), self.width, textHorizontalAlign))
+                            for n = 1, h do
+                                if (n == verticalAlign) then
+                                    self.parent:setText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self:getValue(), w, textHorizontalAlign))
+                                end
+                            end
                         end
                     else
                         local tData = bigFont(fontsize, self:getValue(), self.fgColor, self.bgColor or colors.black)
                         if(autoSize)then
-                            self.height = #tData[1]-1
-                            self.width = #tData[1][1]
+                            self:setSize(#tData[1][1], #tData[1]-1)
                         end
-                        for n = 1, self.height do
+                        for n = 1, h do
                             if (n == verticalAlign) then
                                 local oX, oY = self.parent:getSize()
                                 local cX, cY = #tData[1][1], #tData[1]
@@ -115,9 +129,9 @@ return function(name)
                                 oby = oby or math.floor((oY - cY) / 2) + 1
                             
                                 for i = 1, cY do
-                                    self.parent:setFG(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[2][i], self.width, textHorizontalAlign))
-                                    self.parent:setBG(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[3][i], self.width, textHorizontalAlign, tHex[self.bgColor or colors.black]))
-                                    self.parent:setText(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[1][i], self.width, textHorizontalAlign))
+                                    self.parent:setFG(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[2][i], w, textHorizontalAlign))
+                                    self.parent:setBG(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[3][i], w, textHorizontalAlign, tHex[self.bgColor or colors.black]))
+                                    self.parent:setText(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[1][i], w, textHorizontalAlign))
                                 end
                             end
                         end

@@ -1,6 +1,6 @@
 local Object = require("Object")
-local theme = require("theme")
 local utils = require("utils")
+local xmlValue = utils.getValueFromXML
 local tHex = require("tHex")
 
 return function(name)
@@ -10,13 +10,11 @@ return function(name)
 
     base.width = 30
     base.height = 1
-    base.bgColor = colors.gray
-    base.fgColor = colors.lightGray
     base:setZIndex(5)
 
     local list = {}
-    local itemSelectedBG = theme.selectionBG
-    local itemSelectedFG = theme.selectionFG
+    local itemSelectedBG
+    local itemSelectedFG
     local selectionColorActive = true
     local align = "left"
     local itemOffset = 0
@@ -26,10 +24,11 @@ return function(name)
     local function maxScroll()
         local mScroll = 0
         local xPos = 0
+        local w = object:getWidth()
         for n = 1, #list do
-            if (xPos + list[n].text:len() + space * 2 > object.width) then
-                if(xPos < object.width)then
-                    mScroll = mScroll + (list[n].text:len() + space * 2-(object.width - xPos))
+            if (xPos + list[n].text:len() + space * 2 > w) then
+                if(xPos < w)then
+                    mScroll = mScroll + (list[n].text:len() + space * 2-(w - xPos))
                 else
                     mScroll = mScroll + list[n].text:len() + space * 2
                 end
@@ -41,12 +40,19 @@ return function(name)
     end
 
     object = {
+        init = function(self)
+            self.bgColor = self.parent:getTheme("MenubarBG")
+            self.fgColor = self.parent:getTheme("MenubarText")
+            itemSelectedBG = self.parent:getTheme("SelectionBG")
+            itemSelectedFG = self.parent:getTheme("SelectionText")
+        end,
+
         getType = function(self)
             return objectType
         end;
 
         addItem = function(self, text, bgCol, fgCol, ...)
-            table.insert(list, { text = text, bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })
+            table.insert(list, { text = tostring(text), bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })
             if (#list == 1) then
                 self:setValue(list[1])
             end
@@ -77,7 +83,7 @@ return function(name)
             return self
         end;
 
-        setPositionOffset = function(self, offset)
+        setOffset = function(self, offset)
             itemOffset = offset or 0
             if (itemOffset < 0) then
                 itemOffset = 0
@@ -90,7 +96,7 @@ return function(name)
             return self
         end;
 
-        getPositionOffset = function(self)
+        getOffset = function(self)
             return itemOffset
         end;
 
@@ -99,6 +105,23 @@ return function(name)
             if(scroll==nil)then scrollable = true end
             return self
         end;
+
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("selectionBG", data)~=nil)then itemSelectedBG = colors[xmlValue("selectionBG", data)] end
+            if(xmlValue("selectionFG", data)~=nil)then itemSelectedFG = colors[xmlValue("selectionFG", data)] end
+            if(xmlValue("scrollable", data)~=nil)then if(xmlValue("scrollable", data))then self:setScrollable(true) else self:setScrollable(false) end end
+            if(xmlValue("offset", data)~=nil)then self:setOffset(xmlValue("offset", data)) end
+            if(xmlValue("space", data)~=nil)then space = xmlValue("space", data) end
+            if(data["item"]~=nil)then
+                local tab = data["item"]
+                if(tab.properties~=nil)then tab = {tab} end
+                for k,v in pairs(tab)do
+                    self:addItem(xmlValue("text", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
+                end
+            end
+            return self
+        end,
 
         removeItem = function(self, index)
             table.remove(list, index)
@@ -134,7 +157,8 @@ return function(name)
         mouseHandler = function(self, event, button, x, y)
             if(base.mouseHandler(self, event, button, x, y))then
                 local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
-                if (objX <= x) and (objX + self.width > x) and (objY <= y) and (objY + self.height > y) and (self:isVisible()) then
+                local w,h = self:getSize()
+                if (objX <= x) and (objX + w > x) and (objY <= y) and (objY + h > y) and (self:isVisible()) then
                     if (self.parent ~= nil) then
                         self.parent:setFocusedObject(self)
                     end
@@ -174,8 +198,9 @@ return function(name)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
+                    local w,h = self:getSize()
                     if(self.bgColor~=false)then
-                        self.parent:drawBackgroundBox(obx, oby, self.width, self.height, self.bgColor)
+                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
                     end
                     local text = ""
                     local textBGCol = ""
@@ -192,9 +217,9 @@ return function(name)
                         end
                     end
 
-                    self.parent:setText(obx, oby, text:sub(itemOffset+1, self.width+itemOffset))
-                    self.parent:setBG(obx, oby, textBGCol:sub(itemOffset+1, self.width+itemOffset))
-                    self.parent:setFG(obx, oby, textFGCol:sub(itemOffset+1, self.width+itemOffset))
+                    self.parent:setText(obx, oby, text:sub(itemOffset+1, w+itemOffset))
+                    self.parent:setBG(obx, oby, textBGCol:sub(itemOffset+1, w+itemOffset))
+                    self.parent:setFG(obx, oby, textFGCol:sub(itemOffset+1, w+itemOffset))
                 end
                 self:setVisualChanged(false)
             end

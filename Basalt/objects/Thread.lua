@@ -1,3 +1,5 @@
+local xmlValue = require("utils").getValueFromXML
+
 return function(name)
     local object
     local objectType = "Thread"
@@ -17,6 +19,20 @@ return function(name)
         getName = function(self)
             return self.name
         end;
+
+        getBaseFrame = function(self)
+            if(self.parent~=nil)then
+                return self.parent:getBaseFrame()
+            end
+            return self
+        end;
+
+        setValuesByXMLData = function(self, data)
+            local f
+            if(xmlValue("thread", data)~=nil)then  f = self:getBaseFrame():getVariable(xmlValue("thread", data)) end
+            if(xmlValue("start", data)~=nil)then  if(xmlValue("start", data))and(f~=nil)then self:start(f) end end
+            return self
+        end,
 
         start = function(self, f)
             if (f == nil) then

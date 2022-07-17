@@ -1,16 +1,19 @@
 local basaltEvent = require("basaltEvent")
-local split = require("utils").splitString
-local numberFromString = require("utils").numberFromString
+local dynValue = require("dynamicValues")
+local utils = require("utils")
+local split = utils.splitString
+local numberFromString = utils.numberFromString
+local xmlValue = utils.getValueFromXML
 
 return function(name)
     -- Base object
     local objectType = "Object" -- not changeable
     local object = {}
-    local value
     local zIndex = 1
+    local value
     local anchor = "topLeft"
     local ignOffset = false
-    local isVisible = false
+    local isVisible = true
 
     local shadow = false
     local borderLeft = false
@@ -24,45 +27,6 @@ return function(name)
     local visualsChanged = true
 
     local eventSystem = basaltEvent()
-
-    local dynamicValue = {}
-    local dynamicValueResult = {}
-
-    local function replacePercentage(str, parentValue)
-        local _fullStr = str
-        for v in _fullStr:gmatch("%d+%%") do
-            local pValue = v:gsub("%%", "")
-            print(str)
-            str = str:gsub(v.."%", parentValue / 100 * math.max(math.min(tonumber(pValue),100),0))
-        end
-        return str
-    end
-
-    local function fToNumber(str, fTable)
-        for k,v in pairs(fTable)do
-            if(type(v)=="function")then
-                local nmb = v()
-                for _ in str:gmatch("f"..k)do
-                    str = string.gsub(str, "f"..k, nmb)
-                end
-            end
-        end
-        str = str:gsub("f%d+", "")
-        return str
-    end
-
-    local calcDynamicValue = function(newDValue)
-        local val = dynamicValue[newDValue][1]
-        if(val~=nil)then
-            if(type(val)=="string")then
-                if(dynamicValue[newDValue][3]~=nil)then
-                    dynamicValueResult[newDValue] = numberFromString(replacePercentage(fToNumber(val, dynamicValue[newDValue][3]), dynamicValue[newDValue][2]() or 1))
-                else
-                    dynamicValueResult[newDValue] = numberFromString(replacePercentage(val, dynamicValue[newDValue][2]() or 1))
-                end
-            end
-        end
-    end
 
     object = {
         x = 1,
@@ -85,6 +49,45 @@ return function(name)
             visualsChanged = true
             return self
         end;
+
+        setValuesByXMLData = function(self, data)
+            local baseFrame = self:getBaseFrame()
+            if(xmlValue("x", data)~=nil)then self:setPosition(xmlValue("x", data), self:getY()) end
+            if(xmlValue("y", data)~=nil)then self:setPosition(self:getX(), xmlValue("y", data)) end
+            if(xmlValue("width", data)~=nil)then self:setSize(xmlValue("width", data), self:getHeight()) end
+            if(xmlValue("height", data)~=nil)then self:setSize(self:getWidth(), xmlValue("height", data)) end
+            if(xmlValue("bg", data)~=nil)then self:setBackground(colors[xmlValue("bg", data)]) end
+            if(xmlValue("fg", data)~=nil)then self:setForeground(colors[xmlValue("fg", data)]) end
+            if(xmlValue("value", data)~=nil)then self:setValue(colors[xmlValue("value", data)]) end
+            if(xmlValue("visible", data)~=nil)then if(xmlValue("visible", data))then self:show() else self:hide() end end
+            if(xmlValue("zIndex", data)~=nil)then self:setZIndex(xmlValue("zIndex", data)) end
+            if(xmlValue("anchor", data)~=nil)then self:setAnchor(xmlValue("anchor", data)) end
+            if(xmlValue("shadow", data)~=nil)then if(xmlValue("shadow", data))then self:showShadow(true) end end
+            if(xmlValue("shadowColor", data)~=nil)then self:setShadow(colors[xmlValue("shadowColor", data)]) end
+            if(xmlValue("border", data)~=nil)then if(xmlValue("border", data))then borderLeft,borderTop,borderRight,borderBottom = true,true,true,true end end
+            if(xmlValue("borderLeft", data)~=nil)then if(xmlValue("borderLeft", data))then borderLeft = true else borderLeft = false end end
+            if(xmlValue("borderTop", data)~=nil)then if(xmlValue("borderTop", data))then borderTop = true else borderTop = false end end
+            if(xmlValue("borderRight", data)~=nil)then if(xmlValue("borderRight", data))then borderRight = true else borderRight = false end end
+            if(xmlValue("borderBottom", data)~=nil)then if(xmlValue("borderBottom", data))then borderBottom = true else borderBottom = false end end
+            if(xmlValue("borderColor", data)~=nil)then self:setBorder(colors[xmlValue("borderColor", data)]) end
+            if(xmlValue("ignoreOffset", data)~=nil)then if(xmlValue("ignoreOffset", data))then self:ignoreOffset(true) end end
+            if(xmlValue("onClick", data)~=nil)then self:onClick(baseFrame:getVariable(xmlValue("onClick", data))) end
+            if(xmlValue("onClickUp", data)~=nil)then self:onClickUp(baseFrame:getVariable(xmlValue("onClickUp", data))) end
+            if(xmlValue("onScroll", data)~=nil)then self:onScroll(baseFrame:getVariable(xmlValue("onScroll", data))) end
+            if(xmlValue("onDrag", data)~=nil)then self:onDrag(baseFrame:getVariable(xmlValue("onDrag", data))) end
+            if(xmlValue("onKey", data)~=nil)then self:onKey(baseFrame:getVariable(xmlValue("onKey", data))) end
+            if(xmlValue("onKeyUp", data)~=nil)then self:onKeyUp(baseFrame:getVariable(xmlValue("onKeyUp", data))) end
+            if(xmlValue("onChange", data)~=nil)then self:onChange(baseFrame:getVariable(xmlValue("onChange", data))) end
+            if(xmlValue("onResize", data)~=nil)then self:onResize(baseFrame:getVariable(xmlValue("onResize", data))) end
+            if(xmlValue("onReposition", data)~=nil)then self:onReposition(baseFrame:getVariable(xmlValue("onReposition", data))) end
+            if(xmlValue("onEvent", data)~=nil)then self:onEvent(baseFrame:getVariable(xmlValue("onEvent", data))) end
+            if(xmlValue("onGetFocus", data)~=nil)then self:onGetFocus(baseFrame:getVariable(xmlValue("onGetFocus", data))) end
+            if(xmlValue("onLoseFocus", data)~=nil)then self:onLoseFocus(baseFrame:getVariable(xmlValue("onLoseFocus", data))) end
+            if(xmlValue("onBackgroundKey", data)~=nil)then self:onBackgroundKey(baseFrame:getVariable(xmlValue("onBackgroundKey", data))) end
+            if(xmlValue("onBackgroundKeyUp", data)~=nil)then self:onBackgroundKeyUp(baseFrame:getVariable(xmlValue("onBackgroundKeyUp", data))) end
+            
+            return self
+        end,
 
         isVisible = function(self)
             return isVisible
@@ -170,38 +173,43 @@ return function(name)
         end;
 
         setPosition = function(self, xPos, yPos, rel)
-            if (rel) then
-                self.x, self.y = math.floor(self.x + xPos), math.floor(self.y + yPos)
-            else
-                self.x, self.y = math.floor(xPos), math.floor(yPos)
-            end
-
-
             if(type(xPos)=="number")then
-                self.x = rel and self.x+xPos or xPos
+                self.x = rel and self:getX()+xPos or xPos
             end
             if(type(yPos)=="number")then
-                self.y = rel and self.y+yPos or yPos
+                self.y = rel and self:getY()+yPos or yPos
             end
-            if(type(xPos)=="string")or(type(xPos)=="table")then
-                dynamicValue.x = {xPos, function() return self:getParent():getX() end}
+            if(type(xPos)=="string")then
+                self.x = dynValue(xPos, function() return self:getParent():getWidth() end)
             end
-            if(type(yPos)=="string")or(type(yPos)=="table")then
-                dynamicValue.y = {yPos, function() return self:getParent():getY() end}
+            if(type(xPos)=="table")then
+                local str = xPos[1]
+                table.remove(xPos, 1)
+                local fList = xPos
+                self.x = dynValue(str, function() return self:getParent():getWidth() end, fList)
             end
-            self:recalculateDynamicValue()
+            if(type(yPos)=="string")then
+                self.y = dynValue(yPos, function() return self:getParent():getHeight() end)
+            end
+            if(type(yPos)=="table")then
+                local str = yPos[1]
+                table.remove(yPos, 1)
+                local fList = yPos
+                self.y = dynValue(str, function() return self:getParent():getHeight() end, fList)
+            end
+            self:calculateDynamicValues()
             eventSystem:sendEvent("basalt_reposition", self)
             visualsChanged = true
             return self
         end;
 
         getX = function(self)
-            return dynamicValue.x or self.x
-        end,
+            return type(self.x)=="number" and self.x or self.x:get()
+        end;
 
         getY = function(self)
-            return dynamicValue.y or self.y
-        end,
+            return type(self.y)=="number" and self.y or self.y:get()
+        end;
 
         getPosition = function(self)
             return self:getX(), self:getY()
@@ -225,38 +233,48 @@ return function(name)
                 self.height = rel and self.height+height or height
             end
             if(type(width)=="string")then
-                dynamicValue.width = {width, function() return self:getParent():getWidth() end}
+                self.width = dynValue(width, function() return self:getParent():getWidth() end)
             end
             if(type(width)=="table")then
-                dynamicValue.width = {width[1], function() return self:getParent():getWidth() end}
+                local str = width[1]
                 table.remove(width, 1)
-                dynamicValue.width[3] = width
+                local fList = width
+                self.width = dynValue(str, function() return self:getParent():getWidth() end, fList)
             end
             if(type(height)=="string")then
-                dynamicValue.height = {height, function() return self:getParent():getHeight() end}
+                self.height = dynValue(height, function() return self:getParent():getHeight() end)
             end
             if(type(height)=="table")then
-                dynamicValue.height = {height[1], function() return self:getParent():getHeight() end}
+                local str = height[1]
                 table.remove(height, 1)
-                dynamicValue.height[3] = height
+                local fList = height
+                self.height = dynValue(str, function() return self:getParent():getHeight() end, fList)
             end
-            self:recalculateDynamicValue()
+            self:calculateDynamicValues()
             eventSystem:sendEvent("basalt_resize", self)
             visualsChanged = true
             return self
         end;
 
         getHeight = function(self)
-            return dynamicValueResult["height"] or self.height
+            return type(self.height)=="number" and self.height or self.height:get()
         end;
 
         getWidth = function(self)
-            return dynamicValueResult["width"] or self.width
+            return type(self.width)=="number" and self.width or self.width:get()
         end;
 
         getSize = function(self)
             return self:getWidth(), self:getHeight()
         end;
+
+        calculateDynamicValues = function(self)
+            if(type(self.width)=="table")then self.width:calculate() end
+            if(type(self.height)=="table")then self.height:calculate() end
+            if(type(self.x)=="table")then self.x:calculate() end
+            if(type(self.y)=="table")then self.y:calculate() end
+            return self
+        end,
 
         setBackground = function(self, color)
             self.bgColor = color
@@ -311,7 +329,7 @@ return function(name)
         end;
 
         setBorder = function(self, color)
-            shadowColor = color
+            borderColor = color
             return self
         end;
         
@@ -390,7 +408,7 @@ return function(name)
             end
 
             if (self.parent ~= nil) then
-                local fx, fy = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
+                local fx, fy = self.parent:getAbsolutePosition()
                 x = fx + x - 1
                 y = fy + y - 1
             end
@@ -399,33 +417,35 @@ return function(name)
 
         getAnchorPosition = function(self, x, y, ignOff)
             if (x == nil) then
-                x = self.x
+                x = self:getX()
             end
             if (y == nil) then
-                y = self.y
-            end
-            if (anchor == "top") then
-                x = math.floor(self.parent.width/2) + x - 1
-            elseif(anchor == "topRight") then
-                x = self.parent.width + x - 1
-            elseif(anchor == "right") then
-                x = self.parent.width + x - 1
-                y = math.floor(self.parent.height/2) + y - 1
-            elseif(anchor == "bottomRight") then
-                x = self.parent.width + x - 1
-                y = self.parent.height + y - 1
-            elseif(anchor == "bottom") then
-                x = math.floor(self.parent.width/2) + x - 1
-                y = self.parent.height + y - 1
-            elseif(anchor == "bottomLeft") then
-                y = self.parent.height + y - 1
-            elseif(anchor == "left") then
-                y = math.floor(self.parent.height/2) + y - 1
-            elseif(anchor == "center") then
-                x = math.floor(self.parent.width/2) + x - 1
-                y = math.floor(self.parent.height/2) + y - 1
+                y = self:getY()
             end
             if(self.parent~=nil)then
+            local pw,ph = self.parent:getSize()
+                if (anchor == "top") then
+                    x = math.floor(pw/2) + x - 1
+                elseif(anchor == "topRight") then
+                    x = pw + x - 1
+                elseif(anchor == "right") then
+                    x = pw + x - 1
+                    y = math.floor(ph/2) + y - 1
+                elseif(anchor == "bottomRight") then
+                    x = pw + x - 1
+                    y = ph + y - 1
+                elseif(anchor == "bottom") then
+                    x = math.floor(pw/2) + x - 1
+                    y = ph + y - 1
+                elseif(anchor == "bottomLeft") then
+                    y = ph + y - 1
+                elseif(anchor == "left") then
+                    y = math.floor(ph/2) + y - 1
+                elseif(anchor == "center") then
+                    x = math.floor(pw/2) + x - 1
+                    y = math.floor(ph/2) + y - 1
+                end
+
                 local xO, yO = self.parent:getOffset()
                 if not(ignOffset or ignOff) then
                     return x+xO, y+yO
@@ -523,22 +543,19 @@ return function(name)
             return self
         end;
 
-        recalculateDynamicValue = function(self, special)
-            if(special==nil)then
-                for k in pairs(dynamicValue)do
-                    calcDynamicValue(k)
-                end
-            else
-                calcDynamicValue(special)
-            end
-            return self
-        end,
-
         onResize = function(self, ...)
-            self:recalculateValues()
             for _,v in pairs(table.pack(...))do
                 if(type(v)=="function")then
                     self:registerEvent("basalt_resize", v)
+                end
+            end
+            return self
+        end;
+
+        onReposition = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("basalt_reposition", v)
                 end
             end
             return self
@@ -613,6 +630,7 @@ return function(name)
             local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
             local w, h = self:getSize()
             local yOff = false
+            
             if(objY-1 == y)and(self:getBorder("top"))then
                 y = y+1
                 yOff = true
