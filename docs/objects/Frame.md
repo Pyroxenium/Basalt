@@ -29,10 +29,15 @@ Creates a child frame on the frame, the same as [basalt.createFrame](https://git
 1. `frame | nil` The frame created by addFrame, or `nil` if there is already a child frame with the given name.<br>
 
 #### Usage:
-* Create a frame with id "myFirstFrame" then create a child of that frame, named "myFirstSubFrame"
+* Create a new main frame and adds a child frame to it
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame")
-local myFrame = mainFrame:addFrame("myFirstSubFrame")
+local mainFrame = basalt.createFrame()
+local myFrame = mainFrame:addFrame()
+```
+
+#### XML:
+```xml
+<frame></frame>
 ```
 
 ## setBar
@@ -53,15 +58,19 @@ frame:setBar("My first Frame!", colors.black, colors.lightGray)
 ```
 * Store the frame, use the named frame variable after assigning.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local myFrame = MainFrame:addFrame("myFirstSubFrame")
+local mainFrame = basalt.createFrame()
+local myFrame = MainFrame:addFrame()
 myFrame:setBar("My first Frame!")
-myFrame:show()
 ```
 * This abuses the call-chaining that Basalt uses.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local myFrame = mainFrame:addFrame("myFirstSubFrame"):setBar("My first Frame!"):show()
+local mainFrame = basalt.createFrame()
+local myFrame = mainFrame:addFrame():setBar("My first Frame!")
+```
+
+#### XML:
+```xml
+<frame barText="My first Frame!" barBG="black" barFG="lightGray"></frame>
 ```
 
 ## setBarTextAlign
@@ -76,7 +85,12 @@ Sets the frame's bar-text alignment
 #### Usage:
 * Set the title of myFrame to "My first frame!", and align it to the right.
 ```lua
-local mainFrame = myFrame:setBar("My first Frame!"):setBarTextAlign("right")
+myFrame:setBar("My first Frame!"):setBarTextAlign("right")
+```
+
+#### XML:
+```xml
+<frame barAlign="right"></frame>
 ```
 
 ## showBar
@@ -91,8 +105,14 @@ Toggles the frame's upper bar
 #### Usage:
 * Sets myFrame to have a bar titled "Hello World!" and subsequently displays it.
 ```lua
-local mainFrame = myFrame:setBar("Hello World!"):showBar()
+myFrame:setBar("Hello World!"):showBar()
 ```
+
+#### XML:
+```xml
+<frame bar="true"></frame>
+```
+
 
 ## setMonitor
 Sets this frame as a monitor frame
@@ -106,10 +126,36 @@ Sets this frame as a monitor frame
 #### Usage:
 * Creates a new monitor frame, you can use to show objects on a monitor.
 ```lua
-local mainFrame = basalt.createFrame("mainFrame"):show()
-local monitorFrame = basalt.createFrame("mainFrame"):setMonitor("right"):show()
+local mainFrame = basalt.createFrame()
+local monitorFrame = basalt.createFrame():setMonitor("right")
 monitorFrame:setBar("Monitor 1"):showBar()
 ```
+
+#### XML:
+```xml
+<frame monitor="right"></frame>
+```
+
+## setMirror
+mirrors this frame to another peripheral monitor object.
+
+#### Parameters: 
+1. `string` The monitor name ("right", "left",... "monitor_1", "monitor_2",...)
+
+#### Returns:
+1. `frame` The frame being used
+
+#### Usage:
+* Creates mirror of your main frame to a monitor on the left side.
+```lua
+local mainFrame = basalt.createFrame():setMirror("left")
+```
+
+#### XML:
+```xml
+<frame mirror="left"></frame>
+```
+
 ## getObject 
 Returns a child object of the frame
 
@@ -152,11 +198,12 @@ Sets the currently focused object
 1. `frame` The frame being used
 
 #### Usage:
-* Creates button with id "myFirstButton", sets the focused object to the previously mentioned button
+* Creates a new button, sets the focused object to the previously mentioned button
 ```lua
-local aButton = myFrame:addButton("myFirstButton")
+local aButton = myFrame:addButton()
 myFrame:setFocusedObject(aButton)
 ```
+
 ## removeFocusedObject 
 Removes the focus of the supplied object
 
@@ -167,14 +214,16 @@ Removes the focus of the supplied object
 1. `frame` The frame being used
 
 #### Usage:
-* Creates a button with id "myFirstButton", then removes the focus from that button
+* Creates a new button then removes the focus from that button when clicking on it
 ```lua
-local aButton = myFrame:addButton("myFirstButton")
-myFrame:removeFocusedObject(aButton)
+local aButton = myFrame:addButton():setFocus():onClick(function() 
+    myFrame:removeFocusedObject(aButton)
+end)
 ```
 
 ## getFocusedObject
 Gets the currently focused object
+
 #### Returns: 
 1. `object` The currently focused object
 
@@ -183,9 +232,10 @@ Gets the currently focused object
 ```lua
 local focusedObject = myFrame:getFocusedObject()
 ```
-## setMovable
 
+## setMovable
 Sets whether the frame can be moved. _In order to move the frame click and drag the upper bar of the frame_
+
 #### Parameters: 
 1. `boolean` Whether the object is movable
 
@@ -195,14 +245,19 @@ Sets whether the frame can be moved. _In order to move the frame click and drag 
 #### Usage:
 * Creates a frame with id "myFirstFrame" and makes it movable
 ```lua
-local myFrame = basalt.createFrame("myFirstFrame"):setMovable(true)
+local myFrame = basalt.createFrame():setMovable(true)
+```
+
+#### XML:
+```xml
+<frame moveable="true"></frame>
 ```
 
 ## setOffset
 Sets the frame's coordinate offset. The frame's child objects will receive the frame's coordinate offset. For example, when using a scrollbar, if you use its value to add an offset to a frame, you will get a scrollable frame.
 Objects are also able to ignore the offset by using :ignoreOffset() (For example, you may want to ignore the offset on the scrollbar itself)
 
-The function can be supplied negative offsets
+The function can also be supplied with negative values
 
 #### Parameters: 
 1. `number` The x direction offset (+/-)
@@ -212,11 +267,169 @@ The function can be supplied negative offsets
 1. `frame` The frame being used
 
 #### Usage:
-* Creates "myFirstFrame" with an x offset of 5 and a y offset of 3
+* Creates a new base frame with x offset of 5 and a y offset of 3
 ```lua
-local myFrame = basalt.createFrame("myFirstFrame"):setOffset(5, 3)
+local myFrame = basalt.createFrame():setOffset(5, 3)
 ```
-* Creates "myFirstFrame" with an x offset of 5 and a y offset of -5 (Meaning if you added a button with y position 5, it would be at y position 0)
+* Creates with x offset of 5 and a y offset of -5 (Meaning if you added a button with y position 5, it would be at y position 0)
 ```lua
-local myFrame = basalt.createFrame("myFirstFrame"):setOffset(5, -5)
+local myFrame = basalt.createFrame():setOffset(5, -5)
+```
+
+#### XML:
+```xml
+<frame xOffset="5" yOffset="-5"></frame>
+```
+
+## addLayout
+Adds a new XML Layout into your frame.
+
+#### Parameters: 
+1. `string` Path to your layout
+
+#### Returns:
+1. `frame` The frame being used
+
+#### Usage:
+* Creates a new base frame and adds the mainframe.xml layout
+```lua
+local myFrame = basalt.createFrame():addLayout("mainframe.xml")
+```
+
+#### XML:
+```xml
+<frame layout="mainframe.xml"></frame>
+```
+
+## addLayoutFromString
+Adds a new XML Layout as string into your frame.
+
+#### Parameters: 
+1. `string` xml
+
+#### Returns:
+1. `frame` The frame being used
+
+#### Usage:
+* Creates a new base frame and adds the mainframe.xml layout
+```lua
+local myFrame = basalt.createFrame():addLayoutFromString("<button x='12' y='5' bg='black' />")
+```
+
+## getLastLayout
+returns a table of all objects this frame has created via xml (useful if you'd like to access all of them for some reason)
+
+#### Returns:
+1. `table` table with objects 
+
+## setTheme
+Sets the default theme of that frame children objects always try to get the theme of its parent frame, if it does not exist it goes to its parent parent frame, and so on until it reaches the basalt managers theme - which is sotred in theme.lua (Please checkout [theme](../Basalt/theme.lua) for how it could look like.
+
+#### Parameters: 
+1. `table` theme layout look into [theme](../Basalt/theme.lua) for a example
+
+#### Returns:
+1. `frame` The frame being used
+
+#### Usage:
+* Creates a new base frame and adds a new theme which only changes the default color of buttons.
+```lua
+local myFrame = basalt.createFrame():setTheme({
+    ButtonBG = colors.yellow,
+    ButtonText = colors.red,
+})
+```
+
+## setScrollable
+Makes the frame scrollable with mousewheel.
+
+#### Parameters: 
+1. `bool` scrollable or not
+
+#### Returns:
+1. `frame` The frame being used
+
+#### Usage:
+* Creates a new base frame and makes it scrollable
+```lua
+local myFrame = basalt.createFrame():setScrollable()
+```
+
+#### XML:
+```xml
+<frame scrollable="true"></frame>
+```
+
+## setMinScroll
+Sets the minimum offset it is allowed to scroll (default 0)
+
+#### Parameters: 
+1. `number` minimum y offset
+
+#### Returns:
+1. `frame` The frame being used
+
+#### Usage:
+* Creates a new base frame and makes it scrollable and sets the minimum amount to -5
+```lua
+local myFrame = basalt.createFrame():setScrollable():setMinScroll(-5)
+```
+
+#### XML:
+```xml
+<frame minScroll="-5"></frame>
+```
+
+## setMaxScroll
+Sets the maximum offset it is allowed to scroll (default 10)
+
+#### Parameters: 
+1. `number` maximum y offset
+
+#### Returns:
+1. `frame` The frame being used
+
+#### Usage:
+* Creates a new base frame and makes it scrollable and sets the maximum amount to 25
+```lua
+local myFrame = basalt.createFrame():setScrollable():setMaxScroll(25)
+```
+
+#### XML:
+```xml
+<frame maxScroll="25"></frame>
+```
+
+## setImportantScroll
+By default if you hovering your mouse over children objects, you wont scroll the frame, if you set this to true the frame scrolling becomes more important
+
+#### Parameters: 
+1. `bool` important or not
+
+#### Returns:
+1. `frame` The frame being used
+
+#### Usage:
+* Creates a new base frame and makes it scrollable and defines it as important
+```lua
+local myFrame = basalt.createFrame():setScrollable():setImportantScroll(true)
+```
+
+#### XML:
+```xml
+<frame importantScroll="true"></frame>
+```
+
+# XML
+
+* A fully working example:
+```xml
+<frame>
+    <frame width="50%" bg="red">
+        <button x="2" y="2" width="17" text="Example Button!"/>
+    </frame>
+    <frame x="50%+1" width="50%+1" bg="black">
+        <textfield bg="green" x="2" width="100%-2" />
+    </frame>
+</frame>
 ```
