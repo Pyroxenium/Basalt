@@ -22,9 +22,9 @@ local function randomThreadFunction()
 end
 aThread:start(randomThreadfunction)
 ```
+you are also able to start threads via xml:
 ```lua
     basalt.setVariable("myThread", function() while true do os.sleep(1) end end)
-
 ```
 ```xml
 <thread thread="myThread" start="true"/>

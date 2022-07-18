@@ -15,7 +15,7 @@ Create a base-frame (main frame)
 #### Usage:
 * Create and show a frame with id "myFirstFrame"
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local mainFrame = basalt.createFrame("myFirstFrame")
 ```
 
 ## basalt.removeFrame
@@ -27,7 +27,7 @@ Removes a base frame
 #### Usage:
 * Removes the previously created frame with id "myFirstFrame" 
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local mainFrame = basalt.createFrame("myFirstFrame")
 basalt.removeFrame("myFirstFrame")
 ```
 
@@ -42,7 +42,7 @@ Returns a base frame with the given name
 #### Usage:
 * Creates, fetches and shows the "myFirstFrame" object
 ```lua
-basalt.createFrame("myFirstFrame")
+basalt.createFrame("myFirstFrame"):hide()
 basalt.getFrame("myFirstFrame"):show()
 ```
 
@@ -56,8 +56,8 @@ Returns the currently active base frame
 #### Usage:
 * Displays the active frame name in the debug console
 ```lua
-basalt.createFrame("myFirstFrame"):show()
-basalt.debug(basalt.getActiveFrame():getName()) -- returns myFirstFrame
+basalt.createFrame()
+basalt.debug(basalt.getActiveFrame():getName()) -- returns the uuid
 ```
 
 ## basalt.autoUpdate
@@ -66,7 +66,7 @@ Starts the draw and event handler until basalt.stopUpdate() is called
 #### Usage:
 * Enable the basalt updates, otherwise the screen will not continue to update
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
+local mainFrame = basalt.createFrame()
 basalt.autoUpdate()
 ```
 
@@ -81,8 +81,8 @@ Calls the draw and event handler once - this gives more flexibility about which 
 #### Usage:
 * Creates and starts a custom update cycle
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myButton"):setPosition(2,2):show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setPosition(2,2)
 
 while true do
 basalt.update(os.pullEventRaw())
@@ -95,8 +95,8 @@ Stops the automatic draw and event handler which got started by basalt.autoUpdat
 #### Usage:
 * When the quit button is clicked, the button stops basalt auto updates
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myButton"):setPosition(2,2):setText("Stop Basalt!"):show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setPosition(2,2):setText("Stop Basalt!")
 
 aButton:onClick(function()
 basalt.stopUpdate()
@@ -117,8 +117,8 @@ Checks if the user is currently holding a key
 #### Usage:
 * Shows a debug message with true or false if the left ctrl key is down, as soon as you click on the button.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aButton = mainFrame:addButton("myButton"):setPosition(2,2):setText("Check Ctrl"):show()
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setPosition(2,2):setText("Check Ctrl")
 
 aButton:onClick(function()
 basalt.debug(basalt.isKeyDown(keys.leftCtrl) )
@@ -136,10 +136,75 @@ which returns the debug Label.
 Also basalt.debugFrame and basalt.debugList are available.
 
 #### Parameters: 
-1. `...` (multiple parameters are possible, like print does)<br>
+1. `...` (multiple parameters are possible, like print does)
 
 #### Usage:
 * Prints "Hello! ^-^" to the debug console
 ```lua
 basalt.debug("Hello! ", "^-^")
+```
+
+## setTheme
+Sets the base theme of the project! Make sure to cover all existing objects, otherwise it will result in errors. A good example is [theme](https://github.com/Pyroxenium/Basalt/blob/master/Basalt/theme.lua)
+
+#### Parameters: 
+1. `table` theme layout look into [theme](https://github.com/Pyroxenium/Basalt/blob/master/Basalt/theme.lua) for a example
+
+#### Usage:
+* Creates a new base frame and adds a new theme which only changes the default color of buttons.
+```lua
+basalt.setTheme({
+    ButtonBG = colors.yellow,
+    ButtonText = colors.red,
+    ...,
+})
+```
+
+## setVariable
+This stores a variable which you're able to access via xml. You are also able to add a function, which then gets called by object events created in XML.
+
+#### Parameters: 
+1. `string` a key name
+1. `any` any variable
+
+#### Usage:
+* Adds a function to basalt.
+```lua
+basalt.setVariable("clickMe", function()
+    basalt.debug("I got clicked")
+end)
+```
+```xml
+<button onClick="clickMe" text="Click me" />
+```
+
+## shedule
+Shedules a function which gets called in a coroutine. After the coroutine is finished it will get destroyed immediatly. It's something like threads, but with some limits.
+
+#### Parameters: 
+1. `function` a function which should get executed
+
+#### Returns: 
+1. `coroutine` it returns the coroutine which got created to execute the function
+
+#### Usage:
+* Creates a shedule which switches the color between red and gray
+```lua
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setText("Click me")
+aButton:onClick(function()
+    basalt.shedule(function()
+        aButton:setBackground(colors.red)
+        os.sleep(0.1)
+        aButton:setBackground(colors.gray)
+        os.sleep(0.1)
+        aButton:setBackground(colors.red)
+        os.sleep(0.1)
+        aButton:setBackground(colors.gray)
+        os.sleep(0.1)
+        aButton:setBackground(colors.red)
+        os.sleep(0.1)
+        aButton:setBackground(colors.gray)
+    end)
+end)
 ```

@@ -473,8 +473,8 @@ return function(name, parent)
         end;
 
         execute = function(self, path, ...)
-            cachedPath = path
-            curProcess = process:new(path, pWindow, ...)
+            cachedPath = path or cachedPath
+            curProcess = process:new(cachedPath, pWindow, ...)
             pWindow.setBackgroundColor(colors.black)
             pWindow.setTextColor(colors.white)
             pWindow.clear()

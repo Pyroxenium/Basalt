@@ -18,7 +18,6 @@ Changes the input type. default: text
 local mainFrame = basalt.createFrame()
 local aInput = mainFrame:addInput():setInputType("number")
 ```
-
 ```xml
 <input type="number" />
 ```

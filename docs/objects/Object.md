@@ -1,4 +1,4 @@
-This is the base class of all visual objects. This means, if you create a button, label, frame or something else visual (no timers, threads or animations) the following methods apply:
+This is the base class for all visual objects. Which means, if you create a button, label, frame or something else (no timers, threads or animations) the following methods apply:
 
 ## show
 Shows the object (only if the parent frame is already visible)
@@ -8,12 +8,12 @@ Shows the object (only if the parent frame is already visible)
 #### Usage:
 * Shows a frame
 ```lua
-local mainFrame = basalt.createFrame():show()
+local mainFrame = basalt.createFrame()
 local button = mainFrame:addButton()
 button:show()
 ```
 ```xml
-<button visible="true"></button>
+<button visible="true" />
 ```
 
 ## hide
@@ -27,10 +27,9 @@ Hides the object
 ```lua
 local mainFrame = basalt.createFrame()
 local button = mainFrame:addButton():setText("Close"):onClick(function() mainFrame:hide() end)
-button
 ```
 ```xml
-<button visible="false"></button>
+<button visible="false" />
 ```
 
 ## setPosition
@@ -50,7 +49,7 @@ local mainFrame = basalt.createFrame()
 mainFrame:addButton():setPosition(2,3)
 ```
 ```xml
-<button x="2" y="3"></button>
+<button x="2" y="3" />
 ```
 
 ## setBackground
@@ -67,7 +66,7 @@ Changes the object background color, if you set the value to false the backgroun
 local mainFrame = basalt.createFrame():setBackground(colors.gray)
 ```
 ```xml
-<button bg="gray"></button>
+<button bg="gray" />
 ```
 
 ## setForeground
@@ -84,7 +83,7 @@ Changes the object text color
 local mainFrame = basalt.createFrame():setForeground(colors.green)
 ```
 ```xml
-<button fg="green"></button>
+<button fg="green" />
 ```
 
 ## setSize
@@ -103,7 +102,7 @@ local mainFrame = basalt.createFrame()
 local subFrame = mainFrame:addFrame():setSize(15,12)
 ```
 ```xml
-<frame width="15" height="12"></frame>
+<frame width="15" height="12" />
 ```
 
 ## setFocus    
@@ -136,8 +135,8 @@ local aButton = mainFrame:addButton():setZIndex(1):setPosition(2,2)
 local aLabel = mainFrame:addButton():setZIndex(2):setPosition(2,2):setText("I am a label!")
 ```
 ```xml
-<button x="2" y="2" zIndex="1"></button>
-<label x="2" y="2" text="I am a label!" zIndex="2"></label>
+<button x="2" y="2" zIndex="1" />
+<label x="2" y="2" text="I am a label!" zIndex="2" />
 ```
 
 ## setParent
@@ -214,10 +213,8 @@ local aButton = mainFrame:addButton()
         :setSize(8,1)
         :setPosition(-8,1)
 ```
-
-#### XML:
 ```xml
-<button anchor="bottomRight"></button>
+<button anchor="bottomRight" />
 ```
 
 ## getAbsolutePosition
@@ -252,7 +249,7 @@ local mainFrame = basalt.createFrame()
 local aCheckbox = mainFrame:addCheckbox():setValue(true)
 ```
 ```xml
-<checkbox value="true"></checkbox>
+<checkbox value="true" />
 ```
 
 ## getValue
@@ -327,7 +324,7 @@ local subFrame = mainFrame:addFrame()
         :showShadow(true)
 ```
 ```xml
-<frame width="18" height="6" shadow="true" shadowColor="green" moveable="true"></frame>
+<frame width="18" height="6" shadow="true" shadowColor="green" moveable="true" />
 ```
 
 ## showShadow
@@ -349,7 +346,7 @@ local subFrame = mainFrame:addFrame()
         :showShadow(true)
 ```
 ```xml
-<frame width="18" height="6" shadow="true" moveable="true"></frame>
+<frame width="18" height="6" shadow="true" moveable="true" />
 ```
 
 ## setBorder
@@ -372,7 +369,7 @@ local subFrame = mainFrame:addFrame()
         :showBorder("left", "top", "right", "bottom")
 ```
 ```xml
-<frame width="18" height="6" border="true" borderColor="green" moveable="true"></frame>
+<frame width="18" height="6" border="true" borderColor="green" moveable="true" />
 ```
 
 ## showBorder
@@ -394,5 +391,5 @@ local subFrame = mainFrame:addFrame()
         :showBorder("left", "top", "bottom")
 ```
 ```xml
-<frame width="18" height="6" border="true" borderColor="green" borderRight="false" moveable="true"></frame>
+<frame width="18" height="6" border="true" borderColor="green" borderRight="false" moveable="true" />
 ```

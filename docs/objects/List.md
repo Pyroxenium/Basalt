@@ -1,151 +1,279 @@
-Lists are objects where you can create endless entrys and the user can choose one of them
+Lists are objects where you can create endless entries, and the user is able to select one of them
 
-Here is a example of how to create a standard list:
+If you want to access values inside items this is how the table for single items is made (just a example):
 
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
+item = {
+  text="1. Entry", 
+  bgCol=colors.black, 
+  fgCol=colors.white
+  args = {}
+}
 ```
 
-This will create a default list with the size 8 width and 5 height on position 1 1 (relative to its parent frame), the default background is colors.lightGray, the default text color is colors.black and the default zIndex is 5. The default horizontal text align is "center", default symbol is ">"
-
-Here are all possible functions available for lists. Remember List inherits from [Object](objects/Object.md)
+Remember Lists also inherits from [Object](objects/Object.md)
 
 ## addItem
 Adds a item into the list
 
+#### Parameters: 
+1. `string` The entry name
+2. `number|color` unique default background color - optional
+3. `number|color` unique default text color - optional
+4. `any` any value - you could access this later in a :onChange() event (you need to use :getValue()) - optional
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default list with 3 entries
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
 aList:addItem("1. Entry")
 aList:addItem("2. Entry",colors.yellow)
 aList:addItem("3. Entry",colors.yellow,colors.green)
 ```
-#### Parameters: string text, number bgcolor, number fgcolor, any ... - (text is the displayed text, bgcolor and fgcolors the colors of background/text and args (...) is something dynamic, you wont see them but if you require some more information per item you can use that)<br>
-#### Returns: self<br>
+```xml
+<list>
+  <item><text>1. Entry</text></item>
+  <item><text>2. Entry</text><bg>yellow</bg></item>
+  <item><text>3. Entry</text><bg>yellow</bg><fg>green</fg></item>
+</list>
+```
 
 ## removeItem
 Removes a item from the list
 
+#### Parameters: 
+1. `number` The index which should get removed
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default list with 3 entries and removes the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
 aList:addItem("1. Entry")
 aList:addItem("2. Entry",colors.yellow)
 aList:addItem("3. Entry",colors.yellow,colors.green)
 aList:removeItem(2)
 ```
-#### Parameters: number index<br>
-#### Returns: self<br>
 
 ## editItem
-Edits a item on the list
+Edits a item from the list
 
+#### Parameters: 
+1. `number` The index which should be edited
+2. `string` The new item name
+3. `number` the new item background color - optional
+4. `number` The new item text color - optional
+5. `any` New additional information - optional
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default list with 3 entries and changes the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
 aList:addItem("1. Entry")
 aList:addItem("2. Entry",colors.yellow)
 aList:addItem("3. Entry",colors.yellow,colors.green)
-aList:editItem(3,"3. Edited Entry",colors.yellow,colors.green)
+aList:editItem(2, "Still 2. Entry", colors.red)
 ```
-#### Parameters: number index, string text, number bgcolor, number fgcolor, any ...<br>
-#### Returns: self<br>
 
-## setScrollable
-Makes the list scrollable
+## getItem
+Returns a item by index
 
+#### Parameters: 
+1. `number` The index which should be returned
+
+#### Returns:
+1. `table` The item table example: {text="1. Entry", bgCol=colors.black, fgCol=colors.white}
+
+#### Usage:
+* Creates a default list with 3 entries and edits the second one.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
 aList:addItem("1. Entry")
 aList:addItem("2. Entry",colors.yellow)
 aList:addItem("3. Entry",colors.yellow,colors.green)
-aList:setScrollable(true)
+basalt.debug(aList:getItem(2).text)
 ```
-#### Parameters: boolean isScrollable<br>
-#### Returns: self<br>
+
+## getItemCount
+Returns the current item count
+
+#### Returns:
+1. `number` The item list count
+
+#### Usage:
+* Creates a default list with 3 entries and prints the current item count.
+```lua
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
+aList:addItem("1. Entry")
+aList:addItem("2. Entry",colors.yellow)
+aList:addItem("3. Entry",colors.yellow,colors.green)
+basalt.debug(aList:getItemCount())
+```
+
+## getAll
+Returns all items as table
+
+#### Returns:
+1. `table` All items
+
+#### Usage:
+* Creates a default menubar with 3 entries and prints a table.
+```lua
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
+aList:addItem("1. Entry")
+aList:addItem("2. Entry",colors.yellow)
+aList:addItem("3. Entry",colors.yellow,colors.green)
+basalt.debug(aList:getAll())
+```
 
 ## selectItem
 selects a item in the list (same as a player would click on a item)
 
+#### Parameters: 
+1. `number` The index which should get selected
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default list with 3 entries and selects the second entry.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
 aList:addItem("1. Entry")
 aList:addItem("2. Entry",colors.yellow)
 aList:addItem("3. Entry",colors.yellow,colors.green)
-aList:selectItem(1)
+aList:selectItem(2)
 ```
-#### Parameters: number index<br>
-#### Returns: self<br>
 
 ## clear
-clears the entire list
+Removes all items.
 
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default list with 3 entries and removes them immediatley. Which makes no sense.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
-aDropdown:addItem("1. Entry")
-aDropdown:addItem("2. Entry",colors.yellow)
-aDropdown:addItem("3. Entry",colors.yellow,colors.green)
-aDropdown:clear()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
+aList:addItem("1. Entry")
+aList:addItem("2. Entry",colors.yellow)
+aList:addItem("3. Entry",colors.yellow,colors.green)
+aList:clear()
 ```
-#### Parameters: -<br>
-#### Returns: self<br>
 
 ## getItemIndex
 returns the item index of the currently selected item
 
+#### Returns:
+1. `number` The current index
+
+#### Usage:
+* Creates a default list with 3 entries selects the second entry and prints the currently selected index.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aDropdown = mainFrame:addDropdown("myFirstDropdown"):show()
-aDropdown:addItem("1. Entry")
-aDropdown:addItem("2. Entry",colors.yellow)
-aDropdown:addItem("3. Entry",colors.yellow,colors.green)
-aDropdown:getItemIndex()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
+aList:addItem("1. Entry")
+aList:addItem("2. Entry",colors.yellow)
+aList:addItem("3. Entry",colors.yellow,colors.green)
+aList:selectItem(2)
+basalt.debug(aList:getItemIndex())
 ```
-#### Parameters: -<br>
-#### Returns: number index<br>
 
 ## setSelectedItem
-Sets the background of the item which is currently selected
+Sets the background and the foreground of the item which is currently selected
 
+#### Parameters: 
+1. `number|color` The background color which should be used
+2. `number|color` The text color which should be used
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default list with 4 entries and sets the selection background color to green.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
 aList:addItem("1. Entry")
 aList:addItem("2. Entry",colors.yellow)
 aList:addItem("3. Entry",colors.yellow,colors.green)
-aList:setSelectedItem(colors.green, colors.blue)
+aList:addItem("4. Entry")
+aList:setSelectedItem(colors.green, colors.red)
 ```
-#### Parameters: number bgcolor, number fgcolor, boolean isActive (isActive means if different colors for selected item should be used)<br>
-#### Returns: self<br>
+```xml
+<list selectionBG="green" selectionFG="red">
+  <item><text>1. Entry</text></item>
+  <item><text>2. Entry</text><bg>yellow</bg></item>
+  <item><text>2. Entry</text><bg>yellow</bg><fg>green</fg></item>
+</list>
+```
 
 ## setOffset
-sets the list offset (will automatically change if scrolling is active)
+Sets the offset of the list (the same as you would scroll) - default is 0
 
+#### Parameters: 
+1. `number` The offset value
+
+#### Returns:
+1. `object` The object in use
+
+#### Usage:
+* Creates a default list with 6 entries and sets the offset to 3.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
-aList:addItem("1. Entry")
-aList:addItem("2. Entry",colors.yellow)
-aList:addItem("3. Entry",colors.yellow,colors.green)
-aList:setOffset(3)
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
+      :addItem("1. Entry")
+      :addItem("2. Entry")
+      :addItem("3. Entry")
+      :addItem("4. Entry")
+      :addItem("5. Entry")
+      :addItem("6. Entry")
+      :setOffset(3)
 ```
-#### Parameters: number offsetValue<br>
-#### Returns: self<br>
+```xml
+<list offset="3">
+  <item><text>1. Entry</text></item>
+  <item><text>2. Entry</text></item>
+  <item><text>3. Entry</text></item>
+  <item><text>4. Entry</text></item>
+  <item><text>5. Entry</text></item>
+  <item><text>6. Entry</text></item>
+</list>
+```
 
 ## getOffset
-returns the current offset
+Returns the current index offset
 
+#### Returns:
+1. `number` offset value
+
+#### Usage:
+* Creates a default list with 6 entries and sets the offset to 3, also prints the current offset.
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aList = mainFrame:addList("myFirstList"):show()
-aList:addItem("1. Entry")
-aList:addItem("2. Entry",colors.yellow)
-aList:addItem("3. Entry",colors.yellow,colors.green)
-aList:getOffset()
+local mainFrame = basalt.createFrame()
+local aList = mainFrame:addList()
+      :addItem("1. Entry")
+      :addItem("2. Entry")
+      :addItem("3. Entry")
+      :addItem("4. Entry")
+      :addItem("5. Entry")
+      :addItem("6. Entry")
+      :setOffset(3)
+basalt.debug(aList:getOffset())
 ```
-#### Parameters: -<br>
-#### Returns: number offsetValue<br>

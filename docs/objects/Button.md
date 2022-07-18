@@ -16,7 +16,6 @@ Sets the displayed button text
 local mainFrame = basalt.createFrame()
 local button = mainFrame:addButton():setText("Click me!")
 ```
-
 ```xml
 <button text="Click me!" />
 ```
@@ -38,7 +37,6 @@ local button = mainFrame:addButton()
        :setText("Click me!")
        :setHorizontalAlign("right")
 ```
-
 ```xml
 <button text="Click me!" horizontalAlign="right" />
 ```
@@ -88,7 +86,6 @@ basalt.setVariable("buttonClick", function(self,event,button,x,y)
   end
 end)
 ```
-
 ```xml
 <button onClick="buttonClick" text="Click" />
 ```

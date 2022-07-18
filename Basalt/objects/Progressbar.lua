@@ -36,9 +36,6 @@ return function(name)
             if(xmlValue("progressSymbol", data)~=nil)then activeBarSymbol = xmlValue("progressSymbol", data) end
             if(xmlValue("backgroundSymbol", data)~=nil)then bgBarSymbol = xmlValue("backgroundSymbol", data) end
             if(xmlValue("progressSymbolColor", data)~=nil)then activeBarSymbolCol = colors[xmlValue("progressSymbolColor", data)] end
-            if(xmlValue("scrollable", data)~=nil)then if(xmlValue("scrollable", data))then self:setScrollable(true) else self:setScrollable(false) end end
-            if(xmlValue("offset", data)~=nil)then self:setOffset(xmlValue("offset", data)) end
-            if(xmlValue("space", data)~=nil)then space = xmlValue("space", data) end
             if(xmlValue("onDone", data)~=nil)then self:onProgressDone(baseFrame:getVariable(xmlValue("onDone", data))) end
             return self
         end,
