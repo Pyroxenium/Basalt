@@ -46,7 +46,6 @@ basalt.createFrame("myFirstFrame"):hide()
 basalt.getFrame("myFirstFrame"):show()
 ```
 
-
 ## basalt.getActiveFrame
 Returns the currently active base frame
 
@@ -70,7 +69,6 @@ local mainFrame = basalt.createFrame()
 basalt.autoUpdate()
 ```
 
-
 ## basalt.update
 Calls the draw and event handler once - this gives more flexibility about which events basalt should process. For example you could filter the terminate event.
 
@@ -80,14 +78,6 @@ Calls the draw and event handler once - this gives more flexibility about which 
 
 #### Usage:
 * Creates and starts a custom update cycle
-```lua
-local mainFrame = basalt.createFrame()
-local aButton = mainFrame:addButton():setPosition(2,2)
-
-while true do
-basalt.update(os.pullEventRaw())
-end
-```
 
 ## basalt.stopUpdate
 Stops the automatic draw and event handler which got started by basalt.autoUpdate()
@@ -97,11 +87,9 @@ Stops the automatic draw and event handler which got started by basalt.autoUpdat
 ```lua
 local mainFrame = basalt.createFrame()
 local aButton = mainFrame:addButton():setPosition(2,2):setText("Stop Basalt!")
-
 aButton:onClick(function()
 basalt.stopUpdate()
 end)
-
 basalt.autoUpdate()
 ```
 
@@ -116,16 +104,7 @@ Checks if the user is currently holding a key
 
 #### Usage:
 * Shows a debug message with true or false if the left ctrl key is down, as soon as you click on the button.
-```lua
-local mainFrame = basalt.createFrame()
-local aButton = mainFrame:addButton():setPosition(2,2):setText("Check Ctrl")
 
-aButton:onClick(function()
-basalt.debug(basalt.isKeyDown(keys.leftCtrl) )
-end)
-
-basalt.autoUpdate()
-```
 
 ## basalt.debug
 creates a label with some information on the main frame on the bottom left, if you click on that label it will open a log view for you. See it as the new print for debugging
@@ -151,7 +130,7 @@ Sets the base theme of the project! Make sure to cover all existing objects, oth
 1. `table` theme layout look into [theme](https://github.com/Pyroxenium/Basalt/blob/master/Basalt/theme.lua) for a example
 
 #### Usage:
-* Creates a new base frame and adds a new theme which only changes the default color of buttons.
+* Sets the default theme of basalt.
 ```lua
 basalt.setTheme({
     ButtonBG = colors.yellow,
