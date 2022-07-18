@@ -182,14 +182,14 @@ return function(name)
                     end
                 end
                 if(duration~=nil)and(#t>0)then
-                    self:changeFG(duration, timer or 0, table.unpack(t))
+                    self:changeTextColor(duration, timer or 0, table.unpack(t))
                 end
             end
-            if(data["backgroundColor"]~=nil)then 
-                local duration = xmlValue("duration", data["backgroundColor"])
-                local timer = xmlValue("time", data["backgroundColor"])
+            if(data["background"]~=nil)then 
+                local duration = xmlValue("duration", data["background"])
+                local timer = xmlValue("time", data["background"])
                 local t = {}
-                local tab = data["backgroundColor"]["color"]
+                local tab = data["background"]["color"]
                 if(tab~=nil)then
                     if(tab.properties~=nil)then tab = {tab} end
                     for k,v in pairs(tab)do
@@ -197,7 +197,7 @@ return function(name)
                     end
                 end
                 if(duration~=nil)and(#t>0)then
-                    self:changeBG(duration, timer or 0, table.unpack(t))
+                    self:changeBackground(duration, timer or 0, table.unpack(t))
                 end
             end
             if(data["text"]~=nil)then 
@@ -285,7 +285,7 @@ return function(name)
             return self
         end,
 
-        changeBG = function(self, duration, timer, ...)
+        changeBackground = function(self, duration, timer, ...)
             local colors = {...}
             timer = timer or 0
             _OBJ = obj or _OBJ
@@ -297,7 +297,7 @@ return function(name)
             return self
         end,
 
-        changeFG = function(self, duration, timer, ...)
+        changeTextColor = function(self, duration, timer, ...)
             local colors = {...}
             timer = timer or 0
             _OBJ = obj or _OBJ

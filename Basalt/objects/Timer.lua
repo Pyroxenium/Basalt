@@ -18,9 +18,8 @@ return function(name)
         end;
 
         setValuesByXMLData = function(self, data)
-            local f
             if(xmlValue("time", data)~=nil)then  timer = xmlValue("time", data) end
-            if(xmlValue("repeat", data)~=nil)then  timer = xmlValue("repeat", data) end
+            if(xmlValue("repeat", data)~=nil)then  savedRepeats = xmlValue("repeat", data) end
             if(xmlValue("start", data)~=nil)then  if(xmlValue("start", data))then self:start() end end
             if(xmlValue("onCall", data)~=nil)then self:onCall(getBaseFrame():getVariable(xmlValue("onCall", data))) end
             return self

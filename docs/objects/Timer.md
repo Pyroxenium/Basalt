@@ -1,49 +1,84 @@
-With timers you can call delayed functions.
+Timers can call your functions delay and repeat it as often as you wish
 <br>
-Here is a list of all available functions for timers: <br>
 
 ## setTime
 sets the time the timer should wait after calling your function
+
+#### Parameters: 
+1. `number` the time to delay
+2. `number` how often it should be repeated -1 is infinite
+
+#### Returns:
+1. `object` The object
+
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aTimer = mainFrame:addTimer("myFirstTimer")
-aTimer:setTime(5)
+local mainFrame = basalt.createFrame()
+local aTimer = mainFrame:addTimer()
+aTimer:setTime(2)
 ```
-#### Parameters:number time[, number repeats] - (time in seconds, if repeats is -1 it will call the function infinitly (every x seconds)<br>
-#### Returns: self<br>
+```xml
+<timer time="2" repeat="1"/>
+```
 
 ## start
-starts the timer
+Starts the timer
+
+#### Returns:
+1. `object` The object
+
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aTimer = mainFrame:addTimer("myFirstTimer")
-aTimer:setTime(5):start()
+local mainFrame = basalt.createFrame()
+local aTimer = mainFrame:addTimer()
+aTimer:setTime(2):start()
 ```
-#### Parameters: -<br>
-#### Returns: self<br>
+```xml
+<timer time="2" start="true"/>
+```
 
 ## cancel
-stops/cancels the timer
+Cancels the timer
+
+#### Returns:
+1. `object` The object
+
 ```lua
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aTimer = mainFrame:addTimer("myFirstTimer")
-aTimer:setTime(5):start()
+local mainFrame = basalt.createFrame()
+local aTimer = mainFrame:addTimer()
+aTimer:setTime(2):start()
 aTimer:cancel()
 ```
-#### Parameters: -<br>
-#### Returns: self<br>
 
+# Events
 
 ## onCall
-adds a function to the timer
-```lua
-local function timerCall(self)
-    basalt.debug("i got called!")
-end
-local mainFrame = basalt.createFrame("myFirstFrame"):show()
-local aTimer = mainFrame:addTimer("myFirstTimer")
-aTimer:setTime(5):onCall(timerCall):start()
+`onCall(self)`<br>
+A custom event which gets triggered as soon as the current timer has finished
 
+Here is a example on how to add a onCall event to your timer:
+
+```lua
+local basalt = require("Basalt")
+
+local mainFrame = basalt.createFrame()
+local aTimer = mainFrame:addTimer()
+
+function call()
+  basalt.debug("The timer has finished!")
+end
+aTimer:onCall(call)
 ```
-#### Parameters: function func<br>
-#### Returns: self<br>
+
+Here is also a example how this is done with xml:
+
+```lua
+local basalt = require("Basalt")
+
+local mainFrame = basalt.createFrame()
+
+basalt.setVariable("call", function()
+  basalt.debug("The timer has finished!")
+end)
+```
+```xml
+<progressbar onDone="call" />
+```

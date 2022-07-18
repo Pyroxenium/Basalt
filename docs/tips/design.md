@@ -9,9 +9,9 @@ Let us begin with simple things:
 Let's create a Button:
 
 ```lua
-local basalt = dofile("basalt.lua")
-local mainFrame = basalt.createFrame("myFirstFrame"):setBackground(colors.black):show()
-local aButton = mainFrame:addButton("myFirstButton"):setSize(10, 3):setText("Beautiful"):setBackground(colors.gray):show()
+local basalt = require("Basalt")
+local mainFrame = basalt.createFrame():setBackground(colors.black):show()
+local aButton = mainFrame:addButton():setSize(10, 3):setText("Beautiful"):setBackground(colors.gray):show()
 ```
 
 Here lets make use of the event system:<br>
@@ -38,7 +38,7 @@ aButton:onLoseFocus(function(self) self:setBackground(colors.gray) end) -- if us
 ## Fade In/Out Objects
 instead of recoloring we are also able to slowly reposition the button, something like fade in:<br>
 ```lua
-local buttonAnimation = mainFrame:addAnimation("buttonFadeAnim")
+local buttonAnimation = mainFrame:addAnimation()
 local function fadeButtonIn(btn)
     if(btn.x < 5)then
         btn:setPosition(1,0,"r")
@@ -51,4 +51,32 @@ buttonAnimation:wait(0.1):add(function() fadeButtonIn(aButton) end):play(true) -
 ```
 This is also possible with entire frames and its children objects. So keep that in mind if you want to create something like a bigger panel to the right or a menu bar
 
-WIP
+## How To use XML
+Here is a example on how to create a cool looking frame by using xml:
+```xml
+<frame width="50%" bg="gray" scrollable="true" importantScroll="true">
+    <button x="2" y="2" width="100%-2" bg="black" fg="lightGray" text="Example Button 1!"/>
+    <button x="2" y="6" width="100%-2" bg="black" fg="lightGray" text="Example Button 2!"/>
+    <button x="2" y="10" width="100%-2" bg="black" fg="lightGray" text="Example Button 3!"/>
+    <button x="2" y="14" width="100%-2" bg="black" fg="lightGray" text="Example Button 4!"/>
+    <button x="2" y="18" width="100%-2" bg="black" fg="lightGray" text="Example Button 5!"/>
+    <button x="2" y="22" width="100%-2" bg="black" fg="lightGray" text="Example Button 6!"/>
+    <button x="2" y="26" width="100%-2" bg="black" fg="lightGray" text="Example Button 7!"/>
+</frame>
+<frame x="50%+1" width="50%+1" bg="black">
+    <textfield bg="gray" x="2" y="2" width="100%-2">
+        <lines>
+            <line>This is line 1.</line>
+            <line>And this is line 2.</line>
+        </lines>
+    </textfield>
+    <label anchor="bottomLeft" x="2" y="0" text="I love labels!" fg="lightGray"/>
+</frame>
+```
+in your lua code you just have to add this layout to your frame:
+```lua
+local basalt = require("Basalt")
+
+basalt.createFrame():addLayout("example.xml")
+basalt.autoUpdate()
+```

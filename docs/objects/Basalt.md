@@ -46,7 +46,6 @@ basalt.createFrame("myFirstFrame"):hide()
 basalt.getFrame("myFirstFrame"):show()
 ```
 
-
 ## basalt.getActiveFrame
 Returns the currently active base frame
 
@@ -70,7 +69,6 @@ local mainFrame = basalt.createFrame()
 basalt.autoUpdate()
 ```
 
-
 ## basalt.update
 Calls the draw and event handler once - this gives more flexibility about which events basalt should process. For example you could filter the terminate event.
 
@@ -83,9 +81,8 @@ Calls the draw and event handler once - this gives more flexibility about which 
 ```lua
 local mainFrame = basalt.createFrame()
 local aButton = mainFrame:addButton():setPosition(2,2)
-
 while true do
-basalt.update(os.pullEventRaw())
+    basalt.update(os.pullEventRaw())
 end
 ```
 
@@ -97,11 +94,9 @@ Stops the automatic draw and event handler which got started by basalt.autoUpdat
 ```lua
 local mainFrame = basalt.createFrame()
 local aButton = mainFrame:addButton():setPosition(2,2):setText("Stop Basalt!")
-
 aButton:onClick(function()
 basalt.stopUpdate()
 end)
-
 basalt.autoUpdate()
 ```
 
@@ -119,11 +114,9 @@ Checks if the user is currently holding a key
 ```lua
 local mainFrame = basalt.createFrame()
 local aButton = mainFrame:addButton():setPosition(2,2):setText("Check Ctrl")
-
-aButton:onClick(function()
-basalt.debug(basalt.isKeyDown(keys.leftCtrl) )
+aButton:onClick(function() 
+    basalt.debug(basalt.isKeyDown(keys.leftCtrl))
 end)
-
 basalt.autoUpdate()
 ```
 
@@ -144,14 +137,14 @@ Also basalt.debugFrame and basalt.debugList are available.
 basalt.debug("Hello! ", "^-^")
 ```
 
-## setTheme
+## basalt.setTheme
 Sets the base theme of the project! Make sure to cover all existing objects, otherwise it will result in errors. A good example is [theme](https://github.com/Pyroxenium/Basalt/blob/master/Basalt/theme.lua)
 
 #### Parameters: 
 1. `table` theme layout look into [theme](https://github.com/Pyroxenium/Basalt/blob/master/Basalt/theme.lua) for a example
 
 #### Usage:
-* Creates a new base frame and adds a new theme which only changes the default color of buttons.
+* Sets the default theme of basalt.
 ```lua
 basalt.setTheme({
     ButtonBG = colors.yellow,
@@ -160,7 +153,7 @@ basalt.setTheme({
 })
 ```
 
-## setVariable
+## basalt.setVariable
 This stores a variable which you're able to access via xml. You are also able to add a function, which then gets called by object events created in XML.
 
 #### Parameters: 
@@ -178,7 +171,7 @@ end)
 <button onClick="clickMe" text="Click me" />
 ```
 
-## shedule
+## basalt.shedule
 Shedules a function which gets called in a coroutine. After the coroutine is finished it will get destroyed immediatly. It's something like threads, but with some limits.
 
 #### Parameters: 
