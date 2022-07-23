@@ -1,5 +1,4 @@
 local basaltEvent = require("basaltEvent")
-local dynValue = require("dynamicValues")
 local utils = require("utils")
 local split = utils.splitString
 local numberFromString = utils.numberFromString
@@ -23,6 +22,9 @@ return function(name)
 
     local shadowColor = colors.black
     local borderColor = colors.black
+    local isEnabled = true
+    local isDragging = false
+    local dragStartX, dragStartY, dragXOffset, dragYOffset = 0, 0, 0, 0
 
     local visualsChanged = true
 
@@ -50,16 +52,48 @@ return function(name)
             return self
         end;
 
+        enable = function(self)
+            isEnabled = true
+            return self
+        end;
+
+        disable = function(self)
+            isEnabled = false
+            return self
+        end;
+
+        generateXMLEventFunction = function(self, func, val)
+            local createF = function(str)
+                if(str:sub(1,1)=="#")then
+                    local o = self:getBaseFrame():getDeepObject(str:sub(2,str:len()))
+                    if(o~=nil)and(o.internalObjetCall~=nil)then
+                        func(self,function()o:internalObjetCall()end)
+                    end
+                else
+                    func(self,self:getBaseFrame():getVariable(str))
+                end
+            end
+            if(type(val)=="string")then
+                createF(val)
+            elseif(type(val)=="table")then
+                for k,v in pairs(val)do
+                    createF(v)
+                end
+            end
+            return self
+        end,
+
         setValuesByXMLData = function(self, data)
             local baseFrame = self:getBaseFrame()
-            if(xmlValue("x", data)~=nil)then self:setPosition(xmlValue("x", data), self:getY()) end
-            if(xmlValue("y", data)~=nil)then self:setPosition(self:getX(), xmlValue("y", data)) end
-            if(xmlValue("width", data)~=nil)then self:setSize(xmlValue("width", data), self:getHeight()) end
-            if(xmlValue("height", data)~=nil)then self:setSize(self:getWidth(), xmlValue("height", data)) end
+            if(xmlValue("x", data)~=nil)then self:setPosition(xmlValue("x", data), self.y) end
+            if(xmlValue("y", data)~=nil)then self:setPosition(self.x, xmlValue("y", data)) end
+            if(xmlValue("width", data)~=nil)then self:setSize(xmlValue("width", data), self.height) end
+            if(xmlValue("height", data)~=nil)then self:setSize(self.width, xmlValue("height", data)) end
             if(xmlValue("bg", data)~=nil)then self:setBackground(colors[xmlValue("bg", data)]) end
             if(xmlValue("fg", data)~=nil)then self:setForeground(colors[xmlValue("fg", data)]) end
             if(xmlValue("value", data)~=nil)then self:setValue(colors[xmlValue("value", data)]) end
             if(xmlValue("visible", data)~=nil)then if(xmlValue("visible", data))then self:show() else self:hide() end end
+            if(xmlValue("enabled", data)~=nil)then if(xmlValue("enabled", data))then self:enable() else self:disable() end end
             if(xmlValue("zIndex", data)~=nil)then self:setZIndex(xmlValue("zIndex", data)) end
             if(xmlValue("anchor", data)~=nil)then self:setAnchor(xmlValue("anchor", data)) end
             if(xmlValue("shadow", data)~=nil)then if(xmlValue("shadow", data))then self:showShadow(true) end end
@@ -71,20 +105,20 @@ return function(name)
             if(xmlValue("borderBottom", data)~=nil)then if(xmlValue("borderBottom", data))then borderBottom = true else borderBottom = false end end
             if(xmlValue("borderColor", data)~=nil)then self:setBorder(colors[xmlValue("borderColor", data)]) end
             if(xmlValue("ignoreOffset", data)~=nil)then if(xmlValue("ignoreOffset", data))then self:ignoreOffset(true) end end
-            if(xmlValue("onClick", data)~=nil)then self:onClick(baseFrame:getVariable(xmlValue("onClick", data))) end
-            if(xmlValue("onClickUp", data)~=nil)then self:onClickUp(baseFrame:getVariable(xmlValue("onClickUp", data))) end
-            if(xmlValue("onScroll", data)~=nil)then self:onScroll(baseFrame:getVariable(xmlValue("onScroll", data))) end
-            if(xmlValue("onDrag", data)~=nil)then self:onDrag(baseFrame:getVariable(xmlValue("onDrag", data))) end
-            if(xmlValue("onKey", data)~=nil)then self:onKey(baseFrame:getVariable(xmlValue("onKey", data))) end
-            if(xmlValue("onKeyUp", data)~=nil)then self:onKeyUp(baseFrame:getVariable(xmlValue("onKeyUp", data))) end
-            if(xmlValue("onChange", data)~=nil)then self:onChange(baseFrame:getVariable(xmlValue("onChange", data))) end
-            if(xmlValue("onResize", data)~=nil)then self:onResize(baseFrame:getVariable(xmlValue("onResize", data))) end
-            if(xmlValue("onReposition", data)~=nil)then self:onReposition(baseFrame:getVariable(xmlValue("onReposition", data))) end
-            if(xmlValue("onEvent", data)~=nil)then self:onEvent(baseFrame:getVariable(xmlValue("onEvent", data))) end
-            if(xmlValue("onGetFocus", data)~=nil)then self:onGetFocus(baseFrame:getVariable(xmlValue("onGetFocus", data))) end
-            if(xmlValue("onLoseFocus", data)~=nil)then self:onLoseFocus(baseFrame:getVariable(xmlValue("onLoseFocus", data))) end
-            if(xmlValue("onBackgroundKey", data)~=nil)then self:onBackgroundKey(baseFrame:getVariable(xmlValue("onBackgroundKey", data))) end
-            if(xmlValue("onBackgroundKeyUp", data)~=nil)then self:onBackgroundKeyUp(baseFrame:getVariable(xmlValue("onBackgroundKeyUp", data))) end
+            if(xmlValue("onClick", data)~=nil)then self:generateXMLEventFunction(self.onClick, xmlValue("onClick", data)) end
+            if(xmlValue("onClickUp", data)~=nil)then self:generateXMLEventFunction(self.onClickUp, xmlValue("onClickUp", data)) end
+            if(xmlValue("onScroll", data)~=nil)then self:generateXMLEventFunction(self.onScroll, xmlValue("onScroll", data)) end
+            if(xmlValue("onDrag", data)~=nil)then self:generateXMLEventFunction(self.onDrag, xmlValue("onDrag", data)) end
+            if(xmlValue("onKey", data)~=nil)then self:generateXMLEventFunction(self.onKey, xmlValue("onKey", data)) end
+            if(xmlValue("onKeyUp", data)~=nil)then self:generateXMLEventFunction(self.onKeyUp, xmlValue("onKeyUp", data)) end
+            if(xmlValue("onChange", data)~=nil)then self:generateXMLEventFunction(self.onChange, xmlValue("onChange", data)) end
+            if(xmlValue("onResize", data)~=nil)then self:generateXMLEventFunction(self.onResize, xmlValue("onResize", data)) end
+            if(xmlValue("onReposition", data)~=nil)then self:generateXMLEventFunction(self.onReposition, xmlValue("onReposition", data)) end
+            if(xmlValue("onEvent", data)~=nil)then self:generateXMLEventFunction(self.onEvent, xmlValue("onEvent", data)) end
+            if(xmlValue("onGetFocus", data)~=nil)then self:generateXMLEventFunction(self.onGetFocus, xmlValue("onGetFocus", data)) end
+            if(xmlValue("onLoseFocus", data)~=nil)then self:generateXMLEventFunction(self.onLoseFocus, xmlValue("onLoseFocus", data)) end
+            if(xmlValue("onBackgroundKey", data)~=nil)then self:generateXMLEventFunction(self.onBackgroundKey, xmlValue("onBackgroundKey", data)) end
+            if(xmlValue("onBackgroundKeyUp", data)~=nil)then self:generateXMLEventFunction(self.onBackgroundKeyUp, xmlValue("onBackgroundKeyUp", data)) end
             
             return self
         end,
@@ -172,6 +206,10 @@ return function(name)
             return self.parent
         end;
 
+        getObjectReferencesForDynVal = function(self, str)
+            
+        end,
+
         setPosition = function(self, xPos, yPos, rel)
             if(type(xPos)=="number")then
                 self.x = rel and self:getX()+xPos or xPos
@@ -179,36 +217,26 @@ return function(name)
             if(type(yPos)=="number")then
                 self.y = rel and self:getY()+yPos or yPos
             end
-            if(type(xPos)=="string")then
-                self.x = dynValue(xPos, function() return self:getParent():getWidth() end)
+            if(self.parent~=nil)then
+                if(type(xPos)=="string")then
+                    self.x = self.parent:newDynamicValue(self, xPos)
+                end
+                if(type(yPos)=="string")then
+                    self.y = self.parent:newDynamicValue(self, yPos)
+                end
+                self.parent:recalculateDynamicValues()
             end
-            if(type(xPos)=="table")then
-                local str = xPos[1]
-                table.remove(xPos, 1)
-                local fList = xPos
-                self.x = dynValue(str, function() return self:getParent():getWidth() end, fList)
-            end
-            if(type(yPos)=="string")then
-                self.y = dynValue(yPos, function() return self:getParent():getHeight() end)
-            end
-            if(type(yPos)=="table")then
-                local str = yPos[1]
-                table.remove(yPos, 1)
-                local fList = yPos
-                self.y = dynValue(str, function() return self:getParent():getHeight() end, fList)
-            end
-            self:calculateDynamicValues()
             eventSystem:sendEvent("basalt_reposition", self)
             visualsChanged = true
             return self
         end;
 
         getX = function(self)
-            return type(self.x)=="number" and self.x or self.x:get()
+            return type(self.x) == "number" and self.x or self.x[1]
         end;
 
         getY = function(self)
-            return type(self.y)=="number" and self.y or self.y:get()
+            return type(self.y) == "number" and self.y or self.y[1]
         end;
 
         getPosition = function(self)
@@ -232,36 +260,26 @@ return function(name)
             if(type(height)=="number")then
                 self.height = rel and self.height+height or height
             end
-            if(type(width)=="string")then
-                self.width = dynValue(width, function() return self:getParent():getWidth() end)
+            if(self.parent~=nil)then
+                if(type(width)=="string")then
+                    self.width = self.parent:newDynamicValue(self, width)
+                end
+                if(type(height)=="string")then
+                    self.height = self.parent:newDynamicValue(self, height)
+                end
+                self.parent:recalculateDynamicValues()
             end
-            if(type(width)=="table")then
-                local str = width[1]
-                table.remove(width, 1)
-                local fList = width
-                self.width = dynValue(str, function() return self:getParent():getWidth() end, fList)
-            end
-            if(type(height)=="string")then
-                self.height = dynValue(height, function() return self:getParent():getHeight() end)
-            end
-            if(type(height)=="table")then
-                local str = height[1]
-                table.remove(height, 1)
-                local fList = height
-                self.height = dynValue(str, function() return self:getParent():getHeight() end, fList)
-            end
-            self:calculateDynamicValues()
             eventSystem:sendEvent("basalt_resize", self)
             visualsChanged = true
             return self
         end;
 
         getHeight = function(self)
-            return type(self.height)=="number" and self.height or self.height:get()
+            return type(self.height) == "number" and self.height or self.height[1]
         end;
 
         getWidth = function(self)
-            return type(self.width)=="number" and self.width or self.width:get()
+            return type(self.width) == "number" and self.width or self.width[1]
         end;
 
         getSize = function(self)
@@ -277,7 +295,7 @@ return function(name)
         end,
 
         setBackground = function(self, color)
-            self.bgColor = color
+            self.bgColor = color or false
             visualsChanged = true
             return self
         end;
@@ -287,7 +305,7 @@ return function(name)
         end;
 
         setForeground = function(self, color)
-            self.fgColor = color
+            self.fgColor = color or false
             visualsChanged = true
             return self
         end;
@@ -516,9 +534,11 @@ return function(name)
         end;
 
         onDrag = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("mouse_drag", v)
+            if(isEnabled)then
+                for _,v in pairs(table.pack(...))do
+                    if(type(v)=="function")then
+                        self:registerEvent("mouse_drag", v)
+                    end
                 end
             end
             return self
@@ -627,38 +647,67 @@ return function(name)
         end;
 
         mouseHandler = function(self, event, button, x, y)
-            local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
-            local w, h = self:getSize()
-            local yOff = false
-            
-            if(objY-1 == y)and(self:getBorder("top"))then
-                y = y+1
-                yOff = true
-            end
-
-            if (objX <= x) and (objX + w > x) and (objY <= y) and (objY + h > y) and (isVisible) then
-                if (self.parent ~= nil) then
-                    self.parent:setFocusedObject(self)
+            if(isEnabled)and(isVisible)then
+                local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+                local w, h = self:getSize()
+                local yOff = false
+                
+                if(objY-1 == y)and(self:getBorder("top"))then
+                    y = y+1
+                    yOff = true
                 end
-                local val = eventSystem:sendEvent(event, self, event, button, x, y)
-                if(val~=nil)then return val end
-                return true
+                if(event=="mouse_up")then
+                    isDragging = false
+                end
+
+                if(isDragging)and(event=="mouse_drag")then 
+                    local xO, yO, parentX, parentY = 0, 0, 1, 1
+                    if (self.parent ~= nil) then
+                        xO, yO = self.parent:getOffset()
+                        xO = xO < 0 and math.abs(xO) or -xO
+                        yO = yO < 0 and math.abs(yO) or -yO
+                        parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
+                    end
+                    local dX, dY = x + dragXOffset - (parentX - 1) + xO, y + dragYOffset - (parentY - 1) + yO
+                    local val = eventSystem:sendEvent(event, self, event, button, dX, dY, dragStartX, dragStartY, x, y)
+                end 
+
+
+                if (objX <= x) and (objX + w > x) and (objY <= y) and (objY + h > y) then
+                    if(event=="mouse_click")then 
+                        isDragging = true 
+                        dragStartX, dragStartY = x, y 
+                        dragXOffset, dragYOffset = objX - x, objY - y
+                    end
+                    if(event~="mouse_drag")then
+                        if (self.parent ~= nil) then
+                            self.parent:setFocusedObject(self)
+                        end
+                        local val = eventSystem:sendEvent(event, self, event, button, x, y)
+                        if(val~=nil)then return val end
+                    end
+                    return true
+                end
             end
             return false
         end;
 
         keyHandler = function(self, event, key)
-            if (self:isFocused()) then
-                local val = eventSystem:sendEvent(event, self, event, key)
-                if(val~=nil)then return val end
-                return true
+            if(isEnabled)then
+                if (self:isFocused()) then
+                    local val = eventSystem:sendEvent(event, self, event, key)
+                    if(val~=nil)then return val end
+                    return true
+                end
             end
             return false
         end;
 
         backgroundKeyHandler = function(self, event, key)
-            local val = eventSystem:sendEvent("background_"..event, self, event, key)
-            if(val~=nil)then return val end
+                if(isEnabled)then
+                local val = eventSystem:sendEvent("background_"..event, self, event, key)
+                if(val~=nil)then return val end
+            end
             return true
         end;
 

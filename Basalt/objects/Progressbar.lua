@@ -36,7 +36,7 @@ return function(name)
             if(xmlValue("progressSymbol", data)~=nil)then activeBarSymbol = xmlValue("progressSymbol", data) end
             if(xmlValue("backgroundSymbol", data)~=nil)then bgBarSymbol = xmlValue("backgroundSymbol", data) end
             if(xmlValue("progressSymbolColor", data)~=nil)then activeBarSymbolCol = colors[xmlValue("progressSymbolColor", data)] end
-            if(xmlValue("onDone", data)~=nil)then self:onProgressDone(baseFrame:getVariable(xmlValue("onDone", data))) end
+            if(xmlValue("onDone", data)~=nil)then self:generateXMLEventFunction(self.onProgressDone, xmlValue("onDone", data)) end
             return self
         end,
 

@@ -178,26 +178,24 @@ Shedules a function which gets called in a coroutine. After the coroutine is fin
 1. `function` a function which should get executed
 
 #### Returns: 
-1. `coroutine` it returns the coroutine which got created to execute the function
+1. `function` it returns the function which you have to execute in order to start the coroutine
 
 #### Usage:
 * Creates a shedule which switches the color between red and gray
 ```lua
 local mainFrame = basalt.createFrame()
 local aButton = mainFrame:addButton():setText("Click me")
-aButton:onClick(function()
-    basalt.shedule(function()
-        aButton:setBackground(colors.red)
-        os.sleep(0.1)
-        aButton:setBackground(colors.gray)
-        os.sleep(0.1)
-        aButton:setBackground(colors.red)
-        os.sleep(0.1)
-        aButton:setBackground(colors.gray)
-        os.sleep(0.1)
-        aButton:setBackground(colors.red)
-        os.sleep(0.1)
-        aButton:setBackground(colors.gray)
-    end)
-end)
+aButton:onClick(basalt.shedule(function(self)
+    self:setBackground(colors.red)
+    os.sleep(0.1)
+    self:setBackground(colors.gray)
+    os.sleep(0.1)
+    self:setBackground(colors.red)
+    os.sleep(0.1)
+    self:setBackground(colors.gray)
+    os.sleep(0.1)
+    self:setBackground(colors.red)
+    os.sleep(0.1)
+    self:setBackground(colors.gray)
+end))
 ```

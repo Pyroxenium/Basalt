@@ -11,6 +11,27 @@ return function(name)
     local eventSystem = basaltEvent()
     local timerIsActive = false
 
+    local generateXMLEventFunction = function(self, func, val)
+        local createF = function(str)
+            if(str:sub(1,1)=="#")then
+                local o = self:getBaseFrame():getDeepObject(str:sub(2,str:len()))
+                if(o~=nil)and(o.internalObjetCall~=nil)then
+                    func(self,function()o:internalObjetCall()end)
+                end
+            else
+                func(self,self:getBaseFrame():getVariable(str))
+            end
+        end
+        if(type(val)=="string")then
+            createF(val)
+        elseif(type(val)=="table")then
+            for k,v in pairs(val)do
+                createF(v)
+            end
+        end
+        return self
+    end
+
     local object = {
         name = name,
         getType = function(self)
@@ -21,7 +42,7 @@ return function(name)
             if(xmlValue("time", data)~=nil)then  timer = xmlValue("time", data) end
             if(xmlValue("repeat", data)~=nil)then  savedRepeats = xmlValue("repeat", data) end
             if(xmlValue("start", data)~=nil)then  if(xmlValue("start", data))then self:start() end end
-            if(xmlValue("onCall", data)~=nil)then self:onCall(getBaseFrame():getVariable(xmlValue("onCall", data))) end
+            if(xmlValue("onCall", data)~=nil)then generateXMLEventFunction(self, self.onCall, xmlValue("onCall", data)) end
             return self
         end,
 

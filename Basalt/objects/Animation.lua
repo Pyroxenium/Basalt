@@ -8,6 +8,10 @@ local lerp = function(s, e, pct)
     return s + (e - s) * pct
 end
 
+local linear = function (t)
+    return t
+end
+
 local flip = function (x)
     return 1 - x
 end
@@ -25,6 +29,7 @@ local easeInOut = function(t)
 end
 
 local lerp = {
+    linear = linear,
     lerp = lerp,
     flip=flip,
     easeIn=easeIn,
@@ -48,6 +53,8 @@ return function(name)
     local nextWaitTimer = 0
     local lastFunc
     local loop=false
+    local autoDestroy = false
+    local mode = "easeOut"
 
     local _OBJ
 
@@ -58,6 +65,7 @@ return function(name)
     end
 
     local function onPlay(self)
+        if(index==1)then self:animationStartHandler() end
         if (animations[index] ~= nil) then
             call(animations[index].f)
             animationTime = animations[index].t
@@ -106,9 +114,9 @@ return function(name)
             table.insert(animations, {t=time, f={f}})
         end
     end
+    
 
-    local function predefinedLerp(v1,v2,d,t,get,set,mode)
-        mode = mode or "easeOut"
+    local function predefinedLerp(v1,v2,d,t,get,set)
         local x,y 
         addAnimationPart(t+0.05, function()
             x,y = get(_OBJ)
@@ -135,6 +143,32 @@ return function(name)
             return self
         end;
 
+        setMode = function(self, newMode)
+            mode = newMode
+            return self
+        end,
+
+        generateXMLEventFunction = function(self, func, val)
+            local createF = function(str)
+                if(str:sub(1,1)=="#")then
+                    local o = self:getBaseFrame():getDeepObject(str:sub(2,str:len()))
+                    if(o~=nil)and(o.internalObjetCall~=nil)then
+                        func(self,function()o:internalObjetCall()end)
+                    end
+                else
+                    func(self,self:getBaseFrame():getVariable(str))
+                end
+            end
+            if(type(val)=="string")then
+                createF(val)
+            elseif(type(val)=="table")then
+                for k,v in pairs(val)do
+                    createF(v)
+                end
+            end
+            return self
+        end,
+
         setValuesByXMLData = function(self, data)
             loop = xmlValue("loop", data)==true and true or false
             if(xmlValue("object", data)~=nil)then 
@@ -151,24 +185,21 @@ return function(name)
                 local y = xmlValue("y", data["move"])
                 local duration = xmlValue("duration", data["move"])
                 local time = xmlValue("time", data["move"])
-                local mode = xmlValue("mode", data["move"])
-                self:move(x, y, duration, time, mode)
+                self:move(x, y, duration, time)
             end
             if(data["size"]~=nil)then 
                 local w = xmlValue("width", data["size"])
                 local h = xmlValue("height", data["size"])
                 local duration = xmlValue("duration", data["size"])
                 local time = xmlValue("time", data["size"])
-                local mode = xmlValue("mode", data["size"])
-                self:size(w, h, duration, time, mode)
+                self:size(w, h, duration, time)
             end
             if(data["offset"]~=nil)then 
                 local x = xmlValue("x", data["offset"])
                 local y = xmlValue("y", data["offset"])
                 local duration = xmlValue("duration", data["offset"])
                 local time = xmlValue("time", data["offset"])
-                local mode = xmlValue("mode", data["offset"])
-                self:offset(x, y, duration, time, mode)
+                self:offset(x, y, duration, time)
             end
             if(data["textColor"]~=nil)then 
                 local duration = xmlValue("duration", data["textColor"])
@@ -215,29 +246,14 @@ return function(name)
                     self:changeText(duration, timer or 0, table.unpack(t))
                 end
             end
-            if(xmlValue("onDone", data)~=nil)then
-                local value = xmlValue("onDone", data)
-                if(value:sub(1,1)=="#")then
-                    value = xmlValue("onDone", data):sub(2,value:len())
-                    local o = self:getBaseFrame():getDeepObject(value) 
-                    if(o~=nil)then
-                        self:onAnimationDone(function()o:internalObjetCall()end)
-                    end
-                else
-                    local f = self:getBaseFrame():getVariable(value)
-                    if(f~=nil)then
-                        self:onAnimationDone(f)
-                    end
+            if(xmlValue("onDone", data)~=nil)then self:generateXMLEventFunction(self.onDone, xmlValue("onDone", data)) end
+            if(xmlValue("onStart", data)~=nil)then self:generateXMLEventFunction(self.onDone, xmlValue("onStart", data)) end
+            if(xmlValue("autoDestroy", data)~=nil)then
+                if(xmlValue("autoDestroy", data))then
+                    autoDestroy = true
                 end
             end
-            if(xmlValue("autoRemove", data)~=nil)then
-                if(xmlValue("autoRemove", data)~=false)then
-                    self:onAnimationDone(function() self.parent:removeObject(self) end)
-                end 
-            else
-                self:onAnimationDone(function() self.parent:removeObject(self) end)
-            end
-            
+            mode = xmlValue("mode", data) or mode
             if(xmlValue("play", data)~=nil)then if(xmlValue("play", data))then self:play(loop) end end
             return self
         end,
@@ -263,7 +279,7 @@ return function(name)
 
         offset = function(self, x, y, duration, timer, obj)
             _OBJ = obj or _OBJ
-            predefinedLerp(x,y,duration,timer or 0,_OBJ.getOffset,_OBJ.setOffset)
+            predefinedLerp(x,y,duration,timer or 0,_OBJ.getOffsetInternal,_OBJ.setOffset)
             return self
         end,
 
@@ -329,13 +345,31 @@ return function(name)
             return self
         end;
 
-        onAnimationDone = function(self, f)
+        onDone = function(self, f)
             eventSystem:registerEvent("animation_done", f)
+            return self
+        end,
+
+        onStart = function(self, f)
+            eventSystem:registerEvent("animation_start", f)
+            return self
+        end,
+
+        setAutoDestroy = function(self, destroy)
+            autoDestroy = destroy~=nil and destroy or true
             return self
         end,
 
         animationDoneHandler = function(self)
             eventSystem:sendEvent("animation_done", self)
+            if(autoDestroy)then
+                self.parent:removeObject(self)
+                self = nil
+            end
+        end;
+
+        animationStartHandler = function(self)
+            eventSystem:sendEvent("animation_start", self)
         end;
 
         clear = function(self)

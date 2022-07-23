@@ -164,6 +164,41 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
     drawFrames()
 end
 
+local basaltError = function(errMsg)
+    baseTerm.clear()
+    baseTerm.setBackgroundColor(colors.black)
+    baseTerm.setTextColor(colors.red)
+    local w,h = baseTerm.getSize()
+
+    local splitString = function(str, sep)
+        if sep == nil then
+                sep = "%s"
+        end
+        local t={}
+        for v in string.gmatch(str, "([^"..sep.."]+)") do
+                table.insert(t, v)
+        end
+        return t
+    end   
+    local words = splitString(errMsg, " ")
+    local line = "Basalt error: "
+    local yPos = 1
+    for n=1,#words do
+        baseTerm.setCursorPos(1,yPos)
+        if(#line+#words[n]<w)then 
+            line = line.." "..words[n]
+        else
+            baseTerm.write(line)
+            line = words[n]
+            yPos = yPos + 1
+        end
+        if(n==#words)then
+            baseTerm.write(line)
+        end
+    end
+    baseTerm.setCursorPos(1,yPos+1)
+end
+
 local basalt = {}
 basalt = {
     setTheme = setTheme,
@@ -180,12 +215,17 @@ basalt = {
     end,
 
     autoUpdate = function(isActive)
+        local pCall = pcall
         updaterActive = isActive
         if(isActive==nil)then updaterActive = true end
         drawFrames()
         while updaterActive do
             local event, p1, p2, p3, p4 = os.pullEventRaw()
-            basaltUpdateEvent(event, p1, p2, p3, p4)
+            local ok, err = pCall(basaltUpdateEvent, event, p1, p2, p3, p4)
+            if not(ok)then
+                basaltError(err)
+                return
+            end
         end
     end,
     
@@ -232,12 +272,13 @@ basalt = {
 
     shedule = function(f)
         assert(f~="function", "Shedule needs a function in order to work!")
-        local co = coroutine.create(f)
-        local ok, result = coroutine.resume(co)
-        if(ok)then
-            table.insert(shedules, co)     
+        return function(...)
+            local co = coroutine.create(f)
+            local ok, result = coroutine.resume(co, ...)
+            if(ok)then
+                table.insert(shedules, co)     
+            end
         end
-        return co
     end,
     
     createFrame = function(name)
@@ -281,7 +322,7 @@ basalt = {
         end
         basalt.debugList:setValue(basalt.debugList:getItem(basalt.debugList:getItemCount()))
         if(basalt.debugList.getItemCount() > basalt.debugList:getHeight())then
-            basalt.debugList:setIndexOffset(basalt.debugList:getItemCount() - basalt.debugList:getHeight())
+            basalt.debugList:setOffset(basalt.debugList:getItemCount() - basalt.debugList:getHeight())
         end
         basalt.debugLabel:show()
     end,

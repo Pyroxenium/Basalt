@@ -19,6 +19,8 @@ return function(name, parent, pTerm, basalt)
     local object = {}
     local variables = {}
     local theme = {}
+    local dynamicValues = {}
+    local dynValueId = 0
     local termObject = pTerm or term.current()
 
     local monSide = ""
@@ -65,37 +67,11 @@ return function(name, parent, pTerm, basalt)
         end
     end
 
-    local function duplicateTerm(term1, term2)
-        local both = {}
-        setmetatable(both, {
-            __index = function(_, k)
-                if (type(term1[k]) == "function") then
-                    return function(...)
-                        pcall(term1[k], ...)
-                        return term2[k](...)
-                    end
-                else
-                    return term1[k]
-                end
-            end,
-            __call = function(_, f, ...)
-                pcall(term2[f], ...)
-                return term1[f](...)
-            end,
-            __newindex = function(_, k, v)
-                term1[k] = v
-                term2[k] = v
-            end
-        })
-        return both
-    end
-
     if (parent ~= nil) then
         base.parent = parent
         base.width, base.height = parent:getSize()
         base.bgColor = parent:getTheme("FrameBG")
         base.fgColor = parent:getTheme("FrameText")
-        print(parent:getTheme("FrameBG"))
     else
         base.width, base.height = termObject.getSize()
         base.bgColor = basalt.getTheme("BasaltBG")
@@ -168,6 +144,89 @@ return function(name, parent, pTerm, basalt)
         return false
     end
 
+    local function stringToNumber(str)
+        local ok, err = pcall(load("return " .. str))
+        if not(ok)then error(str.." is not a valid dynamic code") end
+        return load("return " .. str)()
+    end
+
+    local function newDynamicValue(_, obj, str)
+        dynValueId = dynValueId + 1
+        dynamicValues[dynValueId] = {0, str, {}, obj, dynValueId}
+        return dynamicValues[dynValueId]
+    end
+
+    local function dynValueGetObjects(obj, str)
+        local names = {}
+        local t = {}
+        for v in str:gmatch("%a+%.x") do
+            local name = v:gsub("%.x", "")
+            if(name~="self")and(name~="parent")then 
+                table.insert(names, name) end
+        end
+        for v in str:gmatch("%w+%.y") do
+            local name = v:gsub("%.y", "")
+            if(name~="self")and(name~="parent")then table.insert(names, name) end
+        end
+        for v in str:gmatch("%a+%.w") do
+            local name = v:gsub("%.w", "")
+            if(name~="self")and(name~="parent")then 
+                table.insert(names, name) 
+            
+            end
+        end
+        for v in str:gmatch("%a+%.h") do
+            local name = v:gsub("%.h", "")
+            if(name~="self")and(name~="parent")then 
+                table.insert(names, name) end
+        end
+        for k,v in pairs(names)do
+            t[v] = getObject(v)
+            if(t[v]==nil)then
+                error("Dynamic Values - unable to find object "..v)
+            end
+        end
+        t["self"] = obj
+        t["parent"] = obj:getParent()
+        return t
+    end
+
+    local function dynValueObjectToNumber(str, objList)
+        local newStr = str
+        for v in str:gmatch("%w+%.x") do
+            newStr = newStr:gsub(v, objList[v:gsub("%.x", "")]:getX())
+        end
+        for v in str:gmatch("%w+%.y") do
+            newStr = newStr:gsub(v, objList[v:gsub("%.y", "")]:getY())
+        end
+        for v in str:gmatch("%w+%.w") do
+            newStr = newStr:gsub(v, objList[v:gsub("%.w", "")]:getWidth())
+        end
+        for v in str:gmatch("%w+%.h") do
+            newStr = newStr:gsub(v, objList[v:gsub("%.h", "")]:getHeight())
+        end
+        return newStr
+    end
+
+
+    local function recalculateDynamicValues()
+        if(#dynamicValues>0)then
+            for n=1,dynValueId do
+                if(dynamicValues[n]~=nil)then
+                    local numberStr
+                    if(#dynamicValues[n][3]<=0)then dynamicValues[n][3] = dynValueGetObjects(dynamicValues[n][4], dynamicValues[n][2]) end
+                    numberStr = dynValueObjectToNumber(dynamicValues[n][2], dynamicValues[n][3])
+                    dynamicValues[n][1] = stringToNumber(numberStr)
+                end
+            end
+        end
+    end
+
+    local function getDynamicValue(id)
+        return dynamicValues[id][1]
+    end
+
+
     object = {
         barActive = false,
         barBackground = colors.gray,
@@ -175,6 +234,10 @@ return function(name, parent, pTerm, basalt)
         barText = "New Frame",
         barTextAlign = "left",
         isMoveable = false,
+
+        newDynamicValue = newDynamicValue,
+        recalculateDynamicValues = recalculateDynamicValues,
+        getDynamicValue = getDynamicValue,
 
         getType = function(self)
             return objectType
@@ -243,8 +306,12 @@ return function(name, parent, pTerm, basalt)
             return self
         end;
 
-        getOffset = function(self) -- internal
+        getOffset = function(self)
             return xOffset, yOffset
+        end;
+
+        getOffsetInternal = function(self) -- internal
+            return xOffset < 0 and math.abs(xOffset) or -xOffset, yOffset < 0 and math.abs(yOffset) or -yOffset
         end;
 
         removeFocusedObject = function(self)
@@ -264,7 +331,7 @@ return function(name, parent, pTerm, basalt)
                 local obx, oby = self:getAnchorPosition()
                 self.parent:setCursor(_blink or false, (_xCursor or 0)+obx-1, (_yCursor or 0)+oby-1, color or cursorColor)
             else
-                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition(self:getX(), self:getY(), true))
                 cursorBlink = _blink or false
                 if (_xCursor ~= nil) then
                     xCursor = obx + _xCursor - 1
@@ -361,7 +428,6 @@ return function(name, parent, pTerm, basalt)
         
         setValuesByXMLData = function(self, data)
             base.setValuesByXMLData(self, data)
-
             if(xmlValue("moveable", data)~=nil)then if(xmlValue("moveable", data))then self:setMoveable(true) end end
             if(xmlValue("scrollable", data)~=nil)then if(xmlValue("scrollable", data))then self:setScrollable(true) end end
             if(xmlValue("monitor", data)~=nil)then self:setMonitor(xmlValue("monitor", data)):show() end
@@ -378,14 +444,19 @@ return function(name, parent, pTerm, basalt)
             if(xmlValue("minScroll", data)~=nil)then self:setMaxScroll(xmlValue("minScroll", data)) end
             if(xmlValue("importantScroll", data)~=nil)then self:setImportantScroll(xmlValue("importantScroll", data)) end
 
-
-            for k,v in pairs(_OBJECTS)do
-                if(k~="Animation")then
-                    addXMLObjectType(data[string.lower(k)], self["add"..k], self)
+            local objectList = data:children()
+            
+            for k,v in pairs(objectList)do
+                if(v.___name~="animation")then
+                    local name = v.___name:gsub("^%l", string.upper)
+                    if(_OBJECTS[name]~=nil)then
+                        addXMLObjectType(v, self["add"..name], self)
+                    end
                 end
             end
-            addXMLObjectType(data["animation"], self.addAnimation, self)
+            
             addXMLObjectType(data["frame"], self.addFrame, self)
+            addXMLObjectType(data["animation"], self.addAnimation, self)
             return self
         end,
 
@@ -545,12 +616,12 @@ return function(name, parent, pTerm, basalt)
         end;
 
         mouseHandler = function(self, event, button, x, y)
-            local xO, yO = self:getOffset()
-            xO = xO < 0 and math.abs(xO) or -xO
-            yO = yO < 0 and math.abs(yO) or -yO
             if (self.drag) then
+                local xO, yO = self.parent:getOffset()
+                xO = xO < 0 and math.abs(xO) or -xO
+                yO = yO < 0 and math.abs(yO) or -yO
                 if (event == "mouse_drag") then
-                    local parentX = 1;
+                    local parentX = 1
                     local parentY = 1
                     if (self.parent ~= nil) then
                         parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())

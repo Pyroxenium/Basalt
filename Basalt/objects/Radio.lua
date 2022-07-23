@@ -1,5 +1,6 @@
 local Object = require("Object")
 local utils = require("utils")
+local xmlValue = utils.getValueFromXML
 
 return function(name)
     local base = Object(name)
@@ -12,6 +13,8 @@ return function(name)
     local itemSelectedFG
     local boxSelectedBG
     local boxSelectedFG
+    local boxNotSelectedBG
+    local boxNotSelectedFG
     local selectionColorActive = true
     local symbol = "\7"
     local align = "left"
@@ -35,8 +38,10 @@ return function(name)
             base.setValuesByXMLData(self, data)
             if(xmlValue("selectionBG", data)~=nil)then itemSelectedBG = colors[xmlValue("selectionBG", data)] end
             if(xmlValue("selectionFG", data)~=nil)then itemSelectedFG = colors[xmlValue("selectionFG", data)] end
-            if(xmlValue("boxBG", data)~=nil)then itemSelectedBG = colors[xmlValue("boxBG", data)] end
-            if(xmlValue("boxFG", data)~=nil)then itemSelectedFG = colors[xmlValue("boxFG", data)] end
+            if(xmlValue("boxBG", data)~=nil)then boxSelectedBG = colors[xmlValue("boxBG", data)] end
+            if(xmlValue("inactiveBoxBG", data)~=nil)then boxNotSelectedBG = colors[xmlValue("inactiveBoxBG", data)] end
+            if(xmlValue("inactiveBoxFG", data)~=nil)then boxNotSelectedFG = colors[xmlValue("inactiveBoxFG", data)] end
+            if(xmlValue("boxFG", data)~=nil)then boxSelectedFG = colors[xmlValue("boxFG", data)] end
             if(xmlValue("symbol", data)~=nil)then symbol = xmlValue("symbol", data) end
             if(data["item"]~=nil)then
                 local tab = data["item"]
@@ -139,7 +144,7 @@ return function(name)
                                 self.parent:writeText(value.x + 2 + obx - 1, value.y + oby - 1, value.text, itemSelectedBG, itemSelectedFG)
                             end
                         else
-                            self.parent:drawBackgroundBox(value.x + obx - 1, value.y + oby - 1, 1, 1, self.bgColor)
+                            self.parent:drawBackgroundBox(value.x + obx - 1, value.y + oby - 1, 1, 1, boxNotSelectedBG or self.bgColor)
                             self.parent:writeText(value.x + 2 + obx - 1, value.y + oby - 1, value.text, value.bgCol, value.fgCol)
                         end
                     end

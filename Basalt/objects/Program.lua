@@ -559,7 +559,7 @@ return function(name, parent)
                 if not (curProcess:isDead()) then
                     if not (paused) then
                         local absX, absY = self:getAbsolutePosition(self:getAnchorPosition(nil, nil, true))
-                        curProcess:resume(event, button, x - (absX - 1), y - (absY - 1))
+                        curProcess:resume(event, button, x-absX+1, y-absY+1)
                     end
                 end
                 return true

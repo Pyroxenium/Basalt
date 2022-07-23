@@ -8,6 +8,18 @@ return function(name)
     local cRoutine
     local isActive = false
 
+    local generateXMLEventFunction = function(self, str)
+        if(str:sub(1,1)=="#")then
+            local o = self:getBaseFrame():getDeepObject(str:sub(2,str:len()))
+            if(o~=nil)and(o.internalObjetCall~=nil)then
+                return (function()o:internalObjetCall()end)
+            end
+        else
+            return self:getBaseFrame():getVariable(str)
+        end
+        return self
+    end
+    
     object = {
         name = name,
         getType = function(self)
@@ -29,7 +41,7 @@ return function(name)
 
         setValuesByXMLData = function(self, data)
             local f
-            if(xmlValue("thread", data)~=nil)then  f = self:getBaseFrame():getVariable(xmlValue("thread", data)) end
+            if(xmlValue("thread", data)~=nil)then  f = generateXMLEventFunction(self, xmlValue("thread", data)) end
             if(xmlValue("start", data)~=nil)then  if(xmlValue("start", data))and(f~=nil)then self:start(f) end end
             return self
         end,

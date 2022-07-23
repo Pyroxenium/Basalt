@@ -34,11 +34,12 @@ return function(name)
         return pos
     end
 
-    local function updateColors(self)
-        local fgLine = tHex[self.fgColor]:rep(fgLines[textY]:len())
-        local bgLine = tHex[self.bgColor]:rep(bgLines[textY]:len())
+    local function updateColors(self, l)
+        l = l or textY
+        local fgLine = tHex[self.fgColor]:rep(fgLines[l]:len())
+        local bgLine = tHex[self.bgColor]:rep(bgLines[l]:len())
         for k,v in pairs(rules)do
-            local pos = stringGetPositions(lines[textY], v[1])
+            local pos = stringGetPositions(lines[l], v[1])
             if(#pos>0)then
                 for x=1,#pos/2 do
                     local xP = x*2 - 1
@@ -53,7 +54,7 @@ return function(name)
         end
         for k,v in pairs(keyWords)do
             for _,b in pairs(v)do
-                local pos = stringGetPositions(lines[textY], b)
+                local pos = stringGetPositions(lines[l], b)
                 if(#pos>0)then
                     for x=1,#pos/2 do
                         local xP = x*2 - 1
@@ -62,8 +63,14 @@ return function(name)
                 end
             end
         end
-        fgLines[textY] = fgLine
-        bgLines[textY] = bgLine
+        fgLines[l] = fgLine
+        bgLines[l] = bgLine
+    end
+
+    local function updateAllColors(self)
+        for n=1,#lines do
+            updateColors(self, n)
+        end
     end
 
     local object = {
@@ -75,10 +82,24 @@ return function(name)
             return objectType
         end;
 
+        setBackground = function(self, bg)
+            base.setBackground(self, bg)
+            updateAllColors(self)
+            return self
+        end,
+
+        setForeground = function(self, fg)
+            base.setForeground(self, fg)
+            updateAllColors(self)
+            return self
+        end,
+
         setValuesByXMLData = function(self, data)
             base.setValuesByXMLData(self, data)
             if(data["lines"]~=nil)then
-                for k,v in pairs(data["lines"]["line"])do
+                local l = data["lines"]["line"]
+                if(l.properties~=nil)then l = {l} end
+                for k,v in pairs(l)do
                     self:addLine(v:value())
                 end
             end
