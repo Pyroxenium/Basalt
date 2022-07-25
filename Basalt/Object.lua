@@ -232,11 +232,11 @@ return function(name)
         end;
 
         getX = function(self)
-            return type(self.x) == "number" and self.x or self.x[1]
+            return type(self.x) == "number" and self.x or math.floor(self.x[1]+0.5)
         end;
 
         getY = function(self)
-            return type(self.y) == "number" and self.y or self.y[1]
+            return type(self.y) == "number" and self.y or math.floor(self.y[1]+0.5)
         end;
 
         getPosition = function(self)
@@ -275,11 +275,11 @@ return function(name)
         end;
 
         getHeight = function(self)
-            return type(self.height) == "number" and self.height or self.height[1]
+            return type(self.height) == "number" and self.height or math.floor(self.height[1]+0.5)
         end;
 
         getWidth = function(self)
-            return type(self.width) == "number" and self.width or self.width[1]
+            return type(self.width) == "number" and self.width or math.floor(self.width[1]+0.5)
         end;
 
         getSize = function(self)
@@ -464,7 +464,7 @@ return function(name)
                     y = math.floor(ph/2) + y - 1
                 end
 
-                local xO, yO = self.parent:getOffset()
+                local xO, yO = self.parent:getOffsetInternal()
                 if not(ignOffset or ignOff) then
                     return x+xO, y+yO
                 end
@@ -663,7 +663,7 @@ return function(name)
                 if(isDragging)and(event=="mouse_drag")then 
                     local xO, yO, parentX, parentY = 0, 0, 1, 1
                     if (self.parent ~= nil) then
-                        xO, yO = self.parent:getOffset()
+                        xO, yO = self.parent:getOffsetInternal()
                         xO = xO < 0 and math.abs(xO) or -xO
                         yO = yO < 0 and math.abs(yO) or -yO
                         parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
@@ -680,8 +680,10 @@ return function(name)
                         dragXOffset, dragYOffset = objX - x, objY - y
                     end
                     if(event~="mouse_drag")then
-                        if (self.parent ~= nil) then
-                            self.parent:setFocusedObject(self)
+                        if(event~="mouse_up")then
+                            if (self.parent ~= nil) then
+                                self.parent:setFocusedObject(self)
+                            end
                         end
                         local val = eventSystem:sendEvent(event, self, event, button, x, y)
                         if(val~=nil)then return val end

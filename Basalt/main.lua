@@ -1,7 +1,9 @@
 local basaltEvent = require("basaltEvent")()
 local Frame = require("Frame")
 local theme = require("theme")
-local uuid = require("utils").uuid
+local utils = require("utils")
+local uuid = utils.uuid
+local createText = utils.createText
 
 local baseTerm = term.current()
 local version = 4
@@ -85,6 +87,41 @@ local bInstance = {
     end
 }
 
+local basaltError = function(errMsg)
+    baseTerm.clear()
+    baseTerm.setBackgroundColor(colors.black)
+    baseTerm.setTextColor(colors.red)
+    local w,h = baseTerm.getSize()
+
+    local splitString = function(str, sep)
+        if sep == nil then
+                sep = "%s"
+        end
+        local t={}
+        for v in string.gmatch(str, "([^"..sep.."]+)") do
+                table.insert(t, v)
+        end
+        return t
+    end   
+    local words = splitString(errMsg, " ")
+    local line = "Basalt error: "
+    local yPos = 1
+    for n=1,#words do
+        baseTerm.setCursorPos(1,yPos)
+        if(#line+#words[n]<w)then 
+            line = line.." "..words[n]
+        else
+            baseTerm.write(line)
+            line = words[n]
+            yPos = yPos + 1
+        end
+        if(n==#words)then
+            baseTerm.write(line)
+        end
+    end
+    baseTerm.setCursorPos(1,yPos+1)
+end
+
 local function handleShedules(event, p1, p2, p3, p4)
     if(#shedules>0)then
         local finished = {}
@@ -93,7 +130,7 @@ local function handleShedules(event, p1, p2, p3, p4)
                 if (coroutine.status(shedules[n]) == "suspended")then
                     local ok, result = coroutine.resume(shedules[n], event, p1, p2, p3, p4)
                     if not(ok)then
-                        table.insert(finished, n)
+                        basaltError(result)
                     end
                 else
                     table.insert(finished, n)
@@ -162,41 +199,6 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
     end
     handleShedules(event, p1, p2, p3, p4)
     drawFrames()
-end
-
-local basaltError = function(errMsg)
-    baseTerm.clear()
-    baseTerm.setBackgroundColor(colors.black)
-    baseTerm.setTextColor(colors.red)
-    local w,h = baseTerm.getSize()
-
-    local splitString = function(str, sep)
-        if sep == nil then
-                sep = "%s"
-        end
-        local t={}
-        for v in string.gmatch(str, "([^"..sep.."]+)") do
-                table.insert(t, v)
-        end
-        return t
-    end   
-    local words = splitString(errMsg, " ")
-    local line = "Basalt error: "
-    local yPos = 1
-    for n=1,#words do
-        baseTerm.setCursorPos(1,yPos)
-        if(#line+#words[n]<w)then 
-            line = line.." "..words[n]
-        else
-            baseTerm.write(line)
-            line = words[n]
-            yPos = yPos + 1
-        end
-        if(n==#words)then
-            baseTerm.write(line)
-        end
-    end
-    baseTerm.setCursorPos(1,yPos+1)
 end
 
 local basalt = {}
@@ -276,7 +278,9 @@ basalt = {
             local co = coroutine.create(f)
             local ok, result = coroutine.resume(co, ...)
             if(ok)then
-                table.insert(shedules, co)     
+                table.insert(shedules, co)
+            else
+                basaltError(result)
             end
         end
     end,
@@ -316,7 +320,9 @@ basalt = {
             str = str .. tostring(value) .. (#args ~= key and ", " or "")
         end
         basalt.debugLabel:setText("[Debug] " .. str)
-        basalt.debugList:addItem(str)
+        for k,v in pairs(createText(str, basalt.debugList:getWidth()))do
+            basalt.debugList:addItem(v)
+        end
         if (basalt.debugList:getItemCount() > 50) then
             basalt.debugList:removeItem(1)
         end

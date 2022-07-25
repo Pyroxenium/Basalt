@@ -147,6 +147,14 @@ return function(name)
             return self
         end;
 
+        clear = function(self)
+            lines = {""}
+            bgLines = {""}
+            fgLines = {""}
+            hIndex, wIndex, textX, textY = 1, 1, 1, 1
+            return self
+        end,
+
         addLine = function(self, text, index)
             if(text~=nil)then
                 if(#lines==1)and(lines[1]=="")then

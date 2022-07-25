@@ -104,12 +104,17 @@ return function(name)
             return self
         end;
 
+        setActiveSymbol = function(self, sym)
+            symbol = sym:sub(1,1)
+            return self
+        end,
+
         setSelectedItem = function(self, bgCol, fgCol, boxBG, boxFG, active)
             itemSelectedBG = bgCol or itemSelectedBG
             itemSelectedFG = fgCol or itemSelectedFG
             boxSelectedBG = boxBG or boxSelectedBG
             boxSelectedFG = boxFG or boxSelectedFG
-            selectionColorActive = active
+            selectionColorActive = active~=nil and active or true
             return self
         end;
 
@@ -123,7 +128,7 @@ return function(name)
                             if (self.parent ~= nil) then
                                 self.parent:setFocusedObject(self)
                             end
-                            --eventSystem:sendEvent(event, self, event, button, x, y)
+                            self:getEventSystem():sendEvent(event, self, event, button, x, y)
                             self:setVisualChanged()
                             return true
                         end

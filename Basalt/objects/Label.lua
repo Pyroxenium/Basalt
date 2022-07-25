@@ -1,6 +1,7 @@
 local Object = require("Object")
 local utils = require("utils")
 local xmlValue = utils.getValueFromXML
+local createText = utils.createText
 local tHex = require("tHex")
 local bigFont = require("bigfont")
 
@@ -95,17 +96,7 @@ return function(name)
                     if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, w, h, self.fgColor) end
                     if(fontsize==0)then
                         if not(autoSize)then
-                            local splittedText = utils.splitString(self:getValue(), " ")
-                            local text = {}
-                            local line = ""
-                            for _,v in pairs(splittedText)do
-                                if(line:len()+v:len()<=w)then
-                                    line = line=="" and v or line.." "..v
-                                else
-                                    table.insert(text, line)
-                                    line = v:sub(1,w)
-                                end
-                            end
+                            local text = createText(self:getValue(), self:getWidth())
                             for k,v in pairs(text)do
                                 self.parent:setText(obx, oby+k-1, v)
                             end

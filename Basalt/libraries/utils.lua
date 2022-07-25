@@ -1,3 +1,14 @@
+local splitString = function(str, sep)
+    if sep == nil then
+            sep = "%s"
+    end
+    local t={}
+    for v in string.gmatch(str, "([^"..sep.."]+)") do
+            table.insert(t, v)
+    end
+    return t
+end
+
 return {
 getTextHorizontalAlign = function(text, width, textAlign, replaceChar)
     text = string.sub(text, 1, width)
@@ -37,15 +48,26 @@ rpairs = function(t)
     end, t, #t + 1
 end,
 
-splitString = function(str, sep)
-    if sep == nil then
-            sep = "%s"
+splitString = splitString,
+
+createText = function(str, width)
+    local uniqueLines = splitString(str, "\n")
+    local lines = {}
+    for k,v in pairs(uniqueLines)do
+        local line = ""
+        local words = splitString(v, " ")
+        for a,b in pairs(words)do
+            if(#line+#b <= width)then
+                line = line=="" and b or line.." "..b
+                if(a==#words)then table.insert(lines, line) end
+            else
+                table.insert(lines, line)
+                line = b:sub(1,width)
+                if(a==#words)then table.insert(lines, line) end
+            end
+        end
     end
-    local t={}
-    for v in string.gmatch(str, "([^"..sep.."]+)") do
-            table.insert(t, v)
-    end
-    return t
+    return lines
 end,
 
 getValueFromXML = function(name, tab)

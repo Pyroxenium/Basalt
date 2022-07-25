@@ -45,6 +45,7 @@ return function(name)
 
     local animations = {}
     local animationTime = 0
+    local animationActive = false
     local index = 1
     local infinitePlay = false
 
@@ -279,7 +280,7 @@ return function(name)
 
         offset = function(self, x, y, duration, timer, obj)
             _OBJ = obj or _OBJ
-            predefinedLerp(x,y,duration,timer or 0,_OBJ.getOffsetInternal,_OBJ.setOffset)
+            predefinedLerp(x,y,duration,timer or 0,_OBJ.getOffset,_OBJ.setOffset)
             return self
         end,
 
@@ -384,6 +385,7 @@ return function(name)
 
         play = function(self, infinite)
             self:cancel()
+            animationActive = true
             infinitePlay = infinite and true or false
             index = 1
             animationTime = 0
@@ -404,6 +406,7 @@ return function(name)
                 os.cancelTimer(timerObj)
                 infinitePlay = false
             end
+            animationActive = false
             return self
         end;
 
@@ -412,11 +415,13 @@ return function(name)
         end,
 
         eventHandler = function(self, event, tObj)
-            if (event == "timer") and (tObj == timerObj) then
-                if (animations[index] ~= nil) then
-                    onPlay(self)
-                else
-                    self:animationDoneHandler()
+            if(animationActive)then
+                if (event == "timer") and (tObj == timerObj) then
+                    if (animations[index] ~= nil) then
+                        onPlay(self)
+                    else
+                        self:animationDoneHandler()
+                    end
                 end
             end
         end;

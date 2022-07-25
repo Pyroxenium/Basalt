@@ -36,6 +36,9 @@ return function(name, parent, pTerm, basalt)
     local mirrorSide = ""
     local importantScroll = false
 
+    local focusedOBjectCache
+    local focusedObject
+
     base:setZIndex(10)
 
     local basaltDraw = BasaltDraw(termObject)
@@ -151,6 +154,11 @@ return function(name, parent, pTerm, basalt)
     end
 
     local function newDynamicValue(_, obj, str)
+        for k,v in pairs(dynamicValues)do
+            if(v[2]==str)and(v[4]==obj)then
+                return v
+            end
+        end
         dynValueId = dynValueId + 1
         dynamicValues[dynValueId] = {0, str, {}, obj, dynValueId}
         return dynamicValues[dynValueId]
@@ -244,14 +252,7 @@ return function(name, parent, pTerm, basalt)
         end;
 
         setFocusedObject = function(self, obj)
-            if (basalt.getFocusedObject() ~= nil) then
-                basalt.getFocusedObject():loseFocusHandler()
-                basalt.setFocusedObject(nil)
-            end
-            if(obj~=nil)then
-                basalt.setFocusedObject(obj)
-                obj:getFocusHandler()
-            end
+            focusedOBjectCache = obj
             return self
         end;
 
@@ -306,24 +307,21 @@ return function(name, parent, pTerm, basalt)
             return self
         end;
 
-        getOffset = function(self)
+        getOffsetInternal = function(self)
             return xOffset, yOffset
         end;
 
-        getOffsetInternal = function(self) -- internal
+        getOffset = function(self) -- internal
             return xOffset < 0 and math.abs(xOffset) or -xOffset, yOffset < 0 and math.abs(yOffset) or -yOffset
         end;
 
         removeFocusedObject = function(self)
-            if (basalt.getFocusedObject() ~= nil) then
-                basalt.getFocusedObject():loseFocusHandler()
-            end
-            basalt.setFocusedObject(nil)
+                focusedOBjectCache = nil
             return self
         end;
 
         getFocusedObject = function(self)
-            return basalt.getFocusedObject()
+            return focusedObject
         end;
 
         setCursor = function(self, _blink, _xCursor, _yCursor, color)
@@ -369,6 +367,14 @@ return function(name, parent, pTerm, basalt)
         setMinScroll = function(self, min)
             minScroll = min or minScroll
             return self
+        end,
+
+        getMaxScroll = function(self)
+            return maxScroll
+        end,
+
+        getMinScroll = function(self)
+            return minScroll
         end,
 
         show = function(self)
@@ -534,6 +540,10 @@ return function(name, parent, pTerm, basalt)
 
         loseFocusHandler = function(self)
             base.loseFocusHandler(self)
+            if(focusedOBjectCache~=nil)then
+                focusedOBjectCache:loseFocusHandler()
+                focusedOBjectCache = nil
+            end
         end;
 
         getFocusHandler = function(self)
@@ -545,7 +555,6 @@ return function(name, parent, pTerm, basalt)
         end;
 
         keyHandler = function(self, event, key)
-            local focusedObject = basalt.getFocusedObject()
             if (focusedObject ~= nil) then
                 if(focusedObject~=self)then
                     if (focusedObject.keyHandler ~= nil) then
@@ -617,7 +626,7 @@ return function(name, parent, pTerm, basalt)
 
         mouseHandler = function(self, event, button, x, y)
             if (self.drag) then
-                local xO, yO = self.parent:getOffset()
+                local xO, yO = self.parent:getOffsetInternal()
                 xO = xO < 0 and math.abs(xO) or -xO
                 yO = yO < 0 and math.abs(yO) or -yO
                 if (event == "mouse_drag") then
@@ -634,15 +643,14 @@ return function(name, parent, pTerm, basalt)
                 return true
             end
 
-            local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+            local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
             local yOff = false
-            if(objY-1 == y)and(self:getBorder("top"))then
+            if(fy-1 == y)and(self:getBorder("top"))then
                 y = y+1
                 yOff = true
             end
 
             if (base.mouseHandler(self, event, button, x, y)) then
-                local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
                 fx = fx + xOffset;fy = fy + yOffset;
                 if(isScrollable)and(importantScroll)then
                     if(event=="mouse_scroll")then
@@ -662,8 +670,8 @@ return function(name, parent, pTerm, basalt)
                             end
                         end
                     end
+                    self:removeFocusedObject()
                     if (self.isMoveable) then
-                        local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
                         if (x >= fx) and (x <= fx + self:getWidth() - 1) and (y == fy) and (event == "mouse_click") then
                             self.drag = true
                             dragXOffset = fx - x
@@ -677,10 +685,6 @@ return function(name, parent, pTerm, basalt)
                             end
                         end
                     end
-                if (basalt.getFocusedObject() ~= nil) then
-                    basalt.getFocusedObject():loseFocusHandler()
-                    basalt.setFocusedObject(nil)
-                end
                 return true
             end
             return false
@@ -768,6 +772,17 @@ return function(name, parent, pTerm, basalt)
             if(isMonitor)and not(monitorAttached)then return false end;
             if (self:getVisualChanged()) then
                 if (base.draw(self)) then
+
+                    if(focusedObject~=focusedOBjectCache)then
+                        if(focusedOBjectCache~=nil)then
+                            focusedOBjectCache:getFocusHandler()
+                        end
+                        if(focusedObject~=nil)then
+                            focusedObject:loseFocusHandler()
+                        end
+                        focusedObject = focusedOBjectCache
+                    end
+
                     local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                     local anchx, anchy = self:getAnchorPosition()
                     local w,h = self:getSize()
@@ -851,7 +866,7 @@ return function(name, parent, pTerm, basalt)
         end,
 
         addFrame = function(self, name)
-            local obj = basalt.newFrame(name, self, nil, basalt)
+            local obj = basalt.newFrame(name or uuid(), self, nil, basalt)
             return addObject(obj)
         end;
     }
