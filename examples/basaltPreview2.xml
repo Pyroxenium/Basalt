@@ -1,0 +1,209 @@
+<frame onScroll="ex1OnScroll" id="example1" width="parent.w" height="parent.w" bg="lightGray" maxScroll="32" scrollable="true">
+    <label text="Objects" font="2" x="16" y="2" />
+    <button onClick="buttonColor" onClick="ex2" anchor="topRight" height="1" width="8" x="-7" y="2" text="Next" />
+    <button onDrag="dragPosition" x="2" y="6" width="parent.w/2-2" height="5" />
+    <button onDrag="dragPosition" x="parent.w/2+1" y="6" width="parent.w/2-2" height="5" />
+    <frame y="13" x="2" width="parent.w/2-2" height="16" bg="black" scrollable="true" importantScroll="true">
+        <button onClick="buttonColor" width="parent.w-2" x="2" y="2" text="Example Button 1" />
+        <button onClick="buttonColor" width="parent.w-2" x="2" y="6" text="Example Button 2" />
+        <button onClick="buttonColor" width="parent.w-2" x="2" y="10" text="Example Button 3" />
+        <button onClick="buttonColor" width="parent.w-2" x="2" y="14" text="Example Button 4" />
+        <button onClick="buttonColor" width="parent.w-2" x="2" y="18" text="Example Button 5" />
+        <button onClick="buttonColor" width="parent.w-2" x="2" y="22" text="Example Button 6" />
+    </frame>
+    <frame y="13" x="parent.w/2+1" width="parent.w/2-2" height="16" bg="black" scrollable="true" importantScroll="true">
+        <label x="2" y="2" text="Radios and Checkboxes:" fg="lightGray" />
+        <radio x="2" y="4" bg="gray" fg="lightGray" boxBG="black" boxFG="lightGray" selectionBG="black" inactiveBoxBG="black">
+                <item><text>Radio 1</text><x>2</x><y>1</y><bg>black</bg></item>
+                <item><text>Radio 2</text><x>2</x><y>3</y><bg>black</bg></item>
+                <item><text>Radio 3</text><x>2</x><y>5</y><bg>black</bg></item>
+                <item><text>Radio 4</text><x>2</x><y>7</y><bg>black</bg></item>
+                <item><text>Radio 5</text><x>2</x><y>9</y><bg>black</bg></item>
+        </radio>
+        <checkbox x="3" y="15" /><label x="5" y="15" text="Checkbox 1" fg="lightGray" />
+        <checkbox x="3" y="17" /><label x="5" y="17" text="Checkbox 2" fg="lightGray" />
+        <checkbox x="3" y="19" /><label x="5" y="19" text="Checkbox 3" fg="lightGray" />
+        <checkbox x="3" y="21" /><label x="5" y="21" text="Checkbox 4" fg="lightGray" />
+    </frame>
+    <progressbar onChange="progressChange" width="parent.w-2" height="3" x="2" y="30" id="progressBar" />
+    <label x="parent.w/2-7" y="31" zIndex="6" bg="false" text="Progressbar Example" fg="lightGray" />
+    <label id="progressLabel" x="3" y="31" zIndex="6" bg="false" text="0%" fg="lightGray" />
+    <thread thread="progressTheProgressbar" start="true" />
+    <frame zIndex="16" y="34" x="4" width="32" height="12" moveable="true" bar="true" barText="Moveable Frame" barBG="black" barFG="lightGray" shadow="true">
+        <label x="2" y="3" text="Input:" fg="lightGray" />
+        <input default="Default Text" defaultFG="gray" width="parent.w-2" x="2" y="5" bg="black" fg="lightGray" />
+        <input default="Only numbers" defaultFG="gray" width="parent.w-2" x="2" y="7" type="number" bg="black" fg="lightGray" />
+        <input default="Password" defaultFG="gray" width="parent.w-2" x="2" y="9" type="password" bg="black" fg="lightGray" />
+    </frame>
+    <frame zIndex="16" y="36" x="6" width="32" height="12" moveable="true" bar="true" barText="Moveable Frame 2" barBG="black" barFG="lightGray" border="true" borderTop="false">
+        <label x="2" y="3" text="Dropdowns, Lists and Menubars" fg="lightGray" />
+        <dropdown x="2" y="5" bg="black" fg="lightGray">                
+            <item><text>Entry 1</text></item>
+            <item><text>Entry 2</text></item>
+            <item><text>Entry 3</text></item>
+            <item><text>Entry 4</text></item>
+            <item><text>Entry 5</text></item>
+            <item><text>Entry 6</text></item>
+            <item><text>Entry 7</text></item>
+            <item><text>Entry 8</text></item>
+        </dropdown>
+        <list x="parent.w/2" y="5" width="parent.w/2-1" bg="black" fg="gray" selectionFG="lightGray">                
+            <item><text>Entry 1</text></item>
+            <item><text>Entry 2</text></item>
+            <item><text>Entry 3</text></item>
+            <item><text>Entry 4</text></item>
+            <item><text>Entry 5</text></item>
+            <item><text>Entry 6</text></item>
+            <item><text>Entry 7</text></item>
+            <item><text>Entry 8</text></item>
+        </list>
+        <menubar x="2" y="1" anchor="bottomLeft" width="parent.w-2" bg="black" fg="gray" selectionFG="lightGray" scrollable="true">                
+            <item><text>Entry 1</text></item>
+            <item><text>Entry 2</text></item>
+            <item><text>Entry 3</text></item>
+            <item><text>Entry 4</text></item>
+            <item><text>Entry 5</text></item>
+            <item><text>Entry 6</text></item>
+            <item><text>Entry 7</text></item>
+            <item><text>Entry 8</text></item>
+        </menubar>
+    </frame>
+    <button onClick="buttonColor" onClick="ex1Top" x="parent.w-12" y="48" text="Top" />
+</frame>
+<frame id="example3" x="parent.w*2+1" width="parent.w" height="parent.h" bg="lightGray" >
+    <label text="Editor" font="2" x="16" y="2" />
+    <textfield x="2" y="6" width="parent.w-2" height="parent.h-7"/>
+    <frame ignoreOffset="true" id="sidebar" anchor="topRight" x="3" width="14" height="parent.h" bg="black" >
+        <button onClick="buttonColor" onClick="closeSidebar" anchor="bottomLeft" width="5" height="1" x="1" y="1" fg="black" bg="gray" text="Close" />
+        <button onClick="buttonColor" onClick="e1" onClick="closeSidebar" width="parent.w-2" x="2" y="2" text="Example 1" />
+        <button onClick="buttonColor" onClick="e2" onClick="closeSidebar" width="parent.w-2" x="2" y="6" text="Example 2" />
+        <button onClick="buttonColor" onClick="e3" onClick="closeSidebar" width="parent.w-2" x="2" y="10" text="Example 3" />
+    </frame>
+    <textfield x="2" y="parent.h+2" width="parent.w-2" height="parent.h-3">
+        <keywords>
+            <purple>
+                <keyword>if</keyword>
+                <keyword>then</keyword>
+                <keyword>else</keyword>
+                <keyword>elseif</keyword>
+                <keyword>repeat</keyword>
+                <keyword>do</keyword>
+                <keyword>while</keyword>
+                <keyword>end</keyword>
+                <keyword>function</keyword>
+                <keyword>for</keyword>
+            </purple>
+            <blue>
+                <keyword>local</keyword>
+                <keyword>true</keyword>
+                <keyword>false</keyword>
+                <keyword>nil</keyword>
+            </blue>
+            <yellow>
+                <keyword>print</keyword>
+                <keyword>pairs</keyword>
+                <keyword>ipairs</keyword>
+            </yellow>
+        </keywords>
+        <rules>
+            <rule>
+                <pattern>%d</pattern>
+                <fg>lightBlue</fg>
+            </rule>
+            <rule>
+                <pattern>%"%a+%"</pattern>
+                <fg>red</fg>
+            </rule>
+            <rule>
+                <pattern>[-]+[%w*%s*%p*]*</pattern>
+                <fg>green</fg>
+            </rule>
+        </rules>
+    </textfield>
+
+    <textfield id="coolTextfield" onGetFocus="onTextfieldFocus" onLoseFocus="onTextfieldLoseFocus" x="2" y="parent.h*2+2" width="20" height="3" bg="black" fg="gray">
+        <lines>
+            <line>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna </line>
+            <line>aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata </line>
+            <line>sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor </line>
+            <line>invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet</line>
+            <line>clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</line>
+        </lines>
+    </textfield>
+    <button id="anotherRandomButton" onClick="buttonColor" x="coolTextfield.x" y="coolTextfield.y + coolTextfield.h + 1" text="Button" />
+    <button onClick="buttonColor" x="coolTextfield.x + coolTextfield.w + 2" y="coolTextfield.y" text="Button" />
+
+    
+    <animation id="textfieldAnimFocus" object="coolTextfield"><size width="40" height="12" duration="1"/></animation>
+    <animation id="textfieldAnimLoseFocus" object="coolTextfield"><size width="20" height="3" duration="1"/></animation>
+    <button ignoreOffset="true" onClick="buttonColor" onClick="openSidebar" anchor="bottomRight" width="5" height="1" x="-3" y="1" text="Open" />
+    <button onClick="buttonColor" onClick="ex2" x="2" y="2" width="8" height="1" text="Back" />
+    <button onClick="buttonColor" onClick="ex4" anchor="topRight" x="-7" y="2" width="8" height="1" text="Next" />
+</frame>
+
+<frame zIndex="17" id="example4" x="parent.w*3+1" width="parent.w" height="parent.h" bg="lightGray" >
+    <label text="Animations" font="2" x="16" y="2" />
+    <button onClick="buttonColor" onClick="ex3" x="2" y="2" width="8" height="1" text="Back" />
+
+
+    <frame id="showAnimFrame1" x="15" y="30" width="2" height="2" bg="black" >
+        <label id="animFrameLabel" text="Hello" x="-5" y="-1" fg="lightGray" />
+        <button anchor="bottomLeft" id="animFrameBtn1" text="Cool" x="-5" y="15" fg="lightGray" bg="gray" />
+        <button anchor="bottomRight" id="animFrameBtn2" text="Button" x="50" y="15" fg="lightGray" bg="gray" />
+    </frame>
+
+    <animation id="animation19" onDone="enableStartButton" object="animationButton"><move x="22" y="10" duration="0.5"/> <size width="12" height="3" duration="1"/></animation>
+    <animation id="animation18" onDone="#animation19" object="showAnimFrame1"><move x="50" y="20" duration="0.5"/><size width="2" height="2" duration="0.5"/></animation>
+    <animation id="animation17" onDone="#animation18" object="showAnimFrame1"><move x="5" y="6" duration="1"/><size width="30" height="8" duration="1"/></animation>
+    <animation id="animation16" onDone="#animation17" object="showAnimFrame1"><move x="2" y="6" duration="1"/><size width="48" height="13" duration="1"/></animation>
+    <animation id="animation15" onDone="#animation16" object="showAnimFrame1"><size width="36" height="10" duration="1"/></animation>
+    <animation id="animation14" onDone="#animation15" object="animFrameBtn2"><move x="-12" y="-2" duration="0.7"/></animation>  
+    <animation id="animation13" onDone="#animation14" object="animFrameBtn1"><move x="3" y="-2" duration="0.7"/></animation>  
+    <animation id="animation12" onDone="#animation13" object="animFrameLabel"><move x="3" y="3" duration="1"/><text duration="2"><text>Hello, i</text><text>Hello, i am</text><text>Hello, i am just</text><text>Hello, i am just a</text><text>Hello, i am just a label</text></text></animation>  
+    <animation id="animation11" onDone="#animation12" object="showAnimFrame1"><move x="5" y="6" duration="1"/><size width="42" height="12" duration="1"/></animation>  
+
+    <button id="showAnimBtn1" x="25" y="-6" width="16" text="Button 1" visible="false" />
+    <button id="showAnimBtn2" x="0" y="-6" width="16" text="Button 2" visible="false" />
+    <button id="showAnimBtn3" x="50" y="-6" width="16" text="Button 3" visible="false" />
+    <animation id="animation10" onDone="#animation11" object="showAnimBtn1"><move x="60" y="6" duration="1"/><size width="2" height="2" duration="1"/></animation>  
+    <animation id="animation9" onDone="#animation10" object="showAnimBtn1"><move x="5" y="6" duration="0.5"/><size width="42" height="9" duration="1"/></animation>  
+    <animation id="btn2PosAnim2" object="showAnimBtn2"><move x="-15" y="22" duration="0.5"/></animation>  
+    <animation id="btn3PosAnim2" object="showAnimBtn3"><move x="55" y="22" duration="0.5"/></animation>  
+    <animation mode="linear" id="animation8" onDone="#animation9" onDone="#btn2PosAnim2" onDone="#btn3PosAnim2" object="showAnimBtn3"><textColor duration="1"><color>yellow</color><color>green</color><color>red</color><color>blue</color><color>purple</color><color>orange</color><color>brown</color><color>black</color></textColor>
+                                                                                        <background duration="3"><color>red</color><color>blue</color><color>green</color><color>purple</color><color>orange</color><color>black</color><color>lightBlue</color><color>gray</color></background></animation>
+    <animation mode="linear" id="animation7" object="showAnimBtn2"><textColor duration="3"><color>yellow</color><color>green</color><color>red</color><color>blue</color><color>purple</color><color>orange</color><color>brown</color><color>black</color></textColor></animation>
+    <animation mode="linear" id="animation6" object="showAnimBtn1"><background duration="3"><color>red</color><color>blue</color><color>green</color><color>purple</color><color>orange</color><color>black</color><color>brown</color><color>gray</color></background></animation>
+    <animation id="btn3PosAnim" onDone="#animation6" object="showAnimBtn3"><move x="9" y="14" duration="0.8"/><size width="35" height="3" duration="1.2"/></animation>
+    <animation id="btn2PosAnim" onDone="#animation7" object="showAnimBtn2"><move x="9" y="10" duration="0.6"/><size width="35" height="3" duration="1.2"/></animation>
+    <animation id="btn1PosAnim" onDone="#animation8" object="showAnimBtn1"><move x="9" y="6" duration="0.4"/><size width="35" height="3" duration="1.2"/></animation>
+    <animation mode="linear" id="animation4" onDone="#btn1PosAnim" onDone="#btn2PosAnim" onDone="#btn3PosAnim" onDone="makeButtonVisible" object="animationButton"><move x="-15" y="4" duration="0.5"/><size width="1" height="1" duration="0.5"/></animation>
+    <animation mode="linear" id="animation3" onDone="#animation4" object="animationButton"><move x="12" y="14" duration="0.7"/></animation>
+    <animation mode="linear" id="animation2" onDone="#animation3" object="animationButton"><move x="32" y="16" duration="1"/></animation>
+    <animation mode="linear" id="animation1" onStart="disableStartButton" onDone="#animation2" object="animationButton"><move x="34" y="9" duration="1.2"/></animation>
+
+    <button id="animationButton" onClick="startAnimation" onClick="buttonColor" x="22" y="10" text="Start" />
+</frame>
+
+<frame id="example2" x="parent.w+1" width="parent.w" height="parent.h" bg="lightGray" >
+    <label text="Program" font="2" x="16" y="2" />
+    <program x="2" y="6" width="parent.w-12" height="parent.h-6" path="rom/programs/shell.lua" execute="true" />
+    <button onClick="buttonColor" onClick="p2" anchor="bottomRight" width="8" x="-7" y="-2" text="Down" />
+    <frame moveable="true" bar="true" barText="Program" x="2" y="parent.h+2" width="28" height="12" bg="black" >
+        <program id="program2" x="1" y="2" width="parent.w" height="parent.h-1" path="rom/programs/fun/worm.lua" execute="true" />
+    </frame>
+    <frame moveable="true" bar="true" barText="Program" x="6" y="parent.h+4" width="28" height="12" bg="black" >
+        <program id="program2" x="1" y="2" width="parent.w" height="parent.h-1" path="rom/programs/shell.lua" execute="true" />
+    </frame>
+    <button onClick="buttonColor" onClick="p1" width="8" x="parent.w-8" y="parent.h+2" text="Up" />
+    <button onClick="buttonColor" onClick="p3" width="8" x="parent.w-8" y="parent.h*2-3" text="Down" />
+    <button onClick="buttonColor" onClick="p2" width="8" x="parent.w-8" y="parent.h*2+2" text="Up" />
+    <program id="program3" onClick="test" x="2" y="parent.h*2+2" width="parent.w-12" height="parent.h-2" path="rom/programs/fun/worm.lua" execute="true" />
+    <button onClick="buttonColor" onClick="pauseP3" width="8" x="parent.w-8" y="parent.w*2+7" text="Pause" />
+    <button onClick="buttonColor" onClick="p3Up" width="1" height="1" x="parent.w-5" y="parent.h*2+11" text="^" />
+    <button onClick="buttonColor" onClick="p3Down" width="1" height="1" x="parent.w-5" y="parent.h*2+13" text="v" />
+    <button onClick="buttonColor" onClick="p3Left" width="1" height="1" x="parent.w-7" y="parent.h*2+12" text="<" />
+    <button onClick="buttonColor" onClick="p3Right" width="1" height="1" x="parent.w-3" y="parent.h*2+12" text="&#62;" />
+    
+    <button onClick="buttonColor" onClick="ex1" x="2" y="2" width="8" height="1" text="Back" />
+    <button onClick="buttonColor" onClick="ex3" anchor="topRight" x="-7" y="2" width="8" height="1" text="Next" />
+</frame>
