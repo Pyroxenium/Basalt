@@ -55,13 +55,13 @@ This is also possible with entire frames and its children objects. So keep that 
 Here is a example on how to create a cool looking frame by using xml:
 ```xml
 <frame width="parent.w/2" bg="gray" scrollable="true" importantScroll="true">
-    <button x="2" y="2" width="100%-2" bg="black" fg="lightGray" text="Example Button 1!"/>
-    <button x="2" y="6" width="100%-2" bg="black" fg="lightGray" text="Example Button 2!"/>
-    <button x="2" y="10" width="100%-2" bg="black" fg="lightGray" text="Example Button 3!"/>
-    <button x="2" y="14" width="100%-2" bg="black" fg="lightGray" text="Example Button 4!"/>
-    <button x="2" y="18" width="100%-2" bg="black" fg="lightGray" text="Example Button 5!"/>
-    <button x="2" y="22" width="100%-2" bg="black" fg="lightGray" text="Example Button 6!"/>
-    <button x="2" y="26" width="100%-2" bg="black" fg="lightGray" text="Example Button 7!"/>
+    <button x="2" y="2" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 1!"/>
+    <button x="2" y="6" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 2!"/>
+    <button x="2" y="10" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 3!"/>
+    <button x="2" y="14" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 4!"/>
+    <button x="2" y="18" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 5!"/>
+    <button x="2" y="22" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 6!"/>
+    <button x="2" y="26" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 7!"/>
 </frame>
 <frame x="parent.w/2+1" width="parent.w/2+1" bg="black">
     <textfield bg="gray" x="2" y="2" width="parent.w-2">
