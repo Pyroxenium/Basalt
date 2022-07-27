@@ -205,6 +205,7 @@ local basalt = {}
 basalt = {
     setTheme = setTheme,
     getTheme = getTheme,
+    stopUpdate = stop,
     getVersion = function()
         return version
     end,
