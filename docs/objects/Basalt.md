@@ -171,8 +171,8 @@ end)
 <button onClick="clickMe" text="Click me" />
 ```
 
-## basalt.shedule
-Shedules a function which gets called in a coroutine. After the coroutine is finished it will get destroyed immediatly. It's something like threads, but with some limits.
+## basalt.schedule
+Schedules a function which gets called in a coroutine. After the coroutine is finished it will get destroyed immediatly. It's something like threads, but with some limits.
 
 #### Parameters: 
 1. `function` a function which should get executed
@@ -181,11 +181,11 @@ Shedules a function which gets called in a coroutine. After the coroutine is fin
 1. `function` it returns the function which you have to execute in order to start the coroutine
 
 #### Usage:
-* Creates a shedule which switches the color between red and gray
+* Creates a schedule which switches the color between red and gray
 ```lua
 local mainFrame = basalt.createFrame()
 local aButton = mainFrame:addButton():setText("Click me")
-aButton:onClick(basalt.shedule(function(self)
+aButton:onClick(basalt.schedule(function(self)
     self:setBackground(colors.red)
     os.sleep(0.1)
     self:setBackground(colors.gray)
