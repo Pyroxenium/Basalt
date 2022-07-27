@@ -54,7 +54,7 @@ This is also possible with entire frames and its children objects. So keep that 
 ## How To use XML
 Here is a example on how to create a cool looking frame by using xml:
 ```xml
-<frame width="50%" bg="gray" scrollable="true" importantScroll="true">
+<frame width="parent.w/2" bg="gray" scrollable="true" importantScroll="true">
     <button x="2" y="2" width="100%-2" bg="black" fg="lightGray" text="Example Button 1!"/>
     <button x="2" y="6" width="100%-2" bg="black" fg="lightGray" text="Example Button 2!"/>
     <button x="2" y="10" width="100%-2" bg="black" fg="lightGray" text="Example Button 3!"/>
@@ -63,8 +63,8 @@ Here is a example on how to create a cool looking frame by using xml:
     <button x="2" y="22" width="100%-2" bg="black" fg="lightGray" text="Example Button 6!"/>
     <button x="2" y="26" width="100%-2" bg="black" fg="lightGray" text="Example Button 7!"/>
 </frame>
-<frame x="50%+1" width="50%+1" bg="black">
-    <textfield bg="gray" x="2" y="2" width="100%-2">
+<frame x="parent.w/2+1" width="parent.w/2+1" bg="black">
+    <textfield bg="gray" x="2" y="2" width="parent.w-2">
         <lines>
             <line>This is line 1.</line>
             <line>And this is line 2.</line>
