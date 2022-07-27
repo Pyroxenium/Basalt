@@ -1,5 +1,5 @@
-name: Bug Report
-description: Report a bug for Basalt!
+name: Bug Report w/ BETA form
+description: Report a bug for Basalt (Using BETA form)!
 title: "bug: [TITLE]"
 labels: ["bug"]
 body:
