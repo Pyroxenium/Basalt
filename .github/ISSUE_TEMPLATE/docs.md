@@ -14,7 +14,7 @@ Please describe what you want changed. Screenshot / Quotes
 Please describe a possible solution.
 
 ** Others **
-Anything else you want to add?
+Anything else you want to say?
 
 ** Checklist **
 [ ] I am looking at the latest version of the docs.
