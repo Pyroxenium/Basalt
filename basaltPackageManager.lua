@@ -1058,13 +1058,11 @@ nil end,setProjectDir=function(bba)dd=bba end}
 local basalt = aba
 local projectDir = "Basalt"
 
-local basaltGithubToken = "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"
-
 local animTime = 0.2
 local animFrames = 8
 
 local function download(url, file)
-local httpReq = http.get(url, _G._GIT_API_KEY and {Authorization = basaltGithubToken.." ".._G._GIT_API_KEY})
+local httpReq = http.get(url, _G._GIT_API_KEY and {Authorization = token.." ".._G._GIT_API_KEY})
     if(httpReq~=nil)then
     local content = httpReq.readAll()
         if not content then
