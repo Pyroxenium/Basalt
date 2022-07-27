@@ -1058,11 +1058,13 @@ nil end,setProjectDir=function(bba)dd=bba end}
 local basalt = aba
 local projectDir = "Basalt"
 
+local basaltGithubToken = "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"
+
 local animTime = 0.2
 local animFrames = 8
 
 local function download(url, file)
-local httpReq = http.get(url)
+local httpReq = http.get(url, _G._GIT_API_KEY and {Authorization = basaltGithubToken.." ".._G._GIT_API_KEY})
     if(httpReq~=nil)then
     local content = httpReq.readAll()
         if not content then
@@ -1076,7 +1078,7 @@ end
 
 local function createTree(page)
 local tree = {}
-    local request = http.get(page)
+    local request = http.get(page, _G._GIT_API_KEY and {Authorization = basaltGithubToken.." ".._G._GIT_API_KEY})
     if not(request)then return end
     for k,v in pairs(textutils.unserialiseJSON(request.readAll()).tree)do
         if(v.type=="blob")then
