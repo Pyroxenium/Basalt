@@ -9,7 +9,7 @@ Here you can find information about how to use Basalt as well as examples of fun
 Basalt is intended to be an easy-to-understand UI Framework designed for CC:Tweaked (Also know as "ComputerCraft: Tweaked") - a popular minecraft mod. For more information about CC:Tweaked, checkout the project's [wiki](https://tweaked.cc/) or [download](https://www.curseforge.com/minecraft/mc-mods/cc-tweaked).
 
 ## Quick Demo
-![Preview](https://media0.giphy.com/media/fvmNPshXKeU7FFA9iA/giphy.gif)
+<img src="https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/_media/basaltPreview2.gif" width="600">
 
 ## Questions & Bugs
 
