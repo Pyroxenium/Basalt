@@ -11,7 +11,7 @@ local debugger = true
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
 
-local activeKey, frames, monFrames, variables, shedules = {}, {}, {}, {}, {}
+local activeKey, frames, monFrames, variables, schedules = {}, {}, {}, {}, {}
 local mainFrame, activeFrame, focusedObject, updaterActive
 
 if not  term.isColor or not term.isColor() then
@@ -122,13 +122,13 @@ local basaltError = function(errMsg)
     baseTerm.setCursorPos(1,yPos+1)
 end
 
-local function handleShedules(event, p1, p2, p3, p4)
-    if(#shedules>0)then
+local function handleSchedules(event, p1, p2, p3, p4)
+    if(#schedules>0)then
         local finished = {}
-        for n=1,#shedules do
-            if(shedules[n]~=nil)then 
-                if (coroutine.status(shedules[n]) == "suspended")then
-                    local ok, result = coroutine.resume(shedules[n], event, p1, p2, p3, p4)
+        for n=1,#schedules do
+            if(schedules[n]~=nil)then 
+                if (coroutine.status(schedules[n]) == "suspended")then
+                    local ok, result = coroutine.resume(schedules[n], event, p1, p2, p3, p4)
                     if not(ok)then
                         basaltError(result)
                     end
@@ -138,7 +138,7 @@ local function handleShedules(event, p1, p2, p3, p4)
             end
         end
         for n=1,#finished do
-            table.remove(shedules, finished[n]-(n-1))
+            table.remove(schedules, finished[n]-(n-1))
         end
     end
 end
@@ -197,7 +197,7 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
     for _, v in pairs(frames) do
         v:eventHandler(event, p1, p2, p3, p4)
     end
-    handleShedules(event, p1, p2, p3, p4)
+    handleSchedules(event, p1, p2, p3, p4)
     drawFrames()
 end
 
@@ -272,13 +272,13 @@ basalt = {
         end
     end,
 
-    shedule = function(f)
-        assert(f~="function", "Shedule needs a function in order to work!")
+    schedule = function(f)
+        assert(f~="function", "Schedule needs a function in order to work!")
         return function(...)
             local co = coroutine.create(f)
             local ok, result = coroutine.resume(co, ...)
             if(ok)then
-                table.insert(shedules, co)
+                table.insert(schedules, co)
             else
                 basaltError(result)
             end
