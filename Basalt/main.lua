@@ -6,7 +6,7 @@ local uuid = utils.uuid
 local createText = utils.createText
 
 local baseTerm = term.current()
-local version = 5
+local version = "1.5.0"
 local debugger = true
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
