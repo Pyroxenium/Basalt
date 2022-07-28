@@ -6,11 +6,11 @@ This is just a script which helps you to setup your program to automatically ins
 Here is a very basic one which just installs basalt.lua if don't exist:
 ```lua
 --Basalt configurated installer
-local filePath = "basalt" --here you can change the file path default: basalt
+local filePath = "basalt.lua" --here you can change the file path default: basalt
 if not(fs.exists(filePath))then
-    shell.run("pastebin run ESs1mg7P packed true "..filePath) -- this is an alternative to the wget command
+    shell.run("pastebin run ESs1mg7P packed true "..filePath:gsub(".lua", "")) -- this is an alternative to the wget command
 end
-local basalt = require(filePath) -- here you can change the variablename in any variablename you want default: basalt
+local basalt = require(filePath:gsub(".lua", "")) -- here you can change the variablename in any variablename you want default: basalt
 ```
 
 ## Advanced Installer
@@ -18,7 +18,7 @@ This is a visual version, it asks the user if he wants to install basalt.lua (if
 ![](https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/_media/installer.png)
 ```lua
 --Basalt configurated installer
-local filePath = "basalt" --here you can change the file path default: basalt
+local filePath = "basalt.lua" --here you can change the file path default: basalt
 if not(fs.exists(filePath))then
     local w,h = term.getSize()
     term.clear()
@@ -51,7 +51,7 @@ if not(fs.exists(filePath))then
         local event, p1,p2,p3,p4 = os.pullEvent()
         if(event=="mouse_click")then
             if(p3==math.floor(h/2+2))and(p2>=w/2-8)and(p2<=w/2-2)then
-                shell.run("pastebin run ESs1mg7P packed true "..filePath)
+                shell.run("pastebin run ESs1mg7P packed true "..filePath:gsub(".lua", ""))
                 _installerWindow.setVisible(false)
                 term.clear()
                 break
@@ -69,6 +69,6 @@ if not(fs.exists(filePath))then
     term.clear()
 end
 
-local basalt = require(filePath) -- here you can change the variablename in any variablename you want default: basalt
+local basalt = require(filePath:gsub(".lua", "")) -- here you can change the variablename in any variablename you want default: basalt
 ------------------------------
 ```
