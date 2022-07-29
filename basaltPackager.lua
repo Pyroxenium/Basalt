@@ -475,6 +475,7 @@ local function writeNewPackage(subdir, name, path)
         else
             outputFile:write(fileData:gsub("]]", "] ]"):gsub("]]", "] ]").."\n")
         end
+        fileData.close()
         outputFile:write("end; \n")
     end
 end
