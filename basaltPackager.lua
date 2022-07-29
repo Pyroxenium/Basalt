@@ -464,7 +464,8 @@ outputFile:write("project['default'] = {}")
 local function writeNewPackage(subdir, name, path)
     if not(fs.isDir(path))then
         outputFile:write("project['"..subdir.."']['"..name.."'] = ".."function(...)")
-        local fileData = io.open(path, "r"):read("*all")
+        local file = io.open(path, "r")
+        local fileData file:read("*all")
         if(minifyProject)then
             local success, data = minify(fileData)
             if(success)then
@@ -475,7 +476,7 @@ local function writeNewPackage(subdir, name, path)
         else
             outputFile:write(fileData:gsub("]]", "] ]"):gsub("]]", "] ]").."\n")
         end
-        fileData.close()
+        file.close()
         outputFile:write("end; \n")
     end
 end
