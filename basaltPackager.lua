@@ -465,7 +465,7 @@ local function writeNewPackage(subdir, name, path)
     if not(fs.isDir(path))then
         outputFile:write("project['"..subdir.."']['"..name.."'] = ".."function(...)")
         local file = io.open(path, "r")
-        local fileData file:read("*all")
+        local fileData = file:read("*all")
         if(minifyProject)then
             local success, data = minify(fileData)
             if(success)then
@@ -476,7 +476,7 @@ local function writeNewPackage(subdir, name, path)
         else
             outputFile:write(fileData:gsub("]]", "] ]"):gsub("]]", "] ]").."\n")
         end
-        file.close()
+        file:close()
         outputFile:write("end; \n")
     end
 end
@@ -491,16 +491,17 @@ for _,v in pairs(projectFiles)do
     end
 end
 
-local main = io.open(fs.combine(projectPath, mainFile), "r"):read("*all")
+local main = io.open(fs.combine(projectPath, mainFile), "r")
+local mainData = main:read("*all")
 if(minifyProject)then
-    local success,data = minify(main)
+    local success,data = minify(mainData)
     if(success)then
         outputFile:write(data)
     else
-        print("Error: Can't minify "..fs.combine(projectPath, mainFile))
+        print("Error: Can't minify "..fs.combine(projectPath, mainFile).." "..data)
     end
 else
-    outputFile:write(main)
+    outputFile:write(mainData)
 end
-
+main:close()
 outputFile:close()
