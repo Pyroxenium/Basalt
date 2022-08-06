@@ -1,6 +1,6 @@
 local basalt = require("Basalt")
 
-basalt.setVariable("buttonColor", basalt.shedule(function(self) 
+basalt.setVariable("buttonColor", basalt.schedule(function(self) 
     self:setBackground(colors.black)
     self:setForeground(colors.lightGray)
     os.sleep(0.1)
