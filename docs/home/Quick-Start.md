@@ -47,7 +47,6 @@ local basalt = require("basalt") --> Load the Basalt framework
 
 --> Create the first frame. Please note that Basalt needs at least one active "non-parent" frame to properly supply events
 --> When Basalt#createFrame makes use of unique identifiers (commonly referred to as UIDs), meaning that the supplied value must be UNIQUE
---> If the supplied UID is ambiguous, Basalt#createFrame returns a nil value
 local mainFrame = basalt.createFrame("mainFrame")
 
 --> Show the frame to the user
