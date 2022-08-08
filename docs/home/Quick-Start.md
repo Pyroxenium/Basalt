@@ -2,7 +2,7 @@
 
 To load the framework into your project, make use of the following code on top of your code.
 ```lua
-local basalt = require("Basalt")
+local basalt = require("basalt")
 ```
 
 It does not matter if you have installed the single file version or the full folder project. <br>
@@ -43,11 +43,10 @@ The true keyword in the end is optional and would simply start BPM immediately.
 Here is a fully functioning example of Basalt code
 
 ```lua
-local basalt = require("Basalt") --> Load the Basalt framework
+local basalt = require("basalt") --> Load the Basalt framework
 
 --> Create the first frame. Please note that Basalt needs at least one active "non-parent" frame to properly supply events
 --> When Basalt#createFrame makes use of unique identifiers (commonly referred to as UIDs), meaning that the supplied value must be UNIQUE
---> If the supplied UID is ambiguous, Basalt#createFrame returns a nil value
 local mainFrame = basalt.createFrame("mainFrame")
 
 --> Show the frame to the user
@@ -76,7 +75,7 @@ basalt.autoUpdate() --> Basalt#autoUpdate starts the event listener to detect us
 ```
 If you're like us and strive for succinct and beautiful code, here is a cleaner implementation of the code above:
 ```lua
-local basalt = require("Basalt")
+local basalt = require("basalt")
 
 local mainFrame = basalt.createFrame("mainFrame"):show()
 local button = mainFrame --> Basalt returns an instance of the object on most methods, to make use of "call-chaining"
