@@ -399,11 +399,11 @@ local myFrame = basalt.createFrame():setScrollable():setImportantScroll(true)
 *This is how you would implement frames via xml:
 ```xml
 <frame>
-    <frame width="50%" bg="red">
+    <frame width="parent.w * 0.5" bg="red">
         <button x="2" y="2" width="17" text="Example Button!"/>
     </frame>
     <frame x="50%+1" width="50%+1" bg="black">
-        <textfield bg="green" x="2" width="100%-2" />
+        <textfield bg="green" x="2" width="parent.w-2" />
     </frame>
 </frame>
 ```
