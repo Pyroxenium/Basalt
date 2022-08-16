@@ -280,7 +280,7 @@ return function(name, parent, pTerm, basalt)
         end,
 
         getTheme = function(self, name)
-            return theme[name] or (self.parent~=nil and self.parent:getTheme(name) or basalt.getTheme(name))
+            return (theme and theme[name]) or (self.parent~=nil and self.parent:getTheme(name) or basalt.getTheme(name))
         end,
 
         setPosition = function(self, x, y, rel)
