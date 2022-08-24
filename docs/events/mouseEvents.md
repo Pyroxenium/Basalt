@@ -16,7 +16,7 @@ local button = mainFrame:addButton("myButton"):setPosition(3,3):setSize(12,3):se
 function buttonOnClick()
   basalt.debug("Button got clicked!")
 end
-button:onClick(buttonOnClick())
+button:onClick(buttonOnClick)
 ```
 
 # onClickUp
