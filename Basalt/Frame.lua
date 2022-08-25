@@ -3,6 +3,7 @@ local _OBJECTS = require("loadObjects")
 local BasaltDraw = require("basaltDraw")
 local utils = require("utils")
 local layout = require("layout")
+local log = require("basaltLogs")
 local uuid = utils.uuid
 local rpairs = utils.rpairs
 local xmlValue = utils.getValueFromXML
@@ -206,20 +207,22 @@ return function(name, parent, pTerm, basalt)
     end
 
     local function removeEvent(self, event, obj)
-        for a, b in pairs(events[event]) do
-            for key, value in pairs(b) do
-                if (value == obj) then
-                    table.remove(events[event][a], key)
-                    if(#events[event][a]<=0)then
-                        events[event][a] = nil
-                        if(self.parent~=nil)then
-                            if(tableCount(events[event])<=0)then
-                                activeEvents[event] = false
-                                self.parent:removeEvent(event, self)
+        if(events[event]~=nil)then
+            for a, b in pairs(events[event]) do
+                for key, value in pairs(b) do
+                    if (value == obj) then
+                        table.remove(events[event][a], key)
+                        if(#events[event][a]<=0)then
+                            events[event][a] = nil
+                            if(self.parent~=nil)then
+                                if(tableCount(events[event])<=0)then
+                                    activeEvents[event] = false
+                                    self.parent:removeEvent(event, self)
+                                end
                             end
                         end
+                        return true;
                     end
-                    return true;
                 end
             end
         end
