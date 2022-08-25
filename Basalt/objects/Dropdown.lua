@@ -26,12 +26,6 @@ return function(name)
         getType = function(self)
             return objectType
         end;
-        init = function(self)
-            self.bgColor = self.parent:getTheme("DropdownBG")
-            self.fgColor = self.parent:getTheme("DropdownText")
-            itemSelectedBG = self.parent:getTheme("SelectionBG")
-            itemSelectedFG = self.parent:getTheme("SelectionText")
-        end,
 
         setValuesByXMLData = function(self, data)
             base.setValuesByXMLData(self, data)
@@ -51,6 +45,7 @@ return function(name)
 
         setOffset = function(self, yOff)
             yOffset = yOff
+            self:updateDraw()
             return self
         end;
 
@@ -60,6 +55,7 @@ return function(name)
 
         addItem = function(self, text, bgCol, fgCol, ...)
             table.insert(list, { text = text, bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })
+            self:updateDraw()
             return self
         end;
 
@@ -69,6 +65,7 @@ return function(name)
 
         removeItem = function(self, index)
             table.remove(list, index)
+            self:updateDraw()
             return self
         end;
 
@@ -88,6 +85,7 @@ return function(name)
         clear = function(self)
             list = {}
             self:setValue({})
+            self:updateDraw()
             return self
         end;
 
@@ -98,11 +96,13 @@ return function(name)
         editItem = function(self, index, text, bgCol, fgCol, ...)
             table.remove(list, index)
             table.insert(list, index, { text = text, bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })
+            self:updateDraw()
             return self
         end;
 
         selectItem = function(self, index)
             self:setValue(list[index] or {})
+            self:updateDraw()
             return self
         end;
 
@@ -110,55 +110,90 @@ return function(name)
             itemSelectedBG = bgCol or self.bgColor
             itemSelectedFG = fgCol or self.fgColor
             selectionColorActive = active
+            self:updateDraw()
             return self
         end;
 
         setDropdownSize = function(self, width, height)
             dropdownW, dropdownH = width, height
+            self:updateDraw()
             return self
-        end;
+        end,
 
-        mouseHandler = function(self, event, button, x, y)
+        mouseHandler = function(self, button, x, y)
             if (isOpened) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
-
+                if(button==1)then
                     if (#list > 0) then
                         for n = 1, dropdownH do
                             if (list[n + yOffset] ~= nil) then
                                 if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
                                     self:setValue(list[n + yOffset])
+                                    self:updateDraw()
+                                    local val = self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", dir, x, y)
+                                    if(val==false)then return val end
                                     return true
                                 end
                             end
                         end
                     end
                 end
+            end
+            if (base.mouseHandler(self, button, x, y)) then
+                isOpened = (not isOpened)
+                self:updateDraw()
+                return true
+            else
+                if(isOpened)then 
+                    self:updateDraw()
+                    isOpened = false
+                end 
+                return false
+            end
+        end,
 
-                if (event == "mouse_scroll") then
-                    yOffset = yOffset + button
-                    if (yOffset < 0) then
-                        yOffset = 0
-                    end
-                    if (button == 1) then
-                        if (#list > dropdownH) then
-                            if (yOffset > #list - dropdownH) then
-                                yOffset = #list - dropdownH
+        mouseUpHandler = function(self, button, x, y)
+            if (isOpened) then
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                if(button==1)then
+                    if (#list > 0) then
+                        for n = 1, dropdownH do
+                            if (list[n + yOffset] ~= nil) then
+                                if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
+                                    isOpened = false
+                                    self:updateDraw()
+                                    local val = self:getEventSystem():sendEvent("mouse_up", self, "mouse_up", dir, x, y)
+                                    if(val==false)then return val end
+                                    return true
+                                end
                             end
-                        else
-                            yOffset = math.min(#list - 1, 0)
                         end
                     end
-                    return true
                 end
-                self:setVisualChanged()
             end
-            if (base.mouseHandler(self, event, button, x, y)) then
-                isOpened = true
-            else
-                isOpened = false
+        end,
+
+        scrollHandler = function(self, dir, x, y)
+            if (isOpened)and(self:isFocused()) then
+                yOffset = yOffset + dir
+                if (yOffset < 0) then
+                    yOffset = 0
+                end
+                if (dir == 1) then
+                    if (#list > dropdownH) then
+                        if (yOffset > #list - dropdownH) then
+                            yOffset = #list - dropdownH
+                        end
+                    else
+                        yOffset = math.min(#list - 1, 0)
+                    end
+                end
+                local val = self:getEventSystem():sendEvent("mouse_scroll", self, "mouse_scroll", dir, x, y)
+                if(val==false)then return val end
+                self:updateDraw()
+                return true
             end
-        end;
+        end,
 
         draw = function(self)
             if (base.draw(self)) then
@@ -186,9 +221,20 @@ return function(name)
                         end
                     end
                 end
-                self:setVisualChanged(false)
             end
-        end;
+        end,
+
+        init = function(self)
+            self.bgColor = self.parent:getTheme("DropdownBG")
+            self.fgColor = self.parent:getTheme("DropdownText")
+            itemSelectedBG = self.parent:getTheme("SelectionBG")
+            itemSelectedFG = self.parent:getTheme("SelectionText")
+            if(self.parent~=nil)then
+                self.parent:addEvent("mouse_click", self)
+                self.parent:addEvent("mouse_up", self)
+                self.parent:addEvent("mouse_scroll", self)
+            end
+        end,
     }
 
     return setmetatable(object, base)

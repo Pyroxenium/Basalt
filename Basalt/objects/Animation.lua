@@ -1,8 +1,7 @@
-
 local xmlValue = require("utils").getValueFromXML
 local basaltEvent = require("basaltEvent")
 
-local floor = math.floor
+local floor,sin,cos,pi = math.floor,math.sin,math.cos,math.pi
 
 local lerp = function(s, e, pct)
     return s + (e - s) * pct
@@ -12,8 +11,8 @@ local linear = function (t)
     return t
 end
 
-local flip = function (x)
-    return 1 - x
+local flip = function (t)
+    return 1 - t
 end
 
 local easeIn = function (t)
@@ -28,6 +27,18 @@ local easeInOut = function(t)
     return lerp(easeIn(t), easeOut(t), t)
 end
 
+local easeOutSine = function(t)
+    return sin((t * pi) / 2);
+end
+
+local easeInSine = function(t)
+    return flip(cos((t * pi) / 2))
+end
+
+local easeInOutSine = function(t)
+    return -(cos(pi * x) - 1) / 2
+end
+
 local lerp = {
     linear = linear,
     lerp = lerp,
@@ -35,7 +46,12 @@ local lerp = {
     easeIn=easeIn,
     easeOut=easeOut,
     easeInOut=easeInOut,
+    easeOutSine = easeOutSine,
+    easeInSine = easeInSine,
+    easeInOutSine = easeInOutSine,
 }
+
+local activeAnimations = {}
 
 return function(name)
     local object = {}
@@ -117,16 +133,33 @@ return function(name)
     end
     
 
-    local function predefinedLerp(v1,v2,d,t,get,set)
+    local function predefinedLerp(v1,v2,d,t,get,set,typ,self)
         local x,y 
+        local name = ""
+        if(_OBJ.parent~=nil)then name = _OBJ.parent:getName() end
+        name = name.._OBJ:getName()
         addAnimationPart(t+0.05, function()
+            if(typ~=nil)then
+                if(activeAnimations[typ]==nil)then activeAnimations[typ] = {} end
+                    if(activeAnimations[typ][name]~=nil)then
+                        activeAnimations[typ][name]:cancel()
+                    end
+                activeAnimations[typ][name] = self
+            end
             x,y = get(_OBJ)
         end)
-        for n=0.05,d,0.05 do
+        for n=0.05,d+0.01,0.05 do
             addAnimationPart(t+n, function()
                 local _x = math.floor(lerp.lerp(x, v1, lerp[mode](n / d))+0.5)
                 local _y = math.floor(lerp.lerp(y, v2, lerp[mode](n / d))+0.5)
                 set(_OBJ, _x,_y)
+                if(typ~=nil)then
+                    if(n>=d-0.01)then
+                        if(activeAnimations[typ][name]==self)then
+                            activeAnimations[typ][name] = nil
+                        end
+                    end
+                end
             end)
         end
     end;
@@ -274,19 +307,19 @@ return function(name)
 
         move = function(self, x, y, duration, timer, obj)
             _OBJ = obj or _OBJ
-            predefinedLerp(x,y,duration,timer or 0,_OBJ.getPosition,_OBJ.setPosition)
+            predefinedLerp(x,y,duration,timer or 0,_OBJ.getPosition,_OBJ.setPosition, "position", self)
             return self
         end,
 
         offset = function(self, x, y, duration, timer, obj)
             _OBJ = obj or _OBJ
-            predefinedLerp(x,y,duration,timer or 0,_OBJ.getOffset,_OBJ.setOffset)
+            predefinedLerp(x,y,duration,timer or 0,_OBJ.getOffset,_OBJ.setOffset, "offset", self)
             return self
         end,
 
         size = function(self, w, h, duration, timer, obj)
             _OBJ = obj or _OBJ
-            predefinedLerp(w,h,duration,timer or 0,_OBJ.getSize,_OBJ.setSize)
+            predefinedLerp(w,h,duration,timer or 0,_OBJ.getSize,_OBJ.setSize, "size", self)
             return self
         end,
 
@@ -363,6 +396,7 @@ return function(name)
 
         animationDoneHandler = function(self)
             eventSystem:sendEvent("animation_done", self)
+            self.parent:removeEvent("other_event", self)
             if(autoDestroy)then
                 self.parent:removeObject(self)
                 self = nil
@@ -398,6 +432,7 @@ return function(name)
             else
                 self:animationDoneHandler()
             end
+            self.parent:addEvent("other_event", self)
             return self
         end;
 
@@ -407,6 +442,7 @@ return function(name)
                 infinitePlay = false
             end
             animationActive = false
+            self.parent:removeEvent("other_event", self)
             return self
         end;
 

@@ -1,5 +1,6 @@
 local Object = require("Object")
 local utils = require("utils")
+local log = require("basaltLogs")
 local xmlValue = utils.getValueFromXML
 
 return function(name)
@@ -24,10 +25,6 @@ return function(name)
     local internalValueChange = false
 
     local object = {
-        init = function(self)
-            self.bgColor = self.parent:getTheme("InputBG")
-            self.fgColor = self.parent:getTheme("InputFG")
-        end,
         getType = function(self)
             return objectType
         end;
@@ -36,6 +33,7 @@ return function(name)
             if (iType == "password") or (iType == "number") or (iType == "text") then
                 inputType = iType
             end
+            self:updateDraw()
             return self
         end;
 
@@ -48,6 +46,7 @@ return function(name)
             else
                 showingText = defaultText
             end
+            self:updateDraw()
             return self
         end;
 
@@ -58,8 +57,14 @@ return function(name)
         setValue = function(self, val)
             base.setValue(self, tostring(val))
             if not (internalValueChange) then
-                textX = tostring(val):len() + 1
+                if(self:isFocused())then
+                    textX = tostring(val):len() + 1
+                    wIndex = math.max(1, textX-self:getWidth()+1)
+                    local obx, oby = self:getAnchorPosition()
+                    self.parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self.height/2), self.fgColor)
+                end
             end
+            self:updateDraw()
             return self
         end;
 
@@ -70,6 +75,7 @@ return function(name)
 
         setInputLimit = function(self, limit)
             inputLimit = tonumber(limit) or inputLimit
+            self:updateDraw()
             return self
         end;
 
@@ -93,25 +99,28 @@ return function(name)
             if (self.parent ~= nil) then
                 local obx, oby = self:getAnchorPosition()
                 showingText = ""
-                if (self.parent ~= nil) then
-                    self.parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self.height/2), self.fgColor)
+                if(defaultText~="")then
+                    self:updateDraw()
                 end
+                self.parent:setCursor(true, obx + textX - wIndex, oby+math.max(math.ceil(self:getHeight()/2-1, 1)), self.fgColor)
             end
         end;
 
         loseFocusHandler = function(self)
             base.loseFocusHandler(self)
             if (self.parent ~= nil) then
-                self.parent:setCursor(false)
                 showingText = defaultText
+                if(defaultText~="")then
+                    self:updateDraw()
+                end
+                self.parent:setCursor(false)
             end
         end;
 
-        keyHandler = function(self, event, key)
-            if (base.keyHandler(self, event, key)) then
+        keyHandler = function(self, key)
+            if (base.keyHandler(self, key)) then
                 local w,h = self:getSize()
                 internalValueChange = true
-                if (event == "key") then
                     if (key == keys.backspace) then
                         -- on backspace
                         local text = tostring(base.getValue())
@@ -167,29 +176,6 @@ return function(name)
                             wIndex = 1
                         end
                     end
-                end
-
-                if (event == "char") then
-                    local text = base.getValue()
-                    if (text:len() < inputLimit or inputLimit <= 0) then
-                        if (inputType == "number") then
-                            local cache = text
-                            if (key == ".") or (tonumber(key) ~= nil) then
-                                self:setValue(text:sub(1, textX - 1) .. key .. text:sub(textX, text:len()))
-                                textX = textX + 1
-                            end
-                            if (tonumber(base.getValue()) == nil) then
-                                self:setValue(cache)
-                            end
-                        else
-                            self:setValue(text:sub(1, textX - 1) .. key .. text:sub(textX, text:len()))
-                            textX = textX + 1
-                        end
-                        if (textX >= w + wIndex) then
-                            wIndex = wIndex + 1
-                        end
-                    end
-                end
                 local obx, oby = self:getAnchorPosition()
                 local val = tostring(base.getValue())
                 local cursorX = (textX <= val:len() and textX - 1 or val:len()) - (wIndex - 1)
@@ -198,21 +184,117 @@ return function(name)
                     cursorX = self.x + w - 1
                 end
                 if (self.parent ~= nil) then
-                    self.parent:setCursor(true, obx + cursorX, oby+math.floor(h/2), self.fgColor)
+                    self.parent:setCursor(true, obx + cursorX, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
                 end
                 internalValueChange = false
-            end
-        end;
-
-        mouseHandler = function(self, event, button, x, y)
-            if (base.mouseHandler(self, event, button, x, y)) then
-                if (event == "mouse_click") and (button == 1) then
-                    
-                end
                 return true
             end
             return false
-        end;
+        end,
+
+        charHandler = function(self, char)
+            if (base.charHandler(self, char)) then
+                internalValueChange = true
+                local w,h = self:getSize()
+                local text = base.getValue()
+                if (text:len() < inputLimit or inputLimit <= 0) then
+                    if (inputType == "number") then
+                        local cache = text
+                        if (char == ".") or (tonumber(char) ~= nil) then
+                            self:setValue(text:sub(1, textX - 1) .. char .. text:sub(textX, text:len()))
+                            textX = textX + 1
+                        end
+                        if (tonumber(base.getValue()) == nil) then
+                            self:setValue(cache)
+                        end
+                    else
+                        self:setValue(text:sub(1, textX - 1) .. char .. text:sub(textX, text:len()))
+                        textX = textX + 1
+                    end
+                    if (textX >= w + wIndex) then
+                        wIndex = wIndex + 1
+                    end
+                end
+                local obx, oby = self:getAnchorPosition()
+                local val = tostring(base.getValue())
+                local cursorX = (textX <= val:len() and textX - 1 or val:len()) - (wIndex - 1)
+
+                local x = self:getX()
+                if (cursorX > x + w - 1) then
+                    cursorX = x + w - 1
+                end
+                if (self.parent ~= nil) then
+                    self.parent:setCursor(true, obx + cursorX, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
+                end
+                internalValueChange = false
+                self:updateDraw()
+                return true
+            end
+            return false
+        end,
+
+        mouseHandler = function(self, button, x, y)
+            if(base.mouseHandler(self, button, x, y))then
+                local ax, ay = self:getAnchorPosition()
+                local obx, oby = self:getAbsolutePosition(ax, ay)
+                local w, h = self:getSize()
+                textX = x - obx + wIndex
+                local text = base.getValue()
+                if (textX > text:len()) then
+                    textX = text:len() + 1
+                end
+                if (textX < wIndex) then
+                    wIndex = textX - 1
+                    if (wIndex < 1) then
+                        wIndex = 1
+                    end
+                end
+                self.parent:setCursor(true, obx + textX-1, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
+                return true
+            end
+        end,
+
+        eventHandler = function(self, event, paste, p2, p3, p4)
+            if(base.eventHandler(self, event, paste, p2, p3, p4))then
+                if(event=="paste")then
+                    if(self:isFocused())then
+                        local text = base.getValue()
+                        local w, h = self:getSize()
+                        internalValueChange = true
+                        if (inputType == "number") then
+                            local cache = text
+                            if (paste == ".") or (tonumber(paste) ~= nil) then
+                                self:setValue(text:sub(1, textX - 1) .. paste .. text:sub(textX, text:len()))
+                                textX = textX + paste:len()
+                            end
+                            if (tonumber(base.getValue()) == nil) then
+                                self:setValue(cache)
+                            end
+                        else
+                            self:setValue(text:sub(1, textX - 1) .. paste .. text:sub(textX, text:len()))
+                            textX = textX + paste:len()
+                        end
+                        if (textX >= w + wIndex) then
+                            wIndex = (textX+1)-w
+                        end
+
+                        local obx, oby = self:getAnchorPosition()
+                        local val = tostring(base.getValue())
+                        local cursorX = (textX <= val:len() and textX - 1 or val:len()) - (wIndex - 1)
+
+                        local x = self:getX()
+                        if (cursorX > x + w - 1) then
+                            cursorX = x + w - 1
+                        end
+                        if (self.parent ~= nil) then
+                            self.parent:setCursor(true, obx + cursorX, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
+                        end
+                        self:updateDraw()
+                        internalValueChange = false
+                    end
+                end
+            end
+        end,
 
         draw = function(self)
             if (base.draw(self)) then
@@ -246,14 +328,24 @@ return function(name)
                             if (inputType == "password") and (val ~= "") then
                                 text = string.rep("*", text:len())
                             end
-                            text = text .. string.rep(" ", space)
+                            text = text .. string.rep(self.bgSymbol, space)
                             self.parent:writeText(obx, oby + (n - 1), text, bCol, fCol)
                         end
                     end
                 end
-                self:setVisualChanged(false)
             end
-        end;
+        end,
+
+        init = function(self)
+            self.bgColor = self.parent:getTheme("InputBG")
+            self.fgColor = self.parent:getTheme("InputText")
+            if(self.parent~=nil)then
+                self.parent:addEvent("mouse_click", self)
+                self.parent:addEvent("key", self)
+                self.parent:addEvent("char", self)
+                self.parent:addEvent("other_event", self)
+            end
+        end,
     }
 
     return setmetatable(object, base)

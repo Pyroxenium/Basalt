@@ -42,6 +42,7 @@ return function(name)
 
         setDirection = function(self, dir)
             direction = dir
+            self:updateDraw()
             return self
         end;
 
@@ -49,11 +50,13 @@ return function(name)
             activeBarColor = color or activeBarColor
             activeBarSymbol = symbol or activeBarSymbol
             activeBarSymbolCol = symbolcolor or activeBarSymbolCol
+            self:updateDraw()
             return self
         end;
 
         setBackgroundSymbol = function(self, symbol)
             bgBarSymbol = symbol:sub(1, 1)
+            self:updateDraw()
             return self
         end;
 
@@ -65,6 +68,7 @@ return function(name)
                     self:progressDoneHandler()
                 end
             end
+            self:updateDraw()
             return self
         end;
 
@@ -107,9 +111,8 @@ return function(name)
                         self.parent:drawTextBox(obx, oby, w / 100 * progress, h, activeBarSymbol)
                     end
                 end
-                self:setVisualChanged(false)
             end
-        end;
+        end,
 
     }
 

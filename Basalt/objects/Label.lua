@@ -33,27 +33,28 @@ return function(name)
             if (autoSize) then
                 self.width = text:len()
             end
-            if not(fgColChanged)then self.fgColor = self.parent:getForeground() or colors.white end
-            if not(bgColChanged)then self.bgColor = self.parent:getBackground() or colors.black end
+            self:updateDraw()
             return self
         end;
 
         setBackground = function(self, col)
             base.setBackground(self, col)
             bgColChanged = true
+            self:updateDraw()
             return self
         end,
 
         setForeground = function(self, col)
             base.setForeground(self, col)
             fgColChanged = true
+            self:updateDraw()
             return self
         end,
 
         setTextAlign = function(self, hor, vert)
             textHorizontalAlign = hor or textHorizontalAlign
             textVerticalAlign = vert or textVerticalAlign
-            self:setVisualChanged()
+            self:updateDraw()
             return self
         end;
 
@@ -61,6 +62,7 @@ return function(name)
             if(size>0)and(size<=4)then
                 fontsize = size-1 or 0
             end
+            self:updateDraw()
             return self
         end;
 
@@ -77,10 +79,10 @@ return function(name)
             return self
         end,
 
-        setSize = function(self, width, height)
-            base.setSize(self, width, height)
+        setSize = function(self, width, height, rel)
+            base.setSize(self, width, height, rel)
             autoSize = false
-            self:setVisualChanged()
+            self:updateDraw()
             return self
         end;
 
@@ -90,47 +92,43 @@ return function(name)
                     local obx, oby = self:getAnchorPosition()
                     local w,h = self:getSize()
                     local verticalAlign = utils.getTextVerticalAlign(h, textVerticalAlign)
-                    if(self.bgColor~=false)then 
-                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
-                        self.parent:drawTextBox(obx, oby, w, h, " ") end
-                    if(self.fgColor~=false)then self.parent:drawForegroundBox(obx, oby, w, h, self.fgColor) end
                     if(fontsize==0)then
                         if not(autoSize)then
                             local text = createText(self:getValue(), self:getWidth())
                             for k,v in pairs(text)do
-                                self.parent:setText(obx, oby+k-1, v)
+                                self.parent:writeText(obx, oby+k-1, v, self.bgColor, self.fgColor)
                             end
                         else
-                            for n = 1, h do
-                                if (n == verticalAlign) then
-                                    self.parent:setText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self:getValue(), w, textHorizontalAlign))
-                                end
-                            end
+                            self.parent:writeText(obx, oby, self:getValue(), self.bgColor, self.fgColor)
                         end
                     else
-                        local tData = bigFont(fontsize, self:getValue(), self.fgColor, self.bgColor or colors.black)
+                        local tData = bigFont(fontsize, self:getValue(), self.fgColor, self.bgColor or colors.lightGray)
                         if(autoSize)then
                             self:setSize(#tData[1][1], #tData[1]-1)
                         end
-                        for n = 1, h do
-                            if (n == verticalAlign) then
-                                local oX, oY = self.parent:getSize()
-                                local cX, cY = #tData[1][1], #tData[1]
-                                obx = obx or math.floor((oX - cX) / 2) + 1
-                                oby = oby or math.floor((oY - cY) / 2) + 1
-                            
-                                for i = 1, cY do
-                                    self.parent:setFG(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[2][i], w, textHorizontalAlign))
-                                    self.parent:setBG(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[3][i], w, textHorizontalAlign, tHex[self.bgColor or colors.black]))
-                                    self.parent:setText(obx, oby + i + n - 2, utils.getTextHorizontalAlign(tData[1][i], w, textHorizontalAlign))
-                                end
+                            local oX, oY = self.parent:getSize()
+                            local cX, cY = #tData[1][1], #tData[1]
+                            obx = obx or math.floor((oX - cX) / 2) + 1
+                            oby = oby or math.floor((oY - cY) / 2) + 1
+                        
+                            for i = 1, cY do
+                                self.parent:setFG(obx, oby + i - 2, tData[2][i])
+                                self.parent:setBG(obx, oby + i - 2, tData[3][i])
+                                self.parent:setText(obx, oby + i - 2, tData[1][i])
                             end
-                        end
                     end
                 end
-                self:setVisualChanged(false)
             end
-        end;
+        end,
+        init = function(self)
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("LabelBG")
+                self.fgColor = self.parent:getTheme("LabelText")
+                if(self.parent.bgColor==colors.black)and(self.fgColor==colors.black)then
+                    self.fgColor = colors.lightGray
+                end
+            end
+        end
 
     }
 

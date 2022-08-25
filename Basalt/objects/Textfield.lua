@@ -1,6 +1,9 @@
 local Object = require("Object")
 local tHex = require("tHex")
+local log = require("basaltLogs")
 local xmlValue = require("utils").getValueFromXML
+
+local rep = string.rep
 
 return function(name)
     local base = Object(name)
@@ -65,6 +68,7 @@ return function(name)
         end
         fgLines[l] = fgLine
         bgLines[l] = bgLine
+        self:updateDraw()
     end
 
     local function updateAllColors(self)
@@ -74,10 +78,6 @@ return function(name)
     end
 
     local object = {
-        init = function(self)
-            self.bgColor = self.parent:getTheme("TextfieldBG")
-            self.fgColor = self.parent:getTheme("TextfieldText")
-        end,
         getType = function(self)
             return objectType
         end;
@@ -144,6 +144,7 @@ return function(name)
 
         editLine = function(self, index, text)
             lines[index] = text or lines[index]
+            self:updateDraw()
             return self
         end;
 
@@ -152,6 +153,7 @@ return function(name)
             bgLines = {""}
             fgLines = {""}
             hIndex, wIndex, textX, textY = 1, 1, 1, 1
+            self:updateDraw()
             return self
         end,
 
@@ -173,6 +175,7 @@ return function(name)
                     table.insert(fgLines, tHex[self.fgColor]:rep(text:len()))
                 end
             end
+            self:updateDraw()
             return self
         end;
 
@@ -183,11 +186,13 @@ return function(name)
             for k,v in pairs(tab)do
                 table.insert(keyWords[color], v)
             end
+            self:updateDraw()
             return self
         end;
 
         addRule = function(self, rule, fg, bg)
             table.insert(rules, {rule, fg, bg})
+            self:updateDraw()
             return self
         end;
 
@@ -198,6 +203,7 @@ return function(name)
                     rules[k][3] = bg
                 end
             end
+            self:updateDraw()
             return self
         end;
 
@@ -207,11 +213,13 @@ return function(name)
                     table.remove(rules, k)
                 end
             end
+            self:updateDraw()
             return self
         end;
 
         setKeywords = function(self, color, tab)
             keyWords[color] = tab
+            self:updateDraw()
             return self
         end;
 
@@ -220,6 +228,7 @@ return function(name)
             if (#lines <= 0) then
                 table.insert(lines, "")
             end
+            self:updateDraw()
             return self
         end;
 
@@ -244,11 +253,10 @@ return function(name)
             end
         end;
 
-        keyHandler = function(self, event, key)
+        keyHandler = function(self, key)
             if (base.keyHandler(self, event, key)) then
                 local obx, oby = self:getAnchorPosition()
                 local w,h = self:getSize()
-                if (event == "key") then
                     if (key == keys.backspace) then
                         -- on backspace
                         if (lines[textY] == "") then
@@ -361,7 +369,14 @@ return function(name)
                             if (textX > lines[textY]:len() + 1) then
                                 textX = lines[textY]:len() + 1
                             end
-
+                            if (wIndex > 1) then
+                                if (textX < wIndex) then
+                                    wIndex = textX - w + 1
+                                    if (wIndex < 1) then
+                                        wIndex = 1
+                                    end
+                                end
+                            end
                             if (textY >= hIndex + h) then
                                 hIndex = hIndex + 1
                             end
@@ -411,19 +426,6 @@ return function(name)
                             wIndex = 1
                         end
                     end
-                end
-
-                if (event == "char") then
-                    lines[textY] = lines[textY]:sub(1, textX - 1) .. key .. lines[textY]:sub(textX, lines[textY]:len())
-                    fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self.fgColor] .. fgLines[textY]:sub(textX, fgLines[textY]:len())
-                    bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self.bgColor] .. bgLines[textY]:sub(textX, bgLines[textY]:len())
-                    textX = textX + 1
-                    if (textX >= w + wIndex) then
-                        wIndex = wIndex + 1
-                    end
-                    updateColors(self)
-                    self:setValue("")
-                end
 
                 local cursorX = (textX <= lines[textY]:len() and textX - 1 or lines[textY]:len()) - (wIndex - 1)
                 if (cursorX > self.x + w - 1) then
@@ -434,17 +436,46 @@ return function(name)
                     cursorX = 0
                 end
                 self.parent:setCursor(true, obx + cursorX, oby + cursorY, self.fgColor)
+                self:updateDraw()
                 return true
             end
-        end;
+        end,
 
-        mouseHandler = function(self, event, button, x, y)
-            if (base.mouseHandler(self, event, button, x, y)) then
+        charHandler = function(self, char)
+            if(base.charHandler(self, char))then
+                local obx, oby = self:getAnchorPosition()
+                local w,h = self:getSize()
+                lines[textY] = lines[textY]:sub(1, textX - 1) .. char .. lines[textY]:sub(textX, lines[textY]:len())
+                fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self.fgColor] .. fgLines[textY]:sub(textX, fgLines[textY]:len())
+                bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self.bgColor] .. bgLines[textY]:sub(textX, bgLines[textY]:len())
+                textX = textX + 1
+                if (textX >= w + wIndex) then
+                    wIndex = wIndex + 1
+                end
+                updateColors(self)
+                self:setValue("")
+
+                local cursorX = (textX <= lines[textY]:len() and textX - 1 or lines[textY]:len()) - (wIndex - 1)
+                if (cursorX > self.x + w - 1) then
+                    cursorX = self.x + w - 1
+                end
+                local cursorY = (textY - hIndex < h and textY - hIndex or textY - hIndex - 1)
+                if (cursorX < 1) then
+                    cursorX = 0
+                end
+                self.parent:setCursor(true, obx + cursorX, oby + cursorY, self.fgColor)
+                self:updateDraw()
+                return true
+            end
+        end,
+
+        dragHandler = function(self, button, x, y)
+            if (base.dragHandler(self, button, x, y)) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 local anchx, anchy = self:getAnchorPosition()
                 local w,h = self:getSize()
-                if (event == "mouse_click")or(event=="monitor_touch") then
-                    if (lines[y - oby + hIndex] ~= nil) then
+                if (lines[y - oby + hIndex] ~= nil) then
+                    if(anchx+w > anchx + x - (obx+1)+ wIndex)and(anchx < anchx + x - obx+ wIndex)then
                         textX = x - obx + wIndex
                         textY = y - oby + hIndex
                         if (textX > lines[textY]:len()) then
@@ -459,61 +490,89 @@ return function(name)
                         if (self.parent ~= nil) then
                             self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                         end
+                        self:updateDraw()
                     end
                 end
-                if (event == "mouse_drag") then
-                    if (lines[y - oby + hIndex] ~= nil) then
-                        textX = x - obx + wIndex
-                        textY = y - oby + hIndex
-                        if (textX > lines[textY]:len()) then
-                            textX = lines[textY]:len() + 1
-                        end
-                        if (textX < wIndex) then
-                            wIndex = textX - 1
-                            if (wIndex < 1) then
-                                wIndex = 1
-                            end
-                        end
-                        if (self.parent ~= nil) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
-                        end
-                    end
-                end
-
-                if (event == "mouse_scroll") then
-                    hIndex = hIndex + button
-                    if (hIndex > #lines - (h - 1)) then
-                        hIndex = #lines - (h - 1)
-                    end
-
-                    if (hIndex < 1) then
-                        hIndex = 1
-                    end
-
-                    if (self.parent ~= nil) then
-                        if (obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (oby + textY - hIndex >= oby and oby + textY - hIndex < oby + h) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
-                        else
-                            self.parent:setCursor(false)
-                        end
-                    end
-                end
-                self:setVisualChanged()
                 return true
             end
-        end;
+        end,
+
+        scrollHandler = function(self, dir, x, y)
+            if (base.scrollHandler(self, dir, x, y)) then
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                local anchx, anchy = self:getAnchorPosition()
+                local w,h = self:getSize()
+                hIndex = hIndex + dir
+                if (hIndex > #lines - (h - 1)) then
+                    hIndex = #lines - (h - 1)
+                end
+
+                if (hIndex < 1) then
+                    hIndex = 1
+                end
+
+                if (self.parent ~= nil) then
+                    if (obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (oby + textY - hIndex >= oby and oby + textY - hIndex < oby + h) then
+                        self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+                    else
+                        self.parent:setCursor(false)
+                    end
+                end
+                self:updateDraw()
+                return true
+            end
+        end,
+
+        mouseHandler = function(self, button, x, y)
+            if (base.mouseHandler(self, button, x, y)) then
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                local anchx, anchy = self:getAnchorPosition()
+                    if (lines[y - oby + hIndex] ~= nil) then
+                        textX = x - obx + wIndex
+                        textY = y - oby + hIndex
+                        if (textX > lines[textY]:len()) then
+                            textX = lines[textY]:len() + 1
+                        end
+                        if (textX < wIndex) then
+                            wIndex = textX - 1
+                            if (wIndex < 1) then
+                                wIndex = 1
+                            end
+                        end
+                    end
+                    if (self.parent ~= nil) then
+                        self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+                    end
+                return true
+            end
+        end,
+
+        eventHandler = function(self, event, paste, p2, p3, p4)
+            if(base.eventHandler(self, event, paste, p2, p3, p4))then
+                if(event=="paste")then
+                    if(self:isFocused())then
+                        local w, h = self:getSize()
+                        lines[textY] = lines[textY]:sub(1, textX - 1) .. paste .. lines[textY]:sub(textX, lines[textY]:len())
+                        fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self.fgColor]:rep(paste:len()) .. fgLines[textY]:sub(textX, fgLines[textY]:len())
+                        bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self.bgColor]:rep(paste:len()) .. bgLines[textY]:sub(textX, bgLines[textY]:len())
+                        textX = textX + paste:len()
+                        if (textX >= w + wIndex) then
+                            wIndex = (textX+1)-w
+                        end
+                        local anchx, anchy = self:getAnchorPosition()
+                        self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+                        updateColors(self)
+                        self:updateDraw()
+                    end
+                end
+            end
+        end,
 
         draw = function(self)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
                     local w,h = self:getSize()
-                    if(self.bgColor~=false)then
-                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
-                    end
-                    if(self.fgColor~=false)then
-                        self.parent:drawForegroundBox(obx, oby, w, h, self.fgColor)
-                    end
                     for n = 1, h do
                         local text = ""
                         local bg = ""
@@ -530,17 +589,27 @@ return function(name)
                         if (space < 0) then
                             space = 0
                         end
-                        text = text .. string.rep(" ", space)
-                        bg = bg .. string.rep(tHex[self.bgColor], space)
-                        fg = fg .. string.rep(tHex[self.fgColor], space)
+                        text = text .. rep(self.bgSymbol, space)
+                        bg = bg .. rep(tHex[self.bgColor], space)
+                        fg = fg .. rep(tHex[self.fgColor], space)
                         self.parent:setText(obx, oby + n - 1, text)
                         self.parent:setBG(obx, oby + n - 1, bg)
                         self.parent:setFG(obx, oby + n - 1, fg)
                     end
                 end
-                self:setVisualChanged(false)
             end
-        end;
+        end,
+
+        init = function(self)
+            self.bgColor = self.parent:getTheme("TextfieldBG")
+            self.fgColor = self.parent:getTheme("TextfieldText")
+            self.parent:addEvent("mouse_click", self)
+            self.parent:addEvent("mouse_scroll", self)
+            self.parent:addEvent("mouse_drag", self)
+            self.parent:addEvent("key", self)
+            self.parent:addEvent("char", self)
+            self.parent:addEvent("other_event", self)
+        end,
     }
 
     return setmetatable(object, base)

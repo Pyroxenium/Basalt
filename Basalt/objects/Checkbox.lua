@@ -12,31 +12,38 @@ return function(name)
     base.width = 1
     base.height = 1
 
-    local object = {
-        symbol = "\42",
+    local symbol = "\42"
 
-        init = function(self)
-            self.bgColor = self.parent:getTheme("CheckboxBG")
-            self.fgColor = self.parent:getTheme("CheckboxText")        
-        end,
+    local object = {
 
         getType = function(self)
             return objectType
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if (base.mouseHandler(self, event, button, x, y)) then
-                if ((event == "mouse_click") and (button == 1)) or (event == "monitor_touch") then
+        setSymbol = function(self, sym)
+            symbol = sym
+            self:updateDraw()
+            return self
+        end,
+
+        mouseHandler = function(self, button, x, y)
+            if (base.mouseHandler(self, button, x, y)) then
+                if(button == 1)then
                     if (self:getValue() ~= true) and (self:getValue() ~= false) then
                         self:setValue(false)
                     else
                         self:setValue(not self:getValue())
                     end
-                end
+                self:updateDraw()
                 return true
+                end
             end
             return false
-        end;
+        end,
+
+        touchHandler = function(self, x, y)
+            return self:mouseHandler(1, x, y)
+        end,
 
         setValuesByXMLData = function(self, data)
             base.setValuesByXMLData(self, data)
@@ -54,17 +61,22 @@ return function(name)
                     for n = 1, h do
                         if (n == verticalAlign) then
                             if (self:getValue() == true) then
-                                self.parent:writeText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self.symbol, w, "center"), self.bgColor, self.fgColor)
+                                self.parent:writeText(obx, oby + (n - 1), utils.getTextHorizontalAlign(symbol, w, "center"), self.bgColor, self.fgColor)
                             else
                                 self.parent:writeText(obx, oby + (n - 1), utils.getTextHorizontalAlign(" ", w, "center"), self.bgColor, self.fgColor)
                             end
                         end
                     end
                 end
-                self:setVisualChanged(false)
             end
-        end;
-
+        end,
+        
+        init = function(self)
+            base.init(self)
+            self.bgColor = self.parent:getTheme("CheckboxBG")
+            self.fgColor = self.parent:getTheme("CheckboxText")       
+            self.parent:addEvent("mouse_click", self)
+        end,
     }
 
     return setmetatable(object, base)

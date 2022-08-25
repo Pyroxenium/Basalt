@@ -142,6 +142,7 @@ return function(name)
         loadImage = function(self, path)
             image = paintutils.loadImage(path)
             imageGotShrinked = false
+            self:updateDraw()
             return self
         end;
 
@@ -149,6 +150,7 @@ return function(name)
         shrink = function(self)
             shrink()
             imageGotShrinked = true
+            self:updateDraw()
             return self
         end;
 
@@ -192,9 +194,8 @@ return function(name)
                         end
                     end
                 end
-                self:setVisualChanged(false)
             end
-        end;
+        end,
     }
 
     return setmetatable(object, base)

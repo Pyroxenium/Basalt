@@ -31,7 +31,7 @@ return { -- The default main theme for basalt!
     ScrollbarBG = colors.lightGray,
     ScrollbarText = colors.gray,
     ScrollbarSymbolColor = colors.black,
-    SliderBG = colors.lightGray,
+    SliderBG = false,
     SliderText = colors.gray,
     SliderSymbolColor = colors.black,
     SwitchBG = colors.lightGray,
@@ -39,5 +39,7 @@ return { -- The default main theme for basalt!
     SwitchBGSymbol = colors.black,
     SwitchInactive = colors.red,
     SwitchActive = colors.green,
+    LabelBG = false,
+    LabelText = colors.black
     
 }

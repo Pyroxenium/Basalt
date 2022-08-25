@@ -48,6 +48,16 @@ rpairs = function(t)
     end, t, #t + 1
 end,
 
+tableCount = function(t)
+    local n = 0
+    if(t~=nil)then
+        for k,v in pairs(t)do
+            n = n + 1
+        end
+    end
+    return n
+end,
+
 splitString = splitString,
 
 createText = function(str, width)

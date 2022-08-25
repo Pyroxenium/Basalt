@@ -18,19 +18,37 @@ return function(name)
     local index = 1
     local symbolSize = 1
 
+    local function mouseEvent(self, button, x, y)
+    local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+    local w,h = self:getSize()
+        if (barType == "horizontal") then
+            for _index = 0, w do
+                if (obx + _index == x) and (oby <= y) and (oby + h > y) then
+                    index = math.min(_index + 1, w - (symbolSize - 1))
+                    self:setValue(maxValue / w * (index))
+                    self:updateDraw()
+                end
+            end
+        end
+        if (barType == "vertical") then
+            for _index = 0, h do
+                if (oby + _index == y) and (obx <= x) and (obx + w > x) then
+                    index = math.min(_index + 1, h - (symbolSize - 1))
+                    self:setValue(maxValue / h * (index))
+                    self:updateDraw()
+                end
+            end
+        end
+    end
+
     local object = {
-        init = function(self)
-            self.bgColor = self.parent:getTheme("ScrollbarBG")
-            self.fgColor = self.parent:getTheme("ScrollbarText")
-            symbolColor = self.parent:getTheme("ScrollbarSymbolColor")
-        end,
         getType = function(self)
             return objectType
         end;
 
         setSymbol = function(self, _symbol)
             symbol = _symbol:sub(1, 1)
-            self:setVisualChanged()
+            self:updateDraw()
             return self
         end;
 
@@ -53,6 +71,7 @@ return function(name)
             local w,h = self:getSize()
             index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
             self:setValue(maxValue / (barType == "vertical" and h or w) * index)
+            self:updateDraw()
             return self
         end,
 
@@ -68,67 +87,62 @@ return function(name)
             elseif (barType == "horizontal") then
                 self:setValue(index - 1 * (maxValue / (w - (symbolSize - 1))) - (maxValue / (w - (symbolSize - 1))))
             end
-            self:setVisualChanged()
+            self:updateDraw()
             return self
         end;
 
         setMaxValue = function(self, val)
             maxValue = val
+            self:updateDraw()
             return self
         end;
 
         setBackgroundSymbol = function(self, _bgSymbol)
             bgSymbol = string.sub(_bgSymbol, 1, 1)
-            self:setVisualChanged()
+            self:updateDraw()
             return self
         end;
 
         setSymbolColor = function(self, col)
             symbolColor = col
-            self:setVisualChanged()
+            self:updateDraw()
             return self
         end;
 
         setBarType = function(self, _typ)
             barType = _typ:lower()
+            self:updateDraw()
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            if (base.mouseHandler(self, event, button, x, y)) then
-                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-                local w,h = self:getSize()
-                if (((event == "mouse_click") or (event == "mouse_drag")) and (button == 1))or(event=="monitor_touch") then
-                    if (barType == "horizontal") then
-                        for _index = 0, w do
-                            if (obx + _index == x) and (oby <= y) and (oby + h > y) then
-                                index = math.min(_index + 1, w - (symbolSize - 1))
-                                self:setValue(maxValue / w * (index))
-                                self:setVisualChanged()
-                            end
-                        end
-                    end
-                    if (barType == "vertical") then
-                        for _index = 0, h do
-                            if (oby + _index == y) and (obx <= x) and (obx + w > x) then
-                                index = math.min(_index + 1, h - (symbolSize - 1))
-                                self:setValue(maxValue / h * (index))
-                                self:setVisualChanged()
-                            end
-                        end
-                    end
-                end
-                if (event == "mouse_scroll") then
-                    index = index + button
-                    if (index < 1) then
-                        index = 1
-                    end
-                    index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
-                    self:setValue(maxValue / (barType == "vertical" and h or w) * index)
-                end
+        mouseHandler = function(self, button, x, y)
+            if (base.mouseHandler(self, button, x, y)) then
+                mouseEvent(self, button, x, y)
                 return true
             end
-        end;
+            return false
+        end,
+
+        dragHandler = function(self, button, x, y)
+            if (base.dragHandler(self, button, x, y)) then
+                mouseEvent(self, button, x, y)
+                return true
+            end
+            return false
+        end,
+
+        scrollHandler = function(self, dir, x, y)
+            if(base.scrollHandler(self, dir, x, y))then
+                local w,h = self:getSize()
+                index = index + dir
+                if (index < 1) then
+                    index = 1
+                end
+                index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
+                self:setValue(maxValue / (barType == "vertical" and h or w) * index)
+                self:updateDraw()
+            end
+        end,
 
         draw = function(self)
             if (base.draw(self)) then
@@ -155,9 +169,17 @@ return function(name)
                         end
                     end
                 end
-                self:setVisualChanged(false)
             end
-        end;
+        end,
+
+        init = function(self)
+            self.bgColor = self.parent:getTheme("ScrollbarBG")
+            self.fgColor = self.parent:getTheme("ScrollbarText")
+            symbolColor = self.parent:getTheme("ScrollbarSymbolColor")
+            self.parent:addEvent("mouse_click", self)
+            self.parent:addEvent("mouse_drag", self)
+            self.parent:addEvent("mouse_scroll", self)
+        end,
     }
 
     return setmetatable(object, base)

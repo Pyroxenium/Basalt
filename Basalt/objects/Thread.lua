@@ -59,6 +59,7 @@ return function(name)
                     error("Thread Error Occurred - " .. result)
                 end
             end
+            self.parent:addEvent("other_event", self)
             return self
         end;
 
@@ -71,6 +72,7 @@ return function(name)
 
         stop = function(self, f)
             isActive = false
+            self.parent:removeEvent("other_event", self)
             return self
         end;
 

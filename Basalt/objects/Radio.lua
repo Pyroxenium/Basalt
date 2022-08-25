@@ -20,16 +20,6 @@ return function(name)
     local align = "left"
 
     local object = {
-
-        init = function(self)
-            self.bgColor = self.parent:getTheme("MenubarBG")
-            self.fgColor = self.parent:getTheme("MenubarFG")
-            itemSelectedBG = self.parent:getTheme("SelectionBG")
-            itemSelectedFG = self.parent:getTheme("SelectionText")
-            boxSelectedBG = self.parent:getTheme("MenubarBG")
-            boxSelectedFG = self.parent:getTheme("MenubarText")
-        end,
-
         getType = function(self)
             return objectType
         end;
@@ -58,6 +48,7 @@ return function(name)
             if (#list == 1) then
                 self:setValue(list[1])
             end
+            self:updateDraw()
             return self
         end;
 
@@ -67,6 +58,7 @@ return function(name)
 
         removeItem = function(self, index)
             table.remove(list, index)
+            self:updateDraw()
             return self
         end;
 
@@ -86,6 +78,7 @@ return function(name)
         clear = function(self)
             list = {}
             self:setValue({})
+            self:updateDraw()
             return self
         end;
 
@@ -96,16 +89,19 @@ return function(name)
         editItem = function(self, index, text, x, y, bgCol, fgCol, ...)
             table.remove(list, index)
             table.insert(list, index, { x = x or 1, y = y or 1, text = text, bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })
+            self:updateDraw()
             return self
         end;
 
         selectItem = function(self, index)
             self:setValue(list[index] or {})
+            self:updateDraw()
             return self
         end;
 
         setActiveSymbol = function(self, sym)
             symbol = sym:sub(1,1)
+            self:updateDraw()
             return self
         end,
 
@@ -115,23 +111,23 @@ return function(name)
             boxSelectedBG = boxBG or boxSelectedBG
             boxSelectedFG = boxFG or boxSelectedFG
             selectionColorActive = active~=nil and active or true
+            self:updateDraw()
             return self
         end;
 
-        mouseHandler = function(self, event, button, x, y)
-            local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
-            if ((event == "mouse_click")and(button==1))or(event=="monitor_touch") then
-                if (#list > 0) then
-                    for _, value in pairs(list) do
-                        if (obx + value.x - 1 <= x) and (obx + value.x - 1 + value.text:len() + 2 >= x) and (oby + value.y - 1 == y) then
-                            self:setValue(value)
-                            if (self.parent ~= nil) then
-                                self.parent:setFocusedObject(self)
-                            end
-                            self:getEventSystem():sendEvent(event, self, event, button, x, y)
-                            self:setVisualChanged()
-                            return true
+        mouseHandler = function(self, button, x, y)
+            if (#list > 0) then
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                for _, value in pairs(list) do
+                    if (obx + value.x - 1 <= x) and (obx + value.x - 1 + value.text:len() + 1 >= x) and (oby + value.y - 1 == y) then
+                        self:setValue(value)
+                        local val = self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", button, x, y)
+                        if(val==false)then return val end
+                        if(self.parent~=nil)then
+                            self.parent:setFocusedObject(self)
                         end
+                        self:updateDraw()
+                        return true
                     end
                 end
             end
@@ -139,24 +135,32 @@ return function(name)
         end;
 
         draw = function(self)
-            if (base.draw(self)) then
-                if (self.parent ~= nil) then
-                    local obx, oby = self:getAnchorPosition()
-                    for _, value in pairs(list) do
-                        if (value == self:getValue()) then
-                            if (align == "left") then
-                                self.parent:writeText(value.x + obx - 1, value.y + oby - 1, symbol, boxSelectedBG, boxSelectedFG)
-                                self.parent:writeText(value.x + 2 + obx - 1, value.y + oby - 1, value.text, itemSelectedBG, itemSelectedFG)
-                            end
-                        else
-                            self.parent:drawBackgroundBox(value.x + obx - 1, value.y + oby - 1, 1, 1, boxNotSelectedBG or self.bgColor)
-                            self.parent:writeText(value.x + 2 + obx - 1, value.y + oby - 1, value.text, value.bgCol, value.fgCol)
+            if (self.parent ~= nil) then
+                local obx, oby = self:getAnchorPosition()
+                for _, value in pairs(list) do
+                    if (value == self:getValue()) then
+                        if (align == "left") then
+                            self.parent:writeText(value.x + obx - 1, value.y + oby - 1, symbol, boxSelectedBG, boxSelectedFG)
+                            self.parent:writeText(value.x + 2 + obx - 1, value.y + oby - 1, value.text, itemSelectedBG, itemSelectedFG)
                         end
+                    else
+                        self.parent:drawBackgroundBox(value.x + obx - 1, value.y + oby - 1, 1, 1, boxNotSelectedBG or self.bgColor)
+                        self.parent:writeText(value.x + 2 + obx - 1, value.y + oby - 1, value.text, value.bgCol, value.fgCol)
                     end
                 end
-                self:setVisualChanged(false)
+                return true
             end
-        end;
+        end,
+
+        init = function(self)
+            self.bgColor = self.parent:getTheme("MenubarBG")
+            self.fgColor = self.parent:getTheme("MenubarFG")
+            itemSelectedBG = self.parent:getTheme("SelectionBG")
+            itemSelectedFG = self.parent:getTheme("SelectionText")
+            boxSelectedBG = self.parent:getTheme("MenubarBG")
+            boxSelectedFG = self.parent:getTheme("MenubarText")
+            self.parent:addEvent("mouse_click", self)
+        end,
     }
 
     return setmetatable(object, base)

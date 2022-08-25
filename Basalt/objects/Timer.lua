@@ -74,6 +74,7 @@ return function(name)
             repeats = savedRepeats
             timerObj = os.startTimer(timer)
             timerIsActive = true
+            self.parent:addEvent("other_event", self)
             return self
         end;
 
@@ -86,6 +87,7 @@ return function(name)
                 os.cancelTimer(timerObj)
             end
             timerIsActive = false
+            self.parent:removeEvent("other_event", self)
             return self
         end;
 
