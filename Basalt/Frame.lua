@@ -3,6 +3,7 @@ local _OBJECTS = require("loadObjects")
 local BasaltDraw = require("basaltDraw")
 local utils = require("utils")
 local layout = require("layout")
+local log = require("basaltLogs")
 local uuid = utils.uuid
 local rpairs = utils.rpairs
 local xmlValue = utils.getValueFromXML
