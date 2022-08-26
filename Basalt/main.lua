@@ -2,6 +2,7 @@ local basaltEvent = require("basaltEvent")()
 local Frame = require("Frame")
 local theme = require("theme")
 local utils = require("utils")
+local log = require("basaltLogs")
 local uuid = utils.uuid
 local createText = utils.createText
 

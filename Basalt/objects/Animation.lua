@@ -134,10 +134,11 @@ return function(name)
     
 
     local function predefinedLerp(v1,v2,d,t,get,set,typ,self)
+        local obj = _OBJ
         local x,y 
         local name = ""
-        if(_OBJ.parent~=nil)then name = _OBJ.parent:getName() end
-        name = name.._OBJ:getName()
+        if(obj.parent~=nil)then name = obj.parent:getName() end
+        name = name..obj:getName()
         addAnimationPart(t+0.05, function()
             if(typ~=nil)then
                 if(activeAnimations[typ]==nil)then activeAnimations[typ] = {} end
@@ -146,13 +147,13 @@ return function(name)
                     end
                 activeAnimations[typ][name] = self
             end
-            x,y = get(_OBJ)
+            x,y = get(obj)
         end)
         for n=0.05,d+0.01,0.05 do
             addAnimationPart(t+n, function()
                 local _x = math.floor(lerp.lerp(x, v1, lerp[mode](n / d))+0.5)
                 local _y = math.floor(lerp.lerp(y, v2, lerp[mode](n / d))+0.5)
-                set(_OBJ, _x,_y)
+                set(obj, _x,_y)
                 if(typ~=nil)then
                     if(n>=d-0.01)then
                         if(activeAnimations[typ][name]==self)then
