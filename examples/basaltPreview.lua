@@ -1,17 +1,17 @@
 --Basalt configurated installer
-local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
+local filePath = "basalt.lua" --here you can change the file path default: basalt
 if not(fs.exists(filePath))then
     shell.run("pastebin run ESs1mg7P packed true "..filePath:gsub(".lua", "")) -- this is an alternative to the wget command
 end
-local basalt = require(filePath:gsub(".lua", "")) -- here you can change the variablename in any variablename you want default: basalt
+local basalt = require(filePath:gsub(".lua", ""))
 
 local w, h = term.getSize()
 
 
-local main = basalt.createFrame("mainFrame"):show()
-local objFrame = main:addFrame("objectFrame"):setPosition(1,2):setBackground(colors.lightGray):setSize(w, h-1):show()
-local programFrame = main:addFrame("programFrame"):setPosition(1,2):setBackground(colors.lightGray):setSize(w, h-1)
-local editorFrame = main:addFrame("editorFrame"):setPosition(1,2):setBackground(colors.lightGray):setSize(w, h-1)
+local main = basalt.createFrame("mainFrame")
+local objFrame = main:addFrame("objectFrame"):setPosition(1,2):setBackground(colors.lightGray):setSize(w, h-1)
+local programFrame = main:addFrame("programFrame"):setPosition(1,2):setBackground(colors.lightGray):setSize(w, h-1):hide()
+local editorFrame = main:addFrame("editorFrame"):setPosition(1,2):setBackground(colors.lightGray):setSize(w, h-1):hide()
 
 local menuBar = main:addMenubar("mainMenuBar"):addItem("Object"):addItem("Program"):addItem("Editor"):setBackground(colors.gray):setSize(w, 1):setSpace(5):setScrollable():show()
 menuBar:onChange(function(self)
@@ -67,7 +67,7 @@ end):start()
 --Program Frame:
 local programCount = 1
 visualButton(programFrame:addButton("exampleButton"):setText("Add Shell"):setSize(13,3):setPosition(2,2):onClick(function()
-    local newProgramWindow = programFrame:addFrame("programFrame"..programCount):setMoveable(true):setBar("Console", colors.black, colors.lightGray):showBar():setPosition(3,3):setSize(26,12):show()
+    local newProgramWindow = programFrame:addFrame("programFrame"..programCount):setMovable(true):setBar("Console", colors.black, colors.lightGray):showBar():setPosition(3,3):setSize(26,12):show()
     local program = newProgramWindow:addProgram("exampleProgram"..programCount):setSize(26,11):setPosition(1,2):setBackground(colors.black):show()
     program:execute("rom/programs/shell.lua")
     programCount = programCount + 1

@@ -1,30 +1,29 @@
 -- This is a example on how to use progressbars for energy. I used the Mekanism Ultimate Energy Cube.
 
 
-local filePath = "basalt.lua" --here you can change the file path default: basalt.lua
+--Basalt configurated installer
+local filePath = "basalt.lua" --here you can change the file path default: basalt
 if not(fs.exists(filePath))then
-    shell.run("pastebin run ESs1mg7P packed true "..filePath) -- this is an alternative to the wget command
+    shell.run("pastebin run ESs1mg7P packed true "..filePath:gsub(".lua", "")) -- this is an alternative to the wget command
 end
-local basalt = require(filePath:gsub(".lua", "")) -- here you can change the variablename in any variablename you want default: basalt
+local basalt = require(filePath:gsub(".lua", ""))
 
 local energyCube = peripheral.find("ultimateEnergyCube")
 
-local main = basalt.createFrame("main"):show()
+local main = basalt.createFrame()
 
-local progressText = main:addLabel("currentEnergyValue")
+local progressText = main:addLabel()
             :setText(0)
             :setForeground(colors.gray)
             :setBackground(false)
             :setPosition(10, 3)
             :setZIndex(6)
-            :show()
 
-local energyProgress = main:addProgressbar("mainEnergyCube")
+local energyProgress = main:addProgressbar()
             :setSize(20,3)
             :setPosition(2,2)
             :setBackground(colors.black)
             :setProgressBar(colors.green)
-            :show()
 
 energyProgress:onChange(function()
     local energy = tostring(energyCube.getEnergy())
@@ -47,6 +46,6 @@ local function checkCurrentEnergy()
     end
 end
 
-main:addThread("energyThread"):start(checkCurrentEnergy)
+main:addThread():start(checkCurrentEnergy)
 
 basalt.autoUpdate()

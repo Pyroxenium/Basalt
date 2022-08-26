@@ -20,7 +20,7 @@ local sub = main:addFrame()
 local rFrame = sub:addFrame("redstoneFrame")
  :setPosition(1,1)
  :setSize(25,5)
- :setMoveable(true) -- the next release of Basalt will fix spelling to :setMovable
+ :setMovable(true)
  :setBackground(colours.red)
 
 -- Redstone Analog Output

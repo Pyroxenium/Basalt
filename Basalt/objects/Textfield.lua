@@ -596,6 +596,10 @@ return function(name)
                         self.parent:setBG(obx, oby + n - 1, bg)
                         self.parent:setFG(obx, oby + n - 1, fg)
                     end
+                    if(self:isFocused())then
+                        local anchx, anchy = self:getAnchorPosition()
+                        self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+                    end
                 end
             end
         end,

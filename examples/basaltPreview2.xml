@@ -1,9 +1,9 @@
-<frame onScroll="ex1OnScroll" id="example1" width="parent.w" height="parent.w" bg="lightGray" maxScroll="32" scrollable="true">
-    <label text="Objects" font="2" x="16" y="2" />
+<frame id="example1" width="parent.w" height="parent.h" bg="lightGray" scrollable="true">
+    <label text="Objects" font="2" x="16" y="3" />
     <button onClick="buttonColor" onClick="ex2" anchor="topRight" height="1" width="8" x="-7" y="2" text="Next" />
     <button onDrag="dragPosition" x="2" y="6" width="parent.w/2-2" height="5" />
     <button onDrag="dragPosition" x="parent.w/2+1" y="6" width="parent.w/2-2" height="5" />
-    <frame y="13" x="2" width="parent.w/2-2" height="16" bg="black" scrollable="true" importantScroll="true">
+    <frame y="13" x="2" width="parent.w/2-2" height="16" bg="black" scrollable="true">
         <button onClick="buttonColor" width="parent.w-2" x="2" y="2" text="Example Button 1" />
         <button onClick="buttonColor" width="parent.w-2" x="2" y="6" text="Example Button 2" />
         <button onClick="buttonColor" width="parent.w-2" x="2" y="10" text="Example Button 3" />
@@ -11,7 +11,7 @@
         <button onClick="buttonColor" width="parent.w-2" x="2" y="18" text="Example Button 5" />
         <button onClick="buttonColor" width="parent.w-2" x="2" y="22" text="Example Button 6" />
     </frame>
-    <frame y="13" x="parent.w/2+1" width="parent.w/2-2" height="16" bg="black" scrollable="true" importantScroll="true">
+    <frame y="13" x="parent.w/2+1" width="parent.w/2-2" height="16" bg="black" scrollable="true">
         <label x="2" y="2" text="Radios and Checkboxes:" fg="lightGray" />
         <radio x="2" y="4" bg="gray" fg="lightGray" boxBG="black" boxFG="lightGray" selectionBG="black" inactiveBoxBG="black">
                 <item><text>Radio 1</text><x>2</x><y>1</y><bg>black</bg></item>
@@ -29,13 +29,13 @@
     <label x="parent.w/2-7" y="31" zIndex="6" bg="false" text="Progressbar Example" fg="lightGray" />
     <label id="progressLabel" x="3" y="31" zIndex="6" bg="false" text="0%" fg="lightGray" />
     <thread thread="progressTheProgressbar" start="true" />
-    <frame zIndex="16" y="34" x="4" width="32" height="12" moveable="true" bar="true" barText="Moveable Frame" barBG="black" barFG="lightGray" shadow="true">
+    <frame zIndex="16" y="34" x="4" width="32" height="12" movable="true" bar="true" barText="Movable Frame" barBG="black" barFG="lightGray" shadow="true">
         <label x="2" y="3" text="Input:" fg="lightGray" />
         <input default="Default Text" defaultFG="gray" width="parent.w-2" x="2" y="5" bg="black" fg="lightGray" />
         <input default="Only numbers" defaultFG="gray" width="parent.w-2" x="2" y="7" type="number" bg="black" fg="lightGray" />
         <input default="Password" defaultFG="gray" width="parent.w-2" x="2" y="9" type="password" bg="black" fg="lightGray" />
     </frame>
-    <frame zIndex="16" y="36" x="6" width="32" height="12" moveable="true" bar="true" barText="Moveable Frame 2" barBG="black" barFG="lightGray" border="true" borderTop="false">
+    <frame zIndex="16" y="36" x="6" width="32" height="12" movable="true" bar="true" barText="Movable Frame 2" barBG="black" barFG="lightGray" border="true" borderTop="false">
         <label x="2" y="3" text="Dropdowns, Lists and Menubars" fg="lightGray" />
         <dropdown x="2" y="5" bg="black" fg="lightGray">                
             <item><text>Entry 1</text></item>
@@ -71,7 +71,7 @@
     <button onClick="buttonColor" onClick="ex1Top" x="parent.w-12" y="48" text="Top" />
 </frame>
 <frame id="example3" x="parent.w*2+1" width="parent.w" height="parent.h" bg="lightGray" >
-    <label text="Editor" font="2" x="16" y="2" />
+    <label text="Editor" font="2" x="16" y="3" />
     <textfield x="2" y="6" width="parent.w-2" height="parent.h-7"/>
     <frame ignoreOffset="true" id="sidebar" anchor="topRight" x="3" width="14" height="parent.h" bg="black" >
         <button onClick="buttonColor" onClick="closeSidebar" anchor="bottomLeft" width="5" height="1" x="1" y="1" fg="black" bg="gray" text="Close" />
@@ -142,7 +142,7 @@
 </frame>
 
 <frame zIndex="17" id="example4" x="parent.w*3+1" width="parent.w" height="parent.h" bg="lightGray" >
-    <label text="Animations" font="2" x="16" y="2" />
+    <label text="Animations" font="2" x="16" y="3" />
     <button onClick="buttonColor" onClick="ex3" x="2" y="2" width="8" height="1" text="Back" />
 
 
@@ -185,13 +185,13 @@
 </frame>
 
 <frame id="example2" x="parent.w+1" width="parent.w" height="parent.h" bg="lightGray" >
-    <label text="Program" font="2" x="16" y="2" />
+    <label text="Program" font="2" x="16" y="3" />
     <program x="2" y="6" width="parent.w-12" height="parent.h-6" path="rom/programs/shell.lua" execute="true" />
     <button onClick="buttonColor" onClick="p2" anchor="bottomRight" width="8" x="-7" y="-2" text="Down" />
-    <frame moveable="true" bar="true" barText="Program" x="2" y="parent.h+2" width="28" height="12" bg="black" >
+    <frame movable="true" bar="true" barText="Program" x="2" y="parent.h+2" width="28" height="12" bg="black" >
         <program id="program2" x="1" y="2" width="parent.w" height="parent.h-1" path="rom/programs/fun/worm.lua" execute="true" />
     </frame>
-    <frame moveable="true" bar="true" barText="Program" x="6" y="parent.h+4" width="28" height="12" bg="black" >
+    <frame movable="true" bar="true" barText="Program" x="6" y="parent.h+4" width="28" height="12" bg="black" >
         <program id="program2" x="1" y="2" width="parent.w" height="parent.h-1" path="rom/programs/shell.lua" execute="true" />
     </frame>
     <button onClick="buttonColor" onClick="p1" width="8" x="parent.w-8" y="parent.h+2" text="Up" />

@@ -332,6 +332,9 @@ return function(name)
                             self.parent:writeText(obx, oby + (n - 1), text, bCol, fCol)
                         end
                     end
+                    if(self:isFocused())then
+                        self.parent:setCursor(true, obx + textX - wIndex, oby+math.max(math.ceil(self:getHeight()/2-1, 1)), self.fgColor)
+                    end
                 end
             end
         end,
