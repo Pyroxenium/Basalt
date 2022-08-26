@@ -428,7 +428,7 @@ return function(name)
                 if (animations[index].t > 0) then
                     timerObj = os.startTimer(animations[index].t)
                 else
-                    onPlay()
+                    onPlay(self)
                 end
             else
                 self:animationDoneHandler()
