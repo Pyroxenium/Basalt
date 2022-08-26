@@ -340,6 +340,7 @@ return function(name, parent, pTerm, basalt)
         end
     end
 
+
     local function focusSystem(self)
         if(focusedObject~=focusedObjectCache)then
             if(focusedObject~=nil)then
@@ -496,7 +497,7 @@ return function(name, parent, pTerm, basalt)
         end;
 
         setScrollable = function(self, scrollable)
-            isScrollable = scrollable and true or false
+            isScrollable = (scrollable or scrollable==nil) and true or false
             if(self.parent~=nil)then
                 self.parent:addEvent("mouse_scroll", self)
             end
@@ -512,7 +513,7 @@ return function(name, parent, pTerm, basalt)
 
 
         getScrollAmount = function(self)
-            return scrollAmount
+            return autoScroll and scrollAmount or calculateMaxScroll(self)
         end,
 
         show = function(self)
