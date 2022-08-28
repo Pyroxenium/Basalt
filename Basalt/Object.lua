@@ -588,12 +588,14 @@ return function(name)
                     self:registerEvent("mouse_drag", v)
                 end
             end
-            self.parent:addEvent("mouse_drag", self)
-            activeEvents["mouse_drag"] = true
-            self.parent:addEvent("mouse_click", self)
-            activeEvents["mouse_click"] = true
-            self.parent:addEvent("mouse_up", self)
-            activeEvents["mouse_up"] = true
+            if(self.parent~=nil)then
+                self.parent:addEvent("mouse_drag", self)
+                activeEvents["mouse_drag"] = true
+                self.parent:addEvent("mouse_click", self)
+                activeEvents["mouse_click"] = true
+                self.parent:addEvent("mouse_up", self)
+                activeEvents["mouse_up"] = true
+            end
             return self
         end;
 
