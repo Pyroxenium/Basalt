@@ -1,9 +1,8 @@
-Panes are very simple sizeable background objects.
+With panes you are able to create background without any functionality
 
-The following list is only available to panes: <br>
-Remember Pane also inherits from [Object](objects/Object.md)
+Because panes don't have any unique functionality, there is also no method list for them. 
 
-Pane doesn't have any custom functionallity. If you want to change the color/position or size, just check out the [object](https://github.com/NoryiE/basalt/wiki/Object) wikipage.
+[Object](objects/Object.md) methods also apply for panes.
 
 ## Example:
 

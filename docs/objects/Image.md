@@ -3,39 +3,10 @@ It also provides a :shrink() function, where you can shrink the images to smalle
 
 The image object is still not done. in the future i will provide more image formats.
 
-Remember image inherits from [Object](objects/Object.md)
+[Object](objects/Object.md) methods also apply for images.
 
-## loadImage
-loads a default .nfp file into the object. 
+|   |   |
+|---|---|
+|[loadImage](objects/Image/loadImage.md)|Adds a new object
+|[shrink](objects/Image/shrink.md)|Sets the top bar text and colors - deprecated
 
-#### Parameters: 
-1. `string` the absolute file path
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Creates a default image and loads a test.nfp file
-```lua
-local mainFrame = basalt.createFrame():show()
-local aImage = mainFrame:addImage():loadImage("test.nfp")
-```
-```xml
-<image path="test.nfp" />
-```
-
-## shrink
-Shrinks the current image into a blittle image.
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Creates a default image and loads a test.nfp file
-```lua
-local mainFrame = basalt.createFrame()
-local aImage = mainFrame:addImage():loadImage("test.nfp"):shrink()
-```
-```xml
-<image path="test.nfp" shrink="true" />
-```

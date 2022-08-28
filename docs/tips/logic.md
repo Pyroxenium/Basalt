@@ -1,56 +1,70 @@
 You question yourself how you can execute your own logic while basalt is also active? There are multiple ways of doing that:
 
-## Method 1:
-Using parallel.waitForAll
+## Parallel
+Using parallel.waitForAll or parallel.waitForAny
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("basalt")
 
-local mainFrame = basalt.createFrame("mainFrame"):show()-- lets create a frame and a button without functionality
-mainFrame:addButton("aButton"):onClick(function() end):show()
+local main = basalt.createFrame() -- we need a base frame
+main:addButton() -- just a button
+    :onClick(function()
+        basalt.debug("Button got clicked")
+    end)
 
 local function yourCustomHandler()
     while true do
         -- add your logic here
-        os.sleep(1) -- you need something which calls coroutine.yield(), yes os.sleep does that os.pullEvent() aswell
+        os.sleep(1) -- you need something which calls coroutine.yield(), yes os.sleep() does that and os.pullEvent() too
     end
 end
 
-parallel.waitForAll(basalt.autoUpdate, yourCustomHandler) -- here it will handle your function (yourCustomHandler) and basalts handlers at the time
+parallel.waitForAll(basalt.autoUpdate, yourCustomHandler) -- here it will handle your function (yourCustomHandler) and basalt's handlers at the same time using parallel's API
 ```
-You can read [here (tweaked.cc)](https://tweaked.cc/module/parallel.html) what exactly parallel.waitForAll() does
+[Here (tweaked.cc)](https://tweaked.cc/module/parallel.html) you can find out more about the parallel API.
 
-## Method 2:
-Using threads
+## Threads
+Using basalt's thread implementation.
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("basalt")
 
-local mainFrame = basalt.createFrame("mainFrame"):show()-- lets create a frame, a button without functionality and a thread
-mainFrame:addButton("aButton"):onClick(function() end):show()
-local thread = mainFrame:addThread("customHandlerExecutingThread")
+local main = basalt.createFrame() -- we need a base frame
+main:addButton() -- just a button
+    :onClick(function()
+        basalt.debug("Button got clicked")
+    end)
+
+local thread = mainFrame:addThread() -- here we create a thread
 
 local function yourCustomHandler()
     while true do
         -- add your logic here
-        os.sleep(1) -- you need something which calls coroutine.yield(), yes os.sleep does that os.pullEvent() aswell
+        os.sleep(1) -- you need something which calls coroutine.yield(), yes os.sleep() does that and os.pullEvent() too
     end
 end
-thread:start(yourCustomHandler) -- this will create a coroutine and starts the coroutine, os.sleep does the rest, so you just have to call start once.
+thread:start(yourCustomHandler) -- here we start the thread and pass the function which you want to run.
 ```
 
-## Method 3:
-Using timers
+## Timers
+Using basalt's implementation of timers.
+Remember, timers don't run asynchronly which means if you're using sleep somewhere this will freeze basalt's event system too.
 
 ```lua
-local basalt = dofile("basalt.lua")
+local basalt = require("basalt")
 
-local mainFrame = basalt.createFrame("mainFrame"):show()-- lets create a frame, a button without functionality and a timer
-mainFrame:addButton("aButton"):onClick(function() end):show()
-local timer = mainFrame:addTimer("customHandlerExecutingTimer")
+local main = basalt.createFrame() -- we need a base frame
+main:addButton() -- just a button
+    :onClick(function()
+        basalt.debug("Button got clicked")
+    end)
+
+local timer = mainFrame:addTimer() -- here we will create the timer object
 
 local function yourCustomHandler()
     -- add your logic here
 end
-timer:onCall(yourCustomHandler):setTime(1, -1):start() -- this will call your function every second until you :cancel() the timer
+timer:onCall(yourCustomHandler)
+     :setTime(1, -1)
+     :start() -- this will call your function every second until you :cancel() the timer
 ```

@@ -143,7 +143,9 @@ return function(name)
             if(typ~=nil)then
                 if(activeAnimations[typ]==nil)then activeAnimations[typ] = {} end
                     if(activeAnimations[typ][name]~=nil)then
-                        activeAnimations[typ][name]:cancel()
+                        if(activeAnimations[typ][name]~=self)then
+                            activeAnimations[typ][name]:cancel()
+                        end
                     end
                 activeAnimations[typ][name] = self
             end

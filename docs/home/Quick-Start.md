@@ -45,11 +45,14 @@ Here is a fully functioning example of Basalt code
 ```lua
 local basalt = require("basalt") --> Load the Basalt framework
 
---> Create a base frame. Please note that Basalt needs at least one active base frame to properly supply events
-local mainFrame = basalt.createFrame()
+--> Create the first frame. Please note that Basalt needs at least one active "non-parent" frame to properly supply events
+--> When Basalt#createFrame makes use of unique identifiers (commonly referred to as UIDs), meaning that the supplied value must be UNIQUE
+local mainFrame = basalt.createFrame("mainFrame")
 
+--> Show the frame to the user
+mainFrame:show()
 
-local button = mainFrame:addButton() --> Add a button to the mainFrame
+local button = mainFrame:addButton("clickableButton") --> Add a button to the mainFrame (With a unique identifier)
 
 --> Set the position of the button, Button#setPosition follows an x, y pattern. 
 --> The x value is how far right the object should be from its anchor (negative values from an anchor will travel left)
@@ -66,21 +69,24 @@ end
 --> Make sure the button knows which function to call when it's clicked
 button:onClick(buttonClick)
 
+button:show() --> Make the button visible, so the user can click it
+
 basalt.autoUpdate() --> Basalt#autoUpdate starts the event listener to detect user input
 ```
 If you're like us and strive for succinct and beautiful code, here is a cleaner implementation of the code above:
 ```lua
 local basalt = require("basalt")
 
-local mainFrame = basalt.createFrame()
+local mainFrame = basalt.createFrame("mainFrame"):show()
 local button = mainFrame --> Basalt returns an instance of the object on most methods, to make use of "call-chaining"
-        :addButton() --> This is an example of call chaining
+        :addButton("clickableButton") --> This is an example of call chaining
         :setPosition(4,4) 
         :setText("Click me!")
         :onClick(
             function() 
                 basalt.debug("I got clicked!") 
             end)
+        :show()
 
 basalt.autoUpdate()
 ```

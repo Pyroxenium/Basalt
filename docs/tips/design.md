@@ -1,82 +1,112 @@
 Hello! This page contains some tips on how to create cool designs with Basalt
 
-To understand this page, it is recommended to familiarize yourself with [Animations](../objects/Animation.md) as animations are important for creating complex designs
+To understand this page, it is recommended to familiarize yourself with [Animations](../objects/Animation.md) as animations are important for creating cool looking designs
 
-Let us begin with simple things:
-
-## Recolor objects
-
-Let's create a Button:
+## Animation-move
+Here i will show you how you can move objects by using the animation object.
 
 ```lua
-local basalt = require("Basalt")
-local mainFrame = basalt.createFrame():setBackground(colors.black):show()
-local aButton = mainFrame:addButton():setSize(10, 3):setText("Beautiful"):setBackground(colors.gray):show()
+local basalt = require("basalt")
+
+local main = basalt.createFrame()
+local sub = main:addFrame():setSize("parent.w - 2",12):setPosition("-parent.w",4)
+      sub:addLabel()
+        :setText("Cool Title")
+        :setBackground(colors.black)
+        :setForeground(colors.lightGray)
+        :setSize("parent.w", 1)
+
+local button = sub:addButton()
+    :setBackground(colors.black)
+    :setForeground(colors.lightGray)
+    :setPosition(-12,9)
+local button2 = sub:addButton()
+    :setBackground(colors.black)
+    :setForeground(colors.lightGray)
+    :setPosition("parent.w + 12",9)
+
+local anim = main:addAnimation()
+    :setObject(sub)
+    :move(2,4,1.5)
+    :setObject(button)
+    :move(2,9,1,1.5):
+    setObject(button2)
+    :move(sub:getWidth()-12,9,1,1.5)
+    :play()
+
+basalt.autoUpdate()
 ```
 
-Here lets make use of the event system:<br>
+As you can see, you only need 1 animation but you can still move 3 objects.
+
+## Animation-offset
+Here is a example which changes the offset on your base frame. It shows you, how you could create multiple pages and switch between them in a cool looking way:
 ```lua
-local function changeButtonColor(self,event,typ,x,y)
-    if(event=="mouse_click")then
-        self:setBackground(colors.lightGray)
-    end
-    if(event=="mouse_up")then
-        self:setBackground(colors.gray)
-    end
-end
+local basalt = require("basalt")
 
-local function buttonLogic()
-    -- here you can do some logic when button gets the mouse_up event
-end
+local main = basalt.createFrame()
+local mainAnim = main:addAnimation()
 
-aButton:onClick(changeButtonColor) -- button color change on click
-aButton:onClickUp(changeButtonColor) -- button color change on click up
-aButton:onClickUp(buttonLogic) -- button logic on click up
-aButton:onLoseFocus(function(self) self:setBackground(colors.gray) end) -- if user is clicking on the button and dragging out of button size this event will change the bg color back to gray
+local frames = {
+    main:addFrame():setPosition(1,2):setSize("parent.w", "parent.h-1"):setBackground(colors.lightGray),
+    main:addFrame():setPosition("parent.w+1",2):setSize("parent.w", "parent.h-1"):setBackground(colors.lightGray),
+    main:addFrame():setPosition("parent.w*2+1",2):setSize("parent.w", "parent.h-1"):setBackground(colors.lightGray),
+    main:addFrame():setPosition("parent.w*3+1",2):setSize("parent.w", "parent.h-1"):setBackground(colors.lightGray),
+}
+
+frames[1]:addLabel():setText("This is frame 1")
+frames[2]:addLabel():setText("This is frame 2")
+frames[3]:addLabel():setText("This is frame 3")
+frames[4]:addLabel():setText("This is frame 4")
+
+local menubar = main:addMenubar():ignoreOffset()
+        :addItem("Page 1",nil,nil,1)
+        :addItem("Page 2",nil,nil,2)
+        :addItem("Page 3",nil,nil,3)
+        :addItem("Page 4",nil,nil,4)
+        :setSpace(3)
+        :setSize("parent.w",1)
+        :onChange(function(self, value)
+            mainAnim:clear()
+                    :cancel()
+                    :setObject(main)
+                    :offset(value.args[1] * main:getWidth() - main:getWidth(), 0, 2)
+                    :play()
+        end)
+
+
+basalt.autoUpdate()
 ```
 
-## Fade In/Out Objects
-instead of recoloring we are also able to slowly reposition the button, something like fade in:<br>
+## Visually showing
+Here I'll show you how to visually show the user when something isn't working. this is just one example that you can apply to other topics as well.
 ```lua
-local buttonAnimation = mainFrame:addAnimation()
-local function fadeButtonIn(btn)
-    if(btn.x < 5)then
-        btn:setPosition(1,0,"r")
+local basalt = require("basalt")
+
+local password = "12345"
+
+local main = basalt.createFrame()
+
+main:addLabel():setText("Password:"):setPosition(2,2)
+local input = main:addInput():setInputType("password"):setPosition(2,3):setSize(24,1)
+local submit = main:addButton():setPosition(2,5):setText("Submit")
+submit:onClick(basalt.schedule(function()
+    if(password==input:getValue())then
+        basalt.debug("Password correct!")
     else
-        buttonAnimation:cancel() -- here you cancel the loop
+        basalt.debug("Wrong password!")
+        submit:setBackground(colors.red)
+        sleep(0.05)
+        submit:setPosition(3,5)
+        sleep(0.05)
+        submit:setPosition(2,5)
+        sleep(0.05)
+        submit:setPosition(1,5)
+        sleep(0.05)
+        submit:setPosition(2,5)
+        submit:setBackground(colors.gray)
     end
-end
+end))
 
-buttonAnimation:wait(0.1):add(function() fadeButtonIn(aButton) end):play(true) -- with play(true) you will create a infinite loop
-```
-This is also possible with entire frames and its children objects. So keep that in mind if you want to create something like a bigger panel to the right or a menu bar
-
-## How To use XML
-Here is a example on how to create a cool looking frame by using xml:
-```xml
-<frame width="parent.w/2" bg="gray" scrollable="true" importantScroll="true">
-    <button x="2" y="2" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 1!"/>
-    <button x="2" y="6" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 2!"/>
-    <button x="2" y="10" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 3!"/>
-    <button x="2" y="14" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 4!"/>
-    <button x="2" y="18" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 5!"/>
-    <button x="2" y="22" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 6!"/>
-    <button x="2" y="26" width="parent.w-2" bg="black" fg="lightGray" text="Example Button 7!"/>
-</frame>
-<frame x="parent.w/2+1" width="parent.w/2+1" bg="black">
-    <textfield bg="gray" x="2" y="2" width="parent.w-2">
-        <lines>
-            <line>This is line 1.</line>
-            <line>And this is line 2.</line>
-        </lines>
-    </textfield>
-    <label anchor="bottomLeft" x="2" y="0" text="I love labels!" fg="lightGray"/>
-</frame>
-```
-in your lua code you just have to add this layout to your frame:
-```lua
-local basalt = require("Basalt")
-
-basalt.createFrame():addLayout("example.xml")
 basalt.autoUpdate()
 ```
