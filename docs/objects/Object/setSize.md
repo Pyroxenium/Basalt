@@ -1,8 +1,8 @@
 ## setSize
 Changes the object size
 #### Parameters: 
-1. `number` width
-2. `number` height
+1. `number|string` width as number or dynamicvalue as string
+2. `number|string` height as number or dynamicvalue as string
 
 #### Returns:
 1. `object` The object in use

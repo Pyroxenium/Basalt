@@ -8,6 +8,5 @@ This starts the event and draw handler for you. The listeners will run until you
 * Enable the basalt listeners, otherwise the screen will not continue to update
 ```lua
 local main = basalt.createFrame()
-
 basalt.autoUpdate()
 ```

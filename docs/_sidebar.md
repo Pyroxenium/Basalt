@@ -28,3 +28,4 @@
     - [Your Logic](tips/logic.md)
     - [Button coloring](tips/buttonColoring.md)
     - [Designing/Animating](tips/design.md)
+    - [Dynamic Values](tips/dynamicvalues.md)
