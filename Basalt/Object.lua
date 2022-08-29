@@ -56,17 +56,21 @@ return function(name)
             isVisible = false
             self:updateDraw()
             return self
-        end;
+        end,
 
         enable = function(self)
             isEnabled = true
             return self
-        end;
+        end,
 
         disable = function(self)
             isEnabled = false
             return self
-        end;
+        end,
+
+        isEnabled = function(self)
+            return isEnabled
+        end,
 
         generateXMLEventFunction = function(self, func, val)
             local createF = function(str)

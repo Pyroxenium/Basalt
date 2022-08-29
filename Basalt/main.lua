@@ -8,7 +8,7 @@ local createText = utils.createText
 
 
 local baseTerm = term.current()
-local version = "1.6.0"
+local version = "1.6.1"
 local debugger = true
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")

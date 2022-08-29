@@ -853,14 +853,16 @@ return function(name, parent, pTerm, basalt)
                 self:updateDraw()
                 return true
             end
-            if(events["mouse_drag"]~=nil)then
-                for _, index in ipairs(eventZIndex["mouse_drag"]) do
-                    if (events["mouse_drag"][index] ~= nil) then
-                        for _, value in rpairs(events["mouse_drag"][index]) do
-                            if (value.dragHandler ~= nil) then
-                                if (value:dragHandler(button, x, y)) then
-                                    focusSystem(self)
-                                    return true
+            if(self:isVisible())and(self:isEnabled())then
+                if(events["mouse_drag"]~=nil)then
+                    for _, index in ipairs(eventZIndex["mouse_drag"]) do
+                        if (events["mouse_drag"][index] ~= nil) then
+                            for _, value in rpairs(events["mouse_drag"][index]) do
+                                if (value.dragHandler ~= nil) then
+                                    if (value:dragHandler(button, x, y)) then
+                                        focusSystem(self)
+                                        return true
+                                    end
                                 end
                             end
                         end
