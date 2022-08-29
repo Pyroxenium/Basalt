@@ -8,6 +8,6 @@ The fontsize feature is calculated by bigfonts, a library made by Wojbie (http:/
 
 |   |   |
 |---|---|
-|[setText](objects/Input/setInputType.md)|Sets the input type
-|[setFontSize](objects/Input/getInputType.md)|Returns the input type
-|[getFontSize](objects/Input/setDefaultText.md)|Sets the default text
+|[setText](objects/Label/setText.md)|Sets the input type
+|[setFontSize](objects/Label/setFontSize.md)|Returns the input type
+|[getFontSize](objects/Label/getFontSize.md)|Sets the default text
