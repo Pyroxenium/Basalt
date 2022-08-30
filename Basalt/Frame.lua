@@ -138,7 +138,7 @@ return function(name, parent, pTerm, basalt)
                     if (value == obj) then
                         table.remove(events[a][c], key)
                         if(self.parent~=nil)then
-                            if(tableCount(events[event])<=0)then
+                            if(tableCount(events[a])<=0)then
                                 self.parent:removeEvent(a, self)
                             end
                         end
