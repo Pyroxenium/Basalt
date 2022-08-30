@@ -186,6 +186,7 @@ return function(name)
                 if (self.parent ~= nil) then
                     self.parent:setCursor(true, obx + cursorX, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
                 end
+                self:updateDraw()
                 internalValueChange = false
                 return true
             end
@@ -249,8 +250,19 @@ return function(name)
                         wIndex = 1
                     end
                 end
-                self.parent:setCursor(true, obx + textX-1, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
+                self.parent:setCursor(true, obx + textX - wIndex, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
                 return true
+            end
+        end,
+
+        dragHandler = function(self, btn, x, y, xOffset, yOffset)
+            if(self:isFocused())then
+                if(self:isCoordsInObject(x, y))then
+                    if(base.dragHandler(self, btn, x, y, xOffset, yOffset))then
+                        return true
+                    end
+                end
+                self.parent:removeFocusedObject()
             end
         end,
 
@@ -347,6 +359,7 @@ return function(name)
                 self.parent:addEvent("key", self)
                 self.parent:addEvent("char", self)
                 self.parent:addEvent("other_event", self)
+                self.parent:addEvent("mouse_drag", self)
             end
         end,
     }
