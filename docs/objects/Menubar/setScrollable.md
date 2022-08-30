@@ -10,8 +10,8 @@ Makes it possible to scroll while the mouse is over the menubar
 #### Usage:
 * Creates a new menubar and makes it scrollable
 ```lua
-local mainFrame = basalt.createFrame()
-local aMenubar = mainFrame:addMenubar():setScrollable(true)
+local main = basalt.createFrame()
+local aMenubar = main:addMenubar():setScrollable(true)
   :addItem("1. Entry")
   :addItem("2. Entry")
   :addItem("3. Entry")

@@ -41,3 +41,24 @@ local button2 = main:addButton()
 
 basalt.autoUpdate()
 ```
+
+Also very interesting is a button where you are able to resize the frame just by dragging the button.
+```lua
+local basalt = require("basalt")
+
+local main = basalt.createFrame()
+
+local sub = main:addFrame():setSize(30,12):setMovable()
+sub:addLabel():setText("Example Frame"):setSize("parent.w", 1):setBackground(colors.black):setForeground(colors.lightGray)
+
+local dragButton = sub:addButton()
+  :setAnchor("bottomRight")
+  :setPosition(1,1)
+  :setSize(1,1)
+  :setText("/")
+  :onDrag(function(self, button, x, y, xOffset, yOffset)
+	  sub:setSize(-xOffset, -yOffset, true)
+  end)
+
+basalt.autoUpdate()
+```

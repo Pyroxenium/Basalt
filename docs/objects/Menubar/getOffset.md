@@ -7,8 +7,8 @@ Returns the current index offset
 #### Usage:
 * Creates a default menubar with 6 entries and sets the offset to 3, also prints the current offset.
 ```lua
-local mainFrame = basalt.createFrame()
-local aMenubar = mainFrame:addMenubar()
+local main = basalt.createFrame()
+local aMenubar = main:addMenubar()
       :addItem("1. Entry")
       :addItem("2. Entry")
       :addItem("3. Entry")

@@ -10,8 +10,8 @@ Sets the offset of the menubar (the same as you would scroll) - default is 0
 #### Usage:
 * Creates a default menubar with 6 entries and sets the offset to 3.
 ```lua
-local mainFrame = basalt.createFrame()
-local aMenubar = mainFrame:addMenubar()
+local main = basalt.createFrame()
+local aMenubar = main:addMenubar()
       :addItem("1. Entry")
       :addItem("2. Entry")
       :addItem("3. Entry")

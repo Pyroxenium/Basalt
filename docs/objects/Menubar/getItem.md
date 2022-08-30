@@ -10,8 +10,8 @@ Returns a item by index
 #### Usage:
 * Creates a default menubar with 3 entries and edits the second one.
 ```lua
-local mainFrame = basalt.createFrame()
-local aMenubar = mainFrame:addMeubar()
+local main = basalt.createFrame()
+local aMenubar = main:addMeubar()
     :addItem("1. Entry")
     :addItem("2. Entry",colors.yellow)
     :addItem("3. Entry",colors.yellow,colors.green)
