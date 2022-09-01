@@ -375,6 +375,7 @@ return function(name, parent, pTerm, basalt)
 
         setFocusedObject = function(self, obj)
             focusedObjectCache = obj
+            focusSystem(self)
             return self
         end;
 
@@ -451,6 +452,7 @@ return function(name, parent, pTerm, basalt)
 
         removeFocusedObject = function(self)
                 focusedObjectCache = nil
+                focusSystem(self)
             return self
         end;
 
@@ -776,7 +778,6 @@ return function(name, parent, pTerm, basalt)
                     end
                 end
                 self:removeFocusedObject()
-                focusSystem(self)
                 return true
             end
             return false
@@ -832,7 +833,6 @@ return function(name, parent, pTerm, basalt)
                     end
                 end
                 self:removeFocusedObject()
-                focusSystem(self)
                 if(yOffset==cache)then return false end
                 return true
             end
