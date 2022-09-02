@@ -419,39 +419,44 @@ return function(name)
                     end
                     if(borderColors["left"]~=false)then
                         self.parent:drawTextBox(x-1, y, 1, h, "\149")
-                        self.parent:drawBackgroundBox(x-1, y, 1, h, borderColors["left"])
-                        self.parent:drawForegroundBox(x-1, y, 1, h, self.parent.bgColor)
+                        self.parent:drawBackgroundBox(x-1, y, 1, h, self.bgColor)
+                        self.parent:drawForegroundBox(x-1, y, 1, h, borderColors["left"])
                     end
                     if(borderColors["left"]~=false)and(borderColors["top"]~=false)then
                         self.parent:drawTextBox(x-1, y-1, 1, 1, "\151")
-                        self.parent:drawBackgroundBox(x-1, y-1, 1, 1, borderColors["left"])
-                        self.parent:drawForegroundBox(x-1, y-1, 1, 1, self.parent.bgColor)
+                        self.parent:drawBackgroundBox(x-1, y-1, 1, 1, self.bgColor)
+                        self.parent:drawForegroundBox(x-1, y-1, 1, 1, borderColors["left"])
                     end
                     if(borderColors["top"]~=false)then
 
                         self.parent:drawTextBox(x, y-1, w, 1, "\131")
-                        self.parent:drawBackgroundBox(x, y-1, w, 1, borderColors["top"])
-                        self.parent:drawForegroundBox(x, y-1, w, 1, self.parent.bgColor)
+                        self.parent:drawBackgroundBox(x, y-1, w, 1, self.bgColor)
+                        self.parent:drawForegroundBox(x, y-1, w, 1, borderColors["top"])
                     end
                     if(borderColors["top"]~=false)and(borderColors["right"]~=false)then
                         self.parent:drawTextBox(x+w, y-1, 1, 1, "\148")
-                        self.parent:drawForegroundBox(x+w, y-1, 1, 1, borderColors["right"])
+                        self.parent:drawForegroundBox(x+w, y-1, 1, 1, self.bgColor)
+                        self.parent:drawBackgroundBox(x+w, y-1, 1, 1, borderColors["right"])
                     end
                     if(borderColors["right"]~=false)then
                         self.parent:drawTextBox(x+w, y, 1, h, "\149")
-                        self.parent:drawForegroundBox(x+w, y, 1, h, borderColors["right"])
+                        self.parent:drawForegroundBox(x+w, y, 1, h, self.bgColor)
+                        self.parent:drawBackgroundBox(x+w, y, 1, h, borderColors["right"])
                     end
                     if(borderColors["right"]~=false)and(borderColors["bottom"]~=false)then
-                        self.parent:drawTextBox(x+w, y+h, 1, 1, "\129")
-                        self.parent:drawForegroundBox(x+w, y+h, 1, 1, borderColors["right"])
+                        self.parent:drawTextBox(x+w, y+h, 1, 1, "\133")
+                        self.parent:drawForegroundBox(x+w, y+h, 1, 1, self.bgColor)
+                        self.parent:drawBackgroundBox(x+w, y+h, 1, 1, borderColors["right"])
                     end
                     if(borderColors["bottom"]~=false)then
-                        self.parent:drawTextBox(x, y+h, w, 1, "\131")
-                        self.parent:drawForegroundBox(x, y+h, w, 1, borderColors["bottom"])
+                        self.parent:drawTextBox(x, y+h, w, 1, "\143")
+                        self.parent:drawForegroundBox(x, y+h, w, 1, self.bgColor)
+                        self.parent:drawBackgroundBox(x, y+h, w, 1, borderColors["bottom"])
                     end
                     if(borderColors["bottom"]~=false)and(borderColors["left"]~=false)then
-                        self.parent:drawTextBox(x-1, y+h, 1, 1, "\130")
-                        self.parent:drawForegroundBox(x-1, y+h, 1, 1, borderColors["left"])
+                        self.parent:drawTextBox(x-1, y+h, 1, 1, "\138")
+                        self.parent:drawForegroundBox(x-1, y+h, 1, 1, self.bgColor)
+                        self.parent:drawBackgroundBox(x-1, y+h, 1, 1, borderColors["left"])
                     end
                 end
                 draw = false
