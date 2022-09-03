@@ -7,9 +7,17 @@ function process:new(path, window, ...)
     local newP = setmetatable({ path = path }, { __index = self })
     newP.window = window
     newP.processId = processId
+    if(type(path)=="string")then
     newP.coroutine = coroutine.create(function()
         shell.execute(path, table.unpack(args))
     end)
+    elseif(type(path)=="function")then
+        newP.coroutine = coroutine.create(function()
+            path(table.unpack(args))
+        end)
+    else
+        return
+    end
     processes[processId] = newP
     processId = processId + 1
     return newP
@@ -22,7 +30,6 @@ function process:resume(event, ...)
         self.filter=nil
     end
     local ok, result = coroutine.resume(self.coroutine, event, ...)
-    self.window = term.current()
     if ok then
         self.filter = result
     else
