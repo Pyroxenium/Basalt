@@ -180,8 +180,9 @@ return function(name)
                 local val = tostring(base.getValue())
                 local cursorX = (textX <= val:len() and textX - 1 or val:len()) - (wIndex - 1)
 
-                if (cursorX > self.x + w - 1) then
-                    cursorX = self.x + w - 1
+                local inpX = self:getX()
+                if (cursorX > inpX + w - 1) then
+                    cursorX = inpX + w - 1
                 end
                 if (self.parent ~= nil) then
                     self.parent:setCursor(true, obx + cursorX, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
