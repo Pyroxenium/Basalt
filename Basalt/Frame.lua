@@ -3,6 +3,7 @@ local _OBJECTS = require("loadObjects")
 local BasaltDraw = require("basaltDraw")
 local utils = require("utils")
 local layout = require("layout")
+local basaltMon = require("basaltMon")
 local uuid = utils.uuid
 local rpairs = utils.rpairs
 local xmlValue = utils.getValueFromXML
@@ -27,6 +28,7 @@ return function(name, parent, pTerm, basalt)
 
     local monSide = ""
     local isMonitor = false
+    local isGroupedMonitor = false
     local monitorAttached = false
     local dragXOffset = 0
     local dragYOffset = 0
@@ -522,8 +524,10 @@ return function(name, parent, pTerm, basalt)
             base.show(self)
             if(self.parent==nil)then
                 basalt.setActiveFrame(self)
-                if(isMonitor)then
+                if(isMonitor)and not(isGroupedMonitor)then
                     basalt.setMonitorFrame(monSide, self)
+                elseif(isGroupedMonitor)then
+                    basalt.setMonitorFrame(self:getName(), self, monSide)
                 else
                     basalt.setMainFrame(self)
                 end
@@ -534,9 +538,13 @@ return function(name, parent, pTerm, basalt)
         hide = function (self)
             base.hide(self)
             if(self.parent==nil)then
-                if(activeFrame == self)then activeFrame = nil end
-                if(isMonitor)then
+                if(activeFrame == self)then activeFrame = nil end -- bug activeFrame always nil
+                if(isMonitor)and not(isGroupedMonitor)then
                     if(basalt.getMonitorFrame(monSide) == self)then
+                        basalt.setActiveFrame(nil)
+                    end
+                elseif(isGroupedMonitor)then
+                    if(basalt.getMonitorFrame(self:getName()) == self)then
                         basalt.setActiveFrame(nil)
                     end
                 else
@@ -642,25 +650,47 @@ return function(name, parent, pTerm, basalt)
             return self
         end,
 
-        setMonitor = function(self, side)
+        setMonitorScale = function(self, scale)
+            if(isMonitor)then
+                termObject.setTextScale(scale)
+            end
+            return self
+        end,
+
+        setMonitor = function(self, side, scale)
             if(side~=nil)and(side~=false)then
-                if(peripheral.getType(side)=="monitor")then
-                    termObject = peripheral.wrap(side)
+                if(type(side)=="string")then
+                    if(peripheral.getType(side)=="monitor")then
+                        termObject = peripheral.wrap(side)
+                        monitorAttached = true
+                    end
+                    if(self.parent~=nil)then
+                        self.parent:removeObject(self)
+                    end
+                    isMonitor = true
+                    basalt.setMonitorFrame(side, self)
+                elseif(type(side)=="table")then
+                    termObject = basaltMon(side)
                     monitorAttached = true
-                    
+                    isMonitor = true
+                    isGroupedMonitor = true
+                    basalt.setMonitorFrame(self:getName(), self, true)
                 end
-                if(self.parent~=nil)then
-                    self.parent:removeObject(self)
-                end
-                isMonitor = true
-                basalt.setMonitorFrame(side, self)
             else
                 termObject = parentTerminal
                 isMonitor = false
-                if(basalt.getMonitorFrame(monSide)==self)then
-                    basalt.setMonitorFrame(monSide, nil)
+                isGroupedMonitor = false
+                if(type(monSide)=="string")then
+                    if(basalt.getMonitorFrame(monSide)==self)then
+                        basalt.setMonitorFrame(monSide, nil)
+                    end
+                else
+                    if(basalt.getMonitorFrame(self:getName())==self)then
+                        basalt.setMonitorFrame(self:getName(), nil)
+                    end
                 end
             end
+            if(scale~=nil)then termObject.setTextScale(scale) end
             basaltDraw = BasaltDraw(termObject)
             self:setSize(termObject.getSize())
             autoSize = true
@@ -717,8 +747,18 @@ return function(name, parent, pTerm, basalt)
             end
             if(isMonitor)then
                 if(autoSize)then
-                    if(event=="monitor_resize")and(p1==monSide)then
-                        self:setSize(termObject.getSize())
+                    if(event=="monitor_resize")then
+                        if(type(monSide)=="string")then
+                            self:setSize(termObject.getSize())
+                        elseif(type(monSide)=="table")then
+                            for k,v in pairs(monSide)do
+                                for a,b in pairs(v)do
+                                    if(p1==b)then
+                                        self:setSize(termObject.getSize())
+                                    end
+                                end
+                            end
+                        end
                         autoSize = true
                         self:updateDraw()
                     end
@@ -752,7 +792,12 @@ return function(name, parent, pTerm, basalt)
             end
         end,
 
-        mouseHandler = function(self, button, x, y)
+        mouseHandler = function(self, button, x, y, _, side)
+            if(isGroupedMonitor)then
+                if(termObject.calculateClick~=nil)then
+                    x, y = termObject.calculateClick(side, x, y)
+                end
+            end
             if(base.mouseHandler(self, button, x, y))then
                 if(events["mouse_click"]~=nil)then
                     self:setCursor(false)

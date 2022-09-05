@@ -61,7 +61,7 @@ return function(name)
                     textX = tostring(val):len() + 1
                     wIndex = math.max(1, textX-self:getWidth()+1)
                     local obx, oby = self:getAnchorPosition()
-                    self.parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self.height/2), self.fgColor)
+                    self.parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self:getHeight()/2), self.fgColor)
                 end
             end
             self:updateDraw()
@@ -179,7 +179,7 @@ return function(name)
                 local obx, oby = self:getAnchorPosition()
                 local val = tostring(base.getValue())
                 local cursorX = (textX <= val:len() and textX - 1 or val:len()) - (wIndex - 1)
-
+                
                 local inpX = self:getX()
                 if (cursorX > inpX + w - 1) then
                     cursorX = inpX + w - 1
@@ -251,7 +251,7 @@ return function(name)
                         wIndex = 1
                     end
                 end
-                self.parent:setCursor(true, obx + textX - wIndex, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
+                self.parent:setCursor(true, ax + textX - wIndex, ay+math.max(math.ceil(h/2-1, 1)), self.fgColor)
                 return true
             end
         end,
@@ -346,7 +346,7 @@ return function(name)
                         end
                     end
                     if(self:isFocused())then
-                        self.parent:setCursor(true, obx + textX - wIndex, oby+math.max(math.ceil(self:getHeight()/2-1, 1)), self.fgColor)
+                        self.parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self:getHeight()/2), self.fgColor)
                     end
                 end
             end

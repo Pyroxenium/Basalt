@@ -5,15 +5,16 @@ local utils = require("utils")
 local log = require("basaltLogs")
 local uuid = utils.uuid
 local createText = utils.createText
+local count = utils.tableCount
 
 
 local baseTerm = term.current()
-local version = "1.6.1"
+local version = "1.6.2"
 local debugger = true
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
 
-local activeKey, frames, monFrames, variables, schedules = {}, {}, {}, {}, {}
+local activeKey, frames, monFrames, monGroups, variables, schedules = {}, {}, {}, {}, {}, {}
 local mainFrame, activeFrame, focusedObject, updaterActive
 
 local basalt = {}
@@ -74,12 +75,19 @@ local bInstance = {
     end,
     
     getMonitorFrame = function(name)
-        return monFrames[name]
+        return monFrames[name] or monGroups[name][1]
     end,
 
-    setMonitorFrame = function(name, frame)
+    setMonitorFrame = function(name, frame, isGroupedMon)
         if(mainFrame == frame)then mainFrame = nil end
-        monFrames[name] = frame
+        if(isGroupedMon)then
+            monGroups[name] = {frame, sides}
+        else
+            monFrames[name] = frame
+        end
+        if(frame==nil)then
+            monGroups[name] = nil
+        end
     end,
 
     getBaseTerm = function()
@@ -145,6 +153,10 @@ local function drawFrames()
         v:draw()
         v:updateTerm()
     end
+    for _,v in pairs(monGroups)do
+        v[1]:draw()
+        v[1]:updateTerm()
+    end
 end
 
 local function basaltUpdateEvent(event, p1, p2, p3, p4)
@@ -169,7 +181,14 @@ local function basaltUpdateEvent(event, p1, p2, p3, p4)
             monFrames[p1]:mouseHandler(1, p2, p3, true)
             activeFrame = monFrames[p1]
         end
+        if(count(monGroups)>0)then
+            for k,v in pairs(monGroups)do
+                v[1]:mouseHandler(1, p2, p3, true, p1)
+            end
+        end
     end
+
+
 
     if(event == "char")then
         if(activeFrame~=nil)then

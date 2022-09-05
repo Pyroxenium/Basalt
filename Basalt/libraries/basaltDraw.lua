@@ -181,7 +181,7 @@ return function(drawTerm)
                 isBlinking = terminal.getCursorBlink()
             end
             terminal.setCursorBlink(false)
-            if(mirrorTerm~=nil)then terminal.setCursorBlink(false) end
+            if(mirrorTerm~=nil)then mirrorTerm.setCursorBlink(false) end
             for n = 1, height do
                 terminal.setCursorPos(1, n)
                 terminal.blit(cacheT[n], cacheFG[n], cacheBG[n])
