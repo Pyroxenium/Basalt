@@ -29,3 +29,4 @@
     - [Button coloring](tips/buttonColoring.md)
     - [Designing/Animating](tips/design.md)
     - [Dynamic Values](tips/dynamicvalues.md)
+    - [XML](tips/xml.md)

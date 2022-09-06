@@ -24,13 +24,13 @@ end)
 
 and this would be the xml way:
 ```lua
-local main = basalt.createFrame():addLayout("example.xml")
-
 basalt.setVariable("buttonClick", function(self,event,button,x,y)
   if(event=="mouse_click")and(button==1)then
     basalt.debug("Left mousebutton got clicked!")
   end
 end)
+
+local main = basalt.createFrame():addLayout("example.xml")
 ```
 ```xml
 <button onClick="buttonClick" text="Click" />

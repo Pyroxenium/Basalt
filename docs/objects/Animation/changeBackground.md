@@ -14,7 +14,7 @@ Changes the background color while the animation is running
 ```lua
 local mainFrame = basalt.createFrame()
 local testButton = mainFrame:addButton("buttonToAnimate")
-local aAnimation = mainFrame:addAnimation():setObject(testButton):changeBackground({colors.red, colors.yellow, colors.green}, 2):play()
+local aAnimation = mainFrame:addAnimation():setObject(testButton):changeTextColor(2, 0, colors.red, colors.yellow, colors.green):play()
 ```
 ```xml
 <animation object="buttonToAnimate" play="true">

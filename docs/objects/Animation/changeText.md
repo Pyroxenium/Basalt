@@ -14,7 +14,7 @@ Changes the text while animation is running
 ```lua
 local mainFrame = basalt.createFrame()
 local testButton = mainFrame:addButton("buttonToAnimate")
-local aAnimation = mainFrame:addAnimation():setObject(testButton):changeText({"i", "am", "groot"}, 2):play()
+local aAnimation = mainFrame:addAnimation():setObject(testButton):changeText(2, 0, "i", "am", "groot"):play()
 ```
 ```xml
 <animation object="buttonToAnimate" play="true">

@@ -1,8 +1,5 @@
 ## removeFocusedObject 
-Removes the focus of the supplied object
-
-#### Parameters: 
-1. `object` The child object to remove focus from
+Removes the currently focused object of that frame
 
 #### Returns: 
 1. `frame` The frame being used
@@ -10,7 +7,9 @@ Removes the focus of the supplied object
 #### Usage:
 * Creates a new button then removes the focus from that button when clicking on it
 ```lua
-local aButton = myFrame:addButton():setFocus():onClick(function() 
-    myFrame:removeFocusedObject(aButton)
+local main = basalt.createFrame()
+local input = main:addInput():setFocus()
+local aButton = main:addButton():onClick(function() 
+    main:removeFocusedObject()
 end)
 ```

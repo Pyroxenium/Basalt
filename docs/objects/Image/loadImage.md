@@ -10,7 +10,7 @@ loads a default .nfp file into the object.
 #### Usage:
 * Creates a default image and loads a test.nfp file
 ```lua
-local mainFrame = basalt.createFrame():show()
+local mainFrame = basalt.createFrame()
 local aImage = mainFrame:addImage():loadImage("test.nfp")
 ```
 ```xml
