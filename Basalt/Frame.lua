@@ -150,13 +150,23 @@ return function(name, parent, pTerm, basalt)
         end
     end
 
-    local function removeObject(obj)
+    local function removeObject(self, obj)
         for a, b in pairs(objects) do
             for key, value in pairs(b) do
-                if (value == obj) then
-                    table.remove(objects[a], key)
-                    removeEvents(object, obj)
-                    return true;
+                if(type(obj)=="string")then
+                    if (value:getName() == obj) then
+                        table.remove(objects[a], key)
+                        removeEvents(object, value)
+                        self:updateDraw()
+                        return true;
+                    end
+                else
+                    if (value == obj) then
+                        table.remove(objects[a], key)
+                        removeEvents(object, value)
+                        self:updateDraw()
+                        return true;
+                    end
                 end
             end
         end
@@ -1116,9 +1126,7 @@ return function(name, parent, pTerm, basalt)
             return addObject(obj)
         end;
 
-        removeObject = function(self, obj)
-            return removeObject(obj)
-        end;
+        removeObject = removeObject,
 
         getObject = function(self, obj)
             return getObject(obj)
