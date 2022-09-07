@@ -17,7 +17,3 @@ Basalt is intended to be an easy-to-understand UI Framework designed for CC:Twea
 Obviously NyoriE has implemented some easter eggs, *some people* call them "bugs". If you happen to discover one of these just make a new [Github Issue](https://github.com/Pyroxenium/Basalt/issues)
 
 Additionally, if you have questions about Basalt or how to make use of it, feel free to create a new discussion on [Basalt's Discussion Board (Github)](https://github.com/Pyroxenium/Basalt/discussions), or ask in our [discord](https://discord.gg/yNNnmBVBpE).
-
----
-
-Feel free to join our [discord](https://discord.gg/yNNnmBVBpE)!
