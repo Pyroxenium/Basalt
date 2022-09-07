@@ -1,5 +1,3 @@
-# NavBar
-
 - Getting Started
   - [Home](Home)
   - [Quick Start](home/Quick-Start)

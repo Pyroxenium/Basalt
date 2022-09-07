@@ -1,5 +1,3 @@
-# Sidebar
-
 - About
   - [Home](Home.md)
     - [Quick Start](home/Quick-Start.md)
