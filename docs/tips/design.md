@@ -29,8 +29,8 @@ local anim = main:addAnimation()
     :setObject(sub)
     :move(2,4,1.5)
     :setObject(button)
-    :move(2,9,1,1.5):
-    setObject(button2)
+    :move(2,9,1,1.5)
+    :setObject(button2)
     :move(sub:getWidth()-12,9,1,1.5)
     :play()
 

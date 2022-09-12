@@ -2,9 +2,9 @@
 Changes the text color while the animation is running
 
 #### Parameters: 
-1. `table` multiple color numbers - example: {colors.red, colors.yellow, colors.green}
-2. `number` duration in seconds
-3. `number` time - time when this part should begin (offset to when the animation starts - default 0)
+1. `number` duration in seconds
+2. `number` time - time when this part should begin (offset to when the animation starts - default 0)
+1. `...` multiple color numbers - example: colors.red, colors.yellow, colors.green
 
 #### Returns: 
 1. `animation` Animation in use

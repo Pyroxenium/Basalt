@@ -10,6 +10,7 @@ some special functionality to create very advanced programs.
 |[setBarTextAlign](objects/Frame/setBarTextAlign.md)|Sets the top bars text align - deprecated
 |[showBar](objects/Frame/showBar.md)|Shows the top bar - deprecated
 |[setMonitor](objects/Frame/setMonitor.md)|Sets the frame to be a monitor frame (only for base frames)
+|[setMonitorScale](objects/Frame/setMonitorScale.md)|Sets the monitor scale (same as monitor.setTextScale)
 |[setMirror](objects/Frame/setMirror.md)|Sets the frame to mirror onto a monitor (only for base frames)
 |[getObject](objects/Frame/getObject.md)|Returns the object by its name (or id)
 |[removeObject](objects/Frame/removeObject.md)|Removes the object by its name (or id)
