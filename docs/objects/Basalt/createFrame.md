@@ -1,17 +1,23 @@
-## basalt.createFrame
+
+# basalt.createFrame
+
 Creates a new base-frame, you can have as many base-frames as you want, but only 1 can be active (visible) at the same time.
 You can always switch between your base frames.
 
 Only the currently active base-frame listens to incoming events (except for some events like time-events and peripheral-events)
 
-#### Parameters: 
+## Parameters
+
 1. `string` id - optional (if you dont set a id it will automatically create a uuid for you)
 
-#### Returns: 
+## Returns
+
 1. `frame` object
 
-#### Usage:
+## Usage
+
 * How to use multiple base frames:
+
 ```lua
 local main1 = basalt.createFrame() -- Visible base frame on program start
 local main2 = basalt.createFrame()
@@ -24,4 +30,5 @@ main1:addButton()
     end)
 main2:addLabel()
     :setText("We are currently on main2")
+basalt.autoUpdate()
 ```
