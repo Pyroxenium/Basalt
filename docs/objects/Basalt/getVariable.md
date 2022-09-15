@@ -16,7 +16,7 @@ basalt.setVariable("abc", function()
   return 1
 end)
 
-basalt.debug(basalt.getVariable("abc")()) -- Should debug log "I got clicked" and debug log 2 (which was returned from the function)
+basalt.debug(basalt.getVariable("abc")()) -- Should debug log "I got clicked" and debug log 1 (which was returned from the function)
 ```
 
 ```xml
