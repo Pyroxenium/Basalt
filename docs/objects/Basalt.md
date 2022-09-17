@@ -28,7 +28,7 @@ You are now able to access the following list of methods:
 |[setActiveFrame](objects/Basalt/setActiveFrame.md)|Sets the active frame
 |[setTheme](objects/Basalt/setTheme.md)|Changes the base theme of basalt
 |[setVariable](objects/Basalt/setVariable.md)|Sets a variable which you can access via XML
-|[stopUpdate](objects/Basalt/stopUpdate.md)|Stops the currently active event and draw listener
+|[stopUpdate / stop](objects/Basalt/stopUpdate.md)|Stops the currently active event and draw listener
 |[update](objects/Basalt/update.md)|Starts the event and draw listener once
 
 ## Examples
