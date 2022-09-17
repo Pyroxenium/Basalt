@@ -1,13 +1,14 @@
+# Basalt
 
-# basalt.getActiveFrame
+## getActiveFrame
 
 Returns the currently active/visible base frame.
 
-## Returns
+### Returns
 
 1. `frame` The current frame
 
-## Usage
+### Usage
 
 * Displays the active frame name in the debug console
 

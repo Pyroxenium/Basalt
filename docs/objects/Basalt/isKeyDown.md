@@ -1,17 +1,18 @@
+# Basalt
 
-# basalt.isKeyDown
+## isKeyDown
 
 Checks if the user is currently holding a key
 
-## Parameters
+### Parameters
 
 1. `number` key code (use the [keys table](https://tweaked.cc/module/keys.html) for that)
 
-## Returns
+### Returns
 
 1. `boolean` true or false
 
-## Usage
+### Usage
 
 * Shows a debug message with true or false if the left ctrl key is down, as soon as you click on the button.
 

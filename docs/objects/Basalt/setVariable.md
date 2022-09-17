@@ -1,14 +1,15 @@
+# Basalt
 
-# basalt.setVariable
+## setVariable
 
 This stores a variable which you're able to access via xml. You are also able to add a function, which then gets called by object events created in XML.
 
-## Parameters
+### Parameters
 
 1. `string` a key name
 2. `any` any variable
 
-## Usage
+### Usage
 
 * Adds a function to basalt.
 

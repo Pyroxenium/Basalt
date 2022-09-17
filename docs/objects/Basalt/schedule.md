@@ -1,17 +1,19 @@
-# basalt.schedule
+# Basalt
+
+## schedule
 
 Schedules a function which gets called in a coroutine. After the coroutine is finished it will get destroyed immediatly. It's something like threads, but with some limits.
 **A guide can be found [here](/tips/logic).**
 
-## Parameters
+### Parameters
 
 1. `function` a function which should get executed
 
-## Returns
+### Returns
 
 1. `function` it returns the function which you have to execute in order to start the coroutine
 
-## Usage
+### Usage
 
 * Creates a schedule which switches the color between red and gray
 

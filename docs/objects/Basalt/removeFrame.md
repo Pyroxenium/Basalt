@@ -1,13 +1,14 @@
+# Basalt
 
-# basalt.removeFrame
+## removeFrame
 
 Removes the base frame by it's id. **This only works for base-frames.**
 
-## Parameters
+### Parameters
 
 1. `string` id - ID of the base-frame.
 
-## Usage
+### Usage
 
 * Removes the previously created frame with id "secondBaseFrame"
 The frame id is gotten from a frame variable's `:getName()`

@@ -1,11 +1,13 @@
-# basalt.setActiveFrame
+# Basalt
+
+## setActiveFrame
 
 Sets what should be the active baseframe.
 
-## Parameters
+### Parameters
 
 1. `frame` frame - The frame that should be the active base-frame.
 
-## Usage
+### Usage
 
 TODO

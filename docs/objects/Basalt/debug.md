@@ -1,5 +1,6 @@
+# Basalt
 
-# basalt.debug
+## debug
 
 Creates a label with some information on the main frame on the bottom left. When you click on that label it will open a log view for you. See it as the new print for debugging
 
@@ -8,11 +9,11 @@ which returns the debug Label.
 
 `basalt.debugFrame` and `basalt.debugList` are also available.
 
-## Parameters
+### Parameters
 
 1. `...` (multiple parameters are possible, like print does)
 
-## Usage
+### Usage
 
 * Prints "Hello! ^-^" to the debug console
 

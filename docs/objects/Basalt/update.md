@@ -1,15 +1,16 @@
+# Basalt
 
-# basalt.update
+## update
 
 Calls the draw and event handler once - this gives more flexibility about which events basalt should process. For example you could filter the terminate event.
 Which means you have to pass the events into basalt.update.
 
-## Parameters
+### Parameters
 
 1. `string` The event to be received
 2. `...` Additional event variables to capture
 
-## Usage
+### Usage
 
 * Creates and starts a custom update cycle
 

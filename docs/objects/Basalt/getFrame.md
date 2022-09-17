@@ -1,17 +1,18 @@
+# Basalt
 
-# basalt.getFrame
+## getFrame
 
 Returns a base frame by the given id.
 
-## Parameters
+### Parameters
 
 1. `string` id
 
-## Returns
+### Returns
 
 1. `frame` The frame with the supplied id.
 
-## Usage
+### Usage
 
 * Creates, fetches and shows the "myFirstFrame" object
 

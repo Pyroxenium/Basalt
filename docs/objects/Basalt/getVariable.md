@@ -1,12 +1,14 @@
-# basalt.getVariable
+# Basalt
+
+## getVariable
 
 Returns a variable defined with [setVariable](objects/Basalt/setVariable)
 
-## Returns
+### Returns
 
 1. `variable` The variable stored
 
-## Usage
+### Usage
 
 * Displays the stored variable in the debug console
 

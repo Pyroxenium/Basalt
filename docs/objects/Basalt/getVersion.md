@@ -1,12 +1,14 @@
-# basalt.getVersion
+# Basalt
+
+## getVersion
 
 Returns the currently active/visible base frame.
 
-## Returns
+### Returns
 
 1. `string` The current version of Basalt
 
-## Usage
+### Usage
 
 * Displays the version of Basalt in the debug console
 
