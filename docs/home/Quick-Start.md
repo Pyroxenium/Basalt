@@ -1,18 +1,21 @@
-## HowTo Use
+# Quick Start
 
-To load the framework into your project, make use of the following code on top of your code.
+## How to use
+
+To load Basalt into your project, make use of the following code on top of your code.
 ```lua
 local basalt = require("basalt")
 ```
 
-It does not matter if you have installed the single file version or the full folder project. <br>
+It does not matter if you have installed the single file version or the full folder project.
 Both versions can be loaded by using `require("Basalt")`, you dont need to add `.lua`.
 
 ## Download
 
 ### Download the folder version
-This version is for people who'd like to work with Basalt, change something in Basalt or checkout the project.<br>
-But you are also able to just use it to create your own UI.<br>
+This version is for people who'd like to work with Basalt, change something in Basalt, or checkout the project.
+But you are also able to just use it to create your own UI.
+
 
 To install the full project to your CC:Tweaked Computer, use the following command on your CC:Tweaked shell:
 
@@ -30,7 +33,7 @@ This will download the project as a single file called "basalt.lua". You are imm
 
 ### Basalt Package Manager
 
-The Basalt Package Manager is still in alpha!<br><br>
+**The Basalt Package Manager is still in alpha!**
 The Basalt Package Manager is a visual installer, you are able to change some settings, also to choose which objects are necessary for your projects and which are not. 
 
 To install the BPM (Basalt Package Manager) use the following command on your CC:Tweaked shell:

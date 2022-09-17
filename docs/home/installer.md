@@ -1,12 +1,12 @@
 # Installer
 
-This is just a script which helps you to setup your program to automatically install the Basalt UI Framework, if it doesn't exists. Means, you create your program (which requires basalt) and add this on the top of your program. Now, everytime you execute your program it checks if basalt.lua (or your custom filepath) exists or not, if not it installs it, or if you are using the advanced installer, it asks the user if the program is allowed to install basalt for you.
+This is just a script which helps you to setup your program to automatically install the Basalt UI Framework if it doesn't exist. Which means you create your program (which requires basalt), and add this on the top of your program. Now everytime you execute your program it checks if basalt.lua (or your custom filepath) exists or not. If it dosent exist it installs it, or if you are using the advanced installer it asks the user if the program is allowed to install basalt for you.
 
 ## Basic Installer
-Here is a very basic one which just installs basalt.lua if don't exist:
+Here is a very basic installer which just installs basalt.lua if it dosen't exist:
 ```lua
 --Basalt configurated installer
-local filePath = "basalt.lua" --here you can change the file path default: basalt
+local filePath = "basalt.lua" --here you can change the file path that it installs to. default: /basalt.lua
 if not(fs.exists(filePath))then
     shell.run("pastebin run ESs1mg7P packed true "..filePath:gsub(".lua", "")) -- this is an alternative to the wget command
 end
@@ -18,8 +18,8 @@ This is a visual version, it asks the user if he wants to install basalt.lua (if
 ![](https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/_media/installer.png)
 ```lua
 --Basalt configurated installer
-local filePath = "basalt.lua" --here you can change the file path default: basalt
-if not(fs.exists(filePath))then
+local filePath = "basalt.lua" --here you can change the file path it installs to. Default: /basalt.lua
+if not fs.exists(filePath) then
     local w,h = term.getSize()
     term.clear()
     local _installerWindow = window.create(term.current(),w/2-8,h/2-3,18,6)
@@ -68,7 +68,4 @@ if not(fs.exists(filePath))then
     term.setCursorPos(1,1)
     term.clear()
 end
-
-local basalt = require(filePath:gsub(".lua", "")) -- here you can change the variablename in any variablename you want default: basalt
-------------------------------
 ```
