@@ -1,6 +1,6 @@
 This is the base class for all visual objects. It covers positioning, sizing, showing/hiding and much more.
 
-By default a freshly created object is visible and automatically listens to all incoming events. 
+By default a freshly created object is visible and doesn't listens to any incoming events.
 Its default position is always 1, 1 (based on it's parent frame). The default anchor is also topLeft.
 
 |   |   |
@@ -31,16 +31,40 @@ Its default position is always 1, 1 (based on it's parent frame). The default an
 
 # Events
 
+This is a list of all available events for all objects:
+
 |   |   |
 |---|---|
 |[onClick](objects/Object/onClick.md)|Fires as soon as the object gets clicked
 |[onClickUp](objects/Object/onClickUp.md)|Fires as soon as the mouse button gets released on the object
-|[onScroll](objects/Object/onScroll.md)|Fires as soon as you scroll with the mousewheel 
+|[onRelease](objects/Object/onRelease.md)|Fires as soon as the mouse button gets released
+|[onScroll](objects/Object/onScroll.md)|Fires as soon as you scroll with the mousewheel
 |[onDrag](objects/Object/onDrag.md)|Fires as soon as the object is beeing dragged
 |[onKey](objects/Object/onKey.md)|Fires when the object is focused and a keyboard key has been clicked
+|[onChar](objects/Object/onChar.md)|Fires when the object is focused and a character has been clicked
 |[onKeyUp](objects/Object/onKeyUp.md)|Fires when the object is focused and a keyboard key has been released
 |[onChange](objects/Object/onChange.md)|Fires when the object value has been changed
 |[onResize](objects/Object/onResize.md)|Fires when the object got resized
 |[onReposition](objects/Object/onReposition.md)|Fires when the object has been repositioned
 |[onGetFocus](objects/Object/onGetFocus.md)|Fires when the object is focused
 |[onLoseFocus](objects/Object/onLoseFocus.md)|Fires when the object lost it's focus
+|[onEvent](objects/Object/onEvent.md)|Fires on any other event
+
+Sidenote: When you use return false this will skip the object's event handler. Here is a example for that.
+
+This code would make it impossible to write a into the input:
+
+```lua
+local basalt = require("basalt")
+
+local main = basalt.createFrame()
+local input = main:addInput()
+  :setPosition(3,3)
+
+function checkInput(self, event, char)
+  if(char=="a")then
+    return false
+  end
+end
+main:onChar(checkInput)
+```

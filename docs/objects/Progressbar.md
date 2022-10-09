@@ -11,3 +11,10 @@ want to add some energy progress you have to do simple maths: currentValue / max
 |[setProgressBar](objects/Progressbar/setProgressBar.md)|Changes the progress design
 |[setBackgroundSymbol](objects/Progressbar/setBackgroundSymbol.md)|Sets the background symbol
 
+# Events
+
+This is a list of all available events for progressbars:
+
+|   |   |
+|---|---|
+|[onDone](objects/Progressbar/onDone.md)|Fires when a progress has finished

@@ -12,3 +12,12 @@ Program objects are here for opening other executable programs in your main prog
 |[injectEvent](objects/Program/injectEvent.md)|Injects a event into the program
 |[injectEvents](objects/Program/injectEvents.md)|Injects a table of events
 |[getQueuedEvents](objects/Program/getQueuedEvents.md)|Returns currently queued events
+
+# Events
+
+This is a list of all available events for programs:
+
+|   |   |
+|---|---|
+|[onError](objects/Program/onError.md)|Fires when a program errors
+|[onDone](objects/Program/onDone.md)|Fires when a program has finished

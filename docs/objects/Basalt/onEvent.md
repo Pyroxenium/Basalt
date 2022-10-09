@@ -2,10 +2,20 @@
 
 ## onEvent
 
-Every event the computer receives, from the bulit-in event "api", will get passed into basalt.onEvent, except for all mouse events, the key events (key and key_up), char and monitor_touch.
+This is the top-level method to intercept an event before sending it to the object event handlers. If you use return false, the event is not passed to the event handlers.
 
 ### Parameters
 
+1. `function` The function which should be called
+
 ### Usage
 
-TODO
+```lua
+local basalt = require("basalt")
+
+basalt.onEvent(function(event)
+    if(event=="terminate")then
+        return false
+    end
+end)
+```

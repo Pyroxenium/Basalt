@@ -11,6 +11,7 @@ local main = basalt.createFrame()
 local subFrame = main:addFrame()
   :setPosition(3,3)
   :setSize(18,6)
+  :hide()
 
 function openSubFrame(self, event, key)
   if(key==keys.c)then

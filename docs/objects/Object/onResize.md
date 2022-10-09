@@ -1,4 +1,5 @@
 # onResize
+
 `onResize(self)`<br>
 This is a custom event which gets triggered as soon as the parent frame gets resized.
 
