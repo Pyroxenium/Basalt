@@ -153,13 +153,15 @@ return function(name)
         end,
 
         init = function(self)
-            self.bgColor = self.parent:getTheme("MenubarBG")
-            self.fgColor = self.parent:getTheme("MenubarFG")
-            itemSelectedBG = self.parent:getTheme("SelectionBG")
-            itemSelectedFG = self.parent:getTheme("SelectionText")
-            boxSelectedBG = self.parent:getTheme("MenubarBG")
-            boxSelectedFG = self.parent:getTheme("MenubarText")
             self.parent:addEvent("mouse_click", self)
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("MenubarBG")
+                self.fgColor = self.parent:getTheme("MenubarFG")
+                itemSelectedBG = self.parent:getTheme("SelectionBG")
+                itemSelectedFG = self.parent:getTheme("SelectionText")
+                boxSelectedBG = self.parent:getTheme("MenubarBG")
+                boxSelectedFG = self.parent:getTheme("MenubarText")
+            end
         end,
     }
 

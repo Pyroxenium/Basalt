@@ -17,8 +17,10 @@ return function(name)
 
     local object = {
         init = function(self)
-            self.bgColor = self.parent:getTheme("ButtonBG")
-            self.fgColor = self.parent:getTheme("ButtonText")        
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("ButtonBG")
+                self.fgColor = self.parent:getTheme("ButtonText")    
+            end    
         end,
         getType = function(self)
             return objectType

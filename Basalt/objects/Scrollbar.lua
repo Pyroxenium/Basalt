@@ -173,12 +173,14 @@ return function(name)
         end,
 
         init = function(self)
-            self.bgColor = self.parent:getTheme("ScrollbarBG")
-            self.fgColor = self.parent:getTheme("ScrollbarText")
-            symbolColor = self.parent:getTheme("ScrollbarSymbolColor")
             self.parent:addEvent("mouse_click", self)
             self.parent:addEvent("mouse_drag", self)
             self.parent:addEvent("mouse_scroll", self)
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("ScrollbarBG")
+                self.fgColor = self.parent:getTheme("ScrollbarText")
+                symbolColor = self.parent:getTheme("ScrollbarSymbolColor")
+            end
         end,
     }
 

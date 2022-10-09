@@ -202,12 +202,12 @@ return function(name)
                 if (text:len() < inputLimit or inputLimit <= 0) then
                     if (inputType == "number") then
                         local cache = text
-                        if (char == ".") or (tonumber(char) ~= nil) then
+                        if (#text==0 and char == "-") or (char == ".") or (tonumber(char) ~= nil) then
                             self:setValue(text:sub(1, textX - 1) .. char .. text:sub(textX, text:len()))
                             textX = textX + 1
                         end
                         if (tonumber(base.getValue()) == nil) then
-                            self:setValue(cache)
+                            --self:setValue(cache)
                         end
                     else
                         self:setValue(text:sub(1, textX - 1) .. char .. text:sub(textX, text:len()))
@@ -353,14 +353,16 @@ return function(name)
         end,
 
         init = function(self)
-            self.bgColor = self.parent:getTheme("InputBG")
-            self.fgColor = self.parent:getTheme("InputText")
             if(self.parent~=nil)then
                 self.parent:addEvent("mouse_click", self)
                 self.parent:addEvent("key", self)
                 self.parent:addEvent("char", self)
                 self.parent:addEvent("other_event", self)
                 self.parent:addEvent("mouse_drag", self)
+            end
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("InputBG")
+                self.fgColor = self.parent:getTheme("InputText")
             end
         end,
     }

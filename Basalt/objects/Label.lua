@@ -31,7 +31,12 @@ return function(name)
             text = tostring(text)
             base:setValue(text)
             if (autoSize) then
-                self.width = text:len()
+                if(text:len()+self:getX()>self.parent:getWidth())then
+                    local newW = self.parent:getWidth() - self:getX()
+                    base.setSize(self, newW, #createText(text, newW))
+                else
+                    base.setSize(self, text:len(), 1)
+                end
             end
             self:updateDraw()
             return self
@@ -86,6 +91,22 @@ return function(name)
             return self
         end;
 
+        eventHandler = function(self, event)
+            if(event=="basalt_resize")then
+                if (autoSize) then
+                    local text = self:getValue()
+                    if(text:len()+self:getX()>self.parent:getWidth())then
+                        local newW = self.parent:getWidth() - self:getX()
+                        base.setSize(self, newW, #createText(text, newW))
+                    else
+                        base.setSize(self, text:len(), 1)
+                    end
+                else
+                    --self.parent:removeEvent("other_event", self)
+                end
+            end
+        end,
+
         draw = function(self)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
@@ -96,10 +117,21 @@ return function(name)
                         if not(autoSize)then
                             local text = createText(self:getValue(), self:getWidth())
                             for k,v in pairs(text)do
-                                self.parent:writeText(obx, oby+k-1, v, self.bgColor, self.fgColor)
+                                if(k<=h)then
+                                    self.parent:writeText(obx, oby+k-1, v, self.bgColor, self.fgColor)
+                                end
                             end
                         else
-                            self.parent:writeText(obx, oby, self:getValue(), self.bgColor, self.fgColor)
+                            if(#self:getValue()+obx>self.parent:getWidth())then
+                                local text = createText(self:getValue(), self:getWidth())
+                                for k,v in pairs(text)do
+                                    if(k<=h)then
+                                        self.parent:writeText(obx, oby+k-1, v, self.bgColor, self.fgColor)
+                                    end
+                                end
+                            else
+                                self.parent:writeText(obx, oby, self:getValue(), self.bgColor, self.fgColor)
+                            end
                         end
                     else
                         local tData = bigFont(fontsize, self:getValue(), self.fgColor, self.bgColor or colors.lightGray)
@@ -112,15 +144,16 @@ return function(name)
                             oby = oby or math.floor((oY - cY) / 2) + 1
                         
                             for i = 1, cY do
-                                self.parent:setFG(obx, oby + i - 2, tData[2][i])
-                                self.parent:setBG(obx, oby + i - 2, tData[3][i])
-                                self.parent:setText(obx, oby + i - 2, tData[1][i])
+                                self.parent:setFG(obx, oby + i - 1, tData[2][i])
+                                self.parent:setBG(obx, oby + i - 1, tData[3][i])
+                                self.parent:setText(obx, oby + i - 1, tData[1][i])
                             end
                     end
                 end
             end
         end,
         init = function(self)
+            self.parent:addEvent("other_event", self)
             if(base.init(self))then
                 self.bgColor = self.parent:getTheme("LabelBG")
                 self.fgColor = self.parent:getTheme("LabelText")

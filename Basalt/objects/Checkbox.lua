@@ -72,10 +72,12 @@ return function(name)
         end,
         
         init = function(self)
-            base.init(self)
-            self.bgColor = self.parent:getTheme("CheckboxBG")
-            self.fgColor = self.parent:getTheme("CheckboxText")       
             self.parent:addEvent("mouse_click", self)
+            self.parent:addEvent("mouse_up", self)
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("CheckboxBG")
+                self.fgColor = self.parent:getTheme("CheckboxText")       
+            end
         end,
     }
 

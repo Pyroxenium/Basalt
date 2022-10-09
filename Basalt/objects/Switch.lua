@@ -74,12 +74,14 @@ return function(name)
         end,
 
         init = function(self)
-            self.bgColor = self.parent:getTheme("SwitchBG")
-            self.fgColor = self.parent:getTheme("SwitchText")
-            bgSymbol = self.parent:getTheme("SwitchBGSymbol")
-            inactiveBG = self.parent:getTheme("SwitchInactive")
-            activeBG = self.parent:getTheme("SwitchActive")
             self.parent:addEvent("mouse_click", self)
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("SwitchBG")
+                self.fgColor = self.parent:getTheme("SwitchText")
+                bgSymbol = self.parent:getTheme("SwitchBGSymbol")
+                inactiveBG = self.parent:getTheme("SwitchInactive")
+                activeBG = self.parent:getTheme("SwitchActive")
+            end
         end,
     }
 

@@ -2,7 +2,6 @@ local Object = require("Object")
 local tHex = require("tHex")
 local process = require("process")
 local xmlValue = require("utils").getValueFromXML
-local log = require("basaltLogs")
 
 local sub = string.sub
 
@@ -12,6 +11,7 @@ return function(name, parent)
     base:setZIndex(5)
     local object
     local cachedPath
+    local enviroment = {}
 
     local function createBasaltWindow(x, y, width, height, self)
         local xCursor, yCursor = 1, 1
@@ -428,7 +428,21 @@ return function(name, parent)
         local obx, oby = self:getAnchorPosition()
         local w,h = self:getSize()
         if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-            self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
+            self.parent:setCursor(self:isFocused() and pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
+        end
+    end
+
+    local function resumeProcess(self, event, ...)
+        local ok, result = curProcess:resume(event, ...)
+        if (ok==false)and(result~=nil)and(result~="Terminated")then
+            local val = self:sendEvent("program_error", result)
+            if(val~=false)then
+                error("Basalt Program - "..result)
+            end
+        end
+        
+        if(curProcess:getStatus()=="dead")then
+            self:sendEvent("program_done")
         end
     end
 
@@ -439,7 +453,7 @@ return function(name, parent)
         if not (curProcess:isDead()) then
             if not (paused) then
                 local absX, absY = self:getAbsolutePosition(self:getAnchorPosition(nil, nil, true))
-                curProcess:resume(event, p1, x-absX+1, y-absY+1)
+                resumeProcess(self, event, p1, x-absX+1, y-absY+1)
                 updateCursor(self)
             end
         end
@@ -452,7 +466,7 @@ return function(name, parent)
         if not (curProcess:isDead()) then
             if not (paused) then
                 if (self.draw) then
-                    curProcess:resume(event, key, isHolding)
+                    resumeProcess(self, event, key, isHolding)
                     updateCursor(self)
                 end
             end
@@ -511,9 +525,14 @@ return function(name, parent)
             return "inactive"
         end;
 
+        setEnviroment = function(self, env)
+            enviroment = env or {}
+            return self
+        end,
+
         execute = function(self, path, ...)
             cachedPath = path or cachedPath
-            curProcess = process:new(cachedPath, pWindow, ...)
+            curProcess = process:new(cachedPath, pWindow, enviroment, ...)
             pWindow.setBackgroundColor(colors.black)
             pWindow.setTextColor(colors.white)
             pWindow.clear()
@@ -521,7 +540,8 @@ return function(name, parent)
             pWindow.setBackgroundColor(self.bgColor)
             pWindow.setTextColor(self.fgColor)
             pWindow.basalt_setVisible(true)
-            curProcess:resume()
+
+            resumeProcess(self)
             paused = false
             if(self.parent~=nil)then
                 self.parent:addEvent("mouse_click", self)
@@ -539,7 +559,7 @@ return function(name, parent)
         stop = function(self)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
-                    curProcess:resume("terminate")
+                    resumeProcess(self, "terminate")
                     if (curProcess:isDead()) then
                         if (self.parent ~= nil) then
                             self.parent:setCursor(false)
@@ -572,7 +592,7 @@ return function(name, parent)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
                     if (paused == false) or (ign) then
-                        curProcess:resume(event, p1, p2, p3, p4)
+                        resumeProcess(self, event, p1, p2, p3, p4)
                     else
                         table.insert(queuedEvent, { event = event, args = { p1, p2, p3, p4 } })
                     end
@@ -594,7 +614,7 @@ return function(name, parent)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
                     for _, value in pairs(events) do
-                        curProcess:resume(value.event, table.unpack(value.args))
+                        resumeProcess(self, value.event, table.unpack(value.args))
                     end
                 end
             end
@@ -665,11 +685,9 @@ return function(name, parent)
                         if (self.parent ~= nil) then
                             local xCur, yCur = pWindow.getCursorPos()
                             local obx, oby = self:getAnchorPosition()
-                            if (self.parent ~= nil) then
-                                local w,h = self:getSize()
-                                if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-                                    self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
-                                end
+                            local w,h = self:getSize()
+                            if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
+                                self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
                             end
                         end
                     end
@@ -699,7 +717,7 @@ return function(name, parent)
                     if(w~=pW)or(h~=pH)then
                         pWindow.basalt_resize(pW, pH)
                         if not (curProcess:isDead()) then
-                            curProcess:resume("term_resize")
+                            resumeProcess(self, "term_resize")
                         end
                     end
                     pWindow.basalt_reposition(self:getAnchorPosition())
@@ -708,7 +726,7 @@ return function(name, parent)
                 if not (curProcess:isDead()) then
                     if not (paused) then
                         if(event ~= "terminate") then
-                            curProcess:resume(event, p1, p2, p3, p4)
+                            resumeProcess(self, event, p1, p2, p3, p4)
                         end
                         if (self:isFocused()) then
                             local obx, oby = self:getAnchorPosition()
@@ -721,8 +739,7 @@ return function(name, parent)
                             end
 
                             if (event == "terminate") then
-                                log(self:isFocused())
-                                curProcess:resume(event)
+                                resumeProcess(self, event)
                                 self.parent:setCursor(false)
                                 return true
                             end
@@ -739,15 +756,45 @@ return function(name, parent)
             if (base.draw(self)) then
                 if (self.parent ~= nil) then
                     local obx, oby = self:getAnchorPosition()
+                    local xCur, yCur = pWindow.getCursorPos()
                     local w,h = self:getSize()
                     pWindow.basalt_reposition(obx, oby)
                     pWindow.basalt_update()
+                    if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
+                        self.parent:setCursor(self:isFocused() and pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
+                    end
                 end
             end
         end,
 
+        onError = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("program_error", v)
+                end
+            end
+            if(self.parent~=nil)then
+                self.parent:addEvent("other_event", self)
+            end
+            return self
+        end,
+
+        onDone = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("program_done", v)
+                end
+            end
+            if(self.parent~=nil)then
+                self.parent:addEvent("other_event", self)
+            end
+            return self
+        end,
+
         init = function(self)
-            self.bgColor = self.parent:getTheme("ProgramBG")
+            if(base.init(self))then
+                elf.bgColor = self.parent:getTheme("ProgramBG")
+            end
         end,
 
     }

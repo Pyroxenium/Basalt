@@ -144,6 +144,7 @@ return function(name)
 
         editLine = function(self, index, text)
             lines[index] = text or lines[index]
+            updateColors(self, index)
             self:updateDraw()
             return self
         end;
@@ -163,18 +164,20 @@ return function(name)
                     lines[1] = text
                     bgLines[1] = tHex[self.bgColor]:rep(text:len())
                     fgLines[1] = tHex[self.fgColor]:rep(text:len())
+                    updateColors(self, 1)
                     return self
                 end
                 if (index ~= nil) then
                     table.insert(lines, index, text)
                     table.insert(bgLines, index, tHex[self.bgColor]:rep(text:len()))
-                    table.insert(fgLines, tHex[self.fgColor]:rep(text:len()))
+                    table.insert(fgLines, index, tHex[self.fgColor]:rep(text:len()))
                 else
                     table.insert(lines, text)
                     table.insert(bgLines, tHex[self.bgColor]:rep(text:len()))
                     table.insert(fgLines, tHex[self.fgColor]:rep(text:len()))
                 end
             end
+            updateColors(self, index or #lines)
             self:updateDraw()
             return self
         end;
@@ -605,14 +608,16 @@ return function(name)
         end,
 
         init = function(self)
-            self.bgColor = self.parent:getTheme("TextfieldBG")
-            self.fgColor = self.parent:getTheme("TextfieldText")
             self.parent:addEvent("mouse_click", self)
             self.parent:addEvent("mouse_scroll", self)
             self.parent:addEvent("mouse_drag", self)
             self.parent:addEvent("key", self)
             self.parent:addEvent("char", self)
             self.parent:addEvent("other_event", self)
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("TextfieldBG")
+                self.fgColor = self.parent:getTheme("TextfieldText")
+            end
         end,
     }
 

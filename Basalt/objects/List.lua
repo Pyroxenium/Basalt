@@ -199,13 +199,15 @@ return function(name)
         end,
 
         init = function(self)
-            self.bgColor = self.parent:getTheme("ListBG")
-            self.fgColor = self.parent:getTheme("ListText")
-            itemSelectedBG = self.parent:getTheme("SelectionBG")
-            itemSelectedFG = self.parent:getTheme("SelectionText")
             self.parent:addEvent("mouse_click", self)
             self.parent:addEvent("mouse_drag", self)
             self.parent:addEvent("mouse_scroll", self)
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("ListBG")
+                self.fgColor = self.parent:getTheme("ListText")
+                itemSelectedBG = self.parent:getTheme("SelectionBG")
+                itemSelectedFG = self.parent:getTheme("SelectionText")
+            end
         end,
     }
 

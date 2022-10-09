@@ -21,9 +21,11 @@ return function(name)
 
     local object = {
         init = function(self)
-            self.bgColor = self.parent:getTheme("ProgressbarBG")
-            self.fgColor = self.parent:getTheme("ProgressbarText")
-            activeBarColor = self.parent:getTheme("ProgressbarActiveBG")
+            if(base.init(self))then
+                self.bgColor = self.parent:getTheme("ProgressbarBG")
+                self.fgColor = self.parent:getTheme("ProgressbarText")
+                activeBarColor = self.parent:getTheme("ProgressbarActiveBG")
+            end
         end,
         getType = function(self)
             return objectType
