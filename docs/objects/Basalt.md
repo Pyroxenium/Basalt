@@ -27,6 +27,8 @@ You are now able to access the following list of methods:
 |[schedule](objects/Basalt/schedule.md)|Schedules a new task
 |[setActiveFrame](objects/Basalt/setActiveFrame.md)|Sets the active frame
 |[setTheme](objects/Basalt/setTheme.md)|Changes the base theme of basalt
+|[setMouseDragThrottle](objects/Basalt/setMouseDragThrottle.md)|Changes the mouse drag throttle amount
+|[setMouseMoveThrottle](objects/Basalt/setMouseMoveThrottle.md)|CraftOS-PC: Changes the mouse move throttle amount
 |[setVariable](objects/Basalt/setVariable.md)|Sets a variable which you can access via XML
 |[stopUpdate / stop](objects/Basalt/stopUpdate.md)|Stops the currently active event and draw listener
 |[update](objects/Basalt/update.md)|Starts the event and draw listener once

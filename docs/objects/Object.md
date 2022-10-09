@@ -40,6 +40,8 @@ This is a list of all available events for all objects:
 |[onRelease](objects/Object/onRelease.md)|Fires as soon as the mouse button gets released
 |[onScroll](objects/Object/onScroll.md)|Fires as soon as you scroll with the mousewheel
 |[onDrag](objects/Object/onDrag.md)|Fires as soon as the object is beeing dragged
+|[onHover](objects/Object/onHover.md)|CraftOS-PC - fires when the mouse hovers over a object
+|[onLeave](objects/Object/onLeave.md)|CraftOS-PC - fires when the mouse leaves a object
 |[onKey](objects/Object/onKey.md)|Fires when the object is focused and a keyboard key has been clicked
 |[onChar](objects/Object/onChar.md)|Fires when the object is focused and a character has been clicked
 |[onKeyUp](objects/Object/onKeyUp.md)|Fires when the object is focused and a keyboard key has been released
