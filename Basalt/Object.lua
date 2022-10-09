@@ -14,6 +14,8 @@ return function(name)
     local ignOffset = false
     local isVisible = true
     local initialized = false
+    local isHovered = false
+    local isClicked = false
 
     local shadow = false
     local borderColors = {
@@ -118,6 +120,8 @@ return function(name)
             if(xmlValue("onClickUp", data)~=nil)then self:generateXMLEventFunction(self.onClickUp, xmlValue("onClickUp", data)) end
             if(xmlValue("onScroll", data)~=nil)then self:generateXMLEventFunction(self.onScroll, xmlValue("onScroll", data)) end
             if(xmlValue("onDrag", data)~=nil)then self:generateXMLEventFunction(self.onDrag, xmlValue("onDrag", data)) end
+            if(xmlValue("onHover", data)~=nil)then self:generateXMLEventFunction(self.onHover, xmlValue("onHover", data)) end
+            if(xmlValue("onLeave", data)~=nil)then self:generateXMLEventFunction(self.onLeave, xmlValue("onLeave", data)) end
             if(xmlValue("onKey", data)~=nil)then self:generateXMLEventFunction(self.onKey, xmlValue("onKey", data)) end
             if(xmlValue("onKeyUp", data)~=nil)then self:generateXMLEventFunction(self.onKeyUp, xmlValue("onKeyUp", data)) end
             if(xmlValue("onChange", data)~=nil)then self:generateXMLEventFunction(self.onChange, xmlValue("onChange", data)) end
@@ -270,10 +274,10 @@ return function(name)
 
         setSize = function(self, width, height, rel)
             if(type(width)=="number")then
-                self.width = rel and self.width+width or width
+                self.width = rel and self:getWidth()+width or width
             end
             if(type(height)=="number")then
-                self.height = rel and self.height+height or height
+                self.height = rel and self:getHeight()+height or height
             end
             if(self.parent~=nil)then
                 if(type(width)=="string")then
@@ -417,46 +421,48 @@ return function(name)
                         self.parent:drawForegroundBox(x+1, y+h, w, 1, shadowColor)
                         self.parent:drawForegroundBox(x+w, y+1, 1, h, shadowColor)
                     end
+
+                    local bgCol = self.bgColor
                     if(borderColors["left"]~=false)then
-                        self.parent:drawTextBox(x-1, y, 1, h, "\149")
-                        self.parent:drawBackgroundBox(x-1, y, 1, h, self.bgColor)
-                        self.parent:drawForegroundBox(x-1, y, 1, h, borderColors["left"])
-                    end
-                    if(borderColors["left"]~=false)and(borderColors["top"]~=false)then
-                        self.parent:drawTextBox(x-1, y-1, 1, 1, "\151")
-                        self.parent:drawBackgroundBox(x-1, y-1, 1, 1, self.bgColor)
-                        self.parent:drawForegroundBox(x-1, y-1, 1, 1, borderColors["left"])
+                        self.parent:drawTextBox(x, y, 1, h, "\149")
+                        if(bgCol~=false)then self.parent:drawBackgroundBox(x, y, 1, h, self.bgColor) end
+                        self.parent:drawForegroundBox(x, y, 1, h, borderColors["left"])
                     end
                     if(borderColors["top"]~=false)then
 
-                        self.parent:drawTextBox(x, y-1, w, 1, "\131")
-                        self.parent:drawBackgroundBox(x, y-1, w, 1, self.bgColor)
-                        self.parent:drawForegroundBox(x, y-1, w, 1, borderColors["top"])
+                        self.parent:drawTextBox(x, y, w, 1, "\131")
+                        if(bgCol~=false)then self.parent:drawBackgroundBox(x, y, w, 1, self.bgColor) end
+                        self.parent:drawForegroundBox(x, y, w, 1, borderColors["top"])
                     end
-                    if(borderColors["top"]~=false)and(borderColors["right"]~=false)then
-                        self.parent:drawTextBox(x+w, y-1, 1, 1, "\148")
-                        self.parent:drawForegroundBox(x+w, y-1, 1, 1, self.bgColor)
-                        self.parent:drawBackgroundBox(x+w, y-1, 1, 1, borderColors["right"])
+                    if(borderColors["left"]~=false)and(borderColors["top"]~=false)then
+                        self.parent:drawTextBox(x, y, 1, 1, "\151")
+                        if(bgCol~=false)then self.parent:drawBackgroundBox(x, y, 1, 1, self.bgColor) end
+                        self.parent:drawForegroundBox(x, y, 1, 1, borderColors["left"])
                     end
                     if(borderColors["right"]~=false)then
-                        self.parent:drawTextBox(x+w, y, 1, h, "\149")
-                        self.parent:drawForegroundBox(x+w, y, 1, h, self.bgColor)
-                        self.parent:drawBackgroundBox(x+w, y, 1, h, borderColors["right"])
-                    end
-                    if(borderColors["right"]~=false)and(borderColors["bottom"]~=false)then
-                        self.parent:drawTextBox(x+w, y+h, 1, 1, "\133")
-                        self.parent:drawForegroundBox(x+w, y+h, 1, 1, self.bgColor)
-                        self.parent:drawBackgroundBox(x+w, y+h, 1, 1, borderColors["right"])
+                        self.parent:drawTextBox(x+w-1, y, 1, h, "\149")
+                        if(bgCol~=false)then self.parent:drawForegroundBox(x+w-1, y, 1, h, self.bgColor) end
+                        self.parent:drawBackgroundBox(x+w-1, y, 1, h, borderColors["right"])
                     end
                     if(borderColors["bottom"]~=false)then
-                        self.parent:drawTextBox(x, y+h, w, 1, "\143")
-                        self.parent:drawForegroundBox(x, y+h, w, 1, self.bgColor)
-                        self.parent:drawBackgroundBox(x, y+h, w, 1, borderColors["bottom"])
+                        self.parent:drawTextBox(x, y+h-1, w, 1, "\143")
+                        if(bgCol~=false)then self.parent:drawForegroundBox(x, y+h-1, w, 1, self.bgColor) end
+                        self.parent:drawBackgroundBox(x, y+h-1, w, 1, borderColors["bottom"])
+                    end
+                    if(borderColors["top"]~=false)and(borderColors["right"]~=false)then
+                        self.parent:drawTextBox(x+w-1, y, 1, 1, "\148")
+                        if(bgCol~=false)then self.parent:drawForegroundBox(x+w-1, y, 1, 1, self.bgColor) end
+                        self.parent:drawBackgroundBox(x+w-1, y, 1, 1, borderColors["right"])
+                    end
+                    if(borderColors["right"]~=false)and(borderColors["bottom"]~=false)then
+                        self.parent:drawTextBox(x+w-1, y+h-1, 1, 1, "\133")
+                        if(bgCol~=false)then self.parent:drawForegroundBox(x+w-1, y+h-1, 1, 1, self.bgColor) end
+                        self.parent:drawBackgroundBox(x+w-1, y+h-1, 1, 1, borderColors["right"])
                     end
                     if(borderColors["bottom"]~=false)and(borderColors["left"]~=false)then
-                        self.parent:drawTextBox(x-1, y+h, 1, 1, "\138")
-                        self.parent:drawForegroundBox(x-1, y+h, 1, 1, self.bgColor)
-                        self.parent:drawBackgroundBox(x-1, y+h, 1, 1, borderColors["left"])
+                        self.parent:drawTextBox(x, y+h-1, 1, 1, "\138")
+                        if(bgCol~=false)then self.parent:drawForegroundBox(x-1, y+h-1, 1, 1, self.bgColor) end
+                        self.parent:drawBackgroundBox(x, y+h-1, 1, 1, borderColors["left"])
                     end
                 end
                 draw = false
@@ -560,6 +566,8 @@ return function(name)
                 if(self.parent~=nil)then
                     self.parent:addEvent("mouse_click", self)
                     activeEvents["mouse_click"] = true
+                    self.parent:addEvent("mouse_up", self)
+                    activeEvents["mouse_up"] = true
                 end
             return self
         end;
@@ -571,23 +579,65 @@ return function(name)
                     end
                 end
                 if(self.parent~=nil)then
+                    self.parent:addEvent("mouse_click", self)
+                    activeEvents["mouse_click"] = true
                     self.parent:addEvent("mouse_up", self)
                     activeEvents["mouse_up"] = true
                 end
             return self
         end;
 
-
-        onScroll = function(self, ...)
+        onRelease = function(self, ...)
                 for _,v in pairs(table.pack(...))do
                     if(type(v)=="function")then
-                        self:registerEvent("mouse_scroll", v)
+                        self:registerEvent("mouse_release", v)
                     end
                 end
                 if(self.parent~=nil)then
-                    self.parent:addEvent("mouse_scroll", self)
-                    activeEvents["mouse_scroll"] = true
+                    self.parent:addEvent("mouse_click", self)
+                    activeEvents["mouse_click"] = true
+                    self.parent:addEvent("mouse_up", self)
+                    activeEvents["mouse_up"] = true
                 end
+            return self
+        end;
+
+        onScroll = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("mouse_scroll", v)
+                end
+            end
+            if(self.parent~=nil)then
+                self.parent:addEvent("mouse_scroll", self)
+                activeEvents["mouse_scroll"] = true
+            end
+            return self
+        end;
+
+        onHover = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("mouse_hover", v)
+                end
+            end
+            if(self.parent~=nil)then
+                self.parent:addEvent("mouse_move", self)
+                activeEvents["mouse_move"] = true
+            end
+            return self
+        end;
+
+        onLeave = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("mouse_leave", v)
+                end
+            end
+            if(self.parent~=nil)then
+                self.parent:addEvent("mouse_move", self)
+                activeEvents["mouse_move"] = true
+            end
             return self
         end;
 
@@ -626,13 +676,25 @@ return function(name)
                 for _,v in pairs(table.pack(...))do
                     if(type(v)=="function")then
                         self:registerEvent("key", v)
-                        self:registerEvent("char", v)
                     end
                 end
                 if(self.parent~=nil)then
                     self.parent:addEvent("key", self)
-                    self.parent:addEvent("char", self)
                     activeEvents["key"] = true
+                end
+            end
+            return self
+        end;
+
+        onChar = function(self, ...)
+            if(isEnabled)then
+                for _,v in pairs(table.pack(...))do
+                    if(type(v)=="function")then
+                        self:registerEvent("char", v)
+                    end
+                end
+                if(self.parent~=nil)then
+                    self.parent:addEvent("char", self)
                     activeEvents["char"] = true
                 end
             end
@@ -717,7 +779,8 @@ return function(name)
 
         isCoordsInObject = function(self, x, y)
             if(isVisible)and(isEnabled)then
-                local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+                if(x==nil)or(y==nil)then return false end
+                local objX, objY = self:getAbsolutePosition()
                 local w, h = self:getSize()            
                 if (objX <= x) and (objX + w > x) and (objY <= y) and (objY + h > y) then
                     return true
@@ -728,11 +791,13 @@ return function(name)
 
         mouseHandler = function(self, button, x, y, isMon)
             if(self:isCoordsInObject(x, y))then
-                local val = eventSystem:sendEvent("mouse_click", self, "mouse_click", button, x, y, isMon)
+                local objX, objY = self:getAbsolutePosition()
+                local val = eventSystem:sendEvent("mouse_click", self, "mouse_click", button, x - (objX-1), y - (objY-1), isMon)
                 if(val==false)then return false end
                 if(self.parent~=nil)then
                     self.parent:setFocusedObject(self)
                 end
+                isClicked = true
                 isDragging = true
                 dragStartX, dragStartY = x, y 
                 return true
@@ -742,8 +807,14 @@ return function(name)
 
         mouseUpHandler = function(self, button, x, y)
             isDragging = false
+            if(isClicked)then
+                local objX, objY = self:getAbsolutePosition()
+                local val = eventSystem:sendEvent("mouse_release", self, "mouse_release", button, x - (objX-1), y - (objY-1))
+                isClicked = false
+            end
             if(self:isCoordsInObject(x, y))then
-                local val = eventSystem:sendEvent("mouse_up", self, "mouse_up", button, x, y)
+                local objX, objY = self:getAbsolutePosition()
+                local val = eventSystem:sendEvent("mouse_up", self, "mouse_up", button, x - (objX-1), y - (objY-1))
                 if(val==false)then return false end
                 return true
             end
@@ -752,16 +823,8 @@ return function(name)
 
         dragHandler = function(self, button, x, y)
             if(isDragging)then 
-                local xO, yO, parentX, parentY = 0, 0, 1, 1
-                if (self.parent ~= nil) then
-                    xO, yO = self.parent:getOffsetInternal()
-                    xO = xO < 0 and math.abs(xO) or -xO
-                    yO = yO < 0 and math.abs(yO) or -yO
-                    parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
-                end
-                local dX, dY = x + dragXOffset - (parentX - 1) + xO, y + dragYOffset - (parentY - 1) + yO
-                local val = eventSystem:sendEvent("mouse_drag", self, button, dX, dY, dragStartX-x, dragStartY-y, x, y)
-                local objX, objY = self:getAbsolutePosition(self:getAnchorPosition())
+                local objX, objY = self:getAbsolutePosition()
+                local val = eventSystem:sendEvent("mouse_drag", self, "mouse_drag", button, x - (objX-1), y - (objY-1), dragStartX-x, dragStartY-y, x, y)
                 dragStartX, dragStartY = x, y 
                 if(val~=nil)then return val end
                 if(self.parent~=nil)then
@@ -780,12 +843,28 @@ return function(name)
 
         scrollHandler = function(self, dir, x, y)
             if(self:isCoordsInObject(x, y))then
-                local val = eventSystem:sendEvent("mouse_scroll", self, "mouse_scroll", dir, x, y)
+                local objX, objY = self:getAbsolutePosition()
+                local val = eventSystem:sendEvent("mouse_scroll", self, "mouse_scroll", dir, x - (objX-1), y - (objY-1))
                 if(val==false)then return false end
                 if(self.parent~=nil)then
                     self.parent:setFocusedObject(self)
                 end
                 return true
+            end
+            return false
+        end,
+
+        hoverHandler = function(self, x, y, stopped)
+            if(self:isCoordsInObject(x, y))then
+                local val = eventSystem:sendEvent("mouse_hover", self, "mouse_hover", x, y, stopped)
+                if(val==false)then return false end
+                isHovered = true
+                return true
+            end
+            if(isHovered)then
+                local val = eventSystem:sendEvent("mouse_leave", self, "mouse_leave", x, y, stopped)
+                if(val==false)then return false end
+                isHovered = false
             end
             return false
         end,
@@ -815,7 +894,7 @@ return function(name)
         charHandler = function(self, char)
             if(isEnabled)and(isVisible)then
                 if (self:isFocused()) then
-                    local val = eventSystem:sendEvent("char", self, "char", char)
+                local val = eventSystem:sendEvent("char", self, "char", char)
                 if(val==false)then return false end
                 return true
                 end
@@ -858,6 +937,7 @@ return function(name)
                 initialized = true
                 return true
             end
+            return false
         end
 
     }

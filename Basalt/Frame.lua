@@ -1,9 +1,10 @@
+local module = require("module")
 local Object = require("Object")
 local _OBJECTS = require("loadObjects")
 local BasaltDraw = require("basaltDraw")
 local utils = require("utils")
-local layout = require("layout")
-local basaltMon = require("basaltMon")
+local layout = module("layout")
+local basaltMon = module("basaltMon")
 local uuid = utils.uuid
 local rpairs = utils.rpairs
 local xmlValue = utils.getValueFromXML
@@ -352,19 +353,6 @@ return function(name, parent, pTerm, basalt)
         end
     end
 
-
-    local function focusSystem(self)
-        if(focusedObject~=focusedObjectCache)then
-            if(focusedObject~=nil)then
-                focusedObject:loseFocusHandler()
-            end
-            if(focusedObjectCache~=nil)then
-                focusedObjectCache:getFocusHandler()
-            end
-            focusedObject = focusedObjectCache
-        end
-    end
-
     object = {
         barActive = false,
         barBackground = colors.gray,
@@ -386,8 +374,15 @@ return function(name, parent, pTerm, basalt)
         end;
 
         setFocusedObject = function(self, obj)
-            focusedObjectCache = obj
-            focusSystem(self)
+            if(focusedObject~=obj)then
+                if(focusedObject~=nil)then
+                    focusedObject:loseFocusHandler()
+                end
+                if(obj~=nil)then
+                    obj:getFocusHandler()
+                end
+                focusedObject = obj
+            end
             return self
         end;
 
@@ -463,8 +458,10 @@ return function(name, parent, pTerm, basalt)
         end;
 
         removeFocusedObject = function(self)
-                focusedObjectCache = nil
-                focusSystem(self)
+            if(focusedObject~=nil)then
+                focusedObject:loseFocusHandler()
+            end
+            focusedObject = nil
             return self
         end;
 
@@ -527,7 +524,7 @@ return function(name, parent, pTerm, basalt)
 
 
         getScrollAmount = function(self)
-            return autoScroll and scrollAmount or calculateMaxScroll(self)
+            return autoScroll and calculateMaxScroll(self) or scrollAmount
         end,
 
         show = function(self)
@@ -732,14 +729,14 @@ return function(name, parent, pTerm, basalt)
             if(focusedObject~=nil)then focusedObject:getFocusHandler() end
         end;
 
-        eventHandler = function(self, event, p1, p2, p3, p4)
-            base.eventHandler(self, event, p1, p2, p3, p4)
+        eventHandler = function(self, event, ...)
+            base.eventHandler(self, event, ...)
             if(events["other_event"]~=nil)then
                 for _, index in ipairs(eventZIndex["other_event"]) do
                     if (events["other_event"][index] ~= nil) then
                         for _, value in rpairs(events["other_event"][index]) do
                             if (value.eventHandler ~= nil) then
-                                if (value:eventHandler(event, p1, p2, p3, p4)) then
+                                if (value:eventHandler(event, ...)) then
                                     return true
                                 end
                             end
@@ -816,7 +813,7 @@ return function(name, parent, pTerm, basalt)
                             for _, value in rpairs(events["mouse_click"][index]) do
                                 if (value.mouseHandler ~= nil) then
                                     if (value:mouseHandler(button, x, y)) then
-                                        focusSystem(self)
+                                        
                                         return true
                                     end
                                 end
@@ -849,7 +846,6 @@ return function(name, parent, pTerm, basalt)
                             for _, value in rpairs(events["mouse_up"][index]) do
                                 if (value.mouseUpHandler ~= nil) then
                                     if (value:mouseUpHandler(button, x, y)) then
-                                        focusSystem(self)
                                         return true
                                     end
                                 end
@@ -857,7 +853,6 @@ return function(name, parent, pTerm, basalt)
                         end
                     end
                 end
-                focusSystem(self)
                 return true
             end
             return false
@@ -871,7 +866,6 @@ return function(name, parent, pTerm, basalt)
                             for _, value in rpairs(events["mouse_scroll"][index]) do
                                 if (value.scrollHandler ~= nil) then
                                     if (value:scrollHandler(dir, x, y)) then
-                                        focusSystem(self)
                                         return true
                                     end
                                 end
@@ -890,6 +884,25 @@ return function(name, parent, pTerm, basalt)
                 self:removeFocusedObject()
                 if(yOffset==cache)then return false end
                 return true
+            end
+            return false
+        end,
+
+        hoverHandler = function(self, x, y, stopped)
+            if(base.hoverHandler(self, x, y, stopped))then
+                if(events["mouse_move"]~=nil)then
+                    for _, index in pairs(eventZIndex["mouse_move"]) do
+                        if (events["mouse_move"][index] ~= nil) then
+                            for _, value in rpairs(events["mouse_move"][index]) do
+                                if (value.hoverHandler ~= nil) then
+                                    if (value:hoverHandler(x, y, stopped)) then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
             end
             return false
         end,
@@ -915,7 +928,6 @@ return function(name, parent, pTerm, basalt)
                             for _, value in rpairs(events["mouse_drag"][index]) do
                                 if (value.dragHandler ~= nil) then
                                     if (value:dragHandler(button, x, y)) then
-                                        focusSystem(self)
                                         return true
                                     end
                                 end
@@ -924,7 +936,7 @@ return function(name, parent, pTerm, basalt)
                     end
                 end
             end
-            focusSystem(self)
+            
             base.dragHandler(self, button, x, y)
             return false
         end,
@@ -1035,6 +1047,24 @@ return function(name, parent, pTerm, basalt)
                 end
             end
         end;
+
+        blit = function (self, x, y, t, f, b)
+            local obx, oby = self:getAnchorPosition()
+            if (y >= 1) and (y <= self:getHeight()) then
+                local w = self:getWidth()
+                if (self.parent ~= nil) then
+                    t = sub(t, max(1 - x + 1, 1), w - x + 1)
+                    f = sub(f, max(1 - x + 1, 1), w - x + 1)
+                    b = sub(b, max(1 - x + 1, 1), w - x + 1)
+                    self.parent:blit(max(x + (obx - 1), obx), oby + y - 1, t, f, b)
+                else
+                    t = sub(t, max(1 - x + 1, 1), max(w - x + 1,1))
+                    f = sub(f, max(1 - x + 1, 1), max(w - x + 1,1))
+                    b = sub(b, max(1 - x + 1, 1), max(w - x + 1,1))
+                    basaltDraw.blit(max(x + (obx - 1), obx), oby + y - 1, t, f, b)
+                end
+            end
+        end,
 
         drawBackgroundBox = function(self, x, y, width, height, bgCol)
             local obx, oby = self:getAnchorPosition()
