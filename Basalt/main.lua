@@ -10,7 +10,7 @@ local moveThrottle = 300
 local dragThrottle = 50
 
 local baseTerm = term.current()
-local version = "1.6.2"
+local version = "1.6.3"
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
 
