@@ -1,14 +1,21 @@
+# Object
+
 ## setAnchor
+
 Sets the anchor of the object
 
-#### Parameters: 
+### Parameters
+
 1. `string` Anchor sides `("topLeft" "top", "topRight", "right", "bottomRight", "bottom", "bottomLeft", "left", "center")`
 
-#### Returns:
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
+### Usage
+
 * Sets the button to have an anchor of `bottomRight`
+
 ```lua
 local mainFrame = basalt.createFrame():show()
 local aButton = mainFrame:addButton()
@@ -16,6 +23,7 @@ local aButton = mainFrame:addButton()
         :setSize(8,1)
         :setPosition(-8,1)
 ```
+
 ```xml
 <button anchor="bottomRight" />
 ```

@@ -1,10 +1,17 @@
+# Object
+
 ## isVisible
+
 Returns if the object is currently visible
-#### Returns: 
+
+### Returns
+
 1. `boolean`
 
-#### Usage:
+#### Usage
+
 * Prints boolean visibility of object to debug console
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aButton = mainFrame:addButton():setSize(5,8)

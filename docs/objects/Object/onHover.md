@@ -1,6 +1,9 @@
-# onHover
+# Object - Event
 
-`onHover(self, event, button, x, y)`<br>
+## onHover
+
+`onHover(self, event, button, x, y)`
+
 The computercraft event which triggers this method is `mouse_move` - only available in [CraftOS-PC](https://www.craftos-pc.cc).
 
 Here is a example on how to add a onHover event to your button:

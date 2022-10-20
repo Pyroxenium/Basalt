@@ -1,6 +1,9 @@
-# onChar
+# Object - Event
 
-`onChar(self, event, char)`<br>
+## onChar
+
+`onChar(self, event, char)`
+
 The computercraft event which triggers this method is `char`.
 
 The char event always happens after the key event (just like in cc:tweaked)

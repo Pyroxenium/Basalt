@@ -1,5 +1,9 @@
+# Object
+
 ## getBackground
+
 Returns the current background color
 
-#### Returns: 
+### Returns
+
 1. `number` color

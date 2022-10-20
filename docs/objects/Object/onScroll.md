@@ -1,5 +1,9 @@
-# onScroll
-`onScroll(self, event, direction, x, y)`<br>
+# Object - Event
+
+## onScroll
+
+`onScroll(self, event, direction, x, y)`
+
 The computercraft event which triggers this method is `mouse_scroll`.
 
 Here is a example on how to add a onScroll event to your button:

@@ -1,11 +1,17 @@
+# Object
+
 ## getName
+
 Returns the given name of the object
 
-#### Returns: 
+### Returns
+
 1. `string` name
 
-#### Usage:
+#### Usage
+
 * Prints name of object to debug window
+
 ```lua
 local main = basalt.createFrame()
 basalt.debug(main:getName()) -- returns the uuid

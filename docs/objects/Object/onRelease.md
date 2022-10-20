@@ -1,5 +1,9 @@
-# onRelease
-`onRelease(self, event, button, x, y)`<br>
+# Object - Event
+
+## onRelease
+
+`onRelease(self, event, button, x, y)`
+
 The computercraft event which triggers this method is `mouse_up`.
 
 The difference between onRelease and :onClickUp is that :onRelease is called even when the mouse is no longer over the object, while :onClickUp is only called when the mouse is over the object.

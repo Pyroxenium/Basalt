@@ -1,5 +1,9 @@
-# onKey
-`onKey(self, event, key)`<br>
+# Object - Event
+
+## onKey
+
+`onKey(self, event, key)`
+
 The computercraft event which triggers this method is `key` and `char`.
 
 Here is a example on how to add a onKey event to your frame:

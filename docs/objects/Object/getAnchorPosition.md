@@ -1,16 +1,23 @@
+# Object
+
 ## getAnchorPosition
+
 Converts the x and y coordinates into the anchor coordinates of the object
 
-#### Parameters: 
+### Parameters
+
 1. `number|nil` x
 2. `number|nil` y, if nothing it uses the object's x, y
 
-#### Returns: 
+#### Returns
+
 1. `number` x
 2. `number` y
 
-#### Usage:
+#### Usage
+
 * Prints the anchor position to the debug console
+
 ```lua
 local mainFrame = basalt.createFrame():setSize(15,15)
 local aButton = mainFrame:addButton()

@@ -1,5 +1,9 @@
-# onClickUp
-`onClickUp(self, event, button, x, y)`<br>
+# Object - Event
+
+## onClickUp
+
+`onClickUp(self, event, button, x, y)`
+
 The computercraft event which triggers this method is `mouse_up`.
 
 Here is a example on how to add a onClickUp event to your button:

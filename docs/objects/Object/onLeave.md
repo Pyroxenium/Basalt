@@ -1,6 +1,9 @@
-# onLeave
+# Object - Event
 
-`onLeave(self, event, button, x, y)`<br>
+## onLeave
+
+`onLeave(self, event, button, x, y)`
+
 The computercraft event which triggers this method is `mouse_move` - only available in [CraftOS-PC](https://www.craftos-pc.cc).
 
 Here is a example on how to add a onLeave event to your button:

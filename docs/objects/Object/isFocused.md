@@ -1,11 +1,17 @@
+# Object
+
 ## isFocused
+
 Returns if the object is currently the focused object of the parent frame
 
-#### Returns: 
+### Returns
+
 1. `boolean` Whether the object is focused
 
-#### Usage:
+#### Usage
+
 * Prints whether the button is focused to the debug console
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aButton = mainFrame:addButton()

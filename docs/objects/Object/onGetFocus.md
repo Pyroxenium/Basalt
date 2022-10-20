@@ -1,5 +1,9 @@
-# onGetFocus
-`onGetFocus(self)`<br>
+# Object - Event
+
+## onGetFocus
+
+`onGetFocus(self)`
+
 This event gets triggered as soon as the object is the currently focused object.
 
 ```lua

@@ -1,5 +1,9 @@
-# onKeyUp
-`onKeyUp(self, event, key)`<br>
+# Object - Event
+
+## onKeyUp
+
+`onKeyUp(self, event, key)`
+
 The computercraft event which triggers this method is `key_up`.
 
 Here is a example on how to add a onKeyUp event to your frame:

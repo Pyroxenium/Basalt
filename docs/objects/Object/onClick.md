@@ -1,5 +1,7 @@
 # onClick
-`onClick(self, event, button, x, y)`<br>
+
+`onClick(self, event, button, x, y)`
+
 The computercraft event which triggers this method is `mouse_click` and `monitor_touch`.
 
 Here is a example on how to add a onClick event to your button:
@@ -20,6 +22,7 @@ button:onClick(buttonOnClick)
 ```
 
 Here is also a example on how you could create double clicks:
+
 ```lua
 local basalt = require("basalt")
 local doubleClickMaxTime = 0.25 -- in seconds

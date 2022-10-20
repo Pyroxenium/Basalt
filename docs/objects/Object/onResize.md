@@ -1,6 +1,9 @@
-# onResize
+# Object - Event
 
-`onResize(self)`<br>
+## onResize
+
+`onResize(self)`
+
 This is a custom event which gets triggered as soon as the parent frame gets resized.
 
 Here is a example on how to add a onResize event to your button:

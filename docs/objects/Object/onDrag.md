@@ -1,8 +1,13 @@
-# onDrag
-`onDrag(self, event, button, x, y, xOffset, yOffset)`<br>
+# Object - Event
+
+## onDrag
+
+`onDrag(self, event, button, x, y, xOffset, yOffset)`
+
 The computercraft event which triggers this method is `mouse_drag`.
 
 This is a example on how you would create a movable button:
+
 ```lua
 local basalt = require("basalt")
 
@@ -21,6 +26,7 @@ basalt.autoUpdate()
 ```
 
 Another example on how you could change the frame's offset by dragging around.
+
 ```lua
 local basalt = require("basalt")
 
@@ -43,6 +49,7 @@ basalt.autoUpdate()
 ```
 
 Also very interesting is a button where you are able to resize the frame just by dragging the button.
+
 ```lua
 local basalt = require("basalt")
 
@@ -57,7 +64,7 @@ local dragButton = sub:addButton()
   :setSize(1,1)
   :setText("/")
   :onDrag(function(self, button, x, y, xOffset, yOffset)
-	  sub:setSize(-xOffset, -yOffset, true)
+    sub:setSize(-xOffset, -yOffset, true)
   end)
 
 basalt.autoUpdate()

@@ -1,5 +1,9 @@
-# onLoseFocus
-`onLoseFocus(self)`<br>
+# Object - Event
+
+## onLoseFocus
+
+`onLoseFocus(self)`
+
 This event gets triggered as soon as the object loses its focus.
 
 ```lua

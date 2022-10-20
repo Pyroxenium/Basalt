@@ -1,4 +1,6 @@
-# onEvent
+# Object - Event
+
+## onEvent
 
 `onEvent(self, event, ...)`
 

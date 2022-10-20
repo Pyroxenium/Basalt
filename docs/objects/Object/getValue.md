@@ -1,10 +1,17 @@
+# Object
+
 ## getValue
+
 Returns the currently saved value
-#### Returns: 
+
+### Returns
+
 1. `any` Object's value
 
-#### Usage:
+### Usage
+
 * Prints the value of the checkbox to the debug console
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aCheckbox = mainFrame:addCheckbox():setValue(true)
