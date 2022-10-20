@@ -10,6 +10,7 @@ Its default position is always 1, 1 (based on it's parent frame). The default an
 |[isVisible](objects/Object/isVisible.md)|Returns if the object is currently visible
 |[enable](objects/Object/enable.md)|Listens to incoming events
 |[disable](objects/Object/disable.md)|Ignores all incoming events
+|[remove](objects/Object/remove.md)|Removes the children object from it's parent object
 |[setPosition](objects/Object/setPosition.md)|Changes the position (x,y)
 |[getPosition](objects/Object/getPosition.md)|Returns the current position
 |[setBackground](objects/Object/setBackground.md)|Changes the object's background
