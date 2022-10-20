@@ -541,7 +541,7 @@ return function(name, parent)
             pWindow.setTextColor(self.fgColor)
             pWindow.basalt_setVisible(true)
 
-            resumeProcess(self)
+            --resumeProcess(self)
             paused = false
             if(self.parent~=nil)then
                 self.parent:addEvent("mouse_click", self)
@@ -793,7 +793,7 @@ return function(name, parent)
 
         init = function(self)
             if(base.init(self))then
-                elf.bgColor = self.parent:getTheme("ProgramBG")
+                self.bgColor = self.parent:getTheme("ProgramBG")
             end
         end,
 
