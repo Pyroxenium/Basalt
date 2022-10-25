@@ -12,7 +12,7 @@ Program objects are here for opening other executable programs in your main prog
 |[injectEvent](objects/Program/injectEvent.md)|Injects a event into the program
 |[injectEvents](objects/Program/injectEvents.md)|Injects a table of events
 |[getQueuedEvents](objects/Program/getQueuedEvents.md)|Returns currently queued events
-|[setEnviroment](objects/Program/setEnviroment.md)|CHanges the default enviroment to a custom one
+|[setEnviroment](objects/Program/setEnviroment.md)|Changes the default enviroment to a custom one
 
 # Events
 
