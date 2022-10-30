@@ -4,10 +4,48 @@ local args = table.pack(...)
 local installer = {printStatus=true}
 installer.githubPath = "https://raw.githubusercontent.com/Pyroxenium/Basalt/"
 
+local function printStatus(...)
+    if(installer.printStatus)then
+        print(...)
+    elseif(type(installer.printStatus)=="function")then
+        installer.printStatus(...)
+    end
+end
+
+function installer.get(url)
+    local httpReq = http.get(url, _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})
+    printStatus("Downloading "..url)
+    if(httpReq~=nil)then
+        local content = httpReq.readAll()
+        if not content then
+            error("Could not connect to website")
+        end
+        return content
+    end
+end
+
+local basaltDataCache
+function installer.getBasaltData()
+    if(basaltDataCache~=nil)then return basaltDataCache end
+    local content
+    printStatus("Downloading basalt data...")
+    if(fs.exists("basaltdata.json"))then
+        content = fs.open("basaltdata.json", "r")
+    else
+        content = installer.get("https://basalt.madefor.cc/basaltdata.json")
+    end
+    if(content~=nil)then
+        content = content.readAll()
+        basaltDataCache = textutils.unserializeJSON(content)
+        printStatus("Successfully downloaded basalt data!")
+        return basaltDataCache
+    end
+end
+
 -- Creates a filetree based on my github project, ofc you can use this in your projects if you'd like to
-function installer.createTableTree(page, branch, dirName)
+function installer.createTree(page, branch, dirName)
     dirName = dirName or ""
-    if(installer.printStatus)then print("Receiving file tree for "..dirName) end
+    printStatus("Receiving file tree for "..dirName~="" and dirName or "Basalt")
     local tree = {}
     local request = http.get(page, _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})
     if not(page)then return end
@@ -22,10 +60,10 @@ function installer.createTableTree(page, branch, dirName)
     return tree
 end
 
-
-function installer.createTree(page, branch, dirName)
+-- Creates a filetree based on my github project, ofc you can use this in your projects if you'd like to
+function installer.createTableTree(page, branch, dirName)
     dirName = dirName or ""
-    if(installer.printStatus)then print("Receiving file tree for "..dirName) end
+    printStatus("Receiving file tree for "..dirName~="" and dirName or "Basalt")
     local tree = {}
     local request = http.get(page, _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})
     if not(page)then return end
@@ -34,12 +72,29 @@ function installer.createTree(page, branch, dirName)
         if(v.type=="blob")then
             table.insert(tree, {name = v.path, path=fs.combine(dirName, v.path), url=installer.githubPath..branch.."/Basalt/"..fs.combine(dirName, v.path), size=v.size})
         elseif(v.type=="tree")then
-            for k,v in pairs(installer.createTree(v.url, branch, fs.combine(dirName, v.path)))do
-                table.insert(tree, v)
-            end
+            tree[v.path] = installer.createTableTree(v.url, branch, fs.combine(dirName, v.path))
         end
     end
     return tree
+end
+
+function installer.createTreeByBasaltData(page, branch, dirName)
+    dirName = dirName or ""
+    printStatus("Receiving file tree for "..dirName~="" and dirName or "Basalt")
+    local bData = installer.getBasaltData()
+    if(bData~=nil)then
+        local tree = {}
+        for k,v in pairs(bData.structure)do
+            if(k=="base")then
+                for a,b in pairs(v)do
+                    table.insert(tree, b)
+                end
+            else
+                tree[k] = v
+            end
+        end
+        return tree
+    end
 end
 
 local function splitString(str, sep)
@@ -51,18 +106,6 @@ local function splitString(str, sep)
         table.insert(t, v)
     end
     return t
-end
-
-function installer.get(url)
-    local httpReq = http.get(url, _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})
-    if(installer.printStatus)then print("Downloading "..url) end
-    if(httpReq~=nil)then
-        local content = httpReq.readAll()
-        if not content then
-            error("Could not connect to website")
-        end
-        return content
-    end
 end
 
 function installer.createIgnoreList(str)
@@ -88,8 +131,29 @@ function installer.download(url, file)
     end
 end
 
+function installer.getRelease(version)
+    local v = installer.getBasaltData().versions[version]
+    if(v~=nil)then
+        printStatus("Downloading basalt "..version)
+        local content = http.get("https://basalt.madefor.cc/versions/"..v, {Authorization =  _G._GIT_API_KEY and  "token ".._G._GIT_API_KEY})
+        if(content~=nil)then
+            return content.readAll()
+        end
+    end
+end
+
+function installer.downloadRelease(version, file)
+    local content = installer.getRelease(version)
+    if(content~=nil)then
+        local f = fs.open(file or "basalt.lua", "w")
+        f.write(content)
+        f.close()
+        return true
+    end
+    return false
+end
+
 function installer.getPackedProject(branch, ignoreList)
-    installer.printStatus = false
     if (ignoreList==nil)then 
         ignoreList = {"init.lua"} 
     else
@@ -188,6 +252,29 @@ end
     projectContent = projectContent..'\n return project["main"]()'
     
     return projectContent
+end
+
+function installer.generateWebVersion(file, version)
+    version = version or "latest.lua"
+    local request = http.get("https://basalt.madefor.cc/versions/"..version, _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})
+    if(request~=nil)then
+        if(fs.exists(file))then
+            fs.delete(file)
+            local f = fs.open(file, "w")
+            local link = "https://basalt.madefor.cc/versions/"..version
+            local content = 'local request = http.get("'..link..'", _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})\n'
+            content = content..[[
+if(request~=nil)then
+    return load(request.readAll())()
+else
+    error("Unable to connect to ]]..link..[[)
+end
+            ]]
+            f:write(content)
+        end
+    else
+        error("Version doesn't exist!")
+    end
 end
 
 function installer.getProjectFiles(branch, ignoreList)
@@ -289,6 +376,8 @@ if(#args>0)then
         installer.downloadPacked(args[2] or "basalt.lua", args[3] or "master", args[4]~=nil and installer.createIgnoreList(args[4]) or nil, args[5] == "false" and false or true)
     elseif(string.lower(args[1])=="source")then
         installer.downloadProject(args[2] or "basalt", args[3] or "master", args[4]~=nil and installer.createIgnoreList(args[4]) or nil)
+    elseif(string.lower(args[1])=="web")then
+        installer.generateWebVersion(args[3] or "basaltWeb.lua", args[2] or "latest.lua")
     end
 end
 
