@@ -263,14 +263,16 @@ function installer.generateWebVersion(file, version)
             local f = fs.open(file, "w")
             local link = "https://basalt.madefor.cc/versions/"..version
             local content = 'local request = http.get("'..link..'", _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})\n'
-            content = content..[[
+            content = content..
+[[
 if(request~=nil)then
     return load(request.readAll())()
 else
-    error("Unable to connect to ]]..link..[[)
+    error("Unable to connect to ]]..link..[[")
 end
-            ]]
-            f:write(content)
+]]
+            f.write(content)
+            f.close()
         end
     else
         error("Version doesn't exist!")
@@ -378,6 +380,8 @@ if(#args>0)then
         installer.downloadProject(args[2] or "basalt", args[3] or "master", args[4]~=nil and installer.createIgnoreList(args[4]) or nil)
     elseif(string.lower(args[1])=="web")then
         installer.generateWebVersion(args[3] or "basaltWeb.lua", args[2] or "latest.lua")
+    elseif(string.lower(args[1])=="file")then
+        installer.download("https://basalt.madefor.cc/versions/"..args[2] or "latest.lua", args[3] or "basalt.lua")
     end
 end
 
