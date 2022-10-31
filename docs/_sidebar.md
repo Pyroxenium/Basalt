@@ -1,7 +1,7 @@
 - About
-  - [Home](Home.md)
-    - [Quick Start](home/Quick-Start.md)
-    - [Installer](home/installer)
+  - [Home](home)
+  - [How To](home/How-To)
+  - [Download](home/download)
 - Objects
   - [Basalt](objects/Basalt.md)
   - [Object](objects/Object.md)

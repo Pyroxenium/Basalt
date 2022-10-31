@@ -45,11 +45,11 @@ end
 -- Creates a filetree based on my github project, ofc you can use this in your projects if you'd like to
 function installer.createTree(page, branch, dirName)
     dirName = dirName or ""
-    printStatus("Receiving file tree for "..dirName~="" and dirName or "Basalt")
+    printStatus("Receiving file tree for "..(dirName~="" and "Basalt/"..dirName or "Basalt"))
     local tree = {}
     local request = http.get(page, _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})
     if not(page)then return end
-    if(request==nil)then error("API rate limit exceeded. It will be available again in a couple of hours.") end
+    if(request==nil)then error("API rate limit exceeded. It will be available again in one hour.") end
     for _,v in pairs(textutils.unserialiseJSON(request.readAll()).tree)do
         if(v.type=="blob")then
             table.insert(tree, {name = v.path, path=fs.combine(dirName, v.path), url=installer.githubPath..branch.."/Basalt/"..fs.combine(dirName, v.path), size=v.size})
@@ -60,27 +60,9 @@ function installer.createTree(page, branch, dirName)
     return tree
 end
 
--- Creates a filetree based on my github project, ofc you can use this in your projects if you'd like to
-function installer.createTableTree(page, branch, dirName)
-    dirName = dirName or ""
-    printStatus("Receiving file tree for "..dirName~="" and dirName or "Basalt")
-    local tree = {}
-    local request = http.get(page, _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})
-    if not(page)then return end
-    if(request==nil)then error("API rate limit exceeded. It will be available again in a couple of hours.") end
-    for _,v in pairs(textutils.unserialiseJSON(request.readAll()).tree)do
-        if(v.type=="blob")then
-            table.insert(tree, {name = v.path, path=fs.combine(dirName, v.path), url=installer.githubPath..branch.."/Basalt/"..fs.combine(dirName, v.path), size=v.size})
-        elseif(v.type=="tree")then
-            tree[v.path] = installer.createTableTree(v.url, branch, fs.combine(dirName, v.path))
-        end
-    end
-    return tree
-end
-
 function installer.createTreeByBasaltData(page, branch, dirName)
     dirName = dirName or ""
-    printStatus("Receiving file tree for "..dirName~="" and dirName or "Basalt")
+    printStatus("Receiving file tree for "..(dirName~="" and "Basalt/"..dirName or "Basalt"))
     local bData = installer.getBasaltData()
     if(bData~=nil)then
         local tree = {}
@@ -159,7 +141,7 @@ function installer.getPackedProject(branch, ignoreList)
     else
         table.insert(ignoreList, "init.lua")
     end
-    local projTree = installer.createTableTree("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/"..branch..":Basalt", branch, "")
+    local projTree = installer.createTree("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/"..branch..":Basalt", branch, "")
     local filteredList = {}
     local project = {}
 
@@ -255,6 +237,7 @@ end
 end
 
 function installer.generateWebVersion(file, version)
+    if(fs.exists(file))then error("A file called "..file.." already exists!") end
     version = version or "latest.lua"
     local request = http.get("https://basalt.madefor.cc/versions/"..version, _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})
     if(request~=nil)then
@@ -273,6 +256,7 @@ end
 ]]
             f.write(content)
             f.close()
+            printStatus("Web version successfully downloaded!")
         end
     else
         error("Version doesn't exist!")
@@ -296,8 +280,18 @@ function installer.getProjectFiles(branch, ignoreList)
     end
 
     for k,v in pairs(projTree)do
-        if not(isInIgnoreList(v))then
-            table.insert(filteredList, v)
+        if not(isInIgnoreList(v.name))then
+            if(type(k)=="string")then
+                local sub = {}
+                for a,b in pairs(v)do
+                    if not(isInIgnoreList(b.name))then
+                        table.insert(sub, b)
+                    end
+                end
+                filteredList[k] = sub
+            else
+                table.insert(filteredList, v)
+            end
         end
     end
 
@@ -308,7 +302,15 @@ function installer.getProjectFiles(branch, ignoreList)
     local fList = {}
     local delay = 0
     for k,v in pairs(filteredList)do
-        table.insert(fList, function() sleep(delay) downloadFile(v.url, v.path) delay = delay + 0.05 end)
+        if(type(k)=="string")then
+            for a,b in pairs(v)do
+                table.insert(fList, function() sleep(delay) downloadFile(b.url, b.path) end)
+                delay = delay + 0.05
+            end
+        else
+            table.insert(fList, function() sleep(delay) downloadFile(v.url, v.path) end)
+            delay = delay + 0.05
+        end
     end
     parallel.waitForAll(table.unpack(fList))
     
@@ -316,6 +318,7 @@ function installer.getProjectFiles(branch, ignoreList)
 end
 
 function installer.downloadPacked(filename, branch, ignoreList, minify)
+    if(fs.exists(filename))then error("A file called "..filename.." already exists!") end
     local projectContent = installer.getPackedProject(branch, ignoreList)
     if(minify)then
         local min
@@ -335,38 +338,22 @@ function installer.downloadPacked(filename, branch, ignoreList, minify)
     end
     local f = fs.open(filename, "w")
     f.write(projectContent)
-    f.close()    
+    f.close()
+    printStatus("Packed version successfully downloaded!")  
 end
 
 function installer.downloadProject(projectDir, branch, ignoreList)
-    local projectFiles = installer.getProjectFiles(branch, ignoreList)
+    if(fs.exists(projectDir))then error("A folder called "..projectDir.." already exists!") end
     projectDir = projectDir or "basalt"
     branch = branch or "master"
-
-    local function downloadFile(url, path)
-        print("Downloading "..path)
-        local files = splitString(path)
-        if(#files>1)then
-            local folderPath = ""
-            for a,b in pairs(files)do
-                if(a<#files)then
-                    folderPath = fs.combine(folderPath, b)
-                else
-                    if not (fs.exists(folderPath))then fs.makeDir(folderPath) end
-                    installer.download(url, fs.combine(projectDir, path))
-                end
-            end
-        else
-            installer.download(url, fs.combine(projectDir, path))
-        end
-    end
-
-    local fList = {}
-    local delay = 0
+    local projectFiles = installer.getProjectFiles(branch, ignoreList)
+    fs.makeDir(projectDir)
     for k,v in pairs(projectFiles)do
-        table.insert(fList, function() sleep(delay) downloadFile(v.url, v.path) delay = delay + 0.05 end)
+        local f = fs.open(fs.combine(projectDir, k), "w")
+        f.write(v)
+        f.close()
     end
-    parallel.waitForAll(table.unpack(fList))
+    printStatus("Source version successfully downloaded!")
 end
 
 if(#args>0)then

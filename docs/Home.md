@@ -1,4 +1,4 @@
-# Welcome to The Basalt Wiki!
+# Welcome to The Basalt Wiki
 
 *Note: The Basalt Wiki is a work in progress. Please treat wiki errors the same as bugs and report them accordingly.*
 
@@ -6,7 +6,7 @@ Here you can find information about how to use Basalt as well as examples of fun
 
 ## About Basalt
 
-Basalt is intended to be an easy-to-understand UI Framework designed for CC:Tweaked (Also know as "ComputerCraft: Tweaked") - a popular minecraft mod. For more information about CC:Tweaked, checkout the project's [wiki](https://tweaked.cc/) or [download](https://modrinth.com/mod/cc-tweaked).
+Basalt is intended to be an easy-to-understand UI Framework designed for CC:Tweaked (Also known as "ComputerCraft: Tweaked") - a popular minecraft mod. For more information about CC:Tweaked, checkout the project's [wiki](https://tweaked.cc/) or [download](https://modrinth.com/mod/cc-tweaked).
 
 ## Quick Demo
 

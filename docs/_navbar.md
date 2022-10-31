@@ -1,4 +1,4 @@
 - Getting Started
   - [Home](Home)
-  - [Quick Start](home/Quick-Start)
-  - [Installer](home/installer)
+  - [How To](home/How-To)
+  - [Download](home/download)
