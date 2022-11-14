@@ -909,7 +909,6 @@ return function(name)
         eventHandler = function(self, event, p1, p2, p3, p4)
             local val = eventSystem:sendEvent("other_event", self, event, p1, p2, p3, p4)
             if(val~=nil)then return val end
-            return true
         end;
 
         getFocusHandler = function(self)
