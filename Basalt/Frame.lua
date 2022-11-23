@@ -49,6 +49,8 @@ return function(name, parent, pTerm, basalt)
 
     local activeEvents = {}
 
+    local colorTheme = {}
+
     base:setZIndex(10)
 
     local basaltDraw = BasaltDraw(termObject)
@@ -81,6 +83,7 @@ return function(name, parent, pTerm, basalt)
     end
 
     local function getObject(name)
+        if(type(name)~="string")then name = name.name end
         for _, value in pairs(objects) do
             for _, b in pairs(value) do
                 if (b:getName() == name) then
@@ -240,11 +243,11 @@ return function(name, parent, pTerm, basalt)
         end
         return false
     end
-
+    local math = math
     local function stringToNumber(str)
-        local ok, err = pcall(load("return " .. str))
+        local ok, result = pcall(load("return " .. str, "", nil, {math=math}))
         if not(ok)then error(str.." is not a valid dynamic code") end
-        return load("return " .. str)()
+        return result
     end
 
     local function newDynamicValue(_, obj, str)
@@ -327,8 +330,13 @@ return function(name, parent, pTerm, basalt)
             for _, index in pairs(objZIndex) do
                 if (objects[index] ~= nil) then
                     for _, value in pairs(objects[index]) do
-                        if (value.eventHandler ~= nil) then
-                            value:eventHandler("dynamicValueEvent", self)
+                        if(basalt.getDynamicValueEventSetting())then
+                            if (value.eventHandler ~= nil) then
+                                value:eventHandler("basalt_dynamicvalue", self)
+                            end
+                        end
+                        if (value.customEventHandler ~= nil) then
+                            value:customEventHandler("basalt_resize", self)
                         end
                     end
                 end
@@ -340,16 +348,48 @@ return function(name, parent, pTerm, basalt)
         return dynamicValues[id][1]
     end
 
-    local function calculateMaxScroll(self)
+    local function getVerticalScrollAmount(self)
+        local amount = 0
         for _, value in pairs(objects) do
             for _, b in pairs(value) do
                 if(b.getHeight~=nil)and(b.getY~=nil)then
-                    local h, y = b:getHeight(), b:getY()
-                    if (h + y - self:getHeight() > scrollAmount) then
-                        scrollAmount = max(h + y - self:getHeight(), 0)
+                    if(b:getType()=="Dropdown")then
+                        local h, y = b:getHeight(), b:getY()
+                        local wD, hD = b:getDropdownSize()
+                        h = h + hD - 1
+                        if (h + y - self:getHeight() >= amount) then
+                            amount = max(h + y - self:getHeight(), 0)
+                        end
+                    else
+                        local h, y = b:getHeight(), b:getY()
+                        if (h + y - self:getHeight() >= amount) then
+                            amount = max(h + y - self:getHeight(), 0)
+                        end
                     end
                 end
             end
+        end
+        return amount
+    end
+
+    local function getHorizontalScrollAmount(self)
+        local amount = 0
+        for _, value in pairs(objects) do
+            for _, b in pairs(value) do
+                if(b.getWidth~=nil)and(b.getX~=nil)then
+                    local h, y = b:getWidth(), b:getX()
+                    if (h + y - self:getWidth() >= amount) then
+                        amount = max(h + y - self:getWidth(), 0)
+                    end
+                end
+            end
+        end
+        return amount
+    end
+
+    local function calculateMaxScroll(self)
+        if(autoScroll)then
+            scrollAmount = getVerticalScrollAmount(self)
         end
     end
 
@@ -371,8 +411,8 @@ return function(name, parent, pTerm, basalt)
 
         getType = function(self)
             return objectType
-        end,
-        
+        end;
+
         setZIndex = function(self, newIndex)
             base.setZIndex(self, newIndex)
             for k,v in pairs(activeEvents)do
@@ -386,10 +426,14 @@ return function(name, parent, pTerm, basalt)
         setFocusedObject = function(self, obj)
             if(focusedObject~=obj)then
                 if(focusedObject~=nil)then
-                    focusedObject:loseFocusHandler()
+                    if(getObject(focusedObject)~=nil)then
+                        focusedObject:loseFocusHandler()
+                    end
                 end
                 if(obj~=nil)then
-                    obj:getFocusHandler()
+                    if(getObject(obj)~=nil)then
+                        obj:getFocusHandler()
+                    end
                 end
                 focusedObject = obj
             end
@@ -408,8 +452,8 @@ return function(name, parent, pTerm, basalt)
             for _, index in pairs(objZIndex) do
                 if (objects[index] ~= nil) then
                     for _, value in pairs(objects[index]) do
-                        if (value.eventHandler ~= nil) then
-                            value:eventHandler("basalt_resize", value, self)
+                        if (value.customEventHandler ~= nil) then
+                            value:customEventHandler("basalt_resize", self)
                         end
                     end
                 end
@@ -433,17 +477,34 @@ return function(name, parent, pTerm, basalt)
             return theme[name] or (self.parent~=nil and self.parent:getTheme(name) or basalt.getTheme(name))
         end,
 
-        setPosition = function(self, x, y, rel)
-            base.setPosition(self, x, y, rel)
-            for _, index in pairs(objZIndex) do
-                if (objects[index] ~= nil) then
-                    for _, value in pairs(objects[index]) do
-                        if (value.eventHandler ~= nil) then
-                            value:eventHandler("basalt_reposition", value, self)
+        getThemeColor = function(self, col)
+            return col~=nil and colorTheme[col] or colorTheme
+        end,
+
+        setThemeColor = function(self, col, ...)
+            if(self.parent==nil)then
+                if(self==basalt.getActiveFrame())then
+                    if(type(col)=="string")then
+                        colorTheme[col] = ...
+                        termObject.setPaletteColor(type(col)=="number" and col or colors[col], ...)
+                    elseif(type(col)=="table")then
+                        for k,v in pairs(col)do
+                            colorTheme[k] = v
+                            if(type(v)=="number")then
+                                termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
+                            else
+                                local r,g,b = table.unpack(v)
+                                termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
+                            end
                         end
                     end
                 end
             end
+            return self
+        end,
+
+        setPosition = function(self, x, y, rel)
+            base.setPosition(self, x, y, rel)
             self:recalculateDynamicValues()
             return self
         end;
@@ -469,7 +530,9 @@ return function(name, parent, pTerm, basalt)
 
         removeFocusedObject = function(self)
             if(focusedObject~=nil)then
-                focusedObject:loseFocusHandler()
+                if(getObject(focusedObject)~=nil)then
+                    focusedObject:loseFocusHandler()
+                end
             end
             focusedObject = nil
             return self
@@ -537,10 +600,26 @@ return function(name, parent, pTerm, basalt)
             return autoScroll and calculateMaxScroll(self) or scrollAmount
         end,
 
+        getCalculatedVerticalScroll = getVerticalScrollAmount,
+        getCalculatedHorizontalScroll = getHorizontalScrollAmount,
+
         show = function(self)
             base.show(self)
             if(self.parent==nil)then
                 basalt.setActiveFrame(self)
+                for k,v in pairs(colors)do
+                    if(type(v)=="number")then
+                        termObject.setPaletteColor(v, colors.packRGB(term.nativePaletteColor((v))))
+                    end
+                end
+                for k,v in pairs(colorTheme)do
+                    if(type(v)=="number")then
+                        termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
+                    else
+                        local r,g,b = table.unpack(v)
+                        termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
+                    end
+                end
                 if(isMonitor)and not(isGroupedMonitor)then
                     basalt.setMonitorFrame(monSide, self)
                 elseif(isGroupedMonitor)then
@@ -555,7 +634,7 @@ return function(name, parent, pTerm, basalt)
         hide = function (self)
             base.hide(self)
             if(self.parent==nil)then
-                if(activeFrame == self)then activeFrame = nil end -- bug activeFrame always nil
+                if(activeFrame == self)then activeFrame = nil end
                 if(isMonitor)and not(isGroupedMonitor)then
                     if(basalt.getMonitorFrame(monSide) == self)then
                         basalt.setActiveFrame(nil)
@@ -804,9 +883,6 @@ return function(name, parent, pTerm, basalt)
                     self:mouseHandler(1, p2, p3, true)
                 end
             end
-            if (event == "terminate")and(self.parent==nil)then
-                basalt.stop()
-            end
         end,
 
         mouseHandler = function(self, button, x, y, _, side)
@@ -891,8 +967,8 @@ return function(name, parent, pTerm, basalt)
                         self:updateDraw()
                     end
                 end
-                self:removeFocusedObject()
                 if(yOffset==cache)then return false end
+                self:removeFocusedObject()
                 return true
             end
             return false

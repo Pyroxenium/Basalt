@@ -31,8 +31,9 @@ return function(name)
             text = tostring(text)
             base:setValue(text)
             if (autoSize) then
-                if(text:len()+self:getX()>self.parent:getWidth())then
-                    local newW = self.parent:getWidth() - self:getX()
+                local xOffset = self.parent:getOffset()
+                if(text:len()+self:getX()>self.parent:getWidth()+xOffset)then
+                    local newW = self.parent:getWidth()+xOffset - self:getX()
                     base.setSize(self, newW, #createText(text, newW))
                 else
                     base.setSize(self, text:len(), 1)

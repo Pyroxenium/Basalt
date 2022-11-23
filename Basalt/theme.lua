@@ -40,6 +40,8 @@ return { -- The default main theme for basalt!
     SwitchInactive = colors.red,
     SwitchActive = colors.green,
     LabelBG = false,
-    LabelText = colors.black
+    LabelText = colors.black,
+    GraphBG = colors.gray,
+    GraphText = colors.black
     
 }

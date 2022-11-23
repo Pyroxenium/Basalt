@@ -24,8 +24,8 @@ return function(name)
 
         addItem = function(self, text, bgCol, fgCol, ...)
             table.insert(list, { text = text, bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })
-            if (#list == 1) then
-                self:setValue(list[1])
+            if (#list <= 1) then
+                self:setValue(list[1], false)
             end
             self:updateDraw()
             return self
@@ -66,7 +66,7 @@ return function(name)
 
         clear = function(self)
             list = {}
-            self:setValue({})
+            self:setValue({}, false)
             self:updateDraw()
             return self
         end;
@@ -83,7 +83,7 @@ return function(name)
         end;
 
         selectItem = function(self, index)
-            self:setValue(list[index] or {})
+            self:setValue(list[index] or {}, false)
             self:updateDraw()
             return self
         end;

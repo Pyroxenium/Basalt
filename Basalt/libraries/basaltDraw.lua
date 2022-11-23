@@ -126,6 +126,52 @@ return function(drawTerm)
         end
     end
 
+    local function blit(x, y, t, fg, bg)
+        if(#t == #fg)or(#t == #bg)then
+            if (y >= 1) and (y <= height) then
+                if (x + t:len() > 0) and (x <= width) then
+                    local oldCacheT = cacheT[y]
+                    local oldCacheFG = cacheFG[y]
+                    local oldCacheBG = cacheBG[y]
+                    local newCacheT, newCacheFG, newCacheBG 
+                    local nEnd = x + #t - 1
+
+                    if (x < 1) then
+                        local startN = 1 - x + 1
+                        local endN = width - x + 1
+                        t = sub(t, startN, endN)
+                        fg = sub(fg, startN, endN)
+                        bg = sub(bg, startN, endN)
+                    elseif (nEnd > width) then
+                        local endN = width - x + 1
+                        t = sub(t, 1, endN)
+                        fg = sub(fg, 1, endN)
+                        bg = sub(bg, 1, endN)
+                    end
+
+                    if (x > 1) then
+                        local endN = x - 1
+                        newCacheT = sub(oldCacheT, 1, endN) .. t
+                        newCacheFG = sub(oldCacheFG, 1, endN) .. fg
+                        newCacheBG = sub(oldCacheBG, 1, endN) .. bg
+                    else
+                        newCacheT = t
+                        newCacheFG = fg
+                        newCacheBG = bg
+                    end
+                    if nEnd < width then
+                        newCacheT = newCacheT .. sub(oldCacheT, nEnd + 1, width)
+                        newCacheFG = newCacheFG .. sub(oldCacheFG, nEnd + 1, width)
+                        newCacheBG = newCacheBG .. sub(oldCacheBG, nEnd + 1, width)
+                    end
+                    cacheT[y] = newCacheT
+                    cacheFG[y] = newCacheFG
+                    cacheBG[y] = newCacheBG
+                end
+            end
+        end
+    end
+
     local drawHelper = {
         setSize = function(w, h)
             width, height = w, h
@@ -146,6 +192,10 @@ return function(drawTerm)
         setFG = function(x, y, colorStr)
             setFG(x, y, colorStr)
         end;
+
+        blit = function(x, y, t, fg, bg)
+            blit(x, y, t, fg, bg)
+        end,
 
         drawBackgroundBox = function(x, y, width, height, bgCol)
             for n = 1, height do

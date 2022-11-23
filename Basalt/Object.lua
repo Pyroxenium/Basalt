@@ -1,8 +1,12 @@
 local basaltEvent = require("basaltEvent")
 local utils = require("utils")
+local module = require("module")
+local images = module("images")
 local split = utils.splitString
 local numberFromString = utils.numberFromString
 local xmlValue = utils.getValueFromXML
+
+local unpack,sub = table.unpack,string.sub
 
 return function(name)
     -- Base object
@@ -29,6 +33,13 @@ return function(name)
     local isEnabled = true
     local isDragging = false
     local dragStartX, dragStartY, dragXOffset, dragYOffset = 0, 0, 0, 0
+
+    local bimg
+    local texture
+    local textureId = 1
+    local textureTimerId
+    local textureMode
+    local infinitePlay = true
 
     local draw = true
     local activeEvents = {}
@@ -97,8 +108,8 @@ return function(name)
 
         setValuesByXMLData = function(self, data)
             local baseFrame = self:getBaseFrame()
-            if(xmlValue("x", data)~=nil)then self:setPosition(xmlValue("x", data), self.y) end
-            if(xmlValue("y", data)~=nil)then self:setPosition(self.x, xmlValue("y", data)) end
+            if(xmlValue("x", data)~=nil)then self:setPosition(xmlValue("x", data), self:getY()) end
+            if(xmlValue("y", data)~=nil)then self:setPosition(self:getX(), xmlValue("y", data)) end
             if(xmlValue("width", data)~=nil)then self:setSize(xmlValue("width", data), self.height) end
             if(xmlValue("height", data)~=nil)then self:setSize(self.width, xmlValue("height", data)) end
             if(xmlValue("bg", data)~=nil)then self:setBackground(colors[xmlValue("bg", data)]) end
@@ -195,11 +206,13 @@ return function(name)
             return self
         end;
 
-        setValue = function(self, _value)
+        setValue = function(self, _value, valueChangedHandler)
             if (value ~= _value) then
                 value = _value
                 self:updateDraw()
-                self:valueChangedHandler()
+                if(valueChangedHandler~=false)then
+                    self:valueChangedHandler()
+                end
             end
             return self
         end;
@@ -245,7 +258,7 @@ return function(name)
                 end
                 self.parent:recalculateDynamicValues()
             end
-            eventSystem:sendEvent("basalt_reposition", self)
+            self:customEventHandler("basalt_reposition")
             self:updateDraw()
             return self
         end;
@@ -288,24 +301,27 @@ return function(name)
                 end
                 self.parent:recalculateDynamicValues()
             end
-            eventSystem:sendEvent("basalt_resize", self)
+            if(bimg~=nil)and(textureMode=="stretch")then
+                texture = images.resizeBIMG(bimg, self:getSize())[textureId]
+            end
+            self:customEventHandler("basalt_resize")
             self:updateDraw()
             return self
-        end;
+        end,
 
         getHeight = function(self)
             return type(self.height) == "number" and self.height or math.floor(self.height[1]+0.5)
-        end;
+        end,
 
         getWidth = function(self)
             return type(self.width) == "number" and self.width or math.floor(self.width[1]+0.5)
-        end;
+        end,
 
         getSize = function(self)
             return self:getWidth(), self:getHeight()
-        end;
+        end,
 
-        calculateDynamicValues = function(self)
+        calculateDynamicValues = function(self) 
             if(type(self.width)=="table")then self.width:calculate() end
             if(type(self.height)=="table")then self.height:calculate() end
             if(type(self.x)=="table")then self.x:calculate() end
@@ -320,12 +336,38 @@ return function(name)
             self.bgSymbolColor = symbolCol or self.bgSymbolColor
             self:updateDraw()
             return self
-        end;
+        end,
+
+        setTexture = function(self, tex, mode, infPlay)
+            if(type(tex)=="string")then
+                bimg = images.loadImageAsBimg(tex)
+            elseif(type(tex)=="table")then
+                bimg = tex
+            end
+            if(bimg.animated)then
+                local t = bimg[textureId].duration or bimg.secondsPerFrame or 0.2
+                textureTimerId = os.startTimer(t)
+                self.parent:addEvent("other_event", self)
+                activeEvents["other_event"] = true
+            end
+            infinitePlay = infPlay==false and false or true
+            textureId = 1
+            textureMode = mode or "normal"
+            if(textureMode=="stretch")then
+                texture = images.resizeBIMG(bimg, self:getSize())[1]
+            else
+                texture = bimg[1]
+            end
+            self:updateDraw()
+            return self
+        end,
 
         setTransparent = function(self, color)
             self.transparentColor = color or false
-            self.bgSymbol = false
-            self.bgSymbolColor = false
+            if(color~=false)then
+                self.bgSymbol = false
+                self.bgSymbolColor = false
+            end
             self:updateDraw()
             return self
         end;
@@ -403,18 +445,50 @@ return function(name)
                     local w,h = self:getSize()
                     local wP,hP = self.parent:getSize()
                     if(x+w<1)or(x>wP)or(y+h<1)or(y>hP)then return false end
-                    if(self.transparentColor~=false)then
-                        self.parent:drawForegroundBox(x, y, w, h, self.transparentColor)
-                    end
-                    if(self.bgColor~=false)then
-                        self.parent:drawBackgroundBox(x, y, w, h, self.bgColor)
-                    end
-                    if(self.bgSymbol~=false)then
-                        self.parent:drawTextBox(x, y, w, h, self.bgSymbol)
-                        if(self.bgSymbol~=" ")then
-                            self.parent:drawForegroundBox(x, y, w, h, self.bgSymbolColor)
+                        if(self.transparentColor~=false)then
+                            self.parent:drawForegroundBox(x, y, w, h, self.transparentColor)
                         end
-                    end
+                        if(self.bgColor~=false)then
+                            self.parent:drawBackgroundBox(x, y, w, h, self.bgColor)
+                        end
+                        if(self.bgSymbol~=false)then
+                            self.parent:drawTextBox(x, y, w, h, self.bgSymbol)
+                            if(self.bgSymbol~=" ")then
+                                self.parent:drawForegroundBox(x, y, w, h, self.bgSymbolColor)
+                            end
+                        end
+                        if(texture~=nil)then
+                            if(textureMode=="center")then
+                                local tW,tH = #texture[1][1],#texture
+                                local xO = tW < w and math.floor((w-tW)/2) or 0
+                                local yO = tH < h and math.floor((h-tH)/2) or 0
+                                local sL = tW<w and 1 or math.floor((tW-w)/2)
+                                local eL = tW<w and w or w - math.floor((w-tW)/2+0.5)-1
+                                local sH = tH<h and 1 or math.floor((tH-h)/2)
+                                local eH = tH<h and h or h - math.floor((h-tH)/2+0.5)-1
+                                local yTex = 1
+                                for k=sH,#texture do
+                                    if(texture[k]~=nil)then
+                                        local t, f, b  = unpack(texture[k])
+                                        t = sub(t, sL,eL)
+                                        f = sub(f, sL,eL)
+                                        b = sub(b, sL,eL)
+                                        self.parent:blit(x+xO, y+yTex-1+yO, t, f, b)
+                                    end
+                                    yTex = yTex + 1
+                                    if(k==eH)then break end
+                                end
+                            else
+                                for k,v in pairs(texture)do
+                                    local t, f, b  = unpack(v)
+                                    t = sub(t, 1,w)
+                                    f = sub(f, 1,w)
+                                    b = sub(b, 1,w)
+                                    self.parent:blit(x, y+k-1, t, f, b)
+                                    if(k==h)then break end
+                                end
+                            end
+                        end
                     if(shadow)then                        
                         self.parent:drawBackgroundBox(x+1, y+h, w, 1, shadowColor)
                         self.parent:drawBackgroundBox(x+w, y+1, 1, h, shadowColor)
@@ -425,11 +499,10 @@ return function(name)
                     local bgCol = self.bgColor
                     if(borderColors["left"]~=false)then
                         self.parent:drawTextBox(x, y, 1, h, "\149")
-                        if(bgCol~=false)then self.parent:drawBackgroundBox(x, y, 1, h, self.bgColor) end
+                        if(bgCol~=false)then self.parent:drawBackgroundBox(x, y, 1, h, bgCol) end
                         self.parent:drawForegroundBox(x, y, 1, h, borderColors["left"])
                     end
                     if(borderColors["top"]~=false)then
-
                         self.parent:drawTextBox(x, y, w, 1, "\131")
                         if(bgCol~=false)then self.parent:drawBackgroundBox(x, y, w, 1, self.bgColor) end
                         self.parent:drawForegroundBox(x, y, w, 1, borderColors["top"])
@@ -792,7 +865,7 @@ return function(name)
         mouseHandler = function(self, button, x, y, isMon)
             if(self:isCoordsInObject(x, y))then
                 local objX, objY = self:getAbsolutePosition()
-                local val = eventSystem:sendEvent("mouse_click", self, "mouse_click", button, x - (objX-1), y - (objY-1), isMon)
+                local val = eventSystem:sendEvent("mouse_click", self, "mouse_click", button, x - (objX-1), y - (objY-1), x, y, isMon)
                 if(val==false)then return false end
                 if(self.parent~=nil)then
                     self.parent:setFocusedObject(self)
@@ -809,12 +882,12 @@ return function(name)
             isDragging = false
             if(isClicked)then
                 local objX, objY = self:getAbsolutePosition()
-                local val = eventSystem:sendEvent("mouse_release", self, "mouse_release", button, x - (objX-1), y - (objY-1))
+                local val = eventSystem:sendEvent("mouse_release", self, "mouse_release", button, x - (objX-1), y - (objY-1), x, y)
                 isClicked = false
             end
             if(self:isCoordsInObject(x, y))then
                 local objX, objY = self:getAbsolutePosition()
-                local val = eventSystem:sendEvent("mouse_up", self, "mouse_up", button, x - (objX-1), y - (objY-1))
+                local val = eventSystem:sendEvent("mouse_up", self, "mouse_up", button, x - (objX-1), y - (objY-1), x, y)
                 if(val==false)then return false end
                 return true
             end
@@ -906,9 +979,44 @@ return function(name)
             eventSystem:sendEvent("value_changed", self, value)
         end;
 
-        eventHandler = function(self, event, p1, p2, p3, p4)
-            local val = eventSystem:sendEvent("other_event", self, event, p1, p2, p3, p4)
+        eventHandler = function(self, event, ...)
+            local args = {...}
+            if(event=="timer")and(args[1]==textureTimerId)then
+                if(bimg[textureId+1]~=nil)then
+                    textureId = textureId + 1
+                    if(textureMode=="stretch")then
+                        texture = images.resizeBIMG(bimg, self:getSize())[textureId]
+                    else
+                        texture = bimg[textureId]
+                    end 
+                    local t = bimg[textureId].duration or bimg.secondsPerFrame or 0.2
+                    textureTimerId = os.startTimer(t)
+                else
+                    if(infinitePlay)then
+                        textureId = 1
+                        if(textureMode=="stretch")then
+                            texture = images.resizeBIMG(bimg, self:getSize())[1]
+                        else
+                            texture = bimg[1]
+                        end 
+                        local t = bimg[1].duration or bimg.secondsPerFrame or 0.2
+                        textureTimerId = os.startTimer(t)
+                    end
+                end
+                self:updateDraw()
+            end
+            local val = eventSystem:sendEvent("other_event", self, event, ...)
             if(val~=nil)then return val end
+        end;
+
+        customEventHandler = function(self, event, ...)
+            if(bimg~=nil)and(textureMode=="stretch")and(event=="basalt_resize")then
+                texture = images.resizeBIMG(bimg, self:getSize())[textureId]
+                self:updateDraw()
+            end
+            local val = eventSystem:sendEvent("custom_event", self, event, ...)
+            if(val~=nil)then return val end
+            return true
         end;
 
         getFocusHandler = function(self)

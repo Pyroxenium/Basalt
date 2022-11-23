@@ -84,7 +84,7 @@ return function(name)
 
         clear = function(self)
             list = {}
-            self:setValue({})
+            self:setValue({}, false)
             self:updateDraw()
             return self
         end;
@@ -101,7 +101,7 @@ return function(name)
         end;
 
         selectItem = function(self, index)
-            self:setValue(list[index] or {})
+            self:setValue(list[index] or {}, false)
             self:updateDraw()
             return self
         end;
@@ -109,7 +109,7 @@ return function(name)
         setSelectedItem = function(self, bgCol, fgCol, active)
             itemSelectedBG = bgCol or self.bgColor
             itemSelectedFG = fgCol or self.fgColor
-            selectionColorActive = active
+            selectionColorActive = active~=nil and active
             self:updateDraw()
             return self
         end;
@@ -118,6 +118,10 @@ return function(name)
             dropdownW, dropdownH = width, height
             self:updateDraw()
             return self
+        end,
+
+        getDropdownSize = function(self)
+            return dropdownW, dropdownH
         end,
 
         mouseHandler = function(self, button, x, y)

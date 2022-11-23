@@ -1,35 +1,101 @@
 local Object = require("Object")
 local tHex = require("tHex")
-local log = require("basaltLogs")
 local xmlValue = require("utils").getValueFromXML
+local log = require("basaltLogs")
 
-local rep = string.rep
+local rep,find,gmatch,sub,len = string.rep,string.find,string.gmatch,string.sub,string.len
 
 return function(name)
     local base = Object(name)
     local objectType = "Textfield"
     local hIndex, wIndex, textX, textY = 1, 1, 1, 1
 
-    local lines = { "" }
+    local lines = { " " }
     local bgLines = { "" }
     local fgLines = { "" }
     local keyWords = { }
     local rules = { }
 
+    local startSelX,endSelX,startSelY,endSelY
+
+    local selectionBG,selectionFG = colors.lightBlue,colors.black
+
     base.width = 30
     base.height = 12
     base:setZIndex(5)
 
+    local function isSelected()
+        if(startSelX~=nil)and(endSelX~=nil)and(startSelY~=nil)and(endSelY~=nil)then
+            return true
+        end
+        return false
+    end
+
+    local function getSelectionCoordinates()
+        local sx,ex,sy,ey
+        if(isSelected())then
+            if(startSelX>endSelX)then
+                sx,ex = endSelX,startSelX
+            else
+                sx,ex = startSelX,endSelX
+            end
+            if(startSelY>endSelY)then
+                sy,ey = endSelY,startSelY
+            else
+                sy,ey = startSelY,endSelY
+            end
+        end
+        return sx,ex,sy,ey
+    end
+
+    local function getSelection()
+
+    end
+
+    local function removeSelection(self)
+        local sx,ex,sy,ey = getSelectionCoordinates(self)
+        for n=ey,sy,-1 do
+            if(n==sy)or(n==ey)then
+                local l = lines[n]
+                local b = bgLines[n]
+                local f = fgLines[n]
+                if(n==sy)and(n==ey)then
+                    l = l:sub(1,sx-1)..l:sub(ex+1,l:len())
+                    b = b:sub(1,sx-1)..b:sub(ex+1,b:len())
+                    f = f:sub(1,sx-1)..f:sub(ex+1,f:len())
+                elseif(n==sx)then
+                    l = l:sub(1, sx)
+                    b = b:sub(1, sx)
+                    f = f:sub(1, sx)
+                elseif(n==sy)then
+                    l = l:sub(ex, l:len())
+                    b = b:sub(ex, b:len())
+                    f = f:sub(ex, f:len())
+                end
+                lines[n] = l
+                bgLines[n] = b
+                fgLines[n] = f
+            else
+                table.remove(lines, n)
+                table.remove(bgLines, n)
+                table.remove(fgLines, n)
+            end
+        end
+        textX,textY = startSelX,startSelY
+        startSelX,endSelX,startSelY,endSelY = nil,nil,nil,nil
+        return self
+    end
+
     local function stringGetPositions(str, word)
         local pos = {}
         if(str:len()>0)then
-            for w in string.gmatch(str, word)do
-                local s, e = string.find(str, w)
+            for w in gmatch(str, word)do
+                local s, e = find(str, w)
                 if(s~=nil)and(e~=nil)then
                     table.insert(pos,s)
                     table.insert(pos,e)
-                    local startL = string.sub(str, 1, (s-1))
-                    local endL = string.sub(str, e+1, str:len())
+                    local startL = sub(str, 1, (s-1))
+                    local endL = sub(str, e+1, str:len())
                     str = startL..(":"):rep(w:len())..endL
                 end
             end
@@ -150,9 +216,10 @@ return function(name)
         end;
 
         clear = function(self)
-            lines = {""}
+            lines = {" "}
             bgLines = {""}
             fgLines = {""}
+            startSelX,endSelX,startSelY,endSelY = nil,nil,nil,nil
             hIndex, wIndex, textX, textY = 1, 1, 1, 1
             self:updateDraw()
             return self
@@ -227,9 +294,14 @@ return function(name)
         end;
 
         removeLine = function(self, index)
-            table.remove(lines, index or #lines)
-            if (#lines <= 0) then
-                table.insert(lines, "")
+            if(#lines>1)then
+                table.remove(lines, index or #lines)
+                table.remove(bgLines, index or #bgLines)
+                table.remove(fgLines, index or #fgLines)
+            else
+                lines = {" "}
+                bgLines = {""}
+                fgLines = {""}
             end
             self:updateDraw()
             return self
@@ -311,17 +383,21 @@ return function(name)
 
                     if (key == keys.delete) then
                         -- on delete
-                        if (textX > lines[textY]:len()) then
-                            if (lines[textY + 1] ~= nil) then
-                                lines[textY] = lines[textY] .. lines[textY + 1]
-                                table.remove(lines, textY + 1)
-                                table.remove(bgLines, textY + 1)
-                                table.remove(fgLines, textY + 1)
-                            end
+                        if(isSelected())then
+                            removeSelection(self)
                         else
-                            lines[textY] = lines[textY]:sub(1, textX - 1) .. lines[textY]:sub(textX + 1, lines[textY]:len())
-                            fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. fgLines[textY]:sub(textX + 1, fgLines[textY]:len())
-                            bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. bgLines[textY]:sub(textX + 1, bgLines[textY]:len())
+                            if (textX > lines[textY]:len()) then
+                                if (lines[textY + 1] ~= nil) then
+                                    lines[textY] = lines[textY] .. lines[textY + 1]
+                                    table.remove(lines, textY + 1)
+                                    table.remove(bgLines, textY + 1)
+                                    table.remove(fgLines, textY + 1)
+                                end
+                            else
+                                lines[textY] = lines[textY]:sub(1, textX - 1) .. lines[textY]:sub(textX + 1, lines[textY]:len())
+                                fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. fgLines[textY]:sub(textX + 1, fgLines[textY]:len())
+                                bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. bgLines[textY]:sub(textX + 1, bgLines[textY]:len())
+                            end
                         end
                         updateColors(self)
                     end
@@ -430,9 +506,14 @@ return function(name)
                         end
                     end
 
+                if not((obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (oby + textY - hIndex >= oby and oby + textY - hIndex < oby + h)) then
+                    wIndex = math.max(1, lines[textY]:len()-w+1)
+                    hIndex = math.max(1, textY - h + 1)
+                end
+
                 local cursorX = (textX <= lines[textY]:len() and textX - 1 or lines[textY]:len()) - (wIndex - 1)
-                if (cursorX > self.x + w - 1) then
-                    cursorX = self.x + w - 1
+                if (cursorX > self:getX() + w - 1) then
+                    cursorX = self:getX() + w - 1
                 end
                 local cursorY = (textY - hIndex < h and textY - hIndex or textY - hIndex - 1)
                 if (cursorX < 1) then
@@ -458,13 +539,21 @@ return function(name)
                 updateColors(self)
                 self:setValue("")
 
+                if not((obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (oby + textY - hIndex >= oby and oby + textY - hIndex < oby + h)) then
+                    wIndex = math.max(1, lines[textY]:len()-w+1)
+                    hIndex = math.max(1, textY - h + 1)
+                end
+
                 local cursorX = (textX <= lines[textY]:len() and textX - 1 or lines[textY]:len()) - (wIndex - 1)
-                if (cursorX > self.x + w - 1) then
-                    cursorX = self.x + w - 1
+                if (cursorX > self:getX() + w - 1) then
+                    cursorX = self:getX() + w - 1
                 end
                 local cursorY = (textY - hIndex < h and textY - hIndex or textY - hIndex - 1)
                 if (cursorX < 1) then
                     cursorX = 0
+                end
+                if(isSelected())then
+                    removeSelection(self)
                 end
                 self.parent:setCursor(true, obx + cursorX, oby + cursorY, self.fgColor)
                 self:updateDraw()
@@ -481,18 +570,21 @@ return function(name)
                     if(anchx+w > anchx + x - (obx+1)+ wIndex)and(anchx < anchx + x - obx+ wIndex)then
                         textX = x - obx + wIndex
                         textY = y - oby + hIndex
+                        endSelX = textX
+                        endSelY = textY
                         if (textX > lines[textY]:len()) then
                             textX = lines[textY]:len() + 1
+                            endSelX = textX
                         end
+
                         if (textX < wIndex) then
                             wIndex = textX - 1
                             if (wIndex < 1) then
                                 wIndex = 1
                             end
                         end
-                        if (self.parent ~= nil) then
-                            self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
-                        end
+                        self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+
                         self:updateDraw()
                     end
                 end
@@ -514,12 +606,10 @@ return function(name)
                     hIndex = 1
                 end
 
-                if (self.parent ~= nil) then
-                    if (obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (oby + textY - hIndex >= oby and oby + textY - hIndex < oby + h) then
-                        self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
-                    else
-                        self.parent:setCursor(false)
-                    end
+                if (obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (anchy + textY - hIndex >= anchy and anchy + textY - hIndex < anchy + h) then
+                    self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+                else
+                    self.parent:setCursor(false)
                 end
                 self:updateDraw()
                 return true
@@ -533,8 +623,13 @@ return function(name)
                     if (lines[y - oby + hIndex] ~= nil) then
                         textX = x - obx + wIndex
                         textY = y - oby + hIndex
+                        endSelX = nil
+                        endSelY = nil
+                        startSelX = textX
+                        startSelY = textY
                         if (textX > lines[textY]:len()) then
                             textX = lines[textY]:len() + 1
+                            startSelX = textX
                         end
                         if (textX < wIndex) then
                             wIndex = textX - 1
@@ -542,9 +637,29 @@ return function(name)
                                 wIndex = 1
                             end
                         end
+                        self:updateDraw()
                     end
                     if (self.parent ~= nil) then
                         self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+                    end
+                return true
+            end
+        end,
+
+        mouseUpHandler = function(self, button, x, y)
+            if (base.mouseUpHandler(self, button, x, y)) then
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                local anchx, anchy = self:getAnchorPosition()
+                    if (lines[y - oby + hIndex] ~= nil) then
+                        endSelX = x - obx + wIndex
+                        endSelY = y - oby + hIndex
+                        if (endSelX > lines[endSelY]:len()) then
+                            endSelX = lines[endSelY]:len() + 1
+                        end
+                        if(startSelX==endSelX)and(startSelY==endSelY)then
+                            startSelX, endSelX, startSelY, endSelY = nil, nil, nil, nil
+                        end                            
+                        self:updateDraw()
                     end
                 return true
             end
@@ -599,9 +714,27 @@ return function(name)
                         self.parent:setBG(obx, oby + n - 1, bg)
                         self.parent:setFG(obx, oby + n - 1, fg)
                     end
+                    if(startSelX~=nil)and(endSelX~=nil)and(startSelY~=nil)and(endSelY~=nil)then
+                        local sx,ex,sy,ey = getSelectionCoordinates(self)
+                        for n=sy,ey do
+                            local line = lines[n]:len()
+                            local xOffset = 0
+                            if(n==sy)and(n==ey)then
+                                xOffset = sx-1
+                                line = line - (sx-1) - (line - ex)
+                            elseif(n==ey)then
+                                line = line - (line - ex)
+                            elseif(n==sy)then
+                                line = line-(sx-1)
+                                xOffset = sx-1
+                            end
+                            self.parent:setBG(obx + xOffset, oby + n - 1, rep(tHex[selectionBG], line))
+                            self.parent:setFG(obx + xOffset, oby + n - 1, rep(tHex[selectionFG], line))
+                        end
+                    end
                     if(self:isFocused())then
                         local anchx, anchy = self:getAnchorPosition()
-                        self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+                        --self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
                     end
                 end
             end
@@ -609,6 +742,7 @@ return function(name)
 
         init = function(self)
             self.parent:addEvent("mouse_click", self)
+            self.parent:addEvent("mouse_up", self)
             self.parent:addEvent("mouse_scroll", self)
             self.parent:addEvent("mouse_drag", self)
             self.parent:addEvent("key", self)

@@ -57,9 +57,9 @@ return function(name)
         setValue = function(self, val)
             base.setValue(self, tostring(val))
             if not (internalValueChange) then
+                textX = tostring(val):len() + 1
+                wIndex = math.max(1, textX-self:getWidth()+1)
                 if(self:isFocused())then
-                    textX = tostring(val):len() + 1
-                    wIndex = math.max(1, textX-self:getWidth()+1)
                     local obx, oby = self:getAnchorPosition()
                     self.parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self:getHeight()/2), self.fgColor)
                 end
@@ -202,12 +202,15 @@ return function(name)
                 if (text:len() < inputLimit or inputLimit <= 0) then
                     if (inputType == "number") then
                         local cache = text
-                        if (#text==0 and char == "-") or (char == ".") or (tonumber(char) ~= nil) then
+                        if (textX==1 and char == "-") or (char == ".") or (tonumber(char) ~= nil) then
                             self:setValue(text:sub(1, textX - 1) .. char .. text:sub(textX, text:len()))
                             textX = textX + 1
-                        end
-                        if (tonumber(base.getValue()) == nil) then
-                            --self:setValue(cache)
+                            if(char==".")or(char=="-")and(#text>0)then
+                                if (tonumber(base.getValue()) == nil) then
+                                    self:setValue(cache)
+                                    textX = textX - 1
+                                end
+                            end
                         end
                     else
                         self:setValue(text:sub(1, textX - 1) .. char .. text:sub(textX, text:len()))
@@ -267,44 +270,43 @@ return function(name)
             end
         end,
 
-        eventHandler = function(self, event, paste, p2, p3, p4)
-            if(base.eventHandler(self, event, paste, p2, p3, p4))then
-                if(event=="paste")then
-                    if(self:isFocused())then
-                        local text = base.getValue()
-                        local w, h = self:getSize()
-                        internalValueChange = true
-                        if (inputType == "number") then
-                            local cache = text
-                            if (paste == ".") or (tonumber(paste) ~= nil) then
-                                self:setValue(text:sub(1, textX - 1) .. paste .. text:sub(textX, text:len()))
-                                textX = textX + paste:len()
-                            end
-                            if (tonumber(base.getValue()) == nil) then
-                                self:setValue(cache)
-                            end
-                        else
+        eventHandler = function(self, event, paste, ...)
+            base.eventHandler(self, event, paste, ...)
+            if(event=="paste")then
+                if(self:isFocused())then
+                    local text = base.getValue()
+                    local w, h = self:getSize()
+                    internalValueChange = true
+                    if (inputType == "number") then
+                        local cache = text
+                        if (paste == ".") or (tonumber(paste) ~= nil) then
                             self:setValue(text:sub(1, textX - 1) .. paste .. text:sub(textX, text:len()))
                             textX = textX + paste:len()
                         end
-                        if (textX >= w + wIndex) then
-                            wIndex = (textX+1)-w
+                        if (tonumber(base.getValue()) == nil) then
+                            self:setValue(cache)
                         end
-
-                        local obx, oby = self:getAnchorPosition()
-                        local val = tostring(base.getValue())
-                        local cursorX = (textX <= val:len() and textX - 1 or val:len()) - (wIndex - 1)
-
-                        local x = self:getX()
-                        if (cursorX > x + w - 1) then
-                            cursorX = x + w - 1
-                        end
-                        if (self.parent ~= nil) then
-                            self.parent:setCursor(true, obx + cursorX, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
-                        end
-                        self:updateDraw()
-                        internalValueChange = false
+                    else
+                        self:setValue(text:sub(1, textX - 1) .. paste .. text:sub(textX, text:len()))
+                        textX = textX + paste:len()
                     end
+                    if (textX >= w + wIndex) then
+                        wIndex = (textX+1)-w
+                    end
+
+                    local obx, oby = self:getAnchorPosition()
+                    local val = tostring(base.getValue())
+                    local cursorX = (textX <= val:len() and textX - 1 or val:len()) - (wIndex - 1)
+
+                    local x = self:getX()
+                    if (cursorX > x + w - 1) then
+                        cursorX = x + w - 1
+                    end
+                    if (self.parent ~= nil) then
+                        self.parent:setCursor(true, obx + cursorX, oby+math.max(math.ceil(h/2-1, 1)), self.fgColor)
+                    end
+                    self:updateDraw()
+                    internalValueChange = false
                 end
             end
         end,
