@@ -371,7 +371,17 @@ return function(name, parent, pTerm, basalt)
 
         getType = function(self)
             return objectType
-        end;
+        end,
+        
+        setZIndex = function(self, newIndex)
+            base.setZIndex(self, newIndex)
+            for k,v in pairs(activeEvents)do
+                if(v)then
+                    self.parent:addEvent(k, self)
+                end
+            end
+            return self
+        end,
 
         setFocusedObject = function(self, obj)
             if(focusedObject~=obj)then

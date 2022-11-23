@@ -60,8 +60,9 @@ return function(name)
 
                     for n = 1, h do
                         if (n == verticalAlign) then
-                            self.parent:setText(obx, oby + (n - 1), utils.getTextHorizontalAlign(self:getValue(), w, textHorizontalAlign))
-                            self.parent:setFG(obx, oby + (n - 1), utils.getTextHorizontalAlign(tHex[self.fgColor]:rep(self:getValue():len()), w, textHorizontalAlign))
+                            local val = self:getValue()
+                            self.parent:setText(obx + (w/2-val:len()/2), oby + (n - 1), utils.getTextHorizontalAlign(val, val:len(), textHorizontalAlign))
+                            self.parent:setFG(obx + (w/2-val:len()/2), oby + (n - 1), utils.getTextHorizontalAlign(tHex[self.fgColor]:rep(val:len()), val:len(), textHorizontalAlign))
                         end
                     end
                 end
