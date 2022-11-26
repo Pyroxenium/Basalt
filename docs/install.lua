@@ -367,7 +367,7 @@ if(#args>0)then
         installer.downloadProject(args[2] or "basalt", args[3] or "master", args[4]~=nil and installer.createIgnoreList(args[4]) or nil)
     elseif(string.lower(args[1])=="web")then
         installer.generateWebVersion(args[3] or "basaltWeb.lua", args[2] or "latest.lua")
-    elseif(string.lower(args[1])=="file")then
+    elseif(string.lower(args[1])=="file")or(string.lower(args[1])=="release")then
         installer.download("https://basalt.madefor.cc/versions/"..args[2] or "latest.lua", args[3] or "basalt.lua")
     end
 end
