@@ -1,7 +1,7 @@
 local curDir = fs.getDir(table.pack(...)[2]) or ""
 
+local defaultPath = package.path
 if not(packed)then
-    local defaultPath = package.path
     local format = "path;/path/?.lua;/path/?/init.lua;"
 
     local main = format:gsub("path", curDir)
