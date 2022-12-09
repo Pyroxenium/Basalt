@@ -83,6 +83,7 @@ return function(name, parent, pTerm, basalt)
     end
 
     local function getObject(name)
+        if(type(name)=="number")then name = tostring(number) end
         if(type(name)~="string")then name = name.name end
         for _, value in pairs(objects) do
             for _, b in pairs(value) do
