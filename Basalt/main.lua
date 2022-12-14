@@ -246,9 +246,9 @@ local function basaltUpdateEvent(event, ...)
     end
 
     if(event == "monitor_touch") then
-        if(monFrames[p1]~=nil)then
-            monFrames[p1]:mouseHandler(1, a[2], a[3], true)
-            activeFrame = monFrames[p1]
+        if(monFrames[a[1]]~=nil)then
+            monFrames[a[1]]:mouseHandler(1, a[2], a[3], true)
+            activeFrame = monFrames[a[1]]
         end
         if(count(monGroups)>0)then
             for k,v in pairs(monGroups)do

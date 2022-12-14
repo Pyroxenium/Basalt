@@ -83,7 +83,6 @@ return function(name, parent, pTerm, basalt)
     end
 
     local function getObject(name)
-        if(type(name)=="number")then name = tostring(number) end
         if(type(name)~="string")then name = name.name end
         for _, value in pairs(objects) do
             for _, b in pairs(value) do
@@ -109,7 +108,7 @@ return function(name, parent, pTerm, basalt)
     local function addObject(obj)
         local zIndex = obj:getZIndex()
         if (getObject(obj.name) ~= nil) then
-            return nil
+            return
         end
         if (objects[zIndex] == nil) then
             for x = 1, #objZIndex + 1 do
@@ -163,14 +162,14 @@ return function(name, parent, pTerm, basalt)
                         table.remove(objects[a], key)
                         removeEvents(object, value)
                         self:updateDraw()
-                        return true;
+                        return true
                     end
                 else
                     if (value == obj) then
                         table.remove(objects[a], key)
                         removeEvents(object, value)
                         self:updateDraw()
-                        return true;
+                        return true
                     end
                 end
             end
@@ -193,7 +192,7 @@ return function(name, parent, pTerm, basalt)
         if(events[event]==nil)then events[event] = {} end
         if(eventZIndex[event]==nil)then eventZIndex[event] = {} end
         if (getEvent(self, event, obj.name) ~= nil) then
-            return nil
+            return
         end
         if(self.parent~=nil)then
             self.parent:addEvent(event, self)
@@ -221,6 +220,7 @@ return function(name, parent, pTerm, basalt)
         table.insert(events[event][zIndex], obj)
         return obj
     end
+    
 
     local function removeEvent(self, event, obj)
         if(events[event]~=nil)then
@@ -412,7 +412,22 @@ return function(name, parent, pTerm, basalt)
 
         getType = function(self)
             return objectType
-        end;
+        end,
+
+        getObjectCount = function(self)
+            local count = 0
+            for _, value in pairs(objects) do
+                count = count+#value
+            end
+            return count
+        end,
+        getEventCount = function(self, ev)
+            local count = 0
+            for _, value in pairs(events[ev]) do
+                count = count+#value
+            end
+            return count
+        end,
 
         setZIndex = function(self, newIndex)
             base.setZIndex(self, newIndex)
