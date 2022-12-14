@@ -1,457 +1,1297 @@
-local basaltEvent = require("basaltEvent")()
-local Frame = require("Frame")
-local theme = require("theme")
+local module = require("module")
+local Object = require("Object")
+local _OBJECTS = require("loadObjects")
+local BasaltDraw = require("basaltDraw")
 local utils = require("utils")
-local log = require("basaltLogs")
+local layout = module("layout")
+local basaltMon = module("basaltMon")
 local uuid = utils.uuid
-local createText = utils.createText
-local count = utils.tableCount
-local moveThrottle = 300
-local dragThrottle = 50
+local rpairs = utils.rpairs
+local xmlValue = utils.getValueFromXML
+local tableCount = utils.tableCount
 
-local baseTerm = term.current()
-local version = "1.6.4"
+local sub,min,max = string.sub,math.min,math.max
 
-local projectDirectory = fs.getDir(table.pack(...)[2] or "")
+return function(name, parent, pTerm, basalt)
+    -- Frame
+    local base = Object(name)
+    local objectType = "Frame"
+    local objects = {}
+    local objZIndex = {}
+    local object = {}
+    local events = {}
+    local eventZIndex = {}
+    local variables = {}
+    local theme = {}
+    local dynamicValues = {}
+    local dynValueId = 0
+    local termObject = pTerm or term.current()
 
-local activeKey, frames, monFrames, monGroups, variables, schedules = {}, {}, {}, {}, {}, {}
-local mainFrame, activeFrame, focusedObject, updaterActive
+    local monSide = ""
+    local isMonitor = false
+    local isGroupedMonitor = false
+    local monitorAttached = false
+    local dragXOffset = 0
+    local dragYOffset = 0
+    local isScrollable = false
+    local scrollAmount = 0
+    local mirrorActive = false
+    local mirrorAttached = false
+    local mirrorSide = ""
+    local isMovable = false
+    local isDragging =false
 
-local basalt = {}
+    local focusedObjectCache
+    local focusedObject
+    local autoSize = true
+    local autoScroll = true
+    local initialized = false
 
-if not  term.isColor or not term.isColor() then
-    error('Basalt requires an advanced (golden) computer to run.', 0)
-end
+    local activeEvents = {}
 
-local defaultColors = {}
-for k,v in pairs(colors)do
-    if(type(v)=="number")then
-        defaultColors[k] = {baseTerm.getPaletteColor(v)}
-    end
-end
+    local colorTheme = {}
 
+    base:setZIndex(10)
 
-local function stop()
-    updaterActive = false    
-    baseTerm.clear()
-    baseTerm.setCursorPos(1, 1)
-    for k,v in pairs(colors)do
-        if(type(v)=="number")then
-            baseTerm.setPaletteColor(v, colors.packRGB(table.unpack(defaultColors[k])))
+    local basaltDraw = BasaltDraw(termObject)
+
+    local cursorBlink = false
+    local xCursor = 1
+    local yCursor = 1
+    local cursorColor = colors.white
+
+    local xOffset, yOffset = 0, 0
+
+    local lastXMLReferences = {}
+
+    local function xmlDefaultValues(data, obj)
+        if(obj~=nil)then
+            obj:setValuesByXMLData(data)
         end
     end
-end
 
-local function basaltError(errMsg)
-    baseTerm.clear()
-    baseTerm.setBackgroundColor(colors.black)
-    baseTerm.setTextColor(colors.red)
-    local w,h = baseTerm.getSize()
-    if(basalt.logging)then
-        log(errMsg, "Error")
-    end
+    local function addXMLObjectType(tab, f, self)
+        if(tab~=nil)then
+            if(tab.properties~=nil)then tab = {tab} end
 
-    local text = createText("Basalt error: "..errMsg, w)
-    local yPos = 1
-    for k,v in pairs(text)do
-        baseTerm.setCursorPos(1,yPos)
-        baseTerm.write(v)
-        yPos = yPos + 1
-    end 
-    baseTerm.setCursorPos(1,yPos+1)
-    updaterActive = false
-end
-
-local function schedule(f)
-assert(f~="function", "Schedule needs a function in order to work!")
-return function(...)
-        local co = coroutine.create(f)
-        local ok, result = coroutine.resume(co, ...)
-        if(ok)then
-            table.insert(schedules, co)
-        else
-            basaltError(result)
+            for k,v in pairs(tab)do
+                local obj = f(self, v["@id"] or uuid())
+                table.insert(lastXMLReferences, obj)
+                xmlDefaultValues(v, obj)
+            end
         end
     end
-end
 
-local setVariable = function(name, var)
-    variables[name] = var
-end
-
-local getVariable = function(name)
-    return variables[name]
-end
-
-local setTheme = function(_theme)
-    theme = _theme
-end
-
-local getTheme = function(name)
-    return theme[name]
-end
-
-local bInstance = {
-    getDynamicValueEventSetting = function()
-        return basalt.dynamicValueEvents
-    end,
-    
-    getMainFrame = function()
-        return mainFrame
-    end,
-
-    setVariable = setVariable,
-    getVariable = getVariable,
-    getTheme = getTheme,
-
-    setMainFrame = function(mFrame)
-        mainFrame = mFrame
-    end,
-
-    getActiveFrame = function()
-        return activeFrame
-    end,
-
-    setActiveFrame = function(aFrame)
-        activeFrame = aFrame
-    end,
-
-    getFocusedObject = function()
-        return focusedObject
-    end,
-
-    setFocusedObject = function(focused)
-        focusedObject = focused
-    end,
-    
-    getMonitorFrame = function(name)
-        return monFrames[name] or monGroups[name][1]
-    end,
-
-    setMonitorFrame = function(name, frame, isGroupedMon)
-        if(mainFrame == frame)then mainFrame = nil end
-        if(isGroupedMon)then
-            monGroups[name] = {frame, sides}
-        else
-            monFrames[name] = frame
-        end
-        if(frame==nil)then
-            monGroups[name] = nil
-        end
-    end,
-
-    getBaseTerm = function()
-        return baseTerm
-    end,
-
-    schedule = schedule,
-
-    stop = stop,
-    newFrame = Frame,
-
-    getDirectory = function()
-        return projectDirectory
-    end
-}
-
-local function handleSchedules(event, p1, p2, p3, p4)
-    if(#schedules>0)then
-        local finished = {}
-        for n=1,#schedules do
-            if(schedules[n]~=nil)then 
-                if (coroutine.status(schedules[n]) == "suspended")then
-                    local ok, result = coroutine.resume(schedules[n], event, p1, p2, p3, p4)
-                    if not(ok)then
-                        basaltError(result)
-                    end
-                else
-                    table.insert(finished, n)
+    local function getObject(name)
+        if(type(name)~="string")then name = name.name end
+        for _, value in pairs(objects) do
+            for _, b in pairs(value) do
+                if (b:getName() == name) then
+                    return b
                 end
             end
         end
-        for n=1,#finished do
-            table.remove(schedules, finished[n]-(n-1))
-        end
     end
-end
-
-local function drawFrames()
-    if(updaterActive==false)then return end
-    if(mainFrame~=nil)then
-        mainFrame:draw()
-        mainFrame:updateTerm()
-    end
-    for _,v in pairs(monFrames)do
-        v:draw()
-        v:updateTerm()
-    end
-    for _,v in pairs(monGroups)do
-        v[1]:draw()
-        v[1]:updateTerm()
-    end
-end
-
-local stopped, moveX, moveY = nil, nil, nil
-local moveTimer = nil
-local function mouseMoveEvent(_, stp, x, y)
-    stopped, moveX, moveY = stp, x, y
-    if(moveTimer==nil)then
-        moveTimer = os.startTimer(moveThrottle/1000)
-    end
-end
-
-local function moveHandlerTimer()
-    moveTimer = nil
-    mainFrame:hoverHandler(moveX, moveY, stopped)
-    activeFrame = mainFrame
-end
-
-local btn, dragX, dragY = nil, nil, nil
-local dragTimer = nil
-local function dragHandlerTimer()
-    dragTimer = nil
-    mainFrame:dragHandler(btn, dragX, dragY)
-    activeFrame = mainFrame
-end
-
-local function mouseDragEvent(_, b, x, y)
-    btn, dragX, dragY = b, x, y
-    if(dragThrottle<50)then 
-        dragHandlerTimer() 
-    else
-        if(dragTimer==nil)then
-            dragTimer = os.startTimer(dragThrottle/1000)
-        end
-    end
-end
-
-local function basaltUpdateEvent(event, ...)
-    local a = {...}
-    if(basaltEvent:sendEvent("basaltEventCycle", event, ...)==false)then return end
-    if(event=="terminate")then basalt.stop() end
-    if(mainFrame~=nil)then
-        local mouseEvents = {
-            mouse_click = mainFrame.mouseHandler,
-            mouse_up = mainFrame.mouseUpHandler,
-            mouse_scroll = mainFrame.scrollHandler,
-            mouse_drag = mouseDragEvent,
-            mouse_move = mouseMoveEvent,
-        }
-        local mouseEvent = mouseEvents[event]
-        if(mouseEvent~=nil)then
-            mouseEvent(mainFrame, ...)
-            drawFrames()
-            return
-        end
-    end
-
-    if(event == "monitor_touch") then
-        if(monFrames[a[1]]~=nil)then
-            monFrames[a[1]]:mouseHandler(1, a[2], a[3], true)
-            activeFrame = monFrames[a[1]]
-        end
-        if(count(monGroups)>0)then
-            for k,v in pairs(monGroups)do
-                v[1]:mouseHandler(1, a[2], a[3], true, a[1])
+    local function getDeepObject(name)
+        local o = getObject(name)
+        if(o~=nil)then return o end
+        for _, value in pairs(objects) do
+            for _, b in pairs(value) do
+                if (b:getType() == "Frame") then
+                    local oF = b:getDeepObject(name)
+                    if(oF~=nil)then return oF end
+                end
             end
         end
-        drawFrames()
-        return
     end
 
-    if(activeFrame~=nil)then
-    local keyEvents = {
-        char = activeFrame.charHandler,
-        key = activeFrame.keyHandler,
-        key_up = activeFrame.keyUpHandler,
-    }
-    local keyEvent = keyEvents[event]
-        if(keyEvent~=nil)then
-            if(event == "key")then
-                activeKey[a[1]] = true
-            elseif(event == "key_up")then
-                activeKey[a[1]] = false
-            end
-            keyEvent(activeFrame, ...)
-            drawFrames()
+    local function addObject(obj)
+        local zIndex = obj:getZIndex()
+        if (getObject(obj.name) ~= nil) then
             return
         end
+        if (objects[zIndex] == nil) then
+            for x = 1, #objZIndex + 1 do
+                if (objZIndex[x] ~= nil) then
+                    if (zIndex == objZIndex[x]) then
+                        break
+                    end
+                    if (zIndex > objZIndex[x]) then
+                        table.insert(objZIndex, x, zIndex)
+                        break
+                    end
+                else
+                    table.insert(objZIndex, zIndex)
+                end
+            end
+            if (#objZIndex <= 0) then
+                table.insert(objZIndex, zIndex)
+            end
+            objects[zIndex] = {}
+        end
+        obj.parent = object
+        if(obj.init~=nil)then
+            obj:init()
+        end
+        table.insert(objects[zIndex], obj)
+        return obj
     end
 
-    if(event=="timer")and(a[1]==moveTimer)then
-        moveHandlerTimer()
-    elseif(event=="timer")and(a[1]==dragTimer)then
-        dragHandlerTimer()
-    else
-        for k, v in pairs(frames) do
-            v:eventHandler(event, ...)
+    local function removeEvents(self, obj)
+        for a, b in pairs(events) do
+            for c, d in pairs(b) do
+                for key, value in pairs(d) do
+                    if (value == obj) then
+                        table.remove(events[a][c], key)
+                        if(self.parent~=nil)then
+                            if(tableCount(events[a])<=0)then
+                                self.parent:removeEvent(a, self)
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
-    handleSchedules(event, ...)
-    drawFrames()
-end
 
-basalt = {
-    logging = false,
-    dynamicValueEvents = false,
-    setTheme = setTheme,
-    getTheme = getTheme,
-    drawFrames = drawFrames,
-    getVersion = function()
-        return version
-    end,
+    local function removeObject(self, obj)
+        for a, b in pairs(objects) do
+            for key, value in pairs(b) do
+                if(type(obj)=="string")then
+                    if (value:getName() == obj) then
+                        table.remove(objects[a], key)
+                        removeEvents(object, value)
+                        self:updateDraw()
+                        return true
+                    end
+                else
+                    if (value == obj) then
+                        table.remove(objects[a], key)
+                        removeEvents(object, value)
+                        self:updateDraw()
+                        return true
+                    end
+                end
+            end
+        end
+        return false
+    end
 
-    setVariable = setVariable,
-    getVariable = getVariable,
+    local function getEvent(self, event, name)
+        for _, value in pairs(events[event]) do
+            for _, b in pairs(value) do
+                if (b:getName() == name) then
+                    return b
+                end
+            end
+        end
+    end
 
-    setBaseTerm = function(_baseTerm)
-        baseTerm = _baseTerm
-    end,
+    local function addEvent(self, event, obj)
+        local zIndex = obj:getZIndex()
+        if(events[event]==nil)then events[event] = {} end
+        if(eventZIndex[event]==nil)then eventZIndex[event] = {} end
+        if (getEvent(self, event, obj.name) ~= nil) then
+            return
+        end
+        if(self.parent~=nil)then
+            self.parent:addEvent(event, self)
+        end
+        activeEvents[event] = true
+        if (events[event][zIndex] == nil) then
+            for x = 1, #eventZIndex[event] + 1 do
+                if (eventZIndex[event][x] ~= nil) then
+                    if (zIndex == eventZIndex[event][x]) then
+                        break
+                    end
+                    if (zIndex > eventZIndex[event][x]) then
+                        table.insert(eventZIndex[event], x, zIndex)
+                        break
+                    end
+                else
+                    table.insert(eventZIndex[event], zIndex)
+                end
+            end
+            if (#eventZIndex[event] <= 0) then
+                table.insert(eventZIndex[event], zIndex)
+            end
+            events[event][zIndex] = {}
+        end
+        table.insert(events[event][zIndex], obj)
+        return obj
+    end
+    
 
-    log = function(...)
-        log(...)
-    end,
+    local function removeEvent(self, event, obj)
+        if(events[event]~=nil)then
+            for a, b in pairs(events[event]) do
+                for key, value in pairs(b) do
+                    if (value == obj) then
+                        table.remove(events[event][a], key)
+                        if(#events[event][a]<=0)then
+                            events[event][a] = nil
+                            if(self.parent~=nil)then
+                                if(tableCount(events[event])<=0)then
+                                    activeEvents[event] = false
+                                    self.parent:removeEvent(event, self)
+                                end
+                            end
+                        end
+                        return true;
+                    end
+                end
+            end
+        end
+        return false
+    end
+    local math = math
+    local function stringToNumber(str)
+        local ok, result = pcall(load("return " .. str, "", nil, {math=math}))
+        if not(ok)then error(str.." is not a valid dynamic code") end
+        return result
+    end
 
-    setMouseMoveThrottle = function(amount)
-        if(_HOST:find("CraftOS%-PC"))then
-            if(config.get("mouse_move_throttle")~=10)then config.set("mouse_move_throttle", 10) end
-            if(amount<100)then
-                moveThrottle = 100
+    local function newDynamicValue(_, obj, str)
+        for k,v in pairs(dynamicValues)do
+            if(v[2]==str)and(v[4]==obj)then
+                return v
+            end
+        end
+        dynValueId = dynValueId + 1
+        dynamicValues[dynValueId] = {0, str, {}, obj, dynValueId}
+        return dynamicValues[dynValueId]
+    end
+
+    local function dynValueGetObjects(obj, str)
+        local names = {}
+        local t = {}
+        for v in str:gmatch("%a+%.x") do
+            local name = v:gsub("%.x", "")
+            if(name~="self")and(name~="parent")then 
+                table.insert(names, name) end
+        end
+        for v in str:gmatch("%w+%.y") do
+            local name = v:gsub("%.y", "")
+            if(name~="self")and(name~="parent")then table.insert(names, name) end
+        end
+        for v in str:gmatch("%a+%.w") do
+            local name = v:gsub("%.w", "")
+            if(name~="self")and(name~="parent")then 
+                table.insert(names, name) 
+            
+            end
+        end
+        for v in str:gmatch("%a+%.h") do
+            local name = v:gsub("%.h", "")
+            if(name~="self")and(name~="parent")then 
+                table.insert(names, name) end
+        end
+        for k,v in pairs(names)do
+            t[v] = getObject(v)
+            if(t[v]==nil)then
+                error("Dynamic Values - unable to find object "..v)
+            end
+        end
+        t["self"] = obj
+        t["parent"] = obj:getParent()
+        return t
+    end
+
+    local function dynValueObjectToNumber(str, objList)
+        local newStr = str
+        for v in str:gmatch("%w+%.x") do
+            newStr = newStr:gsub(v, objList[v:gsub("%.x", "")]:getX())
+        end
+        for v in str:gmatch("%w+%.y") do
+            newStr = newStr:gsub(v, objList[v:gsub("%.y", "")]:getY())
+        end
+        for v in str:gmatch("%w+%.w") do
+            newStr = newStr:gsub(v, objList[v:gsub("%.w", "")]:getWidth())
+        end
+        for v in str:gmatch("%w+%.h") do
+            newStr = newStr:gsub(v, objList[v:gsub("%.h", "")]:getHeight())
+        end
+        return newStr
+    end
+
+
+    local function recalculateDynamicValues(self)
+        if(#dynamicValues>0)then
+            for n=1,dynValueId do
+                if(dynamicValues[n]~=nil)then
+                    local numberStr
+                    if(#dynamicValues[n][3]<=0)then dynamicValues[n][3] = dynValueGetObjects(dynamicValues[n][4], dynamicValues[n][2]) end
+                    numberStr = dynValueObjectToNumber(dynamicValues[n][2], dynamicValues[n][3])
+                    dynamicValues[n][1] = stringToNumber(numberStr)
+                    if(dynamicValues[n][4]:getType()=="Frame")then
+                        dynamicValues[n][4]:recalculateDynamicValues()
+                    end
+                end
+            end
+            for _, index in pairs(objZIndex) do
+                if (objects[index] ~= nil) then
+                    for _, value in pairs(objects[index]) do
+                        if(basalt.getDynamicValueEventSetting())then
+                            if (value.eventHandler ~= nil) then
+                                value:eventHandler("basalt_dynamicvalue", self)
+                            end
+                        end
+                        if (value.customEventHandler ~= nil) then
+                            value:customEventHandler("basalt_resize", self)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    local function getDynamicValue(id)
+        return dynamicValues[id][1]
+    end
+
+    local function getVerticalScrollAmount(self)
+        local amount = 0
+        for _, value in pairs(objects) do
+            for _, b in pairs(value) do
+                if(b.getHeight~=nil)and(b.getY~=nil)then
+                    if(b:getType()=="Dropdown")then
+                        local h, y = b:getHeight(), b:getY()
+                        local wD, hD = b:getDropdownSize()
+                        h = h + hD - 1
+                        if (h + y - self:getHeight() >= amount) then
+                            amount = max(h + y - self:getHeight(), 0)
+                        end
+                    else
+                        local h, y = b:getHeight(), b:getY()
+                        if (h + y - self:getHeight() >= amount) then
+                            amount = max(h + y - self:getHeight(), 0)
+                        end
+                    end
+                end
+            end
+        end
+        return amount
+    end
+
+    local function getHorizontalScrollAmount(self)
+        local amount = 0
+        for _, value in pairs(objects) do
+            for _, b in pairs(value) do
+                if(b.getWidth~=nil)and(b.getX~=nil)then
+                    local h, y = b:getWidth(), b:getX()
+                    if (h + y - self:getWidth() >= amount) then
+                        amount = max(h + y - self:getWidth(), 0)
+                    end
+                end
+            end
+        end
+        return amount
+    end
+
+    local function calculateMaxScroll(self)
+        if(autoScroll)then
+            scrollAmount = getVerticalScrollAmount(self)
+        end
+    end
+
+    object = {
+        barActive = false,
+        barBackground = colors.gray,
+        barTextcolor = colors.black,
+        barText = "New Frame",
+        barTextAlign = "left",
+
+        addEvent = addEvent,
+        removeEvent = removeEvent,
+        removeEvents = removeEvents,
+        getEvent = getEvent,
+
+        newDynamicValue = newDynamicValue,
+        recalculateDynamicValues = recalculateDynamicValues,
+        getDynamicValue = getDynamicValue,
+
+        getType = function(self)
+            return objectType
+        end,
+
+        getObjectCount = function(self)
+            local count = 0
+            for _, value in pairs(objects) do
+                count = count+#value
+            end
+            return count
+        end,
+        getEventCount = function(self, ev)
+            local count = 0
+            for _, value in pairs(events[ev]) do
+                count = count+#value
+            end
+            return count
+        end,
+
+        setZIndex = function(self, newIndex)
+            base.setZIndex(self, newIndex)
+            for k,v in pairs(activeEvents)do
+                if(v)then
+                    self.parent:addEvent(k, self)
+                end
+            end
+            return self
+        end,
+
+        setFocusedObject = function(self, obj)
+            if(focusedObject~=obj)then
+                if(focusedObject~=nil)then
+                    if(getObject(focusedObject)~=nil)then
+                        focusedObject:loseFocusHandler()
+                    end
+                end
+                if(obj~=nil)then
+                    if(getObject(obj)~=nil)then
+                        obj:getFocusHandler()
+                    end
+                end
+                focusedObject = obj
+            end
+            return self
+        end;
+
+        getVariable = function(self, name)
+            return basalt.getVariable(name)
+        end,
+
+        setSize = function(self, w, h, rel)
+            base.setSize(self, w, h, rel)
+            if(self.parent==nil)then
+                basaltDraw = BasaltDraw(termObject)
+            end
+            for _, index in pairs(objZIndex) do
+                if (objects[index] ~= nil) then
+                    for _, value in pairs(objects[index]) do
+                        if (value.customEventHandler ~= nil) then
+                            value:customEventHandler("basalt_resize", self)
+                        end
+                    end
+                end
+            end
+            self:recalculateDynamicValues()
+            autoSize = false
+            return self
+        end;
+
+        setTheme = function(self, _theme, col)
+            if(type(_theme)=="table")then
+                theme = _theme
+            elseif(type(_theme)=="string")then
+                theme[_theme] = col
+            end
+            self:updateDraw()
+            return self
+        end,
+
+        getTheme = function(self, name)
+            return theme[name] or (self.parent~=nil and self.parent:getTheme(name) or basalt.getTheme(name))
+        end,
+
+        getThemeColor = function(self, col)
+            return col~=nil and colorTheme[col] or colorTheme
+        end,
+
+        setThemeColor = function(self, col, ...)
+            if(self.parent==nil)then
+                if(self==basalt.getActiveFrame())then
+                    if(type(col)=="string")then
+                        colorTheme[col] = ...
+                        termObject.setPaletteColor(type(col)=="number" and col or colors[col], ...)
+                    elseif(type(col)=="table")then
+                        for k,v in pairs(col)do
+                            colorTheme[k] = v
+                            if(type(v)=="number")then
+                                termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
+                            else
+                                local r,g,b = table.unpack(v)
+                                termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
+                            end
+                        end
+                    end
+                end
+            end
+            return self
+        end,
+
+        setPosition = function(self, x, y, rel)
+            base.setPosition(self, x, y, rel)
+            self:recalculateDynamicValues()
+            return self
+        end;
+
+        getBasaltInstance = function(self)
+            return basalt
+        end,
+
+        setOffset = function(self, xO, yO)
+            xOffset = xO ~= nil and math.floor(xO < 0 and math.abs(xO) or -xO) or xOffset
+            yOffset = yO ~= nil and math.floor(yO < 0 and math.abs(yO) or -yO) or yOffset
+            self:updateDraw()
+            return self
+        end;
+
+        getOffsetInternal = function(self)
+            return xOffset, yOffset
+        end;
+
+        getOffset = function(self)
+            return xOffset < 0 and math.abs(xOffset) or -xOffset, yOffset < 0 and math.abs(yOffset) or -yOffset
+        end;
+
+        removeFocusedObject = function(self)
+            if(focusedObject~=nil)then
+                if(getObject(focusedObject)~=nil)then
+                    focusedObject:loseFocusHandler()
+                end
+            end
+            focusedObject = nil
+            return self
+        end;
+
+        getFocusedObject = function(self)
+            return focusedObject
+        end;
+
+        setCursor = function(self, _blink, _xCursor, _yCursor, color)
+            if(self.parent~=nil)then
+                local obx, oby = self:getAnchorPosition()
+                self.parent:setCursor(_blink or false, (_xCursor or 0)+obx-1, (_yCursor or 0)+oby-1, color or cursorColor)
             else
-                moveThrottle = amount
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition(self:getX(), self:getY(), true))
+                cursorBlink = _blink or false
+                if (_xCursor ~= nil) then
+                    xCursor = obx + _xCursor - 1
+                end
+                if (_yCursor ~= nil) then
+                    yCursor = oby + _yCursor - 1
+                end
+                cursorColor = color or cursorColor
+                if (cursorBlink) then
+                    termObject.setTextColor(cursorColor)
+                    termObject.setCursorPos(xCursor, yCursor)
+                    termObject.setCursorBlink(cursorBlink)
+                else
+                    termObject.setCursorBlink(false)
+                end
             end
-            return true
-        end
-        return false
-    end,
+            return self
+        end;
 
-    setMouseDragThrottle = function(amount)
-        if(amount<=0)then
-            dragThrottle = 0
-        else
-            dragTimer = nil
-            dragThrottle = amount
-        end
-    end,
-
-    autoUpdate = function(isActive)
-        updaterActive = isActive
-        if(isActive==nil)then updaterActive = true end
-        local function f()
-            drawFrames()
-            while updaterActive do
-                basaltUpdateEvent(os.pullEventRaw())
+        setMovable = function(self, movable)
+            if(self.parent~=nil)then
+                isMovable = movable or not isMovable
+                self.parent:addEvent("mouse_click", self)
+                activeEvents["mouse_click"] = true
+                self.parent:addEvent("mouse_up", self)
+                activeEvents["mouse_up"] = true
+                self.parent:addEvent("mouse_drag", self)
+                activeEvents["mouse_drag"] = true
             end
-        end
-        local ok, err = xpcall(f, debug.traceback)
-        if not(ok)then
-            basaltError(err)
-            return
-        end
-    end,
-    
-    update = function(event, ...)
-        if (event ~= nil) then
-            local ok, err = xpcall(basaltUpdateEvent, debug.traceback, event, ...)
-            if not(ok)then
-                basaltError(err)
-                return
-            end
-        end
-    end,
-    
-    stop = stop,
-    stopUpdate = stop,
-    
-    isKeyDown = function(key)
-        if(activeKey[key]==nil)then return false end
-        return activeKey[key];
-    end,
-    
-    getFrame = function(name)
-        for _, value in pairs(frames) do
-            if (value.name == name) then
-                return value
-            end
-        end
-    end,
-    
-    getActiveFrame = function()
-        return activeFrame
-    end,
-    
-    setActiveFrame = function(frame)
-        if (frame:getType() == "Frame") then
-            activeFrame = frame
-            return true
-        end
-        return false
-    end,
-    
-    onEvent = function(...)
-        for _,v in pairs(table.pack(...))do
-            if(type(v)=="function")then
-                basaltEvent:registerEvent("basaltEventCycle", v)
-            end
-        end
-    end,
+            return self;
+        end;
 
-    schedule = schedule,
-    
-    createFrame = function(name)
-        name = name or uuid()
-        for _, v in pairs(frames) do
-            if (v.name == name) then
-                return nil
+        setScrollable = function(self, scrollable)
+            isScrollable = (scrollable or scrollable==nil) and true or false
+            if(self.parent~=nil)then
+                self.parent:addEvent("mouse_scroll", self)
             end
-        end
-        local newFrame = Frame(name,nil,nil,bInstance)
-        newFrame:init()
-        table.insert(frames, newFrame)
-        if(mainFrame==nil)and(newFrame:getName()~="basaltDebuggingFrame")then
-            newFrame:show()
-        end
-        return newFrame
-    end,
-    
-    removeFrame = function(name)
-        frames[name] = nil
-    end,
+            activeEvents["mouse_scroll"] = true
+            return self
+        end,
 
-    setProjectDir = function(dir)
-        projectDirectory = dir
-    end,
+        setScrollAmount = function(self, max)
+            scrollAmount = max or scrollAmount
+            autoScroll = false
+            return self
+        end,
 
-    debug = function(...)
-        local args = { ... }
-        if(mainFrame==nil)then print(...) return end
-        if (mainFrame.name ~= "basaltDebuggingFrame") then
-            if (mainFrame ~= basalt.debugFrame) then
-                basalt.debugLabel:setParent(mainFrame)
+
+        getScrollAmount = function(self)
+            return autoScroll and calculateMaxScroll(self) or scrollAmount
+        end,
+
+        getCalculatedVerticalScroll = getVerticalScrollAmount,
+        getCalculatedHorizontalScroll = getHorizontalScrollAmount,
+
+        show = function(self)
+            base.show(self)
+            if(self.parent==nil)then
+                basalt.setActiveFrame(self)
+                for k,v in pairs(colors)do
+                    if(type(v)=="number")then
+                        termObject.setPaletteColor(v, colors.packRGB(term.nativePaletteColor((v))))
+                    end
+                end
+                for k,v in pairs(colorTheme)do
+                    if(type(v)=="number")then
+                        termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
+                    else
+                        local r,g,b = table.unpack(v)
+                        termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
+                    end
+                end
+                if(isMonitor)and not(isGroupedMonitor)then
+                    basalt.setMonitorFrame(monSide, self)
+                elseif(isGroupedMonitor)then
+                    basalt.setMonitorFrame(self:getName(), self, monSide)
+                else
+                    basalt.setMainFrame(self)
+                end
             end
-        end
-        local str = ""
-        for key, value in pairs(args) do
-            str = str .. tostring(value) .. (#args ~= key and ", " or "")
-        end
-        basalt.debugLabel:setText("[Debug] " .. str)
-        for k,v in pairs(createText(str, basalt.debugList:getWidth()))do
-            basalt.debugList:addItem(v)
-        end
-        if (basalt.debugList:getItemCount() > 50) then
-            basalt.debugList:removeItem(1)
-        end
-        basalt.debugList:setValue(basalt.debugList:getItem(basalt.debugList:getItemCount()))
-        if(basalt.debugList.getItemCount() > basalt.debugList:getHeight())then
-            basalt.debugList:setOffset(basalt.debugList:getItemCount() - basalt.debugList:getHeight())
-        end
-        basalt.debugLabel:show()
-    end,
-}
+            return self;
+        end;
 
-basalt.debugFrame = basalt.createFrame("basaltDebuggingFrame"):showBar():setBackground(colors.lightGray):setBar("Debug", colors.black, colors.gray)
-basalt.debugFrame:addButton("back"):setAnchor("topRight"):setSize(1, 1):setText("\22"):onClick(function() if(basalt.oldFrame~=nil)then basalt.oldFrame:show() end end):setBackground(colors.red):show()
-basalt.debugList = basalt.debugFrame:addList("debugList"):setSize("parent.w - 2", "parent.h - 3"):setPosition(2, 3):setScrollable(true):show()
-basalt.debugLabel = basalt.debugFrame:addLabel("debugLabel"):onClick(function() basalt.oldFrame = mainFrame basalt.debugFrame:show() end):setBackground(colors.black):setForeground(colors.white):setAnchor("bottomLeft"):ignoreOffset():setZIndex(20):show()
+        hide = function (self)
+            base.hide(self)
+            if(self.parent==nil)then
+                if(activeFrame == self)then activeFrame = nil end
+                if(isMonitor)and not(isGroupedMonitor)then
+                    if(basalt.getMonitorFrame(monSide) == self)then
+                        basalt.setActiveFrame(nil)
+                    end
+                elseif(isGroupedMonitor)then
+                    if(basalt.getMonitorFrame(self:getName()) == self)then
+                        basalt.setActiveFrame(nil)
+                    end
+                else
+                    if(basalt.getMainFrame() == self)then
+                        basalt.setMainFrame(nil)
+                    end
+                end
+            end
+            return self
+        end;
 
-return basalt
+        addLayout = function(self, file)
+            if(file~=nil)then
+                if(fs.exists(file))then
+                    local f = fs.open(file, "r")
+                    local data = layout:ParseXmlText(f.readAll())
+                    f.close()
+                    lastXMLReferences = {}
+                    self:setValuesByXMLData(data)
+                end
+            end
+            return self
+        end,
+
+        getLastLayout = function(self)
+            return lastXMLReferences
+        end,
+
+        addLayoutFromString = function(self, str)
+            if(str~=nil)then
+                local data = layout:ParseXmlText(str)
+                self:setValuesByXMLData(data)
+            end
+            return self
+        end,
+        
+        setValuesByXMLData = function(self, data)
+            base.setValuesByXMLData(self, data)
+            if(xmlValue("movable", data)~=nil)then if(xmlValue("movable", data))then self:setMovable(true) end end
+            if(xmlValue("scrollable", data)~=nil)then if(xmlValue("scrollable", data))then self:setScrollable(true) end end
+            if(xmlValue("monitor", data)~=nil)then self:setMonitor(xmlValue("monitor", data)):show() end
+            if(xmlValue("mirror", data)~=nil)then self:setMirror(xmlValue("mirror", data)) end
+            if(xmlValue("bar", data)~=nil)then if(xmlValue("bar", data))then self:showBar(true) else self:showBar(false) end end
+            if(xmlValue("barText", data)~=nil)then self.barText = xmlValue("barText", data) end
+            if(xmlValue("barBG", data)~=nil)then self.barBackground = colors[xmlValue("barBG", data)] end
+            if(xmlValue("barFG", data)~=nil)then self.barTextcolor = colors[xmlValue("barFG", data)] end
+            if(xmlValue("barAlign", data)~=nil)then self.barTextAlign = xmlValue("barAlign", data) end
+            if(xmlValue("layout", data)~=nil)then self:addLayout(xmlValue("layout", data)) end
+            if(xmlValue("xOffset", data)~=nil)then self:setOffset(xmlValue("xOffset", data), yOffset) end
+            if(xmlValue("yOffset", data)~=nil)then self:setOffset(yOffset, xmlValue("yOffset", data)) end
+            if(xmlValue("scrollAmount", data)~=nil)then self:setScrollAmount(xmlValue("scrollAmount", data)) end
+
+            local objectList = data:children()
+            
+            for k,v in pairs(objectList)do
+                if(v.___name~="animation")then
+                    local name = v.___name:gsub("^%l", string.upper)
+                    if(_OBJECTS[name]~=nil)then
+                        addXMLObjectType(v, self["add"..name], self)
+                    end
+                end
+            end
+            
+            addXMLObjectType(data["frame"], self.addFrame, self)
+            addXMLObjectType(data["animation"], self.addAnimation, self)
+            return self
+        end,
+
+        showBar = function(self, showIt) -- deprecated
+            self.barActive = showIt or not self.barActive
+            self:updateDraw()
+            return self
+        end;
+
+        setBar = function(self, text, bgCol, fgCol) -- deprecated
+            self.barText = text or ""
+            self.barBackground = bgCol or self.barBackground
+            self.barTextcolor = fgCol or self.barTextcolor
+            self:updateDraw()
+            return self
+        end;
+
+        setBarTextAlign = function(self, align) -- deprecated
+            self.barTextAlign = align or "left"
+            self:updateDraw()
+            return self
+        end;
+
+        setMirror = function(self, side)
+            if(self.parent~=nil)then error("Frame has to be a base frame in order to attach a mirror.") end
+            mirrorSide = side
+            if(mirror~=nil)then
+                basaltDraw.setMirror(mirror)
+            end
+            mirrorActive = true
+            return self
+        end,
+
+        removeMirror = function(self)
+            mirror = nil
+            mirrorActive = false
+            basaltDraw.setMirror(nil)
+            return self
+        end,
+
+        setMonitorScale = function(self, scale)
+            if(isMonitor)then
+                termObject.setTextScale(scale)
+            end
+            return self
+        end,
+
+        setMonitor = function(self, side, scale)
+            if(side~=nil)and(side~=false)then
+                if(type(side)=="string")then
+                    if(peripheral.getType(side)=="monitor")then
+                        termObject = peripheral.wrap(side)
+                        monitorAttached = true
+                    end
+                    if(self.parent~=nil)then
+                        self.parent:removeObject(self)
+                    end
+                    isMonitor = true
+                    basalt.setMonitorFrame(side, self)
+                elseif(type(side)=="table")then
+                    termObject = basaltMon(side)
+                    monitorAttached = true
+                    isMonitor = true
+                    isGroupedMonitor = true
+                    basalt.setMonitorFrame(self:getName(), self, true)
+                end
+            else
+                termObject = parentTerminal
+                isMonitor = false
+                isGroupedMonitor = false
+                if(type(monSide)=="string")then
+                    if(basalt.getMonitorFrame(monSide)==self)then
+                        basalt.setMonitorFrame(monSide, nil)
+                    end
+                else
+                    if(basalt.getMonitorFrame(self:getName())==self)then
+                        basalt.setMonitorFrame(self:getName(), nil)
+                    end
+                end
+            end
+            if(scale~=nil)then termObject.setTextScale(scale) end
+            basaltDraw = BasaltDraw(termObject)
+            self:setSize(termObject.getSize())
+            autoSize = true
+            monSide = side or nil
+            self:updateDraw()
+            return self;
+        end;
+
+        loseFocusHandler = function(self)
+            base.loseFocusHandler(self)
+            if(focusedObject~=nil)then focusedObject:loseFocusHandler() focusedObject = nil end
+        end;
+
+        getFocusHandler = function(self)
+            base.getFocusHandler(self)
+            if (self.parent ~= nil) then
+                if(isMovable)then
+                    self.parent:removeEvents(self)
+                    self.parent:removeObject(self)
+                    self.parent:addObject(self)
+                    for k,v in pairs(activeEvents)do
+                        if(v)then
+                            self.parent:addEvent(k, self)
+                        end
+                    end
+                    self:updateDraw()
+                end
+            end
+            if(focusedObject~=nil)then focusedObject:getFocusHandler() end
+        end;
+
+        eventHandler = function(self, event, ...)
+            base.eventHandler(self, event, ...)
+            if(events["other_event"]~=nil)then
+                for _, index in ipairs(eventZIndex["other_event"]) do
+                    if (events["other_event"][index] ~= nil) then
+                        for _, value in rpairs(events["other_event"][index]) do
+                            if (value.eventHandler ~= nil) then
+                                if (value:eventHandler(event, ...)) then
+                                    return true
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            if(autoSize)and not(isMonitor)then
+                if(self.parent==nil)then
+                    if(event=="term_resize")then
+                        self:setSize(termObject.getSize())
+                        autoSize = true
+                    end
+                end
+            end
+            if(isMonitor)then
+                if(autoSize)then
+                    if(event=="monitor_resize")then
+                        if(type(monSide)=="string")then
+                            self:setSize(termObject.getSize())
+                        elseif(type(monSide)=="table")then
+                            for k,v in pairs(monSide)do
+                                for a,b in pairs(v)do
+                                    if(p1==b)then
+                                        self:setSize(termObject.getSize())
+                                    end
+                                end
+                            end
+                        end
+                        autoSize = true
+                        self:updateDraw()
+                    end
+                end
+                if(event == "peripheral")and(p1==monSide)then
+                    if(peripheral.getType(monSide)=="monitor")then
+                        monitorAttached = true
+                        termObject = peripheral.wrap(monSide)
+                        basaltDraw = BasaltDraw(termObject)
+                        self:updateDraw()
+                    end
+                end
+                if(event == "peripheral_detach")and(p1==monSide)then
+                    monitorAttached = false
+                end
+            end
+            if(mirrorActive)then
+                if(peripheral.getType(mirrorSide)=="monitor")then
+                    mirrorAttached = true
+                    basaltDraw.setMirror(peripheral.wrap(mirrorSide))
+                end
+                if(event == "peripheral_detach")and(p1==mirrorSide)then
+                    monitorAttached = false
+                end
+                if(event=="monitor_touch")and(mirrorSide==p1)then
+                    self:mouseHandler(1, p2, p3, true)
+                end
+            end
+        end,
+
+        mouseHandler = function(self, button, x, y, _, side)
+            if(isGroupedMonitor)then
+                if(termObject.calculateClick~=nil)then
+                    x, y = termObject.calculateClick(side, x, y)
+                end
+            end
+            if(base.mouseHandler(self, button, x, y))then
+                if(events["mouse_click"]~=nil)then
+                    self:setCursor(false)
+                    for _, index in ipairs(eventZIndex["mouse_click"]) do
+                        if (events["mouse_click"][index] ~= nil) then
+                            for _, value in rpairs(events["mouse_click"][index]) do
+                                if (value.mouseHandler ~= nil) then
+                                    if (value:mouseHandler(button, x, y)) then
+                                        
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                if (isMovable) then
+                    local fx, fy = self:getAbsolutePosition(self:getAnchorPosition())
+                    if (x >= fx) and (x <= fx + self:getWidth() - 1) and (y == fy)then
+                        isDragging = true
+                        dragXOffset = fx - x
+                        dragYOffset = yOff and 1 or 0
+                    end
+                end
+                self:removeFocusedObject()
+                return true
+            end
+            return false
+        end,
+
+        mouseUpHandler = function(self, button, x, y)
+            if (isDragging) then
+                isDragging = false
+            end
+            if(base.mouseUpHandler(self, button, x, y))then
+                if(events["mouse_up"]~=nil)then
+                    for _, index in ipairs(eventZIndex["mouse_up"]) do
+                        if (events["mouse_up"][index] ~= nil) then
+                            for _, value in rpairs(events["mouse_up"][index]) do
+                                if (value.mouseUpHandler ~= nil) then
+                                    if (value:mouseUpHandler(button, x, y)) then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                return true
+            end
+            return false
+        end,
+
+        scrollHandler = function(self, dir, x, y)
+            if(base.scrollHandler(self, dir, x, y))then
+                if(events["mouse_scroll"]~=nil)then
+                    for _, index in pairs(eventZIndex["mouse_scroll"]) do
+                        if (events["mouse_scroll"][index] ~= nil) then
+                            for _, value in rpairs(events["mouse_scroll"][index]) do
+                                if (value.scrollHandler ~= nil) then
+                                    if (value:scrollHandler(dir, x, y)) then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                local cache = yOffset
+                if(isScrollable)then
+                    calculateMaxScroll(self)
+                    if(dir>0)or(dir<0)then
+                        yOffset = max(min(yOffset-dir, 0),-scrollAmount)
+                        self:updateDraw()
+                    end
+                end
+                if(yOffset==cache)then return false end
+                self:removeFocusedObject()
+                return true
+            end
+            return false
+        end,
+
+        hoverHandler = function(self, x, y, stopped)
+            if(base.hoverHandler(self, x, y, stopped))then
+                if(events["mouse_move"]~=nil)then
+                    for _, index in pairs(eventZIndex["mouse_move"]) do
+                        if (events["mouse_move"][index] ~= nil) then
+                            for _, value in rpairs(events["mouse_move"][index]) do
+                                if (value.hoverHandler ~= nil) then
+                                    if (value:hoverHandler(x, y, stopped)) then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            return false
+        end,
+
+        dragHandler = function(self, button, x, y)
+            if (isDragging) then
+                local xO, yO = self.parent:getOffsetInternal()
+                xO = xO < 0 and math.abs(xO) or -xO
+                yO = yO < 0 and math.abs(yO) or -yO
+                local parentX = 1
+                local parentY = 1
+                if (self.parent ~= nil) then
+                    parentX, parentY = self.parent:getAbsolutePosition(self.parent:getAnchorPosition())
+                end
+                self:setPosition(x + dragXOffset - (parentX - 1) + xO, y + dragYOffset - (parentY - 1) + yO)
+                self:updateDraw()
+                return true
+            end
+            if(self:isVisible())and(self:isEnabled())then
+                if(events["mouse_drag"]~=nil)then
+                    for _, index in ipairs(eventZIndex["mouse_drag"]) do
+                        if (events["mouse_drag"][index] ~= nil) then
+                            for _, value in rpairs(events["mouse_drag"][index]) do
+                                if (value.dragHandler ~= nil) then
+                                    if (value:dragHandler(button, x, y)) then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            base.dragHandler(self, button, x, y)
+            return false
+        end,
+
+        keyHandler = function(self, key, isHolding)
+            if (self:isFocused())or(self.parent==nil)then
+                local val = self:getEventSystem():sendEvent("key", self, "key", key)
+                if(val==false)then return false end
+                if(events["key"]~=nil)then
+                    for _, index in pairs(eventZIndex["key"]) do
+                        if (events["key"][index] ~= nil) then
+                            for _, value in rpairs(events["key"][index]) do
+                                if (value.keyHandler ~= nil) then
+                                    if (value:keyHandler(key, isHolding)) then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            return false
+        end,
+
+        keyUpHandler = function(self, key)
+            if (self:isFocused())or(self.parent==nil)then
+                local val = self:getEventSystem():sendEvent("key_up", self, "key_up", key)
+                if(val==false)then return false end
+                if(events["key_up"]~=nil)then
+                    for _, index in pairs(eventZIndex["key_up"]) do
+                        if (events["key_up"][index] ~= nil) then
+                            for _, value in rpairs(events["key_up"][index]) do
+                                if (value.keyUpHandler ~= nil) then
+                                    if (value:keyUpHandler(key)) then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            return false
+        end,
+
+        charHandler = function(self, char)
+            if (self:isFocused())or(self.parent==nil)then
+                local val = self:getEventSystem():sendEvent("char", self, "char", char)
+                if(val==false)then return false end
+                if(events["char"]~=nil)then
+                    for _, index in pairs(eventZIndex["char"]) do
+                        if (events["char"][index] ~= nil) then
+                            for _, value in rpairs(events["char"][index]) do
+                                if (value.charHandler ~= nil) then
+                                    if (value:charHandler(char)) then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            return false
+        end,
+
+        setText = function(self, x, y, text)
+            local obx, oby = self:getAnchorPosition()
+            if (y >= 1) and (y <= self:getHeight()) then
+                if (self.parent ~= nil) then
+                    self.parent:setText(max(x + (obx - 1), obx), oby + y - 1, sub(text, max(1 - x + 1, 1), max(self:getWidth() - x + 1,1)))
+                else
+                    basaltDraw.setText(max(x + (obx - 1), obx), oby + y - 1, sub(text, max(1 - x + 1, 1), max(self:getWidth() - x + 1,1)))
+                end
+            end
+        end;
+
+        setBG = function(self, x, y, bgCol)
+            local obx, oby = self:getAnchorPosition()
+            if (y >= 1) and (y <= self:getHeight()) then
+                if (self.parent ~= nil) then
+                    self.parent:setBG(max(x + (obx - 1), obx), oby + y - 1, sub(bgCol, max(1 - x + 1, 1), max(self:getWidth() - x + 1,1)))
+                else
+                    basaltDraw.setBG(max(x + (obx - 1), obx), oby + y - 1, sub(bgCol, max(1 - x + 1, 1), max(self:getWidth() - x + 1,1)))
+                end
+            end
+        end;
+
+        setFG = function(self, x, y, fgCol)
+            local obx, oby = self:getAnchorPosition()
+            if (y >= 1) and (y <= self:getHeight()) then
+                if (self.parent ~= nil) then
+                    self.parent:setFG(max(x + (obx - 1), obx), oby + y - 1, sub(fgCol, max(1 - x + 1, 1), max(self:getWidth() - x + 1,1)))
+                else
+                    basaltDraw.setFG(max(x + (obx - 1), obx), oby + y - 1, sub(fgCol, max(1 - x + 1, 1), max(self:getWidth() - x + 1,1)))
+                end
+            end
+        end;
+
+        writeText = function(self, x, y, text, bgCol, fgCol)
+            local obx, oby = self:getAnchorPosition()
+            if (y >= 1) and (y <= self:getHeight()) then
+                if (self.parent ~= nil) then
+                    self.parent:writeText(max(x + (obx - 1), obx), oby + y - 1, sub(text, max(1 - x + 1, 1), self:getWidth() - x + 1), bgCol, fgCol)
+                else
+                    basaltDraw.writeText(max(x + (obx - 1), obx), oby + y - 1, sub(text, max(1 - x + 1, 1), max(self:getWidth() - x + 1,1)), bgCol, fgCol)
+                end
+            end
+        end;
+
+        blit = function (self, x, y, t, f, b)
+            local obx, oby = self:getAnchorPosition()
+            if (y >= 1) and (y <= self:getHeight()) then
+                local w = self:getWidth()
+                if (self.parent ~= nil) then
+                    t = sub(t, max(1 - x + 1, 1), w - x + 1)
+                    f = sub(f, max(1 - x + 1, 1), w - x + 1)
+                    b = sub(b, max(1 - x + 1, 1), w - x + 1)
+                    self.parent:blit(max(x + (obx - 1), obx), oby + y - 1, t, f, b)
+                else
+                    t = sub(t, max(1 - x + 1, 1), max(w - x + 1,1))
+                    f = sub(f, max(1 - x + 1, 1), max(w - x + 1,1))
+                    b = sub(b, max(1 - x + 1, 1), max(w - x + 1,1))
+                    basaltDraw.blit(max(x + (obx - 1), obx), oby + y - 1, t, f, b)
+                end
+            end
+        end,
+
+        drawBackgroundBox = function(self, x, y, width, height, bgCol)
+            local obx, oby = self:getAnchorPosition()
+            
+            height = (y < 1 and (height + y > self:getHeight() and self:getHeight() or height + y - 1) or (height + y > self:getHeight() and self:getHeight() - y + 1 or height))
+            width = (x < 1 and (width + x > self:getWidth() and self:getWidth() or width + x - 1) or (width + x > self:getWidth() and self:getWidth() - x + 1 or width))
+            if (self.parent ~= nil) then
+                self.parent:drawBackgroundBox(max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, bgCol)
+            else
+                basaltDraw.drawBackgroundBox(max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, bgCol)
+            end
+        end;
+
+        drawTextBox = function(self, x, y, width, height, symbol)
+            local obx, oby = self:getAnchorPosition()
+            height = (y < 1 and (height + y > self:getHeight() and self:getHeight() or height + y - 1) or (height + y > self:getHeight() and self:getHeight() - y + 1 or height))
+            width = (x < 1 and (width + x > self:getWidth() and self:getWidth() or width + x - 1) or (width + x > self:getWidth() and self:getWidth() - x + 1 or width))
+            if (self.parent ~= nil) then
+                self.parent:drawTextBox(max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, sub(symbol,1,1))
+            else
+                basaltDraw.drawTextBox(max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, sub(symbol,1,1))
+            end
+        end;
+
+        drawForegroundBox = function(self, x, y, width, height, fgCol)
+            local obx, oby = self:getAnchorPosition()
+            height = (y < 1 and (height + y > self:getHeight() and self:getHeight() or height + y - 1) or (height + y > self:getHeight() and self:getHeight() - y + 1 or height))
+            width = (x < 1 and (width + x > self:getWidth() and self:getWidth() or width + x - 1) or (width + x > self:getWidth() and self:getWidth() - x + 1 or width))
+            if (self.parent ~= nil) then
+                self.parent:drawForegroundBox(max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, fgCol)
+            else
+                basaltDraw.drawForegroundBox(max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, fgCol)
+            end
+        end;
+
+        draw = function(self, force)
+            if(isMonitor)and not(monitorAttached)then return false end;
+            if(self.parent==nil)then if(self:getDraw()==false)then return false end end
+            if (base.draw(self))then
+                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                local anchx, anchy = self:getAnchorPosition()
+                local w,h = self:getSize()
+                if (self.parent == nil) then
+                    if(self.bgColor~=false)then
+                        basaltDraw.drawBackgroundBox(anchx, anchy, w, h, self.bgColor)
+                        basaltDraw.drawTextBox(anchx, anchy, w, h, " ")
+                    end
+                    if(self.fgColor~=false)then basaltDraw.drawForegroundBox(anchx, anchy, w, h, self.fgColor) end
+                end
+                if (self.barActive) then
+                    if (self.parent ~= nil) then
+                        self.parent:writeText(anchx, anchy, utils.getTextHorizontalAlign(self.barText, w, self.barTextAlign), self.barBackground, self.barTextcolor)
+                    else
+                        basaltDraw.writeText(anchx, anchy, utils.getTextHorizontalAlign(self.barText, w, self.barTextAlign), self.barBackground, self.barTextcolor)
+                    end
+                    if(self:getBorder("left"))then
+                        if (self.parent ~= nil) then
+                            self.parent:drawBackgroundBox(anchx-1, anchy, 1, 1, self.barBackground)
+                            if(self.bgColor~=false)then
+                                self.parent:drawBackgroundBox(anchx-1, anchy+1, 1, h-1, self.bgColor)
+                            end
+                        end
+                    end
+                    if(self:getBorder("top"))then
+                        if (self.parent ~= nil) then
+                            self.parent:drawBackgroundBox(anchx-1, anchy-1, w+1, 1, self.barBackground)
+                        end
+                    end
+                end
+
+                for _, index in rpairs(objZIndex) do
+                    if (objects[index] ~= nil) then
+                        for _, value in pairs(objects[index]) do
+                            if (value.draw ~= nil) then
+                                value:draw()
+                            end
+                        end
+                    end
+                end
+            end
+        end;
+
+        updateTerm = function(self)
+            if(isMonitor)and not(monitorAttached)then return false end;
+            basaltDraw.update()
+        end;
+
+        addObject = function(self, obj)
+            return addObject(obj)
+        end;
+
+        removeObject = removeObject,
+
+        getObject = function(self, obj)
+            return getObject(obj)
+        end;
+        getDeepObject = function(self, name)
+            return getDeepObject(name)
+        end,
+
+        addFrame = function(self, name)
+            local obj = basalt.newFrame(name or uuid(), self, nil, basalt)
+            return addObject(obj)
+        end,
+
+        init = function(self)
+            if not(initialized)then
+                if (parent ~= nil) then
+                    base.width, base.height = parent:getSize()
+                    self:setBackground(parent:getTheme("FrameBG"))
+                    self:setForeground(parent:getTheme("FrameText"))
+                else
+                    base.width, base.height = termObject.getSize()
+                    self:setBackground(basalt.getTheme("BasaltBG"))
+                    self:setForeground(basalt.getTheme("BasaltText"))
+                end
+                initialized = true
+            end
+        end,
+    }
+    for k,v in pairs(_OBJECTS)do
+        object["add"..k] = function(self, name)
+            return addObject(v(name or uuid(), self))
+        end
+    end
+    setmetatable(object, base)
+    return object
+end
