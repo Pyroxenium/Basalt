@@ -1,3 +1,5 @@
+# How-To
+
 After downloading the project you can finally start creating your own program and use basalt. The first thing you want to use in your program is always:
 
 ```lua
@@ -24,7 +26,7 @@ local basalt = require("basalt") --> Load the basalt framework into the variable
 --> Now we want to create a base frame, we call the variable "main" - by default everything you create is visible. (you don't need to use :show())
 local main = basalt.createFrame()
 
-local button = mainFrame:addButton() --> Here we add our first button
+local button = main:addButton() --> Here we add our first button
 button:setPosition(4, 4) -- of course we want to change the default position of our button
 button:setSize(16, 3) -- and the default size.
 button:setText("Click me!") --> This method displays what the text of our button should look like
