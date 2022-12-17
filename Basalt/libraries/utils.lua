@@ -140,10 +140,19 @@ createText = function(str, width)
     local result = {}
     for k,v in pairs(uniqueLines)do
         if(#v==0)then table.insert(result, "") end
-        local start = 1
-        while start <= #v do
-        table.insert(result, sub(v, start, start + width - 1))
-        start = start + width
+        while #v > width do
+            local last_space = find(reverse(sub(v, 1, width)), " ")
+            if not last_space then
+                last_space = width
+            else
+                last_space = width - last_space + 1
+            end
+            local line = sub(v, 1, last_space)
+            table.insert(result, line)
+            v = sub(v, last_space + 1)
+        end
+        if #v > 0 then
+            table.insert(result, v)
         end
     end
     return result
