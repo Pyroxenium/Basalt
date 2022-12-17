@@ -1,14 +1,19 @@
-local sub = string.sub
+local sub,find = string.sub,string.find
 
-local splitString = function(str, sep)
-    if sep == nil then
-            sep = "%s"
+local function splitString(str, delimiter)
+    local result = {}
+    if str == "" or delimiter == "" then
+        return result
+        end
+    local start = 1
+    local delim_start, delim_end = find(str, delimiter, start)
+    while delim_start do
+        table.insert(result, sub(str, start, delim_start - 1))
+        start = delim_end + 1
+        delim_start, delim_end = find(str, delimiter, start)
     end
-    local t={}
-    for v in string.gmatch(str, "([^"..sep.."]+)") do
-            table.insert(t, v)
-    end
-    return t
+    table.insert(result, sub(str, start))
+    return result
 end
 
 local relations = {[0] = {8, 4, 3, 6, 5}, {4, 14, 8, 7}, {6, 10, 8, 7}, {9, 11, 8, 0}, {1, 14, 8, 0}, {13, 12, 8, 0}, {2, 10, 8, 0}, {15, 8, 10, 11, 12, 14},
@@ -81,7 +86,7 @@ end
 
 return {
 getTextHorizontalAlign = function(text, width, textAlign, replaceChar)
-    text = string.sub(text, 1, width)
+    text = sub(text, 1, width)
     local offset = width - string.len(text)
     if (textAlign == "right") then
         text = string.rep(replaceChar or " ", offset) .. text
@@ -132,22 +137,16 @@ splitString = splitString,
 
 createText = function(str, width)
     local uniqueLines = splitString(str, "\n")
-    local lines = {}
+    local result = {}
     for k,v in pairs(uniqueLines)do
-        local line = ""
-        local words = splitString(v, " ")
-        for a,b in pairs(words)do
-            if(#line+#b <= width)then
-                line = line=="" and b or line.." "..b
-                if(a==#words)then table.insert(lines, line) end
-            else
-                table.insert(lines, line)
-                line = b:sub(1,width)
-                if(a==#words)then table.insert(lines, line) end
-            end
+        if(#v==0)then table.insert(result, "") end
+        local start = 1
+        while start <= #v do
+        table.insert(result, sub(v, start, start + width - 1))
+        start = start + width
         end
     end
-    return lines
+    return result
 end,
 
 getValueFromXML = function(name, tab)
