@@ -38,7 +38,7 @@ return function(name)
         end;
 
         setText = function(self, text)
-            base:setValue(text)
+            base:setValue(tostring(text))
             self:updateDraw()
             return self
         end;
