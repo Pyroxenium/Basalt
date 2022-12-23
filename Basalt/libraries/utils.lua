@@ -1,4 +1,4 @@
-local sub,find = string.sub,string.find
+local sub,find,reverse = string.sub,string.find,string.reverse
 
 local function splitString(str, delimiter)
     local result = {}
