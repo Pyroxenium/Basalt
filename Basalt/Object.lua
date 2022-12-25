@@ -108,11 +108,25 @@ return function(name)
 
         setValuesByXMLData = function(self, data)
             local baseFrame = self:getBaseFrame()
-            if(xmlValue("x", data)~=nil)then self:setPosition(xmlValue("x", data), self:getY()) end
-            if(xmlValue("y", data)~=nil)then self:setPosition(self:getX(), xmlValue("y", data)) end
-            if(xmlValue("width", data)~=nil)then self:setSize(xmlValue("width", data), self.height) end
-            if(xmlValue("height", data)~=nil)then self:setSize(self.width, xmlValue("height", data)) end
+            local tex, mode, infPlay
+            if(xmlValue("texture", data)~=nil)then tex = xmlValue("texture", data) end
+            if(xmlValue("mode", data)~=nil)then mode = xmlValue("mode", data) end
+            if(xmlValue("texturePlay", data)~=nil)then infPlay = xmlValue("texturePlay", data) end
+            local x, y
+            if(xmlValue("x", data)~=nil)then x = xmlValue("x", data) end
+            if(xmlValue("y", data)~=nil)then y = xmlValue("y", data) end
+            if(x~=nil)or(y~=nil)then
+                self:setPosition(x, y)
+            end
+            local w, h
+            if(xmlValue("width", data)~=nil)then w = xmlValue("width", data) end
+            if(xmlValue("height", data)~=nil)then h = xmlValue("height", data) end
+            if(w~=nil)or(h~=nil)then
+                self:setSize(w, h)
+            end
             if(xmlValue("bg", data)~=nil)then self:setBackground(colors[xmlValue("bg", data)]) end
+            if(xmlValue("bgSymbol", data)~=nil)then self:setBackground(self.bgColor, xmlValue("bgSymbol", data)) end
+            if(xmlValue("bgSymbolColor", data)~=nil)then self:setBackground(self.bgColor, self.bgSymbol, colors[xmlValue("bgSymbolColor", data)]) end
             if(xmlValue("fg", data)~=nil)then self:setForeground(colors[xmlValue("fg", data)]) end
             if(xmlValue("value", data)~=nil)then self:setValue(colors[xmlValue("value", data)]) end
             if(xmlValue("visible", data)~=nil)then if(xmlValue("visible", data))then self:show() else self:hide() end end
@@ -141,6 +155,9 @@ return function(name)
             if(xmlValue("onEvent", data)~=nil)then self:generateXMLEventFunction(self.onEvent, xmlValue("onEvent", data)) end
             if(xmlValue("onGetFocus", data)~=nil)then self:generateXMLEventFunction(self.onGetFocus, xmlValue("onGetFocus", data)) end
             if(xmlValue("onLoseFocus", data)~=nil)then self:generateXMLEventFunction(self.onLoseFocus, xmlValue("onLoseFocus", data)) end
+            if(tex~=nil)then
+                self:setTexture(tex, mode, infPlay)
+            end
             self:updateDraw()
             return self
         end,
