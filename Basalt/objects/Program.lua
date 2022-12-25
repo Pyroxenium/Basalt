@@ -707,48 +707,46 @@ return function(name, parent)
         end,
 
         eventHandler = function(self, event, p1, p2, p3, p4)
-            if(base.eventHandler(self, event, p1, p2, p3, p4))then
-                if (curProcess == nil) then
-                    return
-                end
-                if(event=="dynamicValueEvent")then
-                    local w, h = pWindow.getSize()
-                    local pW, pH = self:getSize()
-                    if(w~=pW)or(h~=pH)then
-                        pWindow.basalt_resize(pW, pH)
-                        if not (curProcess:isDead()) then
-                            resumeProcess(self, "term_resize")
-                        end
+            base.eventHandler(self, event, p1, p2, p3, p4)
+            if (curProcess == nil) then
+                return
+            end
+            if(event=="dynamicValueEvent")then
+                local w, h = pWindow.getSize()
+                local pW, pH = self:getSize()
+                if(w~=pW)or(h~=pH)then
+                    pWindow.basalt_resize(pW, pH)
+                    if not (curProcess:isDead()) then
+                        resumeProcess(self, "term_resize")
                     end
-                    pWindow.basalt_reposition(self:getAnchorPosition())
-                    
                 end
-                if not (curProcess:isDead()) then
-                    if not (paused) then
-                        if(event ~= "terminate") then
-                            resumeProcess(self, event, p1, p2, p3, p4)
-                        end
-                        if (self:isFocused()) then
-                            local obx, oby = self:getAnchorPosition()
-                            local xCur, yCur = pWindow.getCursorPos()
-                            if (self.parent ~= nil) then
-                                local w,h = self:getSize()
-                                if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-                                    self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
-                                end
+                pWindow.basalt_reposition(self:getAnchorPosition())
+                
+            end
+            if not (curProcess:isDead()) then
+                if not (paused) then
+                    if(event ~= "terminate") then
+                        resumeProcess(self, event, p1, p2, p3, p4)
+                    end
+                    if (self:isFocused()) then
+                        local obx, oby = self:getAnchorPosition()
+                        local xCur, yCur = pWindow.getCursorPos()
+                        if (self.parent ~= nil) then
+                            local w,h = self:getSize()
+                            if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
+                                self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
                             end
+                        end
 
-                            if (event == "terminate") then
-                                resumeProcess(self, event)
-                                self.parent:setCursor(false)
-                                return true
-                            end
+                        if (event == "terminate") then
+                            resumeProcess(self, event)
+                            self.parent:setCursor(false)
+                            return true
                         end
-                    else
-                        table.insert(queuedEvent, { event = event, args = { p1, p2, p3, p4 } })
                     end
+                else
+                    table.insert(queuedEvent, { event = event, args = { p1, p2, p3, p4 } })
                 end
-                return false
             end
         end,
 

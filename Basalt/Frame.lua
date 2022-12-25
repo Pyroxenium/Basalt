@@ -92,6 +92,7 @@ return function(name, parent, pTerm, basalt)
             end
         end
     end
+    
     local function getDeepObject(name)
         local o = getObject(name)
         if(o~=nil)then return o end
@@ -108,7 +109,7 @@ return function(name, parent, pTerm, basalt)
     local function addObject(obj)
         local zIndex = obj:getZIndex()
         if (getObject(obj.name) ~= nil) then
-            return
+            return nil
         end
         if (objects[zIndex] == nil) then
             for x = 1, #objZIndex + 1 do
@@ -162,14 +163,14 @@ return function(name, parent, pTerm, basalt)
                         table.remove(objects[a], key)
                         removeEvents(object, value)
                         self:updateDraw()
-                        return true
+                        return true;
                     end
                 else
                     if (value == obj) then
                         table.remove(objects[a], key)
                         removeEvents(object, value)
                         self:updateDraw()
-                        return true
+                        return true;
                     end
                 end
             end
@@ -192,7 +193,7 @@ return function(name, parent, pTerm, basalt)
         if(events[event]==nil)then events[event] = {} end
         if(eventZIndex[event]==nil)then eventZIndex[event] = {} end
         if (getEvent(self, event, obj.name) ~= nil) then
-            return
+            return nil
         end
         if(self.parent~=nil)then
             self.parent:addEvent(event, self)
@@ -220,7 +221,6 @@ return function(name, parent, pTerm, basalt)
         table.insert(events[event][zIndex], obj)
         return obj
     end
-    
 
     local function removeEvent(self, event, obj)
         if(events[event]~=nil)then
@@ -412,22 +412,7 @@ return function(name, parent, pTerm, basalt)
 
         getType = function(self)
             return objectType
-        end,
-
-        getObjectCount = function(self)
-            local count = 0
-            for _, value in pairs(objects) do
-                count = count+#value
-            end
-            return count
-        end,
-        getEventCount = function(self, ev)
-            local count = 0
-            for _, value in pairs(events[ev]) do
-                count = count+#value
-            end
-            return count
-        end,
+        end;
 
         setZIndex = function(self, newIndex)
             base.setZIndex(self, newIndex)
@@ -841,9 +826,7 @@ return function(name, parent, pTerm, basalt)
                     if (events["other_event"][index] ~= nil) then
                         for _, value in rpairs(events["other_event"][index]) do
                             if (value.eventHandler ~= nil) then
-                                if (value:eventHandler(event, ...)) then
-                                    return true
-                                end
+                                value:eventHandler(event, ...)
                             end
                         end
                     end
