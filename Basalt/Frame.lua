@@ -835,6 +835,7 @@ return function(name, parent, pTerm, basalt)
             if(autoSize)and not(isMonitor)then
                 if(self.parent==nil)then
                     if(event=="term_resize")then
+                        self:sendEvent("basalt_resize", self, event, ...)
                         self:setSize(termObject.getSize())
                         autoSize = true
                     end
