@@ -243,6 +243,7 @@ function installer.generateWebVersion(file, version)
     if(request~=nil)then
         if(fs.exists(file))then
             fs.delete(file)
+           end
             local f = fs.open(file, "w")
             local link = "https://basalt.madefor.cc/versions/"..version
             local content = 'local request = http.get("'..link..'", _G._GIT_API_KEY and {Authorization = "token ".._G._GIT_API_KEY})\n'
@@ -257,7 +258,6 @@ end
             f.write(content)
             f.close()
             printStatus("Web version successfully downloaded!")
-        end
     else
         error("Version doesn't exist!")
     end
