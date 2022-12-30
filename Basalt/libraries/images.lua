@@ -1,7 +1,13 @@
-local sub,floor = string.sub,math.floor
+local sub,floor,rep = string.sub,math.floor,string.rep
 
 local function loadNFPAsBimg(path)
-    return {[1]={{}, {}, paintutils.loadImage(path)}}, "bimg"
+    local bimg = {{}}
+    local nfp = fs.open("test.nfp", "r")
+    for line in nfp.readLine do
+        table.insert(bimg[1], {rep(" ",#line), rep(" ",#line), line})
+    end
+    nfp.close()
+    return bimg
 end
 
 local function loadNFP(path)
