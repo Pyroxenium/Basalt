@@ -2,12 +2,14 @@ local sub,floor,rep = string.sub,math.floor,string.rep
 
 local function loadNFPAsBimg(path)
     local bimg = {{}}
-    local nfp = fs.open("test.nfp", "r")
-    for line in nfp.readLine do
-        table.insert(bimg[1], {rep(" ",#line), rep(" ",#line), line})
+    local nfp = fs.open(path, "r")
+    if(nfp~=nil)then
+        for line in nfp.readLine do
+            table.insert(bimg[1], {rep(" ",#line), rep(" ",#line), line})
+        end
+        nfp.close()
+        return bimg
     end
-    nfp.close()
-    return bimg
 end
 
 local function loadNFP(path)
