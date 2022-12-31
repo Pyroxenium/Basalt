@@ -68,7 +68,7 @@ return function(...)
         local co = coroutine.create(f)
         local ok, result = coroutine.resume(co, ...)
         if(ok)then
-            table.insert(schedules, co)
+            table.insert(schedules, {co, result})
         else
             basaltError(result)
         end
@@ -154,15 +154,26 @@ local bInstance = {
     end
 }
 
-local function handleSchedules(event, p1, p2, p3, p4)
+local function handleSchedules(event, ...)
     if(#schedules>0)then
         local finished = {}
         for n=1,#schedules do
             if(schedules[n]~=nil)then 
-                if (coroutine.status(schedules[n]) == "suspended")then
-                    local ok, result = coroutine.resume(schedules[n], event, p1, p2, p3, p4)
-                    if not(ok)then
-                        basaltError(result)
+                if (coroutine.status(schedules[n][1]) == "suspended")then
+                    if(schedules[n][2]~=nil)then
+                        if(schedules[n][2]==event)then
+                            local ok, result = coroutine.resume(schedules[n][1], event, ...)     
+                            schedules[n][2] = result                       
+                            if not(ok)then
+                                basaltError(result)
+                            end
+                        end
+                    else
+                        local ok, result = coroutine.resume(schedules[n][1], event, ...)    
+                        schedules[n][2] = result                        
+                        if not(ok)then
+                            basaltError(result)
+                        end
                     end
                 else
                     table.insert(finished, n)
@@ -240,6 +251,7 @@ local function basaltUpdateEvent(event, ...)
         local mouseEvent = mouseEvents[event]
         if(mouseEvent~=nil)then
             mouseEvent(mainFrame, ...)
+            handleSchedules(event, ...)
             drawFrames()
             return
         end
@@ -255,6 +267,7 @@ local function basaltUpdateEvent(event, ...)
                 v[1]:mouseHandler(1, a[2], a[3], true, a[1])
             end
         end
+        handleSchedules(event, ...)
         drawFrames()
         return
     end
@@ -273,6 +286,7 @@ local function basaltUpdateEvent(event, ...)
                 activeKey[a[1]] = false
             end
             keyEvent(activeFrame, ...)
+            handleSchedules(event, ...)
             drawFrames()
             return
         end
