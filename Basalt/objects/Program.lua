@@ -708,7 +708,6 @@ return function(name, parent)
         
         customEventHandler = function(self, event, ...)
             base.customEventHandler(self, event, ...)
-            log(event)
             if(event=="basalt_resize")then
                 local w, h = pWindow.getSize()
                 local pW, pH = self:getSize()
