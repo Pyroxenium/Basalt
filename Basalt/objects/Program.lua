@@ -705,13 +705,11 @@ return function(name, parent)
                 end
             end
         end,
-
-        eventHandler = function(self, event, p1, p2, p3, p4)
-            base.eventHandler(self, event, p1, p2, p3, p4)
-            if (curProcess == nil) then
-                return
-            end
-            if(event=="dynamicValueEvent")then
+        
+        customEventHandler = function(self, event, ...)
+            base.customEventHandler(self, event, ...)
+            log(event)
+            if(event=="basalt_resize")then
                 local w, h = pWindow.getSize()
                 local pW, pH = self:getSize()
                 if(w~=pW)or(h~=pH)then
@@ -722,6 +720,13 @@ return function(name, parent)
                 end
                 pWindow.basalt_reposition(self:getAnchorPosition())
                 
+            end
+        end,
+
+        eventHandler = function(self, event, p1, p2, p3, p4)
+            base.eventHandler(self, event, p1, p2, p3, p4)
+            if (curProcess == nil) then
+                return
             end
             if not (curProcess:isDead()) then
                 if not (paused) then
