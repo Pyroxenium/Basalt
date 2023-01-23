@@ -685,6 +685,12 @@ return function(name)
                 end
             end
         end,
+        
+        setSelectionColor = function(self, bg, fg)
+            selectionBG = bg or selectionBG
+            selectionFG = fg or selectionFG
+            return self
+        end,
 
         draw = function(self)
             if (base.draw(self)) then
