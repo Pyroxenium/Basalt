@@ -10,7 +10,7 @@ return function(name)
     local objectType = "Textfield"
     local hIndex, wIndex, textX, textY = 1, 1, 1, 1
 
-    local lines = { " " }
+    local lines = { "" }
     local bgLines = { "" }
     local fgLines = { "" }
     local keyWords = { }
@@ -216,7 +216,7 @@ return function(name)
         end;
 
         clear = function(self)
-            lines = {" "}
+            lines = {""}
             bgLines = {""}
             fgLines = {""}
             startSelX,endSelX,startSelY,endSelY = nil,nil,nil,nil
@@ -299,7 +299,7 @@ return function(name)
                 table.remove(bgLines, index or #bgLines)
                 table.remove(fgLines, index or #fgLines)
             else
-                lines = {" "}
+                lines = {""}
                 bgLines = {""}
                 fgLines = {""}
             end
@@ -720,6 +720,7 @@ return function(name)
                         self.parent:setBG(obx, oby + n - 1, bg)
                         self.parent:setFG(obx, oby + n - 1, fg)
                     end
+                    --[[
                     if(startSelX~=nil)and(endSelX~=nil)and(startSelY~=nil)and(endSelY~=nil)then
                         local sx,ex,sy,ey = getSelectionCoordinates(self)
                         for n=sy,ey do
@@ -737,7 +738,7 @@ return function(name)
                             self.parent:setBG(obx + xOffset, oby + n - 1, rep(tHex[selectionBG], line))
                             self.parent:setFG(obx + xOffset, oby + n - 1, rep(tHex[selectionFG], line))
                         end
-                    end
+                    end]]
                     if(self:isFocused())then
                         local anchx, anchy = self:getAnchorPosition()
                         --self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
