@@ -135,10 +135,10 @@ return function(name)
             if(xmlValue("anchor", data)~=nil)then self:setAnchor(xmlValue("anchor", data)) end
             if(xmlValue("shadowColor", data)~=nil)then self:setShadow(colors[xmlValue("shadowColor", data)]) end
             if(xmlValue("border", data)~=nil)then self:setBorder(colors[xmlValue("border", data)]) end
-            if(xmlValue("borderLeft", data)~=nil)then borderColors["left"] = xmlValue("borderLeft", data) end
-            if(xmlValue("borderTop", data)~=nil)then borderColors["top"] = xmlValue("borderTop", data) end
-            if(xmlValue("borderRight", data)~=nil)then borderColors["right"] = xmlValue("borderRight", data) end
-            if(xmlValue("borderBottom", data)~=nil)then borderColors["bottom"] = xmlValue("borderBottom", data) end
+            if(xmlValue("borderLeft", data)~=nil)then borderColors["left"] = colors[xmlValue("borderLeft", data)] end
+            if(xmlValue("borderTop", data)~=nil)then borderColors["top"] = colors[xmlValue("borderTop", data)] end
+            if(xmlValue("borderRight", data)~=nil)then borderColors["right"] = colors[xmlValue("borderRight", data)] end
+            if(xmlValue("borderBottom", data)~=nil)then borderColors["bottom"] = colors[xmlValue("borderBottom", data)] end
             if(xmlValue("borderColor", data)~=nil)then self:setBorder(colors[xmlValue("borderColor", data)]) end
             if(xmlValue("ignoreOffset", data)~=nil)then if(xmlValue("ignoreOffset", data))then self:ignoreOffset(true) end end
             if(xmlValue("onClick", data)~=nil)then self:generateXMLEventFunction(self.onClick, xmlValue("onClick", data)) end
