@@ -23,17 +23,17 @@ return function(name)
             local p = {}
             for k,v in pairs(colors)do
                 if(type(v)=="number")then
-                    p[k] = {term.nativePaletteColor(v)}
+                    p[v] = {term.nativePaletteColor(v)}
                 end
             end
             if(originalImage.palette~=nil)then
                 for k,v in pairs(originalImage.palette)do
-                    p[k] = tonumber(v)
+                    p[2^k] = v
                 end
             end
             if(originalImage[id]~=nil)and(originalImage[id].palette~=nil)then
                 for k,v in pairs(originalImage[id].palette)do
-                    p[k] = tonumber(v)
+                    p[2^k] = v
                 end
             end
             return p
