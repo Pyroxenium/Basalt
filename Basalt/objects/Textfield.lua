@@ -666,22 +666,21 @@ return function(name)
         end,
 
         eventHandler = function(self, event, paste, p2, p3, p4)
-            if(base.eventHandler(self, event, paste, p2, p3, p4))then
-                if(event=="paste")then
-                    if(self:isFocused())then
-                        local w, h = self:getSize()
-                        lines[textY] = lines[textY]:sub(1, textX - 1) .. paste .. lines[textY]:sub(textX, lines[textY]:len())
-                        fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self.fgColor]:rep(paste:len()) .. fgLines[textY]:sub(textX, fgLines[textY]:len())
-                        bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self.bgColor]:rep(paste:len()) .. bgLines[textY]:sub(textX, bgLines[textY]:len())
-                        textX = textX + paste:len()
-                        if (textX >= w + wIndex) then
-                            wIndex = (textX+1)-w
-                        end
-                        local anchx, anchy = self:getAnchorPosition()
-                        self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
-                        updateColors(self)
-                        self:updateDraw()
+            base.eventHandler(self, event, paste, p2, p3, p4)
+            if(event=="paste")then
+                if(self:isFocused())then
+                    local w, h = self:getSize()
+                    lines[textY] = lines[textY]:sub(1, textX - 1) .. paste .. lines[textY]:sub(textX, lines[textY]:len())
+                    fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self.fgColor]:rep(paste:len()) .. fgLines[textY]:sub(textX, fgLines[textY]:len())
+                    bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self.bgColor]:rep(paste:len()) .. bgLines[textY]:sub(textX, bgLines[textY]:len())
+                    textX = textX + paste:len()
+                    if (textX >= w + wIndex) then
+                        wIndex = (textX+1)-w
                     end
+                    local anchx, anchy = self:getAnchorPosition()
+                    self.parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self.fgColor)
+                    updateColors(self)
+                    self:updateDraw()
                 end
             end
         end,
