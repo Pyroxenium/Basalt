@@ -436,6 +436,10 @@ basalt = {
         projectDirectory = dir
     end,
 
+    forceRenderUpdate = function()
+        drawFrames()
+    end,
+
     debug = function(...)
         local args = { ... }
         if(mainFrame==nil)then print(...) return end

@@ -885,20 +885,20 @@ return function(name, parent, pTerm, basalt)
             end
         end,
 
-        mouseHandler = function(self, button, x, y, _, side)
+        mouseHandler = function(self, button, x, y, touch, side)
             if(isGroupedMonitor)then
                 if(termObject.calculateClick~=nil)then
                     x, y = termObject.calculateClick(side, x, y)
                 end
             end
-            if(base.mouseHandler(self, button, x, y))then
+            if(base.mouseHandler(self, button, x, y, touch))then
                 if(events["mouse_click"]~=nil)then
                     self:setCursor(false)
                     for _, index in ipairs(eventZIndex["mouse_click"]) do
                         if (events["mouse_click"][index] ~= nil) then
                             for _, value in rpairs(events["mouse_click"][index]) do
                                 if (value.mouseHandler ~= nil) then
-                                    if (value:mouseHandler(button, x, y)) then
+                                    if (value:mouseHandler(button, x, y, touch)) then
                                         
                                         return true
                                     end

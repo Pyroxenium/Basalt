@@ -124,7 +124,7 @@ return function(name)
             return dropdownW, dropdownH
         end,
 
-        mouseHandler = function(self, button, x, y)
+        mouseHandler = function(self, button, x, y, touch)
             if (isOpened) then
                 local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
                 if(button==1)then
@@ -135,6 +135,9 @@ return function(name)
                                     self:setValue(list[n + yOffset])
                                     self:updateDraw()
                                     local val = self:getEventSystem():sendEvent("mouse_click", self, "mouse_click", dir, x, y)
+                                    if(touch)then
+                                        self:mouseUpHandler(button, x, y)
+                                    end
                                     if(val==false)then return val end
                                     return true
                                 end
