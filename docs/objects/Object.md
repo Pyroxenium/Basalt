@@ -1,61 +1,43 @@
-This is the base class for all visual objects. It covers positioning, sizing, showing/hiding and much more.
+The Object class is the fundamental building block class in Basalt, from which all other objects and components are derived. You can think of it as the "origin" of all objects within the framework. The Object class provides essential functions that are common to all derived objects, such as adding and removing event listeners and managing inheritance and relationships between objects.
 
-By default a freshly created object is visible and doesn't listens to any incoming events.
-Its default position is always 1, 1 (based on it's parent frame). The default anchor is also topLeft.
-
-|   |   |
-|---|---|
-|[show](objects/Object/show.md)|Makes the object visible
-|[hide](objects/Object/hide.md)|Makes the object invisible
-|[isVisible](objects/Object/isVisible.md)|Returns if the object is currently visible
-|[enable](objects/Object/enable.md)|Listens to incoming events
-|[disable](objects/Object/disable.md)|Ignores all incoming events
-|[remove](objects/Object/remove.md)|Removes the children object from it's parent object
-|[setPosition](objects/Object/setPosition.md)|Changes the position (x,y)
-|[getPosition](objects/Object/getPosition.md)|Returns the current position
-|[setBackground](objects/Object/setBackground.md)|Changes the object's background
-|[setForeground](objects/Object/setForeground.md)|Changes the object's text color
-|[setSize](objects/Object/setSize.md)|Changes the object to a new size
-|[getSize](objects/Object/getSize.md)|Returns the width and height
-|[setFocus](objects/Object/setFocus.md)|Changes the object to be the focused object
-|[isFocused](objects/Object/isFocused.md)|Returns if the object is currently focused
-|[setZIndex](objects/Object/setZIndex.md)|Changes the z-index
-|[setParent](objects/Object/setParent.md)|Changes the parent of that object
-|[getAnchorPosition](objects/Object/getAnchorPosition.md)|Returns the relative x and y coordinates of that object
-|[setAnchor](objects/Object/setAnchor.md)|Sets the current anchor
-|[getAbsolutePosition](objects/Object/getAbsolutePosition.md)|Returns the absolute x and y coordinates of that object
-|[setValue](objects/Object/setValue.md)|Changes the stored value
-|[getValue](objects/Object/getValue.md)|Returns the currently stored value
-|[getName](objects/Object/getName.md)|Returns the name (or in other words: id) of that object
-|[setShadow](objects/Object/setShadow.md)|Changes the shadow of that object
-|[setBorder](objects/Object/setBorder.md)|Changes the border lines
-
-# Events
-
-This is a list of all available events for all objects:
+In simple terms, the Object class is like a common ancestor that passes down basic functions and properties to all subsequent objects. This makes it easier to keep the behavior of objects throughout the framework consistent and predictable.
 
 |   |   |
 |---|---|
-|[onClick](objects/Object/onClick.md)|Fires as soon as the object gets clicked
-|[onClickUp](objects/Object/onClickUp.md)|Fires as soon as the mouse button gets released on the object
-|[onRelease](objects/Object/onRelease.md)|Fires as soon as the mouse button gets released
-|[onScroll](objects/Object/onScroll.md)|Fires as soon as you scroll with the mousewheel
-|[onDrag](objects/Object/onDrag.md)|Fires as soon as the object is beeing dragged
-|[onHover](objects/Object/onHover.md)|CraftOS-PC - fires when the mouse hovers over a object
-|[onLeave](objects/Object/onLeave.md)|CraftOS-PC - fires when the mouse leaves a object
-|[onKey](objects/Object/onKey.md)|Fires when the object is focused and a keyboard key has been clicked
-|[onChar](objects/Object/onChar.md)|Fires when the object is focused and a character has been clicked
-|[onKeyUp](objects/Object/onKeyUp.md)|Fires when the object is focused and a keyboard key has been released
-|[onChange](objects/Object/onChange.md)|Fires when the object value has been changed
-|[onResize](objects/Object/onResize.md)|Fires when the object got resized
-|[onReposition](objects/Object/onReposition.md)|Fires when the object has been repositioned
-|[onGetFocus](objects/Object/onGetFocus.md)|Fires when the object is focused
-|[onLoseFocus](objects/Object/onLoseFocus.md)|Fires when the object lost it's focus
-|[onEvent](objects/Object/onEvent.md)|Fires on any other event
+|[enable](objects/Object/enable.md)|Enables the event listeners
+|[disable](objects/Object/disable.md)|Disables the event listeners
+|[getType](objects/Object/getType.md)|Returns the object type
+|[isType](objects/Object/isType.md)|Checks if the object is of a specific type
+|[getName](objects/Object/getName.md)|Returns the name
+|[getParent](objects/Object/getParent.md)|Returns the parent
+|[setParent](objects/Object/setParent.md)|Changes the parent
+|[getZIndex](objects/Object/getZIndex.md)|Returns the z-index
+|[remove](objects/Object/remove.md)|Removes the object from its parent
 
-Sidenote: When you use return false this will skip the object's event handler. Here is a example for that.
+## Events
 
-This code would make it impossible to write a into the input:
+Events are actions or occurrences that happen during the execution of your program. In Basalt, objects can respond to various events, such as user interactions or changes in their properties. The following is a list of all available events for all objects:
+
+|   |   |
+|---|---|
+|[onClick](objects/Object/onClick.md)|Fires when the object is clicked
+|[onClickUp](objects/Object/onClickUp.md)|Fires when the mouse button is released on the object
+|[onRelease](objects/Object/onRelease.md)|Fires when the mouse button is released
+|[onScroll](objects/Object/onScroll.md)|Fires when scrolling with the mouse wheel
+|[onDrag](objects/Object/onDrag.md)|Fires when the object is being dragged
+|[onHover](objects/Object/onHover.md)|CraftOS-PC - fires when the mouse hovers over an object
+|[onLeave](objects/Object/onLeave.md)|CraftOS-PC - fires when the mouse leaves an object
+|[onKey](objects/Object/onKey.md)|Fires when the object is focused and a keyboard key is pressed
+|[onChar](objects/Object/onChar.md)|Fires when the object is focused and a character key is pressed
+|[onKeyUp](objects/Object/onKeyUp.md)|Fires when the object is focused and a keyboard key is released
+|[onChange](objects/Object/onChange.md)|Fires when the object value has changed
+|[onGetFocus](objects/Object/onGetFocus.md)|Fires when the object gains focus
+|[onLoseFocus](objects/Object/onLoseFocus.md)|Fires when the object loses focus
+|[onEvent](objects/Object/onEvent.md)|Fires for any other event
+
+Sidenote: When you use return false, the object's event handler will be skipped. Here is an example of that.
+
+This code would make it impossible to enter the letter 'a' into the input:
 
 ```lua
 local basalt = require("basalt")
@@ -64,10 +46,12 @@ local main = basalt.createFrame()
 local input = main:addInput()
   :setPosition(3,3)
 
-function checkInput(self, event, char)
+local function checkInput(self, event, char)
   if(char=="a")then
     return false
   end
 end
 main:onChar(checkInput)
 ```
+
+In this example, the checkInput function is defined to return false when the character 'a' is entered. When this occurs, the event handler for the input is skipped, preventing the letter 'a' from being added to the input.

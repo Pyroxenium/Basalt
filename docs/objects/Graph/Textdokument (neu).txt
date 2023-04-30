@@ -1,0 +1,20 @@
+## getMinValue
+
+### Description
+
+Returns the current minimum value of the graph.
+
+### Returns
+
+1. `number` minValue - The current minimum value of the graph.
+
+### Usage
+
+* Gets the minimum value of the graph
+
+```lua
+local mainFrame = basalt.createFrame()
+local aGraph = mainFrame:addGraph()
+local minValue = aGraph:getMinValue()
+basalt.debug("Min value:", minValue)
+```

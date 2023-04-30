@@ -1,59 +1,87 @@
-local Object = require("Object")
 local utils = require("utils")
-local xmlValue = utils.getValueFromXML
+local tHex = require("tHex")
 
-return function(name)
-    local base = Object(name)
+return function(name, basalt)
+    local base = basalt.getObject("ChangeableObject")(name, basalt)
     local objectType = "List"
-    base.width = 16
-    base.height = 6
-    base:setZIndex(5)
 
     local list = {}
-    local itemSelectedBG
-    local itemSelectedFG
+    local itemSelectedBG = colors.black
+    local itemSelectedFG = colors.lightGray
     local selectionColorActive = true
-    local align = "left"
+    local textAlign = "left"
     local yOffset = 0
     local scrollable = true
 
+    base:setSize(16, 8)
+    base:setZIndex(5)
+
     local object = {
+        init = function(self)
+            local parent = self:getParent()
+            self:listenEvent("mouse_click")
+            self:listenEvent("mouse_drag")
+            self:listenEvent("mouse_scroll")
+            return base.init(self)
+        end,
+
+        getBase = function(self)
+            return base
+        end,
+
+        setTextAlign = function(self, align)
+            textAlign = align
+            return self
+        end,
+
+        getTextAlign = function(self)
+            return textAlign
+        end,
+
+        getBase = function(self)
+            return base
+        end,  
+
         getType = function(self)
             return objectType
-        end;
+        end,
+
+        isType = function(self, t)
+            return objectType==t or base.isType~=nil and base.isType(t) or false
+        end,
 
         addItem = function(self, text, bgCol, fgCol, ...)
-            table.insert(list, { text = text, bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })
+            table.insert(list, { text = text, bgCol = bgCol or self:getBackground(), fgCol = fgCol or self:getForeground(), args = { ... } })
             if (#list <= 1) then
                 self:setValue(list[1], false)
             end
             self:updateDraw()
             return self
-        end;
+        end,
 
         setOffset = function(self, yOff)
             yOffset = yOff
             self:updateDraw()
             return self
-        end;
+        end,
 
         getOffset = function(self)
             return yOffset
-        end;
+        end,
 
         removeItem = function(self, index)
             table.remove(list, index)
             self:updateDraw()
             return self
-        end;
+        end,
 
         getItem = function(self, index)
             return list[index]
-        end;
+        end,
 
         getAll = function(self)
             return list
-        end;
+        end,
 
         getItemIndex = function(self)
             local selected = self:getValue()
@@ -62,60 +90,52 @@ return function(name)
                     return key
                 end
             end
-        end;
+        end,
 
         clear = function(self)
             list = {}
             self:setValue({}, false)
             self:updateDraw()
             return self
-        end;
+        end,
 
         getItemCount = function(self)
             return #list
-        end;
+        end,
 
         editItem = function(self, index, text, bgCol, fgCol, ...)
             table.remove(list, index)
-            table.insert(list, index, { text = text, bgCol = bgCol or self.bgColor, fgCol = fgCol or self.fgColor, args = { ... } })
+            table.insert(list, index, { text = text, bgCol = bgCol or self:getBackground(), fgCol = fgCol or self:getForeground(), args = { ... } })
             self:updateDraw()
             return self
-        end;
+        end,
 
         selectItem = function(self, index)
             self:setValue(list[index] or {}, false)
             self:updateDraw()
             return self
-        end;
+        end,
 
-        setSelectedItem = function(self, bgCol, fgCol, active)
-            itemSelectedBG = bgCol or self.bgColor
-            itemSelectedFG = fgCol or self.fgColor
+        setSelectionColor = function(self, bgCol, fgCol, active)
+            itemSelectedBG = bgCol or self:getBackground()
+            itemSelectedFG = fgCol or self:getForeground()
             selectionColorActive = active~=nil and active or true
             self:updateDraw()
             return self
-        end;
+        end,
+
+        getSelectionColor = function(self)
+            return itemSelectedBG, itemSelectedFG
+        end,
+
+        isSelectionColorActive = function(self)
+            return selectionColorActive
+        end,
 
         setScrollable = function(self, scroll)
             scrollable = scroll
             if(scroll==nil)then scrollable = true end
             self:updateDraw()
-            return self
-        end;
-
-        setValuesByXMLData = function(self, data)
-            base.setValuesByXMLData(self, data)
-            if(xmlValue("selectionBG", data)~=nil)then itemSelectedBG = colors[xmlValue("selectionBG", data)] end
-            if(xmlValue("selectionFG", data)~=nil)then itemSelectedFG = colors[xmlValue("selectionFG", data)]  end
-            if(xmlValue("scrollable", data)~=nil)then if(xmlValue("scrollable", data))then self:setScrollable(true) else self:setScrollable(false) end end
-            if(xmlValue("offset", data)~=nil)then yOffset = xmlValue("offset", data) end
-            if(data["item"]~=nil)then
-                local tab = data["item"]
-                if(tab.properties~=nil)then tab = {tab} end
-                for k,v in pairs(tab)do
-                    self:addItem(xmlValue("text", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
-                end
-            end
             return self
         end,
 
@@ -148,7 +168,7 @@ return function(name)
 
         mouseHandler = function(self, button, x, y)
             if(base.mouseHandler(self, button, x, y))then
-                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+                local obx, oby = self:getAbsolutePosition()
                 local w,h = self:getSize()
                 if (#list > 0) then
                     for n = 1, h do
@@ -174,42 +194,25 @@ return function(name)
         end,
 
         draw = function(self)
-            if (base.draw(self)) then
-                if (self.parent ~= nil) then
-                    local obx, oby = self:getAnchorPosition()
-                    local w,h = self:getSize()
-                    if(self.bgColor~=false)then
-                        self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
-                    end
-                    for n = 1, h do
-                        if (list[n + yOffset] ~= nil) then
-                            if (list[n + yOffset] == self:getValue()) then
-                                if (selectionColorActive) then
-                                    self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, w, align), itemSelectedBG, itemSelectedFG)
-                                else
-                                    self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, w, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
-                                end
-                            else
-                                self.parent:writeText(obx, oby + n - 1, utils.getTextHorizontalAlign(list[n + yOffset].text, w, align), list[n + yOffset].bgCol, list[n + yOffset].fgCol)
-                            end
+            base.draw(self)
+            self:addDraw("list", function()
+                local parent = self:getParent()
+                local obx, oby = self:getPosition()
+                local w, h = self:getSize()
+                for n = 1, h do
+                    if list[n + yOffset] then
+                        local t = list[n + yOffset].text
+                        local fg, bg = list[n + yOffset].fgCol, list[n + yOffset].bgCol
+                        if list[n + yOffset] == self:getValue() and selectionColorActive then
+                            fg, bg = itemSelectedFG, itemSelectedBG
                         end
+                        self:addBlit(1, n, t, tHex[fg]:rep(#t), tHex[bg]:rep(#t))
                     end
                 end
-            end
-        end,
-
-        init = function(self)
-            self.parent:addEvent("mouse_click", self)
-            self.parent:addEvent("mouse_drag", self)
-            self.parent:addEvent("mouse_scroll", self)
-            if(base.init(self))then
-                self.bgColor = self.parent:getTheme("ListBG")
-                self.fgColor = self.parent:getTheme("ListText")
-                itemSelectedBG = self.parent:getTheme("SelectionBG")
-                itemSelectedFG = self.parent:getTheme("SelectionText")
-            end
+            end)
         end,
     }
 
+    object.__index = object
     return setmetatable(object, base)
 end

@@ -2,11 +2,18 @@
 
 *Note: The Basalt Wiki is a work in progress. Please treat wiki errors the same as bugs and report them accordingly.*
 
-Here you can find information about how to use Basalt as well as examples of functional Basalt code. The aim of Basalt is to improve user interaction through visual display.
+Basalt is a user-friendly UI framework for CC:Tweaked (also known as "ComputerCraft: Tweaked") - a popular Minecraft mod. It was developed to enhance user interaction through visual displays. In this wiki, you'll find information on how to use Basalt as well as examples of functional Basalt code.
+
 
 ## About Basalt
 
-Basalt is intended to be an easy-to-understand UI Framework designed for CC:Tweaked (Also known as "ComputerCraft: Tweaked") - a popular minecraft mod. For more information about CC:Tweaked, checkout the project's [wiki](https://tweaked.cc/) or [download](https://modrinth.com/mod/cc-tweaked).
+Basalt is an easy-to-understand UI framework designed to improve user interaction with CC:Tweaked. Some of its key features include:
+
+- A set of pre-built UI components for creating interfaces quickly and easily.
+- A flexible layout system that allows users to create custom designs.
+- A powerful event handling system for managing user input and interaction.
+- Support for multiple screen resolutions and aspect ratios.
+- Extensive documentation and examples to help users get started quickly.
 
 ## Quick Demo
 

@@ -1,23 +1,16 @@
-local sub,floor,rep = string.sub,math.floor,string.rep
+local sub,floor = string.sub,math.floor
 
 local function loadNFPAsBimg(path)
-    local bimg = {{}}
-    local nfp = fs.open(path, "r")
-    if(nfp~=nil)then
-        for line in nfp.readLine do
-            table.insert(bimg[1], {rep(" ",#line), rep(" ",#line), line})
-        end
-        nfp.close()
-        return bimg
-    end
+    return {[1]={{}, {}, paintutils.loadImage(path)}}, "bimg"
 end
 
 local function loadNFP(path)
     return paintutils.loadImage(path), "nfp"
 end
 
-local function loadBIMG(path)
-    local f = fs.open(path, "rb")
+local function loadBIMG(path, binaryMode)
+    local f = fs.open(path, binaryMode and "rb" or "r")
+    if(f==nil)then error("Path - "..path.." doesn't exist!") end
     local content = textutils.unserialize(f.readAll())
     f.close()
     if(content~=nil)then
@@ -33,28 +26,24 @@ local function loadBBFAsBimg(path)
 
 end
 
-local function loadImage(path, f)
-    if(f==nil)then
-        if(path:find(".bimg"))then
-            return loadBIMG(path)
-        elseif(path:find(".bbf"))then
-            return loadBBF(path)
-        else
-            return loadNFP(path)
-        end
+local function loadImage(path, f, binaryMode)
+    if(sub(path, -4) == ".bimg")then
+        return loadBIMG(path, binaryMode)
+    elseif(sub(path, -3) == ".bbf")then
+        return loadBBF(path, binaryMode)
+    else
+        return loadNFP(path, binaryMode)
     end
     -- ...
 end
 
-local function loadImageAsBimg(path, f)
-    if(f==nil)then
-        if(path:find(".bimg"))then
-            return loadBIMG(path)
-        elseif(path:find(".bbf"))then
-            return loadBBFAsBimg(path)
-        else
-            return loadNFPAsBimg(path)
-        end
+local function loadImageAsBimg(path)
+    if(path:find(".bimg"))then
+        return loadBIMG(path)
+    elseif(path:find(".bbf"))then
+        return loadBBFAsBimg(path)
+    else
+        return loadNFPAsBimg(path)
     end
 end
 

@@ -1,6 +1,6 @@
-# Basalt
-
 ## isKeyDown
+
+### Description
 
 Checks if the user is currently holding a key
 

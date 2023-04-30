@@ -1,18 +1,24 @@
 ## setText
-Sets the text which gets displayed.
 
-#### Parameters: 
+Sets the text which gets displayed in the Label object.
+
+### Parameters
+
 1. `string` The text which should be displayed
 
-#### Returns:
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
+### Usage
+
 * Creates a default label with text "Some random text".
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aLabel = mainFrame:addLabel():setText("Some random text")
 ```
+
 ```xml
 <label text="Some random text" />
 ```

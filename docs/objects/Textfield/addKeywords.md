@@ -1,19 +1,35 @@
 ## addKeywords
-Adds keywords for special coloring
 
-#### Parameteres:
-1. `number|color` color of your choice
-2. `table` a list of keywords which should be colored example: {"if", "else", "then", "while", "do"}
+### Description
 
-#### Returns:
+Adds keywords for special coloring in a Textfield object. This allows you to highlight specific words with a chosen color.
+
+### Parameteres
+
+1. `number|color` color - The color you want to apply to the keywords
+2. `table` keywords - A list of keywords that should be colored, for example: {"if", "else", "then", "while", "do", "hello"}
+
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
-* Changes the color of some words to purple
+### Usage
+
+* Changes the color of specific words to purple in a Textfield object:
+
 ```lua
+local basalt = require("basalt")
+
 local mainFrame = basalt.createFrame()
-local aTextfield = mainFrame:addTextfield():addKeywords(colors.purple, {"if", "else", "then", "while", "do", "hello"})
+local aTextfield = mainFrame:addTextfield()
+
+aTextfield:addKeywords(colors.purple, {"if", "else", "then", "while", "do", "hello"})
+
+basalt.autoUpdate()
 ```
+
+In this example, a Textfield object is created and added to the mainFrame. The addKeywords method is called to add a list of keywords to be highlighted in purple color. The specified keywords are "if", "else", "then", "while", "do", and "hello".
+
 ```xml
 <textfield>
     <keywords>

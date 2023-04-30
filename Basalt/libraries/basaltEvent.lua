@@ -1,21 +1,41 @@
 return function()
     local events = {}
-    local index = {}
 
     local event = {
         registerEvent = function(self, _event, func)
             if (events[_event] == nil) then
                 events[_event] = {}
-                index[_event] = 1
             end
-            events[_event][index[_event]] = func
-            index[_event] = index[_event] + 1
-            return index[_event] - 1
-        end;
+            table.insert(events[_event], func)
+        end,
 
         removeEvent = function(self, _event, index)
             events[_event][index[_event]] = nil
-        end;
+        end,
+
+        hasEvent = function(self, _event)
+            return events[_event]~=nil
+        end,
+        
+        getEventCount = function(self, _event)
+            return events[_event]~=nil and #events[_event] or 0
+        end,
+
+        getEvents = function(self)
+            local t = {}
+            for k,v in pairs(events)do
+                table.insert(t, k)
+            end
+            return t
+        end,
+
+        clearEvent = function(self, _event)
+            events[_event] = nil
+        end,
+
+        clear = function(self, _event)
+            events = {}
+        end,
 
         sendEvent = function(self, _event, ...)
             local returnValue
@@ -28,7 +48,7 @@ return function()
                 end
             end
             return returnValue
-        end;
+        end,
     }
     event.__index = event
     return event

@@ -1,13 +1,13 @@
-# Basalt
-
 ## stopUpdate / stop
 
-Stops the automatic draw and event handler which got started by `basalt.autoUpdate()`.
-`basalt.autoUpdate(false)` also does the same.
+### Description
+
+This method stops the automatic draw and event handler that was started by  `basalt.autoUpdate()`.
+`basalt.autoUpdate(false)` achieves the same result.
 
 ### Usage
 
-* When the quit button is clicked, the button stops basalt's event listeners and draw handlers
+* When the quit button is clicked, the button stops Basalt's event listeners and draw handlers.
 
 ```lua
 local main = basalt.createFrame()

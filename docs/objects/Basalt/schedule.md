@@ -1,6 +1,6 @@
-# Basalt
-
 ## schedule
+
+### Description
 
 Schedules a function which gets called in a coroutine. After the coroutine is finished it will get destroyed immediatly. It's something like threads, but with some limits.
 **A guide can be found [here](/tips/logic).**

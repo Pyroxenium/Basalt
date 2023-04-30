@@ -1,12 +1,18 @@
-# Object - Event
-
 ## onLeave
+
+### Description
 
 `onLeave(self, event, button, x, y)`
 
-The computercraft event which triggers this method is `mouse_move` - only available in [CraftOS-PC](https://www.craftos-pc.cc).
+The onLeave event is triggered when the mouse pointer leaves the object. The event is based on the mouse_move event, which is only available in [CraftOS-PC](https://www.craftos-pc.cc).
 
-Here is a example on how to add a onLeave event to your button:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onLeave event to a button:
 
 ```lua
 local basalt = require("basalt")

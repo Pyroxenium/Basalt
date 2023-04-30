@@ -17,6 +17,7 @@ function process:new(path, window, newEnv, ...)
         local env = setmetatable(newEnv, {__index=_ENV})
         env.shell = shell
         env.basaltProgram=true
+        env.arg = {[0]=path, table.unpack(args)}
         env.require, env.package = newPackage(env, fs.getDir(pPath))
         if(fs.exists(pPath))then
             local file = fs.open(pPath, "r")
@@ -24,7 +25,7 @@ function process:new(path, window, newEnv, ...)
             file.close()
             local program = load(content, path, "bt", env)
             if(program~=nil)then
-                return program(table.unpack(args))
+                return program()
             end
         end
     end)

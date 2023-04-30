@@ -1,12 +1,18 @@
-# Object - Event
-
 ## onClickUp
+
+### Description
 
 `onClickUp(self, event, button, x, y)`
 
-The computercraft event which triggers this method is `mouse_up`.
+The onClickUp event is triggered when a mouse click is released on the object.
 
-Here is a example on how to add a onClickUp event to your button:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onClickUp event to a button:
 
 ```lua
 local basalt = require("basalt")
@@ -17,13 +23,8 @@ local button = main:addButton()
   :setSize(12,3)
   :setText("Click")
 
-function buttonOnClick(self, button, x, y)
-  basalt.debug("Button got clicked!")
+function buttonOnClickUp()
+  basalt.debug("Button click released!")
 end
-button:onClick(buttonOnClick)
-
-function buttonOnRelease(self, button, x, y)
-  basalt.debug("Button got released!")
-end
-button:onClickUp(buttonOnRelease)
+button:onClickUp(buttonOnClickUp)
 ```

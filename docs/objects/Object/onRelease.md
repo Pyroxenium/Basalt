@@ -1,14 +1,18 @@
-# Object - Event
-
 ## onRelease
+
+### Description
 
 `onRelease(self, event, button, x, y)`
 
-The computercraft event which triggers this method is `mouse_up`.
+The `onRelease` event is triggered when the mouse button is released. The main difference between `onRelease` and `onClickUp` is that `onRelease` is called even when the mouse is no longer over the object, while `onClickUp` is only called when the mouse is over the object.
 
-The difference between onRelease and :onClickUp is that :onRelease is called even when the mouse is no longer over the object, while :onClickUp is only called when the mouse is over the object.
+### Returns
 
-Here is a example on how to add a onRelease event to your button:
+1. `object` The object in use
+
+### Usage
+
+* Add an onRelease event to a button:
 
 ```lua
 local basalt = require("basalt")

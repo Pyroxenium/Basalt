@@ -1,17 +1,26 @@
 ## setText
+
+### Description
+
 Sets the displayed button text
-#### Parameters: 
+
+### Parameters
+
 1. `string` the text the button should show
 
-#### Returns:
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
+### Usage
+
 * Creates a button with "Click me!" as text.
+
 ```lua
 local mainFrame = basalt.createFrame()
 local button = mainFrame:addButton():setText("Click me!")
 ```
+
 ```xml
 <button text="Click me!" />
 ```

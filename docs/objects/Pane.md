@@ -1,17 +1,12 @@
-Panes are here to do some visual background modifying, without listening (by default) to any events.
+A Pane object is used for visual background modification without listening to any events by default.
 
-Because panes don't have any unique functionality, there is also no method list for them.
-
-[Object](objects/Object.md) methods also apply for panes.
-
-## Example
+Since Pane objects don't have any unique functionality, there is no method list for them. However, they inherit methods from the Object and VisualObject classes.
 
 ```lua
 local mainFrame = basalt.createFrame()
 local aPane = mainFrame:addPane()
 aPane:setSize(30, 10)
 aPane:setBackground(colors.yellow)
-aPane:show()
 ```
 
 ```xml
@@ -38,4 +33,4 @@ main:addPane():setSize("parent.w - 2", 1):setPosition(2, 4):setBackground(colors
 main:addPane():setSize("parent.w - 2", 1):setPosition(2, 6):setBackground(false, "\183", colors.purple)
 ```
 
-You can also do that in y instead of x direction.
+You can also do that in the y direction instead of the x direction.

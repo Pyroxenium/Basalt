@@ -1,13 +1,18 @@
 ## start
+
 starts a new thread and executes the function
-#### Parameters: 
+
+### Parameters
+
 1. `function` the function which should be executed
 
-#### Returns:
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
+### Usage
 * Starts a new thread
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aThread = mainFrame:addThread()
@@ -19,10 +24,13 @@ local function randomThreadFunction()
 end
 aThread:start(randomThreadfunction)
 ```
+
 you are also able to start threads via xml:
+
 ```lua
     basalt.setVariable("myThread", function() while true do os.sleep(1) end end)
 ```
+
 ```xml
 <thread thread="myThread" start="true"/>
 ```

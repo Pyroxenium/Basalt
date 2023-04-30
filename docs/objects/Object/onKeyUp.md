@@ -1,25 +1,29 @@
-# Object - Event
-
 ## onKeyUp
+
+### Description
 
 `onKeyUp(self, event, key)`
 
-The computercraft event which triggers this method is `key_up`.
+The onKeyUp event is triggered when a key is released on the keyboard.
 
-Here is a example on how to add a onKeyUp event to your frame:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onKeyUp event to an object:
 
 ```lua
 local basalt = require("basalt")
 
 local main = basalt.createFrame()
-local subFrame = main:addFrame()
+local input = main:addInput()
   :setPosition(3,3)
-  :setSize(18,6)
+  :setSize(12,1)
 
-function openSubFrame(self, event, key)
-  if(key==keys.c)then
-    subFrame:show()
-  end
+function inputnOnKeyUp(self, event, key)
+  basalt.debug("Key released: " .. key)
 end
-main:onKeyUp(openSubFrame)
+input:onKeyUp(inputnOnKey)
 ```

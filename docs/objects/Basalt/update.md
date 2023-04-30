@@ -1,5 +1,3 @@
-# Basalt
-
 ## update
 
 Calls the draw and event handler once - this gives more flexibility about which events basalt should process. For example you could filter the terminate event.

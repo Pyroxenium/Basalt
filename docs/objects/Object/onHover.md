@@ -1,12 +1,18 @@
-# Object - Event
-
 ## onHover
+
+### Description
 
 `onHover(self, event, button, x, y)`
 
-The computercraft event which triggers this method is `mouse_move` - only available in [CraftOS-PC](https://www.craftos-pc.cc).
+The onHover event is triggered when the mouse is moved over the object. This event is only available in [CraftOS-PC](https://www.craftos-pc.cc).
 
-Here is a example on how to add a onHover event to your button:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onHover event to a button:
 
 ```lua
 local basalt = require("basalt")

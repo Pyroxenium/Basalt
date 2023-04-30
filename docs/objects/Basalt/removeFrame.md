@@ -1,6 +1,6 @@
-# Basalt
-
 ## removeFrame
+
+### Description
 
 Removes the base frame by it's id. **This only works for base-frames.**
 

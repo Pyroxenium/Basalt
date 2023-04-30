@@ -1,34 +1,27 @@
 ## getQueuedEvents
-If the program is paused, incomming events will be inserted into a queued events table. As soon as the program is unpaused, the queued events table will be empty
 
-#### Returns:
-1. `table` a table - {event="event", args={"a", "b",...}}
+### Description
 
-#### Usage:
-* prints the queued events table
-```lua
-local mainFrame = basalt.createFrame():show()
-local aProgram = mainFrame:addProgram():execute("rom/programs/shell.lua"):show()
-mainFrame:addButton():setText("inject"):onClick(function() basalt.debug(aProgram:getQueuedEvents()) end):show()
-```
+If the program is paused, incoming events will be inserted into a queued events table. As soon as the program is unpaused, the queued events table will be empty.
 
-## updateQueuedEvents
-Here you can manipulate the queued events table
+### Returns
 
-#### Parameters: 
-1. `table` a table, items should be {event="event", args={para1, para2, para3, para4}}
+1. `table`  A table with queued events: {event="event", args={"a", "b",...}}
 
-#### Returns:
-1. `object` The object in use
+### Usage
+
+* Print the queued events table:
 
 ```lua
-local mainFrame = basalt.createFrame():show()
-local aProgram = mainFrame:addProgram():execute("rom/programs/shell.lua"):show()
+local basalt = require("basalt")
 
-mainFrame:addButton():setText("inject"):onClick(function() 
-local events = aProgram:getQueuedEvents()
-table.insert(events,1,{event="char", args={"w"}}
-aProgram:updateQueuedEvents(events) 
-end):show()
+local mainFrame = basalt.createFrame()
+local aProgram = mainFrame:addProgram():execute("rom/programs/shell.lua")
+
+local function printQueuedEvents()
+  local queuedEvents = aProgram:getQueuedEvents()
+  basalt.debug(queuedEvents)
+end
+
+mainFrame:addButton():setText("Show Queued Events"):onClick(printQueuedEvents)
 ```
-

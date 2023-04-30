@@ -1,15 +1,18 @@
 ## loadImage
+
+### Description
+
 This method is used to load an image file into the image object.
 
-#### Parameters: 
+### Parameters
 
-1. `path` the absolute file path
+1. `string` path - The absolute file path
 
-#### Returns:
+### Returns
 
 1. `object` The object in use
 
-#### Usage:
+### Usage
 
 * Creates a default image and loads a test.nfp file
 

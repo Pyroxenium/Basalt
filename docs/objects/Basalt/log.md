@@ -1,13 +1,13 @@
-# Basalt
-
 ## log
 
-This writes something into a file. The main goal is to make debugging errors easier. Lets say you'r program is crashing and you don't know why, you could use basalt.log The log files will automatically removed after you start your program again.
+### Description
+
+Writes a message to the log file. This can be useful for debugging errors or keeping a record of events in your application. Log files are automatically removed when you start your program again.
 
 ### Parameters
 
 1. `string` The text to write into the log file
-2. `string` - optional (default: "Debug") - the type to write
+2. `string` - The type or category of the log message
 
 ### Usage
 
@@ -17,12 +17,12 @@ This writes something into a file. The main goal is to make debugging errors eas
 basalt.log("Hello!")
 ```
 
-This should result in there beeing a file called `basaltLog.txt`. In the file it should say `[Basalt][Debug]: Hello!`.
+This should result in a file called `basaltLog.txt`. In the file it should say `[Basalt][Debug]: Hello!`.
 
-* Writes "Config file missing" into the log file, with warning as prefix.
+* Writes "Config file missing" into the log file, with "WARNING" as the prefix.
 
 ```lua
 basalt.log("Config file is missing", "WARNING")
 ```
 
-This should result in there beeing a file called `basaltLog.txt`. In the file it should say `[Basalt][WARNING]: Config file is missing`.
+This should result in a file called `basaltLog.txt`. In the file, it should say `[Basalt][WARNING]: Config file is missing`.

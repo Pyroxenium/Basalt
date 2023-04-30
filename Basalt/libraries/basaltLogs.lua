@@ -10,7 +10,7 @@ local mt = {
         if(text==nil)then return end
         local dirStr = logDir~="" and logDir.."/"..logFileName or logFileName
         local handle = fs.open(dirStr, fs.exists(dirStr) and "a" or "w")
-        handle.writeLine("[Basalt]["..(typ and typ or defaultLogType).."]: "..tostring(text))
+        handle.writeLine("[Basalt]["..os.date("%Y-%m-%d %H:%M:%S").."]["..(typ and typ or defaultLogType).."]: "..tostring(text))
         handle.close()
     end,
 }

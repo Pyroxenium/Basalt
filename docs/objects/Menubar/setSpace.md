@@ -1,14 +1,21 @@
 ## setSpace
-Sets the background and the foreground of the item which is currently selected
 
-#### Parameters: 
+### Description
+
+Sets the space between the entries in the menubar.
+
+### Parameters
+
 1. `number` The space you want between the entries
 
-#### Returns:
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
-* Creates a default menubar with 4 entries and sets the space to 3.
+### Usage
+
+* Creates a default menubar with 4 entries and sets the space between them to 3.
+
 ```lua
 local main = basalt.createFrame()
 local aMenubar = main:addMenubar()
@@ -18,10 +25,12 @@ local aMenubar = main:addMenubar()
   :addItem("4. Entry")
   :setSpace(3)
 ```
+
 ```xml
-<menubar selectionBG="green" selectionFG="red" space="3">
+<menubar space="3">
   <item><text>1. Entry</text></item>
   <item><text>2. Entry</text><bg>yellow</bg></item>
-  <item><text>2. Entry</text><bg>yellow</bg><fg>green</fg></item>
+  <item><text>3. Entry</text><bg>yellow</bg><fg>green</fg></item>
+  <item><text>4. Entry</text></item>
 </menubar>
 ```

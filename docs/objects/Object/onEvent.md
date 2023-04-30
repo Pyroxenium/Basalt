@@ -1,22 +1,28 @@
-# Object - Event
-
 ## onEvent
+
+### Description
 
 `onEvent(self, event, ...)`
 
-This event gets called on any other event. Some examples: http_success, disk, modem_message, paste, peripheral, redstone,...
+The onEvent method is triggered for any other event that is not handled by the specific event methods. Some examples include: http_success, disk, modem_message, paste, peripheral, redstone, and more.
 
 You can find a full list here: [CC:Tweaked](https://tweaked.cc/) (on the left sidebar)
 
-Here is a example on how to add a onEvent event to your frame:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onEvent event to your frame:
 
 ```lua
 local basalt = require("basalt")
 
 local main = basalt.createFrame()
 main:onEvent(function(event, side, channel, replyChannel, message, distance)
-    if(event=="modem_message")then
-        basalt.debug("Mesage received: "..tostring(message))
+    if(event == "modem_message") then
+        basalt.debug("Message received: " .. tostring(message))
     end
 end)
 ```
