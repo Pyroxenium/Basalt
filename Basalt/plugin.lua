@@ -5,7 +5,7 @@ local dir = fs.getDir(args[2] or "Basalt")
 local pluginDir = fs.combine(dir, "plugins")
 if(packaged)then
     for k,v in pairs(getProject("plugins"))do
-        local newPlugin = require(v:gsub(".lua", ""))
+        local newPlugin = v()
         if(type(newPlugin)=="table")then
             for a,b in pairs(newPlugin)do
                 if(type(a)=="string")then
