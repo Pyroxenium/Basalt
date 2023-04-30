@@ -139,7 +139,7 @@ local function makeText(nSize, sString, nFC, nBC, bBlit)
     return {tText, tFront, tBack}
 end
 
--- The following code is related to basalt and has nothing to do with bigfonts (custom code), it creates a plugin which gets added to labels:
+-- The following code is related to basalt and has nothing to do with bigfonts, it creates a plugin which will be added to labels:
 return {
     Label = function(base)
         local fontsize = 1
@@ -152,6 +152,10 @@ return {
                     fontsize = newFont
                     if(fontsize>1)then
                         self:setDrawState("label", false)
+                        bigfont = makeText(fontsize-1, self:getText(), self:getForeground(), self:getBackground() or colors.lightGray)
+                        if(autoSize)then
+                            self:getBase():setSize(#bigfont[1][1], #bigfont[1]-1)
+                        end
                     else
                         self:setDrawState("label", true)
                     end
@@ -170,6 +174,33 @@ return {
                 return self
             end,
 
+            getSize = function(self)
+                local w, h = base.getSize(self)
+                if(fontsize>1)then
+                    return w * (3*fontsize-3), h * (3*fontsize-3)
+                else
+                    return w, h
+                end
+            end,
+
+            getWidth = function(self)
+                local w = base.getWidth(self)
+                if(fontsize>1)then
+                    return w * (3*fontsize-3)
+                else
+                    return w
+                end
+            end,
+
+            getHeight = function(self)
+                local h = base.getHeight(self)
+                if(fontsize>1)then
+                    return h * (3*fontsize-3)
+                else
+                    return h
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
                 if(xmlValue("text", data)~=nil)then self:setText(xmlValue("text", data)) end
@@ -181,10 +212,6 @@ return {
                 base.draw(self)
                 self:addDraw("bigfonts", function()
                     if(fontsize>1)then
-                        bigfont = makeText(fontsize-1, self:getText(), self:getForeground(), self:getBackground() or colors.lightGray)
-                        if(autoSize)then
-                            self:getBase():setSize(#bigfont[1][1], #bigfont[1]-1)
-                        end
                         local obx, oby = self:getPosition()
                         local parent = self:getParent()
                         local oX, oY = parent:getSize()
