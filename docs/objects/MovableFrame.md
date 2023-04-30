@@ -4,7 +4,7 @@ In addition to the methods inherited from Frame, Container, VisualObject and Obj
 
 |   |   |
 |---|---|
-|[setDraggingMap](objects/MovableFrame/getOffset.md)|Creates a small XY map for the areas where the MovableFrame can be dragged with the mouse
+|[setDraggingMap](objects/MovableFrame/setDraggingMap.md)|Creates a small XY map for the areas where the MovableFrame can be dragged with the mouse
 |[getDraggingMap](objects/MovableFrame/getDraggingMap.md)|Returns the current dragging map of the MovableFrame
 
 These methods allow you to define the specific areas within the MovableFrame where it can be dragged and moved, providing flexibility and control over user interactions with your interface.
