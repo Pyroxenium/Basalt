@@ -1,8 +1,9 @@
+[1.6 Docs](https://basalt.madefor.cc/docs1_6)
+
 - About
-  - [Home](home)
+  - [Home](/)
   - [How To](home/How-To)
   - [Download](home/download)
-  - [1.6 Docs](docs1_6)
 - Objects
   - [Basalt](objects/Basalt.md)
   - [Object](objects/Object.md)
@@ -33,9 +34,5 @@
   - [Thread](objects/Thread.md)
   - [Treeview](objects/Treeview.md)
   - [Timer](objects/Timer.md)
-- Tutorials
-  - [Your Logic](tips/logic.md)
-  - [Button coloring](tips/buttonColoring.md)
-  - [Designing/Animating](tips/design.md)
-  - [Dynamic Values](tips/dynamicvalues.md)
-  - [XML](tips/xml.md)
+- Guides
+  - [Introduction to Basalt](guides/introduction.md)
