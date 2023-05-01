@@ -36,3 +36,4 @@
   - [Timer](objects/Timer.md)
 - Guides
   - [Introduction to Basalt](guides/introduction.md)
+  - [Dynamic Values](guides/dynamicvalues.md)
