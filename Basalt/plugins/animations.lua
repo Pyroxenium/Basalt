@@ -215,6 +215,9 @@ local lerp = {
     easeInOutBounce=easeInOutBounce,
 }
 
+local utils = require("utils")
+local xmlValue = utils.xmlValue
+
 return {
     VisualObject = function(base, basalt)
         local activeAnimations = {}

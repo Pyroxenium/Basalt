@@ -37,3 +37,4 @@
 - Guides
   - [Introduction to Basalt](guides/introduction.md)
   - [Dynamic Values](guides/dynamicvalues.md)
+  - [XML](guides/xml.md)

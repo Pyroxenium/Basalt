@@ -1,3 +1,6 @@
+local utils = require("utils")
+local xmlValue = utils.xmlValue
+
 return {
     VisualObject = function(base)
         local inline = true

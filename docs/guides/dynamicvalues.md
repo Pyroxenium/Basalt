@@ -51,9 +51,9 @@ Dynamic Values can be used to access various attributes of a UI element, such as
 
 You can use different accessors to refer to objects when using Dynamic Values:
 
-1. `parent` The x-coordinate of the element
-2. `self` The y-coordinate of the element
-3. `ObjectID` The width of the element
+1. `parent` Access the parent object
+2. `self` Access the current object
+3. `ObjectID` Access a specific object using its ObjectID
 
 This allows for a more dynamic and responsive layout, as you can adjust an element's attributes based on the properties of other elements. Here's an example of using Dynamic Values to set the position and size of a UI element:
 

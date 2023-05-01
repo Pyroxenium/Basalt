@@ -98,6 +98,29 @@ wrapText = function(str, width)
     return result
 end,
 
+xmlValue = function(name, tab)
+    local var
+    if(type(tab)~="table")then return end
+    if(tab[name]~=nil)then
+        if(type(tab[name])=="table")then
+            if(tab[name].value~=nil)then
+                var = tab[name]:value()
+            end
+        end
+    end
+    if(var==nil)then var = tab["@"..name] end
+
+    if(var=="true")then 
+        var = true 
+    elseif(var=="false")then 
+        var = false
+    elseif(tonumber(var)~=nil)then 
+        var = tonumber(var)
+    end
+    return var
+end,
+
+
 uuid = function()
     return string.gsub(string.format('%x-%x-%x-%x-%x', math.random(0, 0xffff), math.random(0, 0xffff), math.random(0, 0xffff), math.random(0, 0x0fff) + 0x4000, math.random(0, 0x3fff) + 0x8000), ' ', '0')
 end

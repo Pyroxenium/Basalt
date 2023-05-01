@@ -32,6 +32,15 @@ return function(name, basalt)
             return self
         end,
 
+        getAutoSize = function(self)
+            return autoSize
+        end,
+
+        setAutoSize = function(self, bool)
+            autoSize = bool
+            return self
+        end,
+
         getText = function(self)
             return text
         end,

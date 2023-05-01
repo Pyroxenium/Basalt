@@ -1,3 +1,6 @@
+local utils = require("utils")
+local xmlValue = utils.xmlValue
+
 return {
     VisualObject = function(base)
         local bgSymbol = false
@@ -26,8 +29,8 @@ return {
                 return bgSymbolColor
             end,
 
-            setValuesByXMLData = function(self, data)
-                base.setValuesByXMLData(self, data)
+            setValuesByXMLData = function(self, data, scripts)
+                base.setValuesByXMLData(self, data, scripts)
                 if(xmlValue("background-symbol", data)~=nil)then self:setBackgroundSymbol(xmlValue("background-symbol", data), xmlValue("background-symbol-color", data)) end
                 return self
             end,

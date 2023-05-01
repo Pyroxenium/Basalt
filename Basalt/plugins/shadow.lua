@@ -1,3 +1,6 @@
+local utils = require("utils")
+local xmlValue = utils.xmlValue
+
 return {
     VisualObject = function(base)
         local shadow = false        
@@ -28,8 +31,8 @@ return {
                 end)
             end,
 
-            setValuesByXMLData = function(self, data)
-                base.setValuesByXMLData(self, data)
+            setValuesByXMLData = function(self, data, scripts)
+                base.setValuesByXMLData(self, data, scripts)
                 if(xmlValue("shadow", data)~=nil)then self:setShadow(xmlValue("shadow", data)) end
                 return self
             end

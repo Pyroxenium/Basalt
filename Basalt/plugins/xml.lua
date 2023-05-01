@@ -1,5 +1,6 @@
 local utils = require("utils")
 local uuid = utils.uuid
+local xmlValue = utils.xmlValue
 
 local function newNode(name)
     local node = {}
@@ -147,28 +148,6 @@ function XmlParser:loadFile(xmlFilename, base)
     end
 end
 
-local function xmlValue(name, tab)
-    local var
-    if(type(tab)~="table")then return end
-    if(tab[name]~=nil)then
-        if(type(tab[name])=="table")then
-            if(tab[name].value~=nil)then
-                var = tab[name]:value()
-            end
-        end
-    end
-    if(var==nil)then var = tab["@"..name] end
-
-    if(var=="true")then 
-        var = true 
-    elseif(var=="false")then 
-        var = false
-    elseif(tonumber(var)~=nil)then 
-        var = tonumber(var)
-    end
-    return var
-end
-
 local function executeScript(scripts)
     for k,v in pairs(scripts)do
         if(k~="env")then
@@ -193,14 +172,16 @@ return {
 
         local object = {
             setValuesByXMLData = function(self, data, scripts)
+                scripts.env[self:getName()] = self
                 local x, y = self:getPosition()
-                local w, h = self:getSize()
+                local w, h = nil, nil
                 if(xmlValue("x", data)~=nil)then x = xmlValue("x", data) end
                 if(xmlValue("y", data)~=nil)then y = xmlValue("y", data) end
                 if(xmlValue("width", data)~=nil)then w = xmlValue("width", data) end
                 if(xmlValue("height", data)~=nil)then h = xmlValue("height", data) end
                 if(xmlValue("background", data)~=nil)then self:setBackground(colors[xmlValue("background", data)]) end
 
+                
                 if(xmlValue("script", data)~=nil)then 
                     if(scripts[1]==nil)then
                         scripts[1] = {}
@@ -215,7 +196,12 @@ return {
                     end
                 end
                 self:setPosition(x, y)
-                self:setSize(w, h)
+                if(w~=nil or h~=nil)then
+                    local w1, h1 = self:getSize()
+                    if w==nil then w = w1 end
+                    if h==nil then h = h1 end
+                    self:setSize(w, h)
+                end
 
                 return self
             end,
@@ -259,6 +245,7 @@ return {
 
         local object = {                       
             setValuesByXMLData = function(self, data, scripts)
+                lastXMLReferences = {}
                 base.setValuesByXMLData(self, data, scripts)
                 local xOffset, yOffset = self:getOffset()
                 if(xmlValue("layout", data)~=nil)then self:addLayout(xmlValue("layout", data)) end
@@ -281,12 +268,15 @@ return {
                 return self
             end,
 
+            getXMLElements = function(self)
+                return lastXMLReferences
+            end,
+
             loadLayout = function(self, path)
                 if(fs.exists(path))then
                     local scripts = {}
                     scripts.env = _ENV
                     scripts.env.basalt = basalt
-                    scripts.env.main = self
                     scripts.env.shared = {}
                     local f = fs.open(path, "r")
                     local data = XmlParser:ParseXmlText(f.readAll())
