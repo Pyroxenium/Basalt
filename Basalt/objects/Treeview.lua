@@ -25,13 +25,20 @@ return function(name, basalt)
 
         local node = {}
 
+        local onSelect
+
         node = {
             getChildren = function()
                 return children
             end,
 
             setParent = function(p)
+                if(parent~=nil)then
+                    parent.removeChild(parent.findChildrenByText(node.getText()))
+                end
                 parent = p
+                base:updateDraw()
+                return node
             end,
 
             getParent = function()
@@ -51,15 +58,32 @@ return function(name, basalt)
                     expanded = exp
                 end
                 base:updateDraw()
+                return node
             end,
 
             isExpanded = function()
                 return expanded
             end,
 
+            onSelect = function(...)
+                for _,v in pairs(table.pack(...))do
+                    if(type(v)=="function")then
+                        onSelect = v
+                    end
+                end
+                return node
+            end,
+
+            callOnSelect = function()
+                if(onSelect~=nil)then
+                    onSelect(node)
+                end
+            end,
+
             setExpandable = function(expandable)
                 expandable = expandable
                 base:updateDraw()
+                return node
             end,
 
             isExpandable = function()
@@ -67,13 +91,23 @@ return function(name, basalt)
             end,
 
             removeChild = function(index)
+                if(type(index)=="table")then
+                    for k,v in pairs(index)do
+                        if(v==index)then
+                            index = k
+                            break
+                        end
+                    end
+                end
                 table.remove(children, index)
+                base:updateDraw()
+                return node
             end,
 
             findChildrenByText = function(searchText)
                 local foundNodes = {}
                 for _, child in ipairs(children) do
-                    if child.getText() == searchText then
+                    if string.find(child.getText(), searchText) then
                         table.insert(foundNodes, child)
                     end
                 end
@@ -86,6 +120,8 @@ return function(name, basalt)
 
             setText = function(t)
                 text = t
+                base:updateDraw()
+                return node
             end
         }
 
@@ -150,6 +186,27 @@ return function(name, basalt)
             return root
         end,
 
+        setRoot = function(self, node)
+            root = node
+            node.setParent(nil)
+            return self
+        end,
+
+        onSelect = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("treeview_select", v)
+                end
+            end
+            return self
+        end,
+
+        selectionHandler = function(self, node)
+            node.callOnSelect(node)
+            self:sendEvent("treeview_select", node)
+            return self
+        end,
+
         mouseHandler = function(self, button, x, y)
             if base.mouseHandler(self, button, x, y) then
                 local currentLine = 1 - yOffset
@@ -159,6 +216,7 @@ return function(name, basalt)
                     if y == oby+currentLine-1 then
                         if x >= obx and x < obx + w then
                             node.setExpanded(not node.isExpanded())
+                            self:selectionHandler(node)
                             self:setValue(node)
                             self:updateDraw()
                             return true
