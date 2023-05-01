@@ -1,14 +1,17 @@
-With checkbox objects the user can set a bool to true or false
+With checkboxes the user can set a boolean to true or false by clicking on them.
 
-Remember checkbox also inherits from [Object](objects/Object.md)
+[Object](objects/Object.md) methods also apply for checkboxes.
 
-A checkbox does not have any custom methods. All required methods are provided by the base [object](objects/Object.md) class.
+|   |   |
+|---|---|
+|[setSymbol](objects/Checkbox/setSymbol.md)|Changes the symbol when checkbox is checked
+
 
 # Example
 This is how you would create a event which gets fired as soon as the value gets changed:
 ```lua
-local mainFrame = basalt.createFrame()
-local aCheckbox = mainFrame:addCheckbox()
+local main = basalt.createFrame()
+local aCheckbox = main:addCheckbox()
 
 local function checkboxChange(self)
    local checked = self:getValue()
@@ -19,7 +22,7 @@ aCheckbox:onChange(checkboxChange)
 
 also possible via xml:
 ```lua
-local mainFrame = basalt.createFrame():addLayout("example.xml")
+local main = basalt.createFrame():addLayout("example.xml")
 
 basalt.setVariable("checkboxChange", function(self)
   local checked = self:getValue()

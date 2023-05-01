@@ -1,41 +1,18 @@
-The image object is for adding more advanced backgrounds.
-It also provides a :shrink() function, where you can shrink the images to smaller ones. This functionallity is fully provided by the blittle library created by Bomb Bloke. I did not ask for permission to add it into the framework. If the creator wants me to remove the blittle part, just text me on discord!
+The image object is for adding more advanced backgrounds to your interface. It supports the loading of .nfp and .bimg images.
 
-The image object is still not done. in the future i will provide more image formats.
+[Object](objects/Object.md) methods also apply for images.
 
-Remember image inherits from [Object](objects/Object.md)
+|   |   |
+|---|---|
+|[loadImage](objects/Image/loadImage.md)|Loads an image from the specified file path
+|[setImage](objects/Image/setImage.md)|Set's a new image
+|[usePalette](objects/Image/usePalette.md)|Changes the used palette to the image prefered palette
+|[play](objects/Image/play.md)|Plays an animated image
+|[selectFrame](objects/Image/selectFrame.md)|Selects a specific frame in an animated image
+|[getMetadata](objects/Image/getMetadata.md)|Returns the metadata of the image
+|[getImageSize](objects/Image/getImageSize.md)|Returns the width and height of the image
+|[resizeImage](objects/Image/resizeImage.md)|Resizes the image to the specified dimensions
 
-## loadImage
-loads a default .nfp file into the object. 
+# About Bimg
 
-#### Parameters: 
-1. `string` the absolute file path
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Creates a default image and loads a test.nfp file
-```lua
-local mainFrame = basalt.createFrame():show()
-local aImage = mainFrame:addImage():loadImage("test.nfp")
-```
-```xml
-<image path="test.nfp" />
-```
-
-## shrink
-Shrinks the current image into a blittle image.
-
-#### Returns:
-1. `object` The object in use
-
-#### Usage:
-* Creates a default image and loads a test.nfp file
-```lua
-local mainFrame = basalt.createFrame()
-local aImage = mainFrame:addImage():loadImage("test.nfp"):shrink()
-```
-```xml
-<image path="test.nfp" shrink="true" />
-```
+Bimg is a custom image format that can be used in place of .nfp, it is a table which can store multiple frames and metadata. The frames can store text, background and foreground, which makes it possible to create any image you'd like. The image format is made by people from the Minecraft Computercraft Mods - Discord. Here's a Github page which explains how the Bimg format works: [bimg](https://github.com/SkyTheCodeMaster/bimg)
