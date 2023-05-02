@@ -64,16 +64,16 @@ local plugin = {
         return object
     end,
 
-    basaltInternal = function()
+    basalt = function()
         return {
             getTheme = function(name)
                 return baseTheme[name]
             end,
             setTheme = function(_theme, col)
                 if(type(_theme)=="table")then
-                    theme = _theme
+                    baseTheme = _theme
                 elseif(type(_theme)=="string")then
-                    theme[_theme] = col
+                    baseTheme[_theme] = col
                 end
             end
         }
