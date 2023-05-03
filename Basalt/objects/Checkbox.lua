@@ -71,9 +71,9 @@ return function(name, basalt)
                 local verticalAlign = utils.getTextVerticalAlign(h, "center")
                 local bg,fg = self:getBackground(), self:getForeground()
                 if (self:getValue()) then
-                    self:addBlit(1, verticalAlign, utils.getTextHorizontalAlign(symbol, w, "center"), tHex[bg], tHex[fg])
+                    self:addBlit(1, verticalAlign, utils.getTextHorizontalAlign(symbol, w, "center"), tHex[fg], tHex[bg])
                 else
-                    self:addBlit(1, verticalAlign, utils.getTextHorizontalAlign(inactiveSymbol, w, "center"), tHex[bg], tHex[fg])
+                    self:addBlit(1, verticalAlign, utils.getTextHorizontalAlign(inactiveSymbol, w, "center"), tHex[fg], tHex[bg])
                 end
                 if(text~="")then
                     local align = textPos=="left" and -text:len() or 3
