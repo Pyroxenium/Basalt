@@ -212,6 +212,10 @@ return function(name, basalt)
             return self
         end,
 
+        getIgnoreOffset = function(self)
+            return ignOffset
+        end,
+
         isCoordsInObject = function(self, x, y)
             if(isVisible)and(self:isEnabled())then
                 if(x==nil)or(y==nil)then return false end

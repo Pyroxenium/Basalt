@@ -343,6 +343,9 @@ return function(name, basalt)
                                 if(self.getOffset~=nil)then
                                     xO, yO = self:getOffset()
                                 end
+                                if(obj.element.getIgnoreOffset())then
+                                    xO, yO = 0, 0
+                                end
                                 if (obj.element[v[1]](obj.element, btn, x+xO, y+yO, ...)) then      
                                     return true
                                 end

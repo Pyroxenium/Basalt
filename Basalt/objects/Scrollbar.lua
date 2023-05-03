@@ -10,7 +10,7 @@ return function(name, basalt)
 
     local barType = "vertical"
     local symbol = " "
-    local symbolBG = colors.yellow
+    local symbolBG = colors.black
     local symbolFG = colors.black
     local scrollAmount = 3
     local index = 1
@@ -23,6 +23,7 @@ return function(name, basalt)
             symbolSize = math.max((barType == "vertical" and h or w-(#symbol)) - (scrollAmount-1), 1)
         end
     end
+    updateSymbolSize()
 
     local function mouseEvent(self, button, x, y)
     local obx, oby = self:getPosition()
@@ -67,7 +68,7 @@ return function(name, basalt)
                 index = 1
             end
             local w,h = self:getSize()
-            index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
+            --index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
             updateSymbolSize()
             self:updateDraw()
             return self
@@ -145,8 +146,9 @@ return function(name, basalt)
             return self
         end,
 
+
         scrollbarMoveHandler = function(self)
-            self:sendEvent("scrollbar_moved", self, self:getIndex())
+            self:sendEvent("scrollbar_moved", self:getIndex())
         end,
 
         customEventHandler = function(self, event, ...)
@@ -170,7 +172,7 @@ return function(name, basalt)
                     for n = 0, h - 1 do
                         if (index == n + 1) then
                             for curIndexOffset = 0, math.min(symbolSize - 1, h) do
-                                self:blit(1, index + curIndexOffset, symbol:rep(math.max(#symbol, w)), tHex[symbolFG]:rep(math.max(#symbol, w)), tHex[symbolBG]:rep(math.max(#symbol, w)))
+                                self:addBlit(1, index + curIndexOffset, symbol:rep(math.max(#symbol, w)), tHex[symbolFG]:rep(math.max(#symbol, w)), tHex[symbolBG]:rep(math.max(#symbol, w)))
                             end
                         end
                     end

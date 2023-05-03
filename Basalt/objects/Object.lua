@@ -141,7 +141,7 @@ return function(name, basalt)
         end,
 
         sendEvent = function(self, event, ...)
-            return eventSystem:sendEvent(event, self, ...)
+            return eventSystem:sendEvent(event, self, event, ...)
         end,
 
         onClick = function(self, ...)
