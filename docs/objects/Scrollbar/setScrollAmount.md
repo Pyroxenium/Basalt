@@ -1,4 +1,4 @@
-## setMaxValue
+## setScrollAmount
 
 ### Description
 
@@ -23,13 +23,13 @@ local mainFrame = basalt.createFrame()
 local scrollbar = mainFrame:addScrollbar()
   :setPosition(3, 3)
   :setSize(1, 10)
-  :setMaxValue(20)
+  :setScrollAmount(20)
 
 basalt.autoUpdate()
 ```
 
-In this example, a Scrollbar object is created and added to the mainFrame. The setPosition and setSize methods are used to adjust the position and size of the Scrollbar. The setMaxValue method is used to set the maximum value of the Scrollbar to 20.
+In this example, a Scrollbar object is created and added to the mainFrame. The setPosition and setSize methods are used to adjust the position and size of the Scrollbar. The setScrollAmount method is used to set the maximum value of the Scrollbar to 20.
 
 ```xml
-<scrollbar maxValue="20" />
+<scrollbar scrollAmount="20" />
 ```

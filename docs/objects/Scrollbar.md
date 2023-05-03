@@ -7,7 +7,7 @@ In addition to the Object and VisualObject methods, Scrollbar objects have the f
 |[setSymbol](objects/Scrollbar/setSymbol.md)|Sets the scrollbar symbol
 |[setBackgroundSymbol](objects/Scrollbar/setBackgroundSymbol.md)|Sets the background symbol
 |[setBarType](objects/Scrollbar/setBarType.md)|Sets the bar type (vertical or horizontal)
-|[setMaxValue](objects/Scrollbar/setMaxValue.md)|Sets the maximum value
+|[setScrollAmount](objects/Scrollbar/setScrollAmount.md)|Sets the maximum scroll amount
 |[setIndex](objects/Scrollbar/setIndex.md)|Sets the current index
 |[getIndex](objects/Scrollbar/getIndex.md)|Returns the index
 
@@ -20,7 +20,7 @@ local mainFrame = basalt.createFrame()
 local scrollbar = mainFrame:addScrollbar()
 
 scrollbar:setBarType("vertical")
-scrollbar:setMaxValue(100)
+scrollbar:setScrollAmount(100)
 scrollbar:setIndex(50)
 
 scrollbar:onChange(function(self, event, value)
