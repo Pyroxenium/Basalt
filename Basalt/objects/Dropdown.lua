@@ -56,7 +56,7 @@ return function(name, basalt)
             return dropdownW, dropdownH
         end,
 
-        mouseHandler = function(self, button, x, y)
+        mouseHandler = function(self, button, x, y, isMon)
             if (isOpened) then
                 local obx, oby = self:getAbsolutePosition()
                 if(button==1)then
@@ -69,6 +69,12 @@ return function(name, basalt)
                                     self:updateDraw()
                                     local val = self:sendEvent("mouse_click", self, "mouse_click", dir, x, y)
                                     if(val==false)then return val end
+                                    if(isMon)then
+                                        basalt.schedule(function()
+                                            sleep(0.1)
+                                            self:mouseUpHandler(button, x, y)
+                                        end)()
+                                    end
                                     return true
                                 end
                             end

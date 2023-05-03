@@ -15,7 +15,7 @@ local version = "1.7.0"
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
 
-local activeKey, frames, monFrames, monGroups, variables, schedules = {}, {}, {}, {}, {}, {}
+local activeKey, frames, monFrames, variables, schedules = {}, {}, {}, {}, {}
 local mainFrame, activeFrame, focusedObject, updaterActive
 
 local basalt = {}
@@ -191,10 +191,6 @@ local function drawFrames()
         v:render()
         v:updateTerm()
     end
-    for _,v in pairs(monGroups)do
-        v[1]:render()
-        v[1]:updateTerm()
-    end
 end
 
 local stopped, moveX, moveY = nil, nil, nil
@@ -270,13 +266,9 @@ local function basaltUpdateEvent(event, ...)
     end
 
     if(event == "monitor_touch") then
-        if(monFrames[a[2]]~=nil)then
-            monFrames[a[2]]:mouseHandler(1, a[2], a[3], true)
-            activeFrame = monFrames[a[2]]
-        end
-        if(count(monGroups)>0)then
-            for k,v in pairs(monGroups)do
-                v[1]:mouseHandler(1, a[2], a[3], true, a[1])
+        for k,v in pairs(monFrames)do
+            if(v:mouseHandler(1, a[2], a[3], true, a[1]))then
+                activeFrame = v
             end
         end
         handleSchedules(event, ...)
@@ -319,11 +311,26 @@ local function basaltUpdateEvent(event, ...)
     end
 end
 
+local function createFrame(name)
+    for _, v in pairs(frames) do
+        if (v:getName() == name) then
+            return nil
+        end
+    end
+    local newFrame = _OBJECTS["BaseFrame"](name, bInstance)
+    newFrame:init()
+    newFrame:load()
+    newFrame:draw()
+    table.insert(frames, newFrame)
+    if(mainFrame==nil)and(newFrame:getName()~="basaltDebuggingFrame")then
+        newFrame:show()
+    end
+    return newFrame
+end
+
 basalt = {
     logging = false,
     dynamicValueEvents = false,
-    setTheme = setTheme,
-    getTheme = getTheme,
     drawFrames = drawFrames,
     log = log,
     getVersion = function()
@@ -449,20 +456,20 @@ basalt = {
 
     schedule = schedule,
     
-    createFrame = function(name)
+    addFrame  = createFrame,
+    createFrame = createFrame,
+
+    addMonitor = function(name)
         for _, v in pairs(frames) do
             if (v:getName() == name) then
                 return nil
             end
         end
-        local newFrame = _OBJECTS["BaseFrame"](name, bInstance)
+        local newFrame = _OBJECTS["MonitorFrame"](name, bInstance)
         newFrame:init()
         newFrame:load()
         newFrame:draw()
-        table.insert(frames, newFrame)
-        if(mainFrame==nil)and(newFrame:getName()~="basaltDebuggingFrame")then
-            newFrame:show()
-        end
+        table.insert(monFrames, newFrame)
         return newFrame
     end,
     

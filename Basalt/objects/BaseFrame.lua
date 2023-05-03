@@ -142,12 +142,18 @@ return function(name, basalt)
         end,
 
         updateTerm = function(self)
-            basaltDraw.update()
+            if(basaltDraw~=nil)then
+                basaltDraw.update()
+            end
         end,
 
         setTerm = function(self, newTerm)
             termObject = newTerm
-            basaltDraw = drawSystem(termObject)
+            if(newTerm==nil)then
+                basaltDraw = nil
+            else
+                basaltDraw = drawSystem(termObject)
+            end
             return self
         end,
 
@@ -186,6 +192,14 @@ return function(name, basalt)
             return self
         end,
     }
+
+    for k,v in pairs({mouse_click={"mouseHandler", true},mouse_up={"mouseUpHandler", false},mouse_drag={"dragHandler", false},mouse_scroll={"scrollHandler", true},mouse_hover={"hoverHandler", false}})do
+        object[v[1]] = function(self, btn, x, y, ...)
+            if(base[v[1]](self, btn, x, y, ...))then
+                basalt.setActiveFrame(self)
+            end
+        end
+    end
 
     for k,v in pairs({"drawBackgroundBox", "drawForegroundBox", "drawTextBox"})do
         object[v] = function(self, x, y, width, height, symbol)

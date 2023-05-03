@@ -351,8 +351,8 @@ return function(name, basalt)
                     if(v[2])then
                         self:removeFocusedObject()
                     end
-                    return true
                     end
+                    return true
                 end
             end
         end
