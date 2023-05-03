@@ -26,7 +26,7 @@ return function(name, basalt)
     updateSymbolSize()
 
     local function mouseEvent(self, button, x, y)
-    local obx, oby = self:getPosition()
+    local obx, oby = self:getAbsolutePosition()
     local w,h = self:getSize()
         updateSymbolSize()
         local size = barType == "vertical" and h or w
@@ -101,8 +101,8 @@ return function(name, basalt)
             return self
         end,
 
-        mouseHandler = function(self, button, x, y)
-            if (base.mouseHandler(self, button, x, y)) then
+        mouseHandler = function(self, button, x, y, ...)
+            if (base.mouseHandler(self, button, x, y, ...)) then
                 mouseEvent(self, button, x, y)
                 return true
             end
