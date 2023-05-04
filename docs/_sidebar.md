@@ -11,7 +11,7 @@
   - [ChangeableObject](objects/ChangeableObject.md)
   - [Container](objects/Container.md)
     - [BaseFrame](objects/BaseFrame.md)
-    - [BaseFrame](objects/MonitorFrame.md)
+    - [MonitorFrame](objects/MonitorFrame.md)
     - [Frame](objects/Frame.md)
     - [Flexbox](objects/Flexbox.md)
     - [MovableFrame](objects/MovableFrame.md)
