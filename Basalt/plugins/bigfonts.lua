@@ -171,8 +171,8 @@ return {
 
             getSize = function(self)
                 local w, h = base.getSize(self)
-                if(fontsize>1)then
-                    return w * (3*fontsize-3), h * (3*fontsize-3)
+                if(fontsize>1)and(self:getAutoSize())then
+                    return fontsize==2 and self:getText():len()*3 or math.floor(self:getText():len() * 8.5), fontsize==2 and h * 2 or math.floor(h)
                 else
                     return w, h
                 end
@@ -180,8 +180,8 @@ return {
 
             getWidth = function(self)
                 local w = base.getWidth(self)
-                if(fontsize>1)then
-                    return w * (3*fontsize-3)
+                if(fontsize>1)and(self:getAutoSize())then
+                    return fontsize==2 and self:getText():len()*3 or math.floor(self:getText():len() * 8.5)
                 else
                     return w
                 end
@@ -189,8 +189,8 @@ return {
 
             getHeight = function(self)
                 local h = base.getHeight(self)
-                if(fontsize>1)then
-                    return h * (3*fontsize-3)
+                if(fontsize>1)and(self:getAutoSize())then
+                    return fontsize==2 and h * 2 or math.floor(h)
                 else
                     return h
                 end
