@@ -85,6 +85,7 @@ return function(name, basalt)
             local base = base:getBase()
             if (base.mouseHandler(self, button, x, y)) then
                 isOpened = true
+                self:getParent():setImportant(self)
                 self:updateDraw()
                 return true
             else
