@@ -6,6 +6,8 @@ return function(name, basalt)
     local parent
 
     local direction = 0
+    local manualScrollAmount = 0
+    local calculateScrollAmount = true
 
     local function getHorizontalScrollAmount(self)
         local amount = 0
@@ -51,6 +53,12 @@ return function(name, basalt)
             return self
         end,
 
+        setScrollAmount = function(self, amount)
+            manualScrollAmount = amount
+            calculateScrollAmount = false
+            return self
+        end,
+
         getBase = function(self)
             return base
         end, 
@@ -69,10 +77,13 @@ return function(name, basalt)
         scrollHandler = function(self, dir, x, y)
             if(base.scrollHandler(self, dir, x, y))then
                 local xO, yO = self:getOffset()
+                local scrollAmn
                 if(direction==1)then
-                    self:setOffset(min(getHorizontalScrollAmount(self), max(0, xO + dir)), yO)
+                    scrollAmn = calculateScrollAmount and getHorizontalScrollAmount(self) or manualScrollAmount
+                    self:setOffset(min(scrollAmn, max(0, xO + dir)), yO)
                 elseif(direction==0)then
-                    self:setOffset(xO, min(getVerticalScrollAmount(self), max(0, yO + dir)))
+                    scrollAmn = calculateScrollAmount and getVerticalScrollAmount(self) or manualScrollAmount
+                    self:setOffset(xO, min(scrollAmn, max(0, yO + dir)))
                 end
                 self:updateDraw()
                 return true
