@@ -498,7 +498,7 @@ return function(name, basalt)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
                     if not (paused) then
-                        self:injectEvents(queuedEvent)
+                        self:injectEvents(table.unpack(queuedEvent))
                         queuedEvent = {}
                     end
                 end

@@ -13,7 +13,7 @@ return {
                 if(frame==nil)then
                     local mainFrame = basalt.getMainFrame()
                     local w, h = mainFrame:getSize()
-                    frame = mainFrame:addMovableFrame("basaltErrorFrame"):setSize(w-20, h-10):setBackground(colors.lightGray):setForeground(colors.white):setZIndex(500)
+                    frame = mainFrame:addMovableFrame("basaltErrorFrame"):setSize(w-10, h-4):setBackground(colors.lightGray):setForeground(colors.white):setZIndex(500)
                     frame:addPane("titleBackground"):setSize(w, 1):setPosition(1, 1):setBackground(colors.black):setForeground(colors.white)
                     frame:setPosition(w/2-frame:getWidth()/2, h/2-frame:getHeight()/2):setBorder(colors.black)
                     frame:addLabel("title"):setText("Basalt Unexpected Error"):setPosition(2, 1):setBackground(colors.black):setForeground(colors.white)
@@ -31,7 +31,7 @@ return {
                     end)
                 end
                 frame:show()
-                errorList:addItem("--------------------------------------------")
+                errorList:addItem(("-"):rep(frame:getWidth()-2))
                 local err = wrapText(err, frame:getWidth()-2)
                 for i=1, #err do
                     errorList:addItem(err[i])
