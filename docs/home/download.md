@@ -1,25 +1,42 @@
-Basalt offers three unique versions for different use cases: a Source version, a Minified/Packed version, and a Web version.
+Basalt provides several options for downloading the UI Framework. Here's a list of all the available methods to download Basalt:
 
-## Source Version
+## Release Version
 
-The Source version, as the name suggests, contains the unmodified source code of Basalt. Use this version if you want to explore the code, add custom content, or prefer working with the original source.
+The Release version provides a specific, stable version of Basalt. Use this version if you want to work with a particular release of Basalt, ensuring consistency and compatibility with your project.
 
-To download the Source version, use the following command:
+To download the Release version, use the following command:
 
-`wget run https://basalt.madefor.cc/install.lua source [foldername] [branch]`
+`wget run https://basalt.madefor.cc/install.lua release [remote_filename] [local_filename]`
 
-- `foldername` (optional): The folder name for the Basalt installation (default: `basalt`).
-- `branch` (optional): Choose between `master` and `dev` branches (default: `master`).
+In most cases, you'll likely want to use:
+
+`wget run https://basalt.madefor.cc/install.lua release latest.lua`
+
+- `remote_filename`: The file name of the Basalt release you want to download (e.g., basalt-1.6.6.lua, latest.lua).
+- `local_filename` (optional): The file name for the Basalt installation on your local system (e.g., basalt.lua).
+
+A list of all available versions can be found [here](https://github.com/Pyroxenium/Basalt/tree/master/docs/versions).
 
 ## Minified/Packed Version
 
-The Minified/Packed version is a compressed version of the Basalt code. It reduces the file size and combines the code into a single file instead of a folder, making it easier to manage.
+The Minified/Packed version is a compressed version of the Basalt code directly downloaded from GitHub. It reduces the file size and combines the code into a single file instead of a folder, making it easier to manage. Remember, this method always automatically downloads the most recent version from the GitHub repository and is meant for quick fixes between releases.
 
 To download the Minified/Packed version, use the following command:
 
 `wget run https://basalt.madefor.cc/install.lua packed [filename] [branch]`
 
 - `filename` (optional): The file name for the Basalt installation (default: `basalt.lua`).
+- `branch` (optional): Choose between `master` and `dev` branches (default: `master`).
+
+## Source Version
+
+The Source version, as the name suggests, contains the unmodified source code of Basalt, downloaded directly from GitHub. Use this version if you want to explore the code, add custom content, or prefer working with the original source.
+
+To download the Source version, use the following command:
+
+`wget run https://basalt.madefor.cc/install.lua source [foldername] [branch]`
+
+- `foldername` (optional): The folder name for the Basalt installation (default: `basalt`).
 - `branch` (optional): Choose between `master` and `dev` branches (default: `master`).
 
 ## Web Version
