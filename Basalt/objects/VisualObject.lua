@@ -274,7 +274,7 @@ return function(name, basalt)
         mouseHandler = function(self, button, x, y, isMon)
             if(self:isCoordsInObject(x, y))then
                 local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_click", self, button, x - (objX-1), y - (objY-1), x, y, isMon)
+                local val = self:sendEvent("mouse_click", button, x - (objX-1), y - (objY-1), x, y, isMon)
                 if(val==false)then return false end
                 if(parent~=nil)then
                     parent:setFocusedObject(self)
@@ -290,12 +290,12 @@ return function(name, basalt)
             isDragging = false
             if(isClicked)then
                 local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_release", self, "mouse_release", button, x - (objX-1), y - (objY-1), x, y)
+                local val = self:sendEvent("mouse_release", button, x - (objX-1), y - (objY-1), x, y)
                 isClicked = false
             end
             if(self:isCoordsInObject(x, y))then
                 local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_up", self, button, x - (objX-1), y - (objY-1), x, y)
+                local val = self:sendEvent("mouse_up", button, x - (objX-1), y - (objY-1), x, y)
                 if(val==false)then return false end
                 return true
             end
@@ -304,7 +304,7 @@ return function(name, basalt)
         dragHandler = function(self, button, x, y)
             if(isDragging)then 
                 local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_drag", self, button, x - (objX-1), y - (objY-1), dragStartX-x, dragStartY-y, x, y)
+                local val = self:sendEvent("mouse_drag", button, x - (objX-1), y - (objY-1), dragStartX-x, dragStartY-y, x, y)
                 dragStartX, dragStartY = x, y 
                 if(val~=nil)then return val end
                 if(parent~=nil)then
@@ -323,7 +323,7 @@ return function(name, basalt)
         scrollHandler = function(self, dir, x, y)
             if(self:isCoordsInObject(x, y))then
                 local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_scroll", self, "mouse_scroll", dir, x - (objX-1), y - (objY-1))
+                local val = self:sendEvent("mouse_scroll", dir, x - (objX-1), y - (objY-1))
                 if(val==false)then return false end
                 if(parent~=nil)then
                     parent:setFocusedObject(self)
@@ -334,13 +334,13 @@ return function(name, basalt)
 
         hoverHandler = function(self, x, y, stopped)
             if(self:isCoordsInObject(x, y))then
-                local val = self:sendEvent("mouse_hover", self, "mouse_hover", x, y, stopped)
+                local val = self:sendEvent("mouse_hover", x, y, stopped)
                 if(val==false)then return false end
                 isHovered = true
                 return true
             end
             if(isHovered)then
-                local val = self:sendEvent("mouse_leave", self, "mouse_leave", x, y, stopped)
+                local val = self:sendEvent("mouse_leave", x, y, stopped)
                 if(val==false)then return false end
                 isHovered = false
             end
@@ -349,7 +349,7 @@ return function(name, basalt)
         keyHandler = function(self, key, isHolding)
             if(self:isEnabled())and(isVisible)then
                 if (self:isFocused()) then
-                local val = self:sendEvent("key", self, "key", key, isHolding)
+                local val = self:sendEvent("key", key, isHolding)
                 if(val==false)then return false end
                 return true
                 end
@@ -359,7 +359,7 @@ return function(name, basalt)
         keyUpHandler = function(self, key)
             if(self:isEnabled())and(isVisible)then
                 if (self:isFocused()) then
-                    local val = self:sendEvent("key_up", self, "key_up", key)
+                    local val = self:sendEvent("key_up", key)
                 if(val==false)then return false end
                 return true
                 end
@@ -369,7 +369,7 @@ return function(name, basalt)
         charHandler = function(self, char)
             if(self:isEnabled())and(isVisible)then
                 if(self:isFocused())then
-                local val = self:sendEvent("char", self, "char", char)
+                local val = self:sendEvent("char", char)
                 if(val==false)then return false end
                 return true
                 end
@@ -377,25 +377,25 @@ return function(name, basalt)
         end,
 
         eventHandler = function(self, event, ...)
-            local val = self:sendEvent("other_event", self, event, ...)
+            local val = self:sendEvent("other_event", ...)
             if(val~=nil)then return val end
         end,
 
         customEventHandler = function(self, event, ...)
-            local val = self:sendEvent("custom_event", self, event, ...)
+            local val = self:sendEvent("custom_event", ...)
             if(val~=nil)then return val end
             return true
         end,
 
         getFocusHandler = function(self)
-            local val = self:sendEvent("get_focus", self)
+            local val = self:sendEvent("get_focus")
             if(val~=nil)then return val end
             return true
         end,
 
         loseFocusHandler = function(self)
             isDragging = false
-            local val = self:sendEvent("lose_focus", self)
+            local val = self:sendEvent("lose_focus")
             if(val~=nil)then return val end
             return true
         end,

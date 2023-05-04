@@ -406,7 +406,8 @@ basalt = {
     
     update = function(event, ...)
         if (event ~= nil) then
-            local ok, err = xpcall(basaltUpdateEvent, debug.traceback, event, ...)
+            local args = {...}
+            local ok, err = xpcall(function() basaltUpdateEvent(event, table.unpack(args)) end, debug.traceback)
             if not(ok)then
                 basalt.basaltError(err)
                 return

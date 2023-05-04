@@ -65,7 +65,7 @@ return function(name, basalt)
         end,
 
         progressDoneHandler = function(self)
-            self:sendEvent("progress_done", self)
+            self:sendEvent("progress_done")
         end,
 
         draw = function(self)
