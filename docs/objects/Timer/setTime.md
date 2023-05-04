@@ -1,9 +1,9 @@
 ## setTime
-sets the time the timer should wait after calling your function
+sets the time the timer should wait before calling your function
 
 #### Parameters: 
-1. `number` the time to delay
-2. `number` how often it should be repeated -1 is infinite
+1. `number` the time to delay between repetitions
+2. `number` how many times it should be repeated -1 is infinite
 
 #### Returns:
 1. `object` The object
