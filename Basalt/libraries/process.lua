@@ -18,6 +18,9 @@ function process:new(path, window, newEnv, ...)
         env.shell = shell
         env.basaltProgram=true
         env.arg = {[0]=path, table.unpack(args)}
+        if(pPath==nil)then
+            error("The path "..path.." does not exist!")
+        end
         env.require, env.package = newPackage(env, fs.getDir(pPath))
         if(fs.exists(pPath))then
             local file = fs.open(pPath, "r")

@@ -120,7 +120,7 @@ return function(name, basalt)
         end,
 
         setPosition = function(self, xPos, yPos, rel)
-            local curX, curY
+            local curX, curY = x, y
             if(type(xPos)=="number")then
                 x = rel and x+xPos or xPos
             end
@@ -130,6 +130,7 @@ return function(name, basalt)
             if(parent~=nil)then parent:customEventHandler("basalt_FrameReposition", self) end
             if(self:getType()=="Container")then parent:customEventHandler("basalt_FrameReposition", self) end
             self:updateDraw()
+            self:repositionHandler(curX, curY)
             return self
         end,
 
@@ -146,6 +147,7 @@ return function(name, basalt)
         end,
 
         setSize = function(self, newWidth, newHeight, rel)
+            local oldW, oldH = width, height
             if(type(newWidth)=="number")then
                 width = rel and width+newWidth or newWidth
             end
@@ -156,6 +158,7 @@ return function(name, basalt)
                 parent:customEventHandler("basalt_FrameResize", self)
                 if(self:getType()=="Container")then parent:customEventHandler("basalt_FrameResize", self) end
             end
+            self:resizeHandler(oldW, oldH)
             self:updateDraw()
             return self
         end,
@@ -249,6 +252,22 @@ return function(name, basalt)
         isFocused = function(self)
             if (parent ~= nil) then
                 return parent:getFocusedObject() == self
+            end
+            return true
+        end,
+
+        resizeHandler = function(self, ...)
+            if(self:isEnabled())then
+                local val = self:sendEvent("basalt_resize", ...)
+                if(val==false)then return false end
+            end
+            return true
+        end,
+
+        repositionHandler = function(self, ...)
+            if(self:isEnabled())then
+                local val = self:sendEvent("basalt_reposition", ...)
+                if(val==false)then return false end
             end
             return true
         end,
