@@ -21,13 +21,11 @@ Basalt uses XML to define UI elements and their properties. By using XML, you ca
 Here's an example of an XML file that defines a simple UI layout for Basalt:
 
 ```xml
-<frame id="mainFrame">
-    <label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
-    <button id="okButton" text="OK" x="10" y="5" />
-</frame>
+<label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
+<button id="okButton" text="OK" x="10" y="5" />
 ```
 
-In this example, we define a `Frame` containing a `Label` and a `Button` with their respective properties, such as `id`, `text`, `x`, and `y`.
+In this example, we define a `Label` and a `Button` with their respective properties, such as `id`, `text`, `x`, and `y`.
 
 To use the loaded XML data to create the UI elements in Basalt, you can use `main:getXMLElements()`:
 
@@ -52,10 +50,8 @@ To include Lua code in your XML file, you can use the `<script>` tag. Any Lua co
 Here's an example of how to include Lua code in your XML file:
 
 ```xml
-<frame id="mainFrame">
-    <label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
-    <button id="okButton" text="OK" x="10" y="5" />
-</frame>
+<label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
+<button id="okButton" text="OK" x="10" y="5" />
 <script>
     -- Lua code to change the text of the titleLabel based on a condition
     if someCondition then
@@ -73,10 +69,8 @@ Here's an example of using the shared table to share data between two `<script>`
     -- Store a value in the shared table
     shared.myValue = 42
   </script>
-  <frame id="mainFrame">
-    <label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
-    <button id="okButton" text="OK" x="10" y="5" />
-  </frame>
+  <label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
+  <button id="okButton" text="OK" x="10" y="5" />
   <script>
     -- Access the stored value from the shared table
     local myValue = shared.myValue
@@ -93,23 +87,19 @@ You can also include Lua code directly within event attributes of UI elements. T
 To include Lua code in an event attribute, simply add the Lua code within the event attribute's value in the XML tag. The Lua code will be executed when the specified event is triggered.
 
 ```xml
-  <frame id="mainFrame">
-    <label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
-    <button id="okButton" text="OK" x="10" y="5" onClick="titleLabel:setText('Button clicked!')" />
-  </frame>
+<label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
+<button id="okButton" text="OK" x="10" y="5" onClick="titleLabel:setText('Button clicked!')" />
 ```
 
 or
 
 ```xml
-  <frame id="mainFrame">
-    <label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
-    <button id="okButton" text="OK" x="10" y="5">
-        <onClick>
-            titleLabel:setText('Button clicked!')
-        </onClick>
-    </button>
-  </frame>
+<label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
+<button id="okButton" text="OK" x="10" y="5">
+    <onClick>
+        titleLabel:setText('Button clicked!')
+    </onClick>
+</button>
 ```
 
 In both examples, you can see that XML provides a straightforward way to build a Basalt user interface. The XML format allows you to define the UI structure and easily set properties for each UI element, such as position, size, and text.
