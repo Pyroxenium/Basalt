@@ -1,4 +1,5 @@
-return function(name)
+return function(name, basalt)
+    local base = basalt.getObject("Object")(name, basalt)
     local objectType = "Timer"
 
     local timer = 0
@@ -61,7 +62,7 @@ return function(name)
             end
         end,
     }
-    object.__index = object
 
-    return object
+    object.__index = object
+    return setmetatable(object, base)
 end

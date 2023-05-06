@@ -162,6 +162,10 @@ return function(name, basalt)
         return elements
     end
 
+    local function getEvents(self, event)
+        return event~=nil and events[event] or events
+    end
+
     container = {
         getType = function()
             return objectType
@@ -280,6 +284,7 @@ return function(name, basalt)
         getDeepObject = getDeepObject,
         addObject = addObject,
         removeObject = removeObject,
+        getEvents = getEvents,
         getEvent = getEvent,
         addEvent = addEvent,
         removeEvent = removeEvent,
