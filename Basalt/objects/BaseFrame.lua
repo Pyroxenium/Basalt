@@ -174,12 +174,13 @@ return function(name, basalt)
 
         setCursor = function(self, _blink, _xCursor, _yCursor, color)
             local obx, oby = self:getAbsolutePosition()
+            local xO, yO = self:getOffset()
             cursorBlink = _blink or false
             if (_xCursor ~= nil) then
-                xCursor = obx + _xCursor - 1
+                xCursor = obx + _xCursor - 1 - xO
             end
             if (_yCursor ~= nil) then
-                yCursor = oby + _yCursor - 1
+                yCursor = oby + _yCursor - 1 - yO
             end
             cursorColor = color or cursorColor
             if (cursorBlink) then

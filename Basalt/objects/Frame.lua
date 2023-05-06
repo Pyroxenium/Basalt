@@ -81,7 +81,8 @@ return function(name, basalt)
 
         setCursor = function(self, blink, x, y, color)
             local obx, oby = self:getPosition()
-            parent:setCursor(blink or false, (x or 0)+obx-1, (y or 0)+oby-1, color or colors.white)
+            local xO, yO = self:getOffset()
+            parent:setCursor(blink or false, (x or 0)+obx-1 - xO, (y or 0)+oby-1 - yO, color or colors.white)
             return self
         end,
     }

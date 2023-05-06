@@ -17,7 +17,7 @@ return function(name, basalt)
 
     local defaultText = ""
     local defaultBGCol = colors.black
-    local defaultFGCol = colors.white
+    local defaultFGCol = colors.lightGray
     local showingText = defaultText
     local internalValueChange = false
 
