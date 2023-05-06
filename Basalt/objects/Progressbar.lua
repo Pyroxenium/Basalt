@@ -74,25 +74,25 @@ return function(name, basalt)
                 local obx, oby = self:getPosition()
                 local w,h = self:getSize()
                 local bgCol,fgCol = self:getBackground(), self:getForeground()
-                if(bgCol~=false)then self:addBackgroundBox(obx, oby, w, h, bgCol) end
-                if(bgBarSymbol~="")then self:addTextBox(obx, oby, w, h, bgBarSymbol) end
-                if(fgCol~=false)then self:addForegroundBox(obx, oby, w, h, fgCol) end
+                if(bgCol~=false)then self:addBackgroundBox(1, 1, w, h, bgCol) end
+                if(bgBarSymbol~="")then self:addTextBox(1, 1, w, h, bgBarSymbol) end
+                if(fgCol~=false)then self:addForegroundBox(1, 1, w, h, fgCol) end
                 if (direction == 1) then
-                    self:addBackgroundBox(obx, oby, w, h / 100 * progress, activeBarColor)
-                    self:addForegroundBox(obx, oby, w, h / 100 * progress, activeBarSymbolCol)
-                    self:addTextBox(obx, oby, w, h / 100 * progress, activeBarSymbol)
-                elseif (direction == 2) then
-                    self:addBackgroundBox(obx, oby + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarColor)
-                    self:addForegroundBox(obx, oby + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarSymbolCol)
-                    self:addTextBox(obx, oby + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarSymbol)
+                    self:addBackgroundBox(1, 1, w, h / 100 * progress, activeBarColor)
+                    self:addForegroundBox(1, 1, w, h / 100 * progress, activeBarSymbolCol)
+                    self:addTextBox(1, 1, w, h / 100 * progress, activeBarSymbol)
                 elseif (direction == 3) then
-                    self:addBackgroundBox(obx + math.ceil(w - w / 100 * progress), oby, w / 100 * progress, h, activeBarColor)
-                    self:addForegroundBox(obx + math.ceil(w - w / 100 * progress), oby, w / 100 * progress, h, activeBarSymbolCol)
-                    self:addTextBox(obx + math.ceil(w - w / 100 * progress), oby, w / 100 * progress, h, activeBarSymbol)
+                    self:addBackgroundBox(1, 1 + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarColor)
+                    self:addForegroundBox(1, 1 + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarSymbolCol)
+                    self:addTextBox(1, 1 + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarSymbol)
+                elseif (direction == 2) then
+                    self:addBackgroundBox(1 + math.ceil(w - w / 100 * progress), 1, w / 100 * progress, h, activeBarColor)
+                    self:addForegroundBox(1 + math.ceil(w - w / 100 * progress), 1, w / 100 * progress, h, activeBarSymbolCol)
+                    self:addTextBox(1 + math.ceil(w - w / 100 * progress), 1, w / 100 * progress, h, activeBarSymbol)
                 else
-                    self:addBackgroundBox(obx, oby, w / 100 * progress, h, activeBarColor)
-                    self:addForegroundBox(obx, oby, w / 100 * progress, h, activeBarSymbolCol)
-                    self:addTextBox(obx, oby, w / 100 * progress, h, activeBarSymbol)
+                    self:addBackgroundBox(1, 1, math.ceil( w / 100 * progress), h, activeBarColor)
+                    self:addForegroundBox(1, 1, math.ceil(w / 100 * progress), h, activeBarSymbolCol)
+                    self:addTextBox(1, 1, math.ceil(w / 100 * progress), h, activeBarSymbol)
                 end
             end)
         end,

@@ -97,7 +97,6 @@ return function(name, basalt)
             base.draw(self)
             self:addDraw("list", function()
                 local parent = self:getParent()
-                local obx, oby = self:getPosition()
                 local w,h = self:getSize()
                 local text = ""
                 local textBGCol = ""
