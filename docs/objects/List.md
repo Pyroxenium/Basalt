@@ -9,7 +9,8 @@ In addition to the Object and VisualObject methods, lists also have the followin
 |[editItem](objects/List/editItem.md)|Changes an already existing item in the list
 |[getItem](objects/List/getItem.md)|Returns an item by its index
 |[getItemCount](objects/List/getItemCount.md)|Returns the item count
-|[getAll](objects/List/getAll.md)|Returns the entire list as a table
+|[setOptions](objects/List/setOptions.md)|Updates the list options
+|[getOptions](objects/List/getOptions.md)|Returns the entire list as a table
 |[selectItem](objects/List/selectItem.md)|Selects an item
 |[clear](objects/List/clear.md)|Makes the entire list empty
 |[getItemIndex](objects/List/getItemIndex.md)|Returns the currently active item index

@@ -59,6 +59,20 @@ return function(name, basalt)
             return self
         end,
 
+        setOptions = function(self, ...)
+            list = {}
+            for k,v in pairs(...)do
+                if(type(v)=="string")then
+                    table.insert(list, { text = v, bgCol = self:getBackground(), fgCol = self:getForeground(), args = {} })
+                else
+                    table.insert(list, { text = v[1], bgCol = v[2] or self:getBackground(), fgCol = v[3] or self:getForeground(), args = v[4] or {} })
+                end
+            end
+            self:setValue(list[1], false)
+            self:updateDraw()
+            return self
+        end,
+
         setOffset = function(self, yOff)
             yOffset = yOff
             self:updateDraw()
@@ -80,6 +94,10 @@ return function(name, basalt)
         end,
 
         getAll = function(self)
+            return list
+        end,
+
+        getOptions = function(self)
             return list
         end,
 

@@ -24,7 +24,7 @@ aList:addItem("1. Entry")
 aList:addItem("2. Entry",colors.yellow)
 aList:addItem("3. Entry",colors.yellow,colors.green)
 aList:addItem("4. Entry")
-aList:setSelectedItem(colors.green, colors.red)
+aList:setSelectionColor(colors.green, colors.red)
 ```
 
 ```xml
