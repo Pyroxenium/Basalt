@@ -237,7 +237,7 @@ return {
                 if(tab.properties~=nil)then tab = {tab} end
                 for k,v in pairs(tab)do
                     local obj = f(self, v["@id"] or uuid())
-                    table.insert(lastXMLReferences, obj)
+                    lastXMLReferences[obj:getName()] = obj
                     xmlDefaultValues(v, obj, scripts)
                 end
             end
@@ -306,7 +306,7 @@ return {
                 if(tab.properties~=nil)then tab = {tab} end
                 for k,v in pairs(tab)do
                     local obj = f(self, v["@id"] or uuid())
-                    table.insert(lastXMLReferences, obj)
+                    lastXMLReferences[obj:getName()] = obj
                     xmlDefaultValues(v, obj, scripts)
                 end
             end
@@ -335,6 +335,10 @@ return {
                 
                 addXMLObjectType(data["animation"], self.addAnimation, self, scripts)
                 return self
+            end,
+
+            getXMLElements = function(self)
+                return lastXMLReferences
             end,
 
             loadLayout = function(self, path)
