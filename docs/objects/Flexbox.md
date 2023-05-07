@@ -4,9 +4,25 @@ In addition to the methods inherited from Frame, Container, VisualObject and Obj
 
 |   |   |
 |---|---|
-|[setDirection](objects/BaseFrame/getOffset.md)|Sets the direction in which the children will be placed
-|[getDirection](objects/BaseFrame/getOffset.md)|Returns the direction
-|[setSpacing](objects/BaseFrame/setOffset.md)|Sets the space between objects
-|[getSpacing](objects/BaseFrame/setOffset.md)|Returns the space
-|[setJuustifyContent](objects/BaseFrame/getOffset.md)|Determines how the children are aligned along the main axis
-|[getJuustifyContent](objects/BaseFrame/getOffset.md)|Returns the justify content
+|[setSpacing](objects/Flexbox/setSpacing.md)|Sets the space between objects
+|[getSpacing](objects/Flexbox/getSpacing.md)|Returns the space between objects
+|[setFlexDirection](objects/Flexbox/setFlexDirection.md)|Sets the direction in which the children will be placed
+|[setJustifyContent](objects/Flexbox/setJustifyContent.md)|Determines how the children are aligned along the main axis
+
+### Example
+
+Here's an example of how to create a Flexbox object:
+
+```lua
+local main = basalt.createFrame()
+local flexbox = main:addFlexbox()
+  :setFlexDirection("column")
+  :setJustifyContent("space-between")
+  :setSpacing(5)
+```
+
+Alternatively, you can create a flexbox using an XML layout:
+
+```xml
+<flexbox flexDirection="column" justifyContent="space-between" spacing="5">
+```
