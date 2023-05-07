@@ -44,5 +44,4 @@ Alternatively, you can add an onEvent event to an XML layout:
 
 In this case, the event table indices correspond to:
 * 1: The Object where this event is being handled
-* 2: A string representing the Basalt event type. This will always just be the string `"other_event"`
-* 3 onwards: the `os.pullEvent()` parameters
+* 2, 3,...: the `os.pullEvent()` parameters
