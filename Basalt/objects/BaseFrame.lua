@@ -41,19 +41,6 @@ return function(name, basalt)
             return self
         end,
 
-        show = function(self)
-            base.show(self)
-            for k,v in pairs(colorTheme)do
-                if(type(v)=="number")then
-                    termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
-                else
-                    local r,g,b = table.unpack(v)
-                    termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
-                end
-            end
-            return self
-        end,
-
         setPalette = function(self, col, ...)            
             if(self==basalt.getActiveFrame())then
                 if(type(col)=="string")then

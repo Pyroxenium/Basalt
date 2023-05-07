@@ -306,6 +306,9 @@ local function basaltUpdateEvent(event, ...)
         for k, v in pairs(frames) do
             v:eventHandler(event, ...)
         end
+        for k, v in pairs(monFrames) do
+            v:eventHandler(event, ...)
+        end
         handleSchedules(event, ...)
         renderingUpdateEvent()
     end

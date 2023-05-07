@@ -318,7 +318,7 @@ return function(name, basalt)
             return self
         end,
 
-        eventHandler = function(self, ...)            
+        eventHandler = function(self, ...)
             if(base.eventHandler~=nil)then
                 base.eventHandler(self, ...)
                 if(events["other_event"]~=nil)then
