@@ -7,7 +7,7 @@ In addition to the Object and VisualObject methods, ChangeableObjects also have 
 |[setValue](objects/ChangeableObject/setValue.md)|Sets the value of your object
 |[getValue](objects/ChangeableObject/getValue.md)|Gets the value of your object
 
-### Events
+## Events
 
 |   |   |
 |---|---|
