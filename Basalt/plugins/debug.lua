@@ -51,6 +51,7 @@ return {
                 :setPosition(1, "parent.h")
                 :setBackground(colors.black)
                 :setForeground(colors.white)
+                :setZIndex(100)
                 :onClick(function()
                     debugFrame:show()
                     debugFrame:animatePosition(w/2-debugFrame:getWidth()/2, h/2-debugFrame:getHeight()/2, 0.5)
