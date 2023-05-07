@@ -27,16 +27,17 @@ main:onEvent(function(event, side, channel, replyChannel, message, distance)
 end)
 ```
 
-The parameters passed to this function are the same as those returned by `os.pullEvent()`. See [here](https://computercraft.info/wiki/Os.pullEvent) for more info.
+The parameters passed to this function are the same as those returned by `os.pullEvent()`. See [here](https://tweaked.cc/module/os.html#v:pullEvent) for more info.
 
 Alternatively, you can add an onEvent event to an XML layout:
 
 ```xml
 <onEvent>
-    local eventType = event[3]
-    local message = event[7]
+    local eventType = event[2]
+    
     if (eventType == "modem_message") then
-        basalt.debug("Message received: " .. tostring(message))
+        local message = event[6]
+        basalt.debug("Message received: " .. message)
     end
 </onEvent>
 ```
