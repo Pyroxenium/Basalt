@@ -99,6 +99,7 @@ return function(name, basalt)
         remove = function(self)
             if (parent ~= nil) then
                 parent:removeObject(self)
+                parent:removeEvents(self)
             end
             self:updateDraw()
             return self
@@ -138,6 +139,17 @@ return function(name, basalt)
                 end
             end
             return eventSystem:removeEvent(event, index)
+        end,
+
+        eventHandler = function(self, event, ...)
+            local val = self:sendEvent("other_event", event, ...)
+            if(val~=nil)then return val end
+        end,
+
+        customEventHandler = function(self, event, ...)
+            local val = self:sendEvent("custom_event", event, ...)
+            if(val~=nil)then return val end
+            return true
         end,
 
         sendEvent = function(self, event, ...)

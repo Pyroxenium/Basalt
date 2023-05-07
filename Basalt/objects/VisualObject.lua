@@ -395,17 +395,6 @@ return function(name, basalt)
             end
         end,
 
-        eventHandler = function(self, event, ...)
-            local val = self:sendEvent("other_event", ...)
-            if(val~=nil)then return val end
-        end,
-
-        customEventHandler = function(self, event, ...)
-            local val = self:sendEvent("custom_event", ...)
-            if(val~=nil)then return val end
-            return true
-        end,
-
         getFocusHandler = function(self)
             local val = self:sendEvent("get_focus")
             if(val~=nil)then return val end

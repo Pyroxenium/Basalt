@@ -48,7 +48,8 @@ return function(name, basalt)
             return self
         end,
 
-        eventHandler = function(self, event, tObj)
+        eventHandler = function(self, event, ...)
+            base.eventHandler(self, event, ...)
             if event == "timer" and tObj == timerObj and timerIsActive then
                 self:sendEvent("timed_event")
                 if (repeats >= 1) then

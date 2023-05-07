@@ -85,6 +85,7 @@ return function(name, basalt)
         end,
 
         eventHandler = function(self, event, ...)
+            base.eventHandler(self, event, ...)
             if (isActive) then
                 if (coroutine.status(cRoutine) == "suspended") then
                     if(filter~=nil)then

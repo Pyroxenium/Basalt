@@ -43,26 +43,6 @@ local function stop()
     end
 end
 
-function basalt.basaltError(errMsg)
-    baseTerm.clear()
-    baseTerm.setBackgroundColor(colors.black)
-    baseTerm.setTextColor(colors.red)
-    local w,h = baseTerm.getSize()
-    if(basalt.logging)then
-        log(errMsg, "Error")
-    end
-
-    local text = wrapText("Basalt error: "..errMsg, w)
-    local yPos = 1
-    for k,v in pairs(text)do
-        baseTerm.setCursorPos(1,yPos)
-        baseTerm.write(v)
-        yPos = yPos + 1
-    end 
-    baseTerm.setCursorPos(1,yPos+1)
-    updaterActive = false
-end
-
 local function schedule(f)
 assert(f~="function", "Schedule needs a function in order to work!")
 return function(...)
@@ -159,6 +139,26 @@ local bInstance = {
         return projectDirectory
     end
 }
+
+local function defaultErrorHandler(errMsg)
+    baseTerm.clear()
+    baseTerm.setBackgroundColor(colors.black)
+    baseTerm.setTextColor(colors.red)
+    local w,h = baseTerm.getSize()
+    if(basalt.logging)then
+        log(errMsg, "Error")
+    end
+
+    local text = wrapText("Basalt error: "..errMsg, w)
+    local yPos = 1
+    for k,v in pairs(text)do
+        baseTerm.setCursorPos(1,yPos)
+        baseTerm.write(v)
+        yPos = yPos + 1
+    end 
+    baseTerm.setCursorPos(1,yPos+1)
+    updaterActive = false
+end
 
 local function handleSchedules(event, p1, p2, p3, p4)
     if(#schedules>0)then
@@ -329,6 +329,7 @@ local function createFrame(name)
 end
 
 basalt = {
+    basaltError = defaultErrorHandler,
     logging = false,
     dynamicValueEvents = false,
     drawFrames = drawFrames,

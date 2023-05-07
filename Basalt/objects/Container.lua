@@ -10,7 +10,6 @@ return function(name, basalt)
     local events = {}
 
     local container = {}
-    local activeEvents = {}
 
     local focusedObject
     local sorted = true
@@ -69,14 +68,14 @@ return function(name, basalt)
     local function updateZIndex(self, element, newZ)
         objId = objId + 1
         evId = evId + 1
-        for k,v in pairs(elements)do
+        for _,v in pairs(elements)do
             if(v.element==element)then
                 v.zIndex = newZ
                 v.objId = objId
                 break
             end
         end
-        for k,v in pairs(events)do
+        for _,v in pairs(events)do
             for a,b in pairs(v)do
                 if(b.element==element)then
                     b.zIndex = newZ
@@ -109,7 +108,6 @@ return function(name, basalt)
                 end
             end
             if(tableCount(events[a])<=0)then
-                activeEvents[a] = false
                 if(parent~=nil)then
                     parent:removeEvent(a, self)
                 end
@@ -143,7 +141,6 @@ return function(name, basalt)
     end
 
     local function removeEvent(self, event, element)
-        local parent = self:getParent()
         if(events[event]~=nil)then
             for a, b in pairs(events[event]) do
                 if(b.element == element)then
@@ -288,11 +285,11 @@ return function(name, basalt)
         getEvent = getEvent,
         addEvent = addEvent,
         removeEvent = removeEvent,
+        removeEvents = removeEvents,
         updateZIndex = updateZIndex,
 
         listenEvent = function(self, event, active)
             base.listenEvent(self, event, active)
-            activeEvents[event] = active~=nil and active or true
             if(events[event]==nil)then events[event] = {} end
             return self
         end,
@@ -348,8 +345,10 @@ return function(name, basalt)
                                 if(self.getOffset~=nil)then
                                     xO, yO = self:getOffset()
                                 end
-                                if(obj.element.getIgnoreOffset())then
-                                    xO, yO = 0, 0
+                                if(obj.element.getIgnoreOffset~=nil)then
+                                    if(obj.element.getIgnoreOffset())then
+                                        xO, yO = 0, 0
+                                    end
                                 end
                                 if (obj.element[v[1]](obj.element, btn, x+xO, y+yO, ...)) then      
                                     return true

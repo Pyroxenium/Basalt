@@ -159,11 +159,15 @@ local function executeScript(scripts)
 end
 
 local function registerFunctionEvent(self, data, event, scripts)
+    local eventEnv = scripts.env
     if(data:sub(1,1)=="$")then
         local data = data:sub(2)
-        event(self, self:getBasalt():getVariable(data))
+        event(self, self:getBasalt().getVariable(data))
     else
-        event(self, load(data, nil, "t", scripts.env))
+        event(self, function(...)
+            eventEnv.event = {...}
+            load(data, nil, "t", eventEnv)()
+        end)
     end
 end
 
@@ -181,8 +185,8 @@ return {
                 if(xmlValue("height", data)~=nil)then h = xmlValue("height", data) end
                 if(xmlValue("background", data)~=nil)then self:setBackground(colors[xmlValue("background", data)]) end
 
-                
-                if(xmlValue("script", data)~=nil)then 
+
+                if(xmlValue("script", data)~=nil)then
                     if(scripts[1]==nil)then
                         scripts[1] = {}
                     end
@@ -248,7 +252,7 @@ return {
                 lastXMLReferences = {}
                 base.setValuesByXMLData(self, data, scripts)
                 local xOffset, yOffset = self:getOffset()
-                if(xmlValue("layout", data)~=nil)then self:addLayout(xmlValue("layout", data)) end
+                if(xmlValue("layout", data)~=nil)then self:loadLayout(xmlValue("layout", data)) end
                 if(xmlValue("xOffset", data)~=nil)then xOffset = xmlValue("xOffset", data) end
                 self:setOffset(xOffset, yOffset)
     
@@ -316,7 +320,7 @@ return {
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
                 local xOffset, yOffset = self:getOffset()
-                if(xmlValue("layout", data)~=nil)then self:addLayout(xmlValue("layout", data)) end
+                if(xmlValue("layout", data)~=nil)then self:loadLayout(xmlValue("layout", data)) end
                 if(xmlValue("xOffset", data)~=nil)then xOffset = xmlValue("xOffset", data) end
                 if(xmlValue("yOffset", data)~=nil)then yOffset = xmlValue("yOffset", data) end
                 self:setOffset(xOffset, yOffset)
@@ -580,10 +584,12 @@ return {
     end,
 
     Thread = function(base, basalt)
-        local object = { 
+        local object = {
             setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("start", data)~=nil)then self:start(load(xmlValue("start", data), nil, "t", scripts.env)) end
+                if(xmlValue("start", data)~=nil)then
+                    local f = load(xmlValue("start", data), nil, "t", scripts.env)
+                    self:start(f) 
+                end
                 return self
             end,
         }
