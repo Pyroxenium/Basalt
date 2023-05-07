@@ -187,6 +187,7 @@ return {
                 if(xmlValue("width", data)~=nil)then w = xmlValue("width", data) end
                 if(xmlValue("height", data)~=nil)then h = xmlValue("height", data) end
                 if(xmlValue("background", data)~=nil)then self:setBackground(colors[xmlValue("background", data)]) end
+                if(xmlValue("foreground", data)~=nil)then self:setForeground(colors[xmlValue("foreground", data)]) end
 
 
                 if(xmlValue("script", data)~=nil)then
@@ -362,6 +363,19 @@ return {
                     self:setValuesByXMLData(data, scripts)
                     executeScript(scripts)
                 end
+                return self
+            end,
+        }
+        return object
+    end,
+
+    Flexbox = function(base, basalt)
+        local object = { 
+            setValuesByXMLData = function(self, data, scripts)
+                base.setValuesByXMLData(self, data, scripts)
+                if(xmlValue("flexDirection", data)~=nil)then self:setFlexDirection(xmlValue("flexDirection", data)) end
+                if(xmlValue("justifyContent", data)~=nil)then self:setJustifyContent(xmlValue("justifyContent", data)) end
+                if(xmlValue("spacing", data)~=nil)then self:setFlexDirection(xmlValue("spacing", data)) end
                 return self
             end,
         }
