@@ -153,6 +153,9 @@ return function(name, basalt)
         end,
 
         sendEvent = function(self, event, ...)
+            if(event=="other_event")or(event=="custom_event")then
+                return eventSystem:sendEvent(event, self, ...)
+            end
             return eventSystem:sendEvent(event, self, event, ...)
         end,
 

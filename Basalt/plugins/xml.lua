@@ -166,7 +166,10 @@ local function registerFunctionEvent(self, data, event, scripts)
     else
         event(self, function(...)
             eventEnv.event = {...}
-            load(data, nil, "t", eventEnv)()
+            local success, msg = pcall(load(data, nil, "t", eventEnv))
+            if not success then
+                error("XML Error: "..msg)
+            end
         end)
     end
 end
@@ -194,7 +197,7 @@ return {
                 end
 
                 local events = {"onClick", "onClickUp", "onHover", "onScroll", "onDrag", "onKey", "onKeyUp", "onRelease", "onChar", "onGetFocus", "onLoseFocus", "onResize", "onReposition", "onEvent", "onLeave"}
-                for k,v in pairs(events)do
+                for _,v in pairs(events)do
                     if(xmlValue(v, data)~=nil)then 
                         registerFunctionEvent(self, xmlValue(v, data), self[v], scripts)
                     end
@@ -588,7 +591,7 @@ return {
             setValuesByXMLData = function(self, data, scripts)
                 if(xmlValue("start", data)~=nil)then
                     local f = load(xmlValue("start", data), nil, "t", scripts.env)
-                    self:start(f) 
+                    self:start(f)
                 end
                 return self
             end,
