@@ -375,7 +375,7 @@ return {
                 base.setValuesByXMLData(self, data, scripts)
                 if(xmlValue("flexDirection", data)~=nil)then self:setFlexDirection(xmlValue("flexDirection", data)) end
                 if(xmlValue("justifyContent", data)~=nil)then self:setJustifyContent(xmlValue("justifyContent", data)) end
-                if(xmlValue("spacing", data)~=nil)then self:setFlexDirection(xmlValue("spacing", data)) end
+                if(xmlValue("spacing", data)~=nil)then self:setSpacing(xmlValue("spacing", data)) end
                 return self
             end,
         }
