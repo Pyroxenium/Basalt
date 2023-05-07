@@ -12,6 +12,7 @@ local function loadBIMG(path, binaryMode)
     local f = fs.open(path, binaryMode and "rb" or "r")
     if(f==nil)then error("Path - "..path.." doesn't exist!") end
     local content = textutils.unserialize(f.readAll())
+
     f.close()
     if(content~=nil)then
         return content, "bimg"

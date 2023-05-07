@@ -15,6 +15,7 @@ return function(name, basalt)
     local infinitePlay = false
     local animTimer
     local usePalette = false
+    local autoSize = true
 
     local xOffset, yOffset = 0, 0
 
@@ -44,6 +45,14 @@ return function(name, basalt)
         return p
     end
 
+    local function checkAutoSize()
+        if(autoSize)then
+            if(bimgLibrary~=nil)then
+                base:setSize(bimgLibrary.getSize())
+            end
+        end
+    end
+
     local object = {
         getType = function(self)
             return objectType
@@ -64,6 +73,12 @@ return function(name, basalt)
             return self
         end,
 
+        setSize = function(self, _x, _y)
+            base:setSize(_x, _y)
+            autoSize = false
+            return self
+        end,
+
         getOffset = function(self)
             return xOffset, yOffset
         end,
@@ -74,7 +89,7 @@ return function(name, basalt)
             end
             bimgFrame = bimgLibrary.getFrameObject(id)
             image = bimgFrame.getImage(id)
-            selectedFrame = id
+            activeFrame = id
             self:updateDraw()
         end,
 
@@ -117,10 +132,11 @@ return function(name, basalt)
             if(fs.exists(path))then
                 local newBimg = images.loadBIMG(path)
                 bimgLibrary = bimg(newBimg)
-                selectedFrame = 1
+                activeFrame = 1
                 bimgFrame = bimgLibrary.getFrameObject(1)
                 originalImage = bimgLibrary.createBimg()
                 image = bimgFrame.getImage()
+                checkAutoSize()
                 self:updateDraw()
             end     
             return self
@@ -129,10 +145,11 @@ return function(name, basalt)
         setImage = function(self, t)
             if(type(t)=="table")then
                 bimgLibrary = bimg(t)
-                selectedFrame = 1
+                activeFrame = 1
                 bimgFrame = bimgLibrary.getFrameObject(1)
                 originalImage = bimgLibrary.createBimg()
                 image = bimgFrame.getImage()
+                checkAutoSize()
                 self:updateDraw()
             end
             return self
@@ -266,7 +283,7 @@ return function(name, basalt)
         resizeImage = function(self, w, h)
             local newBimg = images.resizeBIMG(originalImage, w, h)
             bimgLibrary = bimg(newBimg)
-            selectedFrame = 1
+            activeFrame = 1
             bimgFrame = bimgLibrary.getFrameObject(1)
             image = bimgFrame.getImage()
             self:updateDraw()

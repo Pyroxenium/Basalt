@@ -187,6 +187,12 @@ return function(img)
     local metadata = {creator="Bimg Library by NyoriE", date=os.date("!%Y-%m-%dT%TZ")}
     local width,height = 0, 0
 
+    if(img~=nil)then
+        if(img[1][1][1]~=nil)then
+            width,height = metadata.width or #img[1][1][1], metadata.height or #img[1]
+        end
+    end
+
     local manager = {}
 
     local function addFrame(id, data)
@@ -363,17 +369,18 @@ return function(img)
         for k,v in pairs(img)do
             if(type(k)=="string")then
                 metadata[k] = v
-            else
-                addFrame(k, v)
             end
         end
         if(metadata.width==nil)or(metadata.height==nil)then
-            for k,v in pairs(frames)do
-                local w, h = v.getSize()
-                if(w>width)then w = width end
-                if(h>height)then h = height end
-            end
+            width = metadata.width or #img[1][1][1]
+            height = metadata.height or #img[1]
             manager.updateSize(width, height, true)
+        end
+
+        for k,v in pairs(img)do
+            if(type(k)=="number")then
+                addFrame(k, v)
+            end
         end
     else
         addFrame(1)
