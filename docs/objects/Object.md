@@ -30,7 +30,6 @@ Events are actions or occurrences that happen during the execution of your progr
 |[onKey](objects/Object/onKey.md)|Fires when the object is focused and a keyboard key is pressed
 |[onChar](objects/Object/onChar.md)|Fires when the object is focused and a character key is pressed
 |[onKeyUp](objects/Object/onKeyUp.md)|Fires when the object is focused and a keyboard key is released
-|[onChange](objects/Object/onChange.md)|Fires when the object value has changed
 |[onGetFocus](objects/Object/onGetFocus.md)|Fires when the object gains focus
 |[onLoseFocus](objects/Object/onLoseFocus.md)|Fires when the object loses focus
 |[onEvent](objects/Object/onEvent.md)|Fires for any other event
