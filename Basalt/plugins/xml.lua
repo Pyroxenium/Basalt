@@ -187,6 +187,7 @@ return {
                 if(xmlValue("width", data)~=nil)then w = xmlValue("width", data) end
                 if(xmlValue("height", data)~=nil)then h = xmlValue("height", data) end
                 if(xmlValue("background", data)~=nil)then self:setBackground(colors[xmlValue("background", data)]) end
+                if(xmlValue("foreground", data)~=nil)then self:setForeground(colors[xmlValue("foreground", data)]) end
 
 
                 if(xmlValue("script", data)~=nil)then
