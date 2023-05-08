@@ -2,45 +2,56 @@ return function(name, basalt)
     local base = basalt.getObject("Frame")(name, basalt)
     local objectType = "Flexbox"
 
-    local flexDirection = "row" -- "row" oder "column"
+    local flexDirection = "row" -- "row" or "column"
     local justifyContent = "flex-start" -- "flex-start", "flex-end", "center", "space-between", "space-around"
+    local alignItems = "flex-start" -- "flex-start", "flex-end", "center", "space-between", "space-around"
     local spacing = 1
+
+    local function getObjectOffAxisOffset(self, obj)
+        local width, height = self:getSize()
+        local objWidth, objHeight = obj.element:getSize()
+        local availableSpace = flexDirection == "row" and height - objHeight or width - objWidth
+        local offset = 1
+        if alignItems == "center" then
+            offset = 1 + availableSpace / 2
+        elseif alignItems == "flex-end" then
+            offset = 1 + availableSpace
+        end
+        return offset
+    end
 
     local function applyLayout(self)
         local objects = self:getObjects()
         local totalElements = #objects
-        local _, _ = self:getPosition()
         local width, height = self:getSize()
     
-        local totalChildSize = 0
+        local mainAxisTotalChildSize = 0
         for _, obj in ipairs(objects) do
+            local objWidth, objHeight = obj.element:getSize()
             if flexDirection == "row" then
-                local objWidth, _ = obj.element:getSize()
-                totalChildSize = totalChildSize + objWidth
+                mainAxisTotalChildSize = mainAxisTotalChildSize + objWidth
             else
-                local _, objHeight = obj.element:getSize()
-                totalChildSize = totalChildSize + objHeight
+                mainAxisTotalChildSize = mainAxisTotalChildSize + objHeight
             end
         end
-    
-        local availableSpace = (flexDirection == "row" and width or height) - totalChildSize - (spacing * (totalElements - 1))
-    
-        local currentOffset = 1
+        local mainAxisAvailableSpace = (flexDirection == "row" and width or height) - mainAxisTotalChildSize - (spacing * (totalElements - 1))
+        local justifyContentOffset = 1
         if justifyContent == "center" then
-            currentOffset = 1 + availableSpace / 2
+            justifyContentOffset = 1 + mainAxisAvailableSpace / 2
         elseif justifyContent == "flex-end" then
-            currentOffset = 1 + availableSpace
+            justifyContentOffset = 1 + mainAxisvailableSpace
         end
     
         for _, obj in ipairs(objects) do
+            local alignItemsOffset = getObjectOffAxisOffset(self, obj)
             if flexDirection == "row" then
-                obj.element:setPosition(currentOffset, 1) -- Ändere den y-Wert auf 1
+                obj.element:setPosition(justifyContentOffset, alignItemsOffset)
                 local objWidth, _ = obj.element:getSize()
-                currentOffset = currentOffset + objWidth + spacing
+                justifyContentOffset = justifyContentOffset + objWidth + spacing
             else
-                obj.element:setPosition(1, math.floor(currentOffset+0.5)) -- Ändere den x-Wert auf 1
+                obj.element:setPosition(alignItemsOffset, math.floor(justifyContentOffset+0.5))
                 local _, objHeight = obj.element:getSize()
-                currentOffset = currentOffset + objHeight + spacing
+                justifyContentOffset = justifyContentOffset + objHeight + spacing
             end
         end
     end
@@ -76,6 +87,14 @@ return function(name, basalt)
         setJustifyContent = function(self, alignment)
             if alignment == "flex-start" or alignment == "flex-end" or alignment == "center" or alignment == "space-between" or alignment == "space-around" then
                 justifyContent = alignment
+                applyLayout(self)
+            end
+            return self
+        end,
+
+        setAlignItems = function(self, alignment)
+            if alignment == "flex-start" or alignment == "flex-end" or alignment == "center" or alignment == "space-between" or alignment == "space-around" then
+                alignItems = alignment
                 applyLayout(self)
             end
             return self
