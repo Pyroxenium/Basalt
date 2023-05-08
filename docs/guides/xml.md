@@ -82,9 +82,9 @@ Here's an example of using the shared table to share data between two `<script>`
 
 In this example, we first store a value in the shared table in one `<script>` tag, and then access that value in another `<script>` tag to update the titleLabel's text.
 
-You can also include Lua code directly within event attributes of UI elements. This allows you to execute specific actions or manipulate UI elements when certain events occur.
+You can also include Lua code directly within event properties of UI elements. This allows you to execute specific actions or manipulate UI elements when certain events occur.
 
-To include Lua code in an event attribute, simply add the Lua code within the event attribute's value in the XML tag. The Lua code will be executed when the specified event is triggered.
+To include Lua code in an event property, simply add the Lua code within the event property's value in the XML tag. The Lua code will be executed when the specified event is triggered.
 
 ```xml
 <label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
@@ -108,11 +108,11 @@ Notably, you can access UI elements by their assigned ID directly in the event c
 
 Remember: IDs have to be unique!
 
-## Dynamic attributes (BETA)
+## Reactive properties (BETA)
 
-Most attributes can also be set to track a shared variable using the curly braces {} syntax. In this case, the initial value for the variable should be set inside the `<script>` tag.
+Most properties can also be set to track a shared variable using the curly braces {} syntax. In this case, the initial value for the variable should be set inside the `<script>` tag. When this variable is modified, the rendered value will be automatically updated.
 
-The earlier example rewritten using dynamic attributes:
+The earlier example rewritten using reactive properties:
 
 ```xml
 <label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />

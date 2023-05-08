@@ -8,7 +8,7 @@ local function newNode(name)
     node.___name = name
     node.___children = {}
     node.___props = {}
-    node.___dynProps = {}
+    node.___reactiveProps = {}
 
     function node:value() return self.___value end
     function node:setValue(val) self.___value = val end
@@ -47,10 +47,9 @@ local function newNode(name)
         table.insert(self.___props, { name = name, value = self[lName] })
     end
 
-    function node:dynamicProperties() return self.___dynProps end
-    function node:numDynamicProperties() return #self.___dynProps end
-    function node:addDynamicProperty(name, value)
-        self.___dynProps[name] = value
+    function node:reactiveProperties() return self.___reactiveProps end
+    function node:addReactiveProperty(name, value)
+        self.___reactiveProps[name] = value
     end
 
     return node
@@ -87,15 +86,15 @@ function XmlParser:FromXmlString(value)
     return value;
 end
 
-function XmlParser:ParseArgs(node, s)
+function XmlParser:ParseProps(node, s)
     string.gsub(s, "(%w+)=([\"'])(.-)%2", function(w, _, a)
         node:addProperty(w, self:FromXmlString(a))
     end)
 end
 
-function XmlParser:ParseDynamicArgs(node, s)
+function XmlParser:ParseReactiveProps(node, s)
     string.gsub(s, "(%w+)={(.-)}", function(w, a)
-        node:addDynamicProperty(w, a)
+        node:addReactiveProperty(w, a)
     end)
 end
 
@@ -115,13 +114,13 @@ function XmlParser:ParseXmlText(xmlText)
         end
         if empty == "/" then -- empty element tag
             local lNode = newNode(label)
-            self:ParseArgs(lNode, xarg)
-            self:ParseDynamicArgs(lNode, xarg)
+            self:ParseProps(lNode, xarg)
+            self:ParseReactiveProps(lNode, xarg)
             top:addChild(lNode)
         elseif c == "" then -- start tag
             local lNode = newNode(label)
-            self:ParseArgs(lNode, xarg)
-            self:ParseDynamicArgs(lNode, xarg)
+            self:ParseProps(lNode, xarg)
+            self:ParseReactiveProps(lNode, xarg)
             table.insert(stack, lNode)
     top = lNode
         else -- end tag
@@ -205,7 +204,7 @@ return {
 
             setValuesByXMLData = function(self, data, scripts)
                 scripts.env[self:getName()] = self
-                for k,v in pairs(data:dynamicProperties()) do
+                for k,v in pairs(data:reactiveProperties()) do
                     local sharedVariable = string.sub(v, 8, -1)
                     local sharedObservers = scripts.env.sharedObservers
                     if (sharedObservers[sharedVariable]) == nil then
