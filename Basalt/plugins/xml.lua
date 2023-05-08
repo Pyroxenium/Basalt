@@ -476,6 +476,8 @@ return {
                     self:setFlexDirection(value)
                 elseif (name == "justifyContent") then
                     self:setJustifyContent(value)
+                elseif (name == "alignItems") then
+                    self:setAlignItems(value)
                 elseif (name == "spacing") then
                     self:setSpacing(value)
                 end
@@ -486,6 +488,7 @@ return {
                 self:updateSpecifiedValuesByXMLData(data, {
                     "flexDirection",
                     "justifyContent",
+                    "alignItems",
                     "spacing"
                 })
                 return self
