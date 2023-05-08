@@ -8,6 +8,7 @@ In addition to the methods inherited from Frame, Container, VisualObject and Obj
 |[getSpacing](objects/Flexbox/getSpacing.md)|Returns the space between objects
 |[setFlexDirection](objects/Flexbox/setFlexDirection.md)|Sets the direction in which the children will be placed
 |[setJustifyContent](objects/Flexbox/setJustifyContent.md)|Determines how the children are aligned along the main axis
+|[setAlignItems](objects/Flexbox/setAlignItems.md)|Determines how the children are aligned along the off axis
 
 ### Example
 
@@ -18,11 +19,12 @@ local main = basalt.createFrame()
 local flexbox = main:addFlexbox()
   :setFlexDirection("column")
   :setJustifyContent("space-between")
+  :setAlignItems("center")
   :setSpacing(5)
 ```
 
 Alternatively, you can create a flexbox using an XML layout:
 
 ```xml
-<flexbox flexDirection="column" justifyContent="space-between" spacing="5">
+<flexbox flexDirection="column" justifyContent="space-between" alignItems="center" spacing="5">
 ```
