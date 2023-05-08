@@ -107,3 +107,22 @@ In both examples, you can see that XML provides a straightforward way to build a
 Notably, you can access UI elements by their assigned ID directly in the event code. In the examples above, the titleLabel and okButton elements are accessed simply by referencing their IDs. This convenient feature eliminates the need to search for or store references to the elements in your code.
 
 Remember: IDs have to be unique!
+
+## Dynamic attributes (BETA)
+
+Most attributes can also be set to track a shared variable using the curly braces {} syntax. In this case, the initial value for the variable should be set inside the `<script>` tag.
+
+The earlier example rewritten using dynamic attributes:
+
+```xml
+<label id="titleLabel" text="Welcome to Basalt!" x="10" y="2" />
+<button id="okButton" text={shared.okButtonText} x="10" y="5">
+    <onClick>
+        shared.okButtonText = "Button clicked!"
+    </onClick>
+</button>
+
+<script>
+  shared.okButtonText = "OK"
+</script>
+```
