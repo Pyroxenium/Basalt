@@ -1,14 +1,21 @@
 ## setOffset
-Sets the offset of the list (the same as you would scroll) - default is 0
 
-#### Parameters: 
+### Description
+
+Sets the offset of the list (the same as you would scroll) - default is 0.
+
+### Parameters
+
 1. `number` The offset value
 
-#### Returns:
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
+### Usage
+
 * Creates a default list with 6 entries and sets the offset to 3.
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aList = mainFrame:addList()
@@ -20,6 +27,7 @@ local aList = mainFrame:addList()
       :addItem("6. Entry")
       :setOffset(3)
 ```
+
 ```xml
 <list offset="3">
   <item><text>1. Entry</text></item>

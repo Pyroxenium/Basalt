@@ -1,4 +1,5 @@
 local _OBJECTS = {}
+
 if(packaged)then
     for k,v in pairs(getProject("objects"))do
         _OBJECTS[k] = v()
@@ -13,7 +14,7 @@ if(dir==nil)then
 end
 
 for _,v in pairs(fs.list(fs.combine(dir, "objects")))do
-    if(v~="example.lua")then
+    if(v~="example.lua")and not(v:find(".disabled"))then
         local name = v:gsub(".lua", "")
         _OBJECTS[name] = require(name)
     end

@@ -1,19 +1,16 @@
-local Object = require("Object")
 local tHex = require("tHex")
 local process = require("process")
-local xmlValue = require("utils").getValueFromXML
 
 local sub = string.sub
 
-return function(name, parent)
-    local base = Object(name)
+return function(name, basalt)
+    local base = basalt.getObject("VisualObject")(name, basalt)
     local objectType = "Program"
-    base:setZIndex(5)
     local object
     local cachedPath
     local enviroment = {}
 
-    local function createBasaltWindow(x, y, width, height, self)
+    local function createBasaltWindow(x, y, width, height)
         local xCursor, yCursor = 1, 1
         local bgColor, fgColor = colors.black, colors.white
         local cursorBlink = false
@@ -30,7 +27,7 @@ return function(name, parent)
 
         for i = 0, 15 do
             local c = 2 ^ i
-            tPalette[c] = { parent:getBasaltInstance().getBaseTerm().getPaletteColour(c) }
+            tPalette[c] = { basalt.getTerm().getPaletteColour(c) }
         end
 
         local function createEmptyLines()
@@ -66,67 +63,17 @@ return function(name, parent)
         end
 
         local function internalBlit(sText, sTextColor, sBackgroundColor)
-            -- copy pasti strikes again (cc: window.lua)
-            local nStart = xCursor
-            local nEnd = nStart + #sText - 1
-            if yCursor >= 1 and yCursor <= height then
-                if nStart <= width and nEnd >= 1 then
-                    -- Modify line
-                    if nStart == 1 and nEnd == width then
-                        cacheT[yCursor] = sText
-                        cacheFG[yCursor] = sTextColor
-                        cacheBG[yCursor] = sBackgroundColor
-                    else
-                        local sClippedText, sClippedTextColor, sClippedBackgroundColor
-                        if nStart < 1 then
-                            local nClipStart = 1 - nStart + 1
-                            local nClipEnd = width - nStart + 1
-                            sClippedText = sub(sText, nClipStart, nClipEnd)
-                            sClippedTextColor = sub(sTextColor, nClipStart, nClipEnd)
-                            sClippedBackgroundColor = sub(sBackgroundColor, nClipStart, nClipEnd)
-                        elseif nEnd > width then
-                            local nClipEnd = width - nStart + 1
-                            sClippedText = sub(sText, 1, nClipEnd)
-                            sClippedTextColor = sub(sTextColor, 1, nClipEnd)
-                            sClippedBackgroundColor = sub(sBackgroundColor, 1, nClipEnd)
-                        else
-                            sClippedText = sText
-                            sClippedTextColor = sTextColor
-                            sClippedBackgroundColor = sBackgroundColor
-                        end
-
-                        local sOldText = cacheT[yCursor]
-                        local sOldTextColor = cacheFG[yCursor]
-                        local sOldBackgroundColor = cacheBG[yCursor]
-                        local sNewText, sNewTextColor, sNewBackgroundColor
-                        if nStart > 1 then
-                            local nOldEnd = nStart - 1
-                            sNewText = sub(sOldText, 1, nOldEnd) .. sClippedText
-                            sNewTextColor = sub(sOldTextColor, 1, nOldEnd) .. sClippedTextColor
-                            sNewBackgroundColor = sub(sOldBackgroundColor, 1, nOldEnd) .. sClippedBackgroundColor
-                        else
-                            sNewText = sClippedText
-                            sNewTextColor = sClippedTextColor
-                            sNewBackgroundColor = sClippedBackgroundColor
-                        end
-                        if nEnd < width then
-                            local nOldStart = nEnd + 1
-                            sNewText = sNewText .. sub(sOldText, nOldStart, width)
-                            sNewTextColor = sNewTextColor .. sub(sOldTextColor, nOldStart, width)
-                            sNewBackgroundColor = sNewBackgroundColor .. sub(sOldBackgroundColor, nOldStart, width)
-                        end
-
-                        cacheT[yCursor] = sNewText
-                        cacheFG[yCursor] = sNewTextColor
-                        cacheBG[yCursor] = sNewBackgroundColor
-                    end
-                    object:updateDraw()
-                end
-                xCursor = nEnd + 1
-                if (visible) then
-                    updateCursor()
-                end
+            if yCursor < 1 or yCursor > height or xCursor < 1 or xCursor + #sText - 1 > width then
+                return
             end
+            cacheT[yCursor] = sub(cacheT[yCursor], 1, xCursor - 1) .. sText .. sub(cacheT[yCursor], xCursor + #sText, width)
+            cacheFG[yCursor] = sub(cacheFG[yCursor], 1, xCursor - 1) .. sTextColor .. sub(cacheFG[yCursor], xCursor + #sText, width)
+            cacheBG[yCursor] = sub(cacheBG[yCursor], 1, xCursor - 1) .. sBackgroundColor .. sub(cacheBG[yCursor], xCursor + #sText, width)
+            xCursor = xCursor + #sText
+            if visible then
+                updateCursor()
+            end
+            object:updateDraw()
         end
 
         local function setText(_x, _y, text)
@@ -233,7 +180,7 @@ return function(name, parent)
                 if (visible) then
                     updateCursor()
                 end
-            end;
+            end,
 
             getCursorPos = function()
                 return xCursor, yCursor
@@ -310,57 +257,40 @@ return function(name, parent)
                 end
             end;
 
-            writeText = function(_x, _y, text, bgCol, fgCol)
-                bgCol = bgCol or bgColor
-                fgCol = fgCol or fgColor
-                setText(x, _y, text)
-                setBG(_x, _y, tHex[bgCol]:rep(text:len()))
-                setFG(_x, _y, tHex[fgCol]:rep(text:len()))
-            end;
-
             basalt_update = function()
-                if (parent ~= nil) then
-                    for n = 1, height do
-                        parent:setText(x, y + (n - 1), cacheT[n])
-                        parent:setBG(x, y + (n - 1), cacheBG[n])
-                        parent:setFG(x, y + (n - 1), cacheFG[n])
-                    end
+                for n = 1, height do
+                    object:addBlit(1, n, cacheT[n], cacheFG[n], cacheBG[n])
                 end
-            end;
+            end,
 
             scroll = function(offset)
-                if type(offset) ~= "number" then
-                    error("bad argument #1 (expected number, got " .. type(offset) .. ")", 2)
-                end
+                assert(type(offset) == "number", "bad argument #1 (expected number, got " .. type(offset) .. ")")
                 if offset ~= 0 then
-                    local sEmptyText = emptySpaceLine
-                    local sEmptyTextColor = emptyColorLines[fgColor]
-                    local sEmptyBackgroundColor = emptyColorLines[bgColor]
-                    for newY = 1, height do
-                        local y = newY + offset
-                        if y >= 1 and y <= height then
-                            cacheT[newY] = cacheT[y]
-                            cacheBG[newY] = cacheBG[y]
-                            cacheFG[newY] = cacheFG[y]
-                        else
-                            cacheT[newY] = sEmptyText
-                            cacheFG[newY] = sEmptyTextColor
-                            cacheBG[newY] = sEmptyBackgroundColor
-                        end
+                  for newY = 1, height do
+                    local y = newY + offset
+                    if y < 1 or y > height then
+                      cacheT[newY] = emptySpaceLine
+                      cacheFG[newY] = emptyColorLines[fgColor]
+                      cacheBG[newY] = emptyColorLines[bgColor]
+                    else
+                      cacheT[newY] = cacheT[y]
+                      cacheBG[newY] = cacheBG[y]
+                      cacheFG[newY] = cacheFG[y]
                     end
+                  end
                 end
                 if (visible) then
                     updateCursor()
                 end
-            end;
+            end,
 
 
             isColor = function()
-                return parent:getBasaltInstance().getBaseTerm().isColor()
+                return basalt.getTerm().isColor()
             end;
 
             isColour = function()
-                return parent:getBasaltInstance().getBaseTerm().isColor()
+                return basalt.getTerm().isColor()
             end;
 
             write = function(text)
@@ -416,19 +346,20 @@ return function(name, parent)
         return basaltwindow
     end
 
-    base.width = 30
-    base.height = 12
-    local pWindow = createBasaltWindow(1, 1, base.width, base.height)
+    base:setZIndex(5)
+    base:setSize(30, 12)
+    local pWindow = createBasaltWindow(1, 1, 30, 12)
     local curProcess
     local paused = false
     local queuedEvent = {}
 
     local function updateCursor(self)
+        local parent = self:getParent()
         local xCur, yCur = pWindow.getCursorPos()
-        local obx, oby = self:getAnchorPosition()
+        local obx, oby = self:getPosition()
         local w,h = self:getSize()
         if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-            self.parent:setCursor(self:isFocused() and pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
+            parent:setCursor(self:isFocused() and pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
         end
     end
 
@@ -452,7 +383,7 @@ return function(name, parent)
         end
         if not (curProcess:isDead()) then
             if not (paused) then
-                local absX, absY = self:getAbsolutePosition(self:getAnchorPosition(nil, nil, true))
+                local absX, absY = self:getAbsolutePosition()
                 resumeProcess(self, event, p1, x-absX+1, y-absY+1)
                 updateCursor(self)
             end
@@ -480,8 +411,8 @@ return function(name, parent)
 
         show = function(self)
             base.show(self)
-            pWindow.setBackgroundColor(self.bgColor)
-            pWindow.setTextColor(self.fgColor)
+            pWindow.setBackgroundColor(self:getBackground())
+            pWindow.setTextColor(self:getForeground())
             pWindow.basalt_setVisible(true)
             return self
         end;
@@ -494,14 +425,8 @@ return function(name, parent)
 
         setPosition = function(self, x, y, rel)
             base.setPosition(self, x, y, rel)
-            pWindow.basalt_reposition(self:getAnchorPosition())
+            pWindow.basalt_reposition(self:getPosition())
             return self
-        end;
-
-        setValuesByXMLData = function(self, data)
-            base.setValuesByXMLData(self, data)
-            if(xmlValue("path", data)~=nil)then cachedPath = xmlValue("path", data) end
-            if(xmlValue("execute", data)~=nil)then if(xmlValue("execute", data))then if(cachedPath~=nil)then self:execute(cachedPath) end end end
         end,
 
         getBasaltWindow = function()
@@ -537,37 +462,34 @@ return function(name, parent)
             pWindow.setTextColor(colors.white)
             pWindow.clear()
             pWindow.setCursorPos(1, 1)
-            pWindow.setBackgroundColor(self.bgColor)
-            pWindow.setTextColor(self.fgColor)
+            pWindow.setBackgroundColor(self:getBackground())
+            pWindow.setTextColor(self:getForeground() or colors.white)
             pWindow.basalt_setVisible(true)
 
             resumeProcess(self)
             paused = false
-            if(self.parent~=nil)then
-                self.parent:addEvent("mouse_click", self)
-                self.parent:addEvent("mouse_up", self)
-                self.parent:addEvent("mouse_drag", self)
-                self.parent:addEvent("mouse_scroll", self)
-                self.parent:addEvent("key", self)
-                self.parent:addEvent("key_up", self)
-                self.parent:addEvent("char", self)
-                self.parent:addEvent("other_event", self)
-            end
+            self:listenEvent("mouse_click", self)
+            self:listenEvent("mouse_up", self)
+            self:listenEvent("mouse_drag", self)
+            self:listenEvent("mouse_scroll", self)
+            self:listenEvent("key", self)
+            self:listenEvent("key_up", self)
+            self:listenEvent("char", self)
+            self:listenEvent("other_event", self)
             return self
         end;
 
-        stop = function(self)
+        stop = function(self)            
+            local parent = self:getParent()
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
                     resumeProcess(self, "terminate")
                     if (curProcess:isDead()) then
-                        if (self.parent ~= nil) then
-                            self.parent:setCursor(false)
-                        end
+                        parent:setCursor(false)
                     end
                 end
             end
-            self.parent:removeEvents(self)
+            parent:removeEvents(self)
             return self
         end;
 
@@ -576,7 +498,7 @@ return function(name, parent)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
                     if not (paused) then
-                        self:injectEvents(queuedEvent)
+                        self:injectEvents(table.unpack(queuedEvent))
                         queuedEvent = {}
                     end
                 end
@@ -588,13 +510,13 @@ return function(name, parent)
             return paused
         end;
 
-        injectEvent = function(self, event, p1, p2, p3, p4, ign)
+        injectEvent = function(self, event, ign, ...)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
                     if (paused == false) or (ign) then
-                        resumeProcess(self, event, p1, p2, p3, p4)
+                        resumeProcess(self, event, ...)
                     else
-                        table.insert(queuedEvent, { event = event, args = { p1, p2, p3, p4 } })
+                        table.insert(queuedEvent, { event = event, args = {...} })
                     end
                 end
             end
@@ -610,10 +532,10 @@ return function(name, parent)
             return self
         end;
 
-        injectEvents = function(self, events)
+        injectEvents = function(self, ...)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
-                    for _, value in pairs(events) do
+                    for _, value in pairs({...}) do
                         resumeProcess(self, value.event, table.unpack(value.args))
                     end
                 end
@@ -682,12 +604,13 @@ return function(name, parent)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
                     if not (paused) then
-                        if (self.parent ~= nil) then
+                        local parent = self:getParent()
+                        if (parent ~= nil) then
                             local xCur, yCur = pWindow.getCursorPos()
-                            local obx, oby = self:getAnchorPosition()
+                            local obx, oby = self:getPosition()
                             local w,h = self:getSize()
                             if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-                                self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
+                                parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
                             end
                         end
                     end
@@ -699,77 +622,70 @@ return function(name, parent)
             base.loseFocusHandler(self)
             if (curProcess ~= nil) then
                 if not (curProcess:isDead()) then
-                    if (self.parent ~= nil) then
-                        self.parent:setCursor(false)
+                    local parent = self:getParent()
+                    if (parent ~= nil) then
+                        parent:setCursor(false)
                     end
                 end
-            end
-        end,
-        
-        customEventHandler = function(self, event, ...)
-            base.customEventHandler(self, event, ...)
-            if (curProcess == nil) then
-                return
-            end
-            if(event=="basalt_resize")then
-                local w, h = pWindow.getSize()
-                local pW, pH = self:getSize()
-                if(w~=pW)or(h~=pH)then
-                    pWindow.basalt_resize(pW, pH)
-                    if not (curProcess:isDead()) then
-                        resumeProcess(self, "term_resize")
-                    end
-                end
-                pWindow.basalt_reposition(self:getAnchorPosition())
-                
             end
         end,
 
-        eventHandler = function(self, event, p1, p2, p3, p4)
-            base.eventHandler(self, event, p1, p2, p3, p4)
-            if (curProcess == nil) then
+        eventHandler = function(self, event, ...)
+            base.eventHandler(self, event, ...)
+            if curProcess == nil then
                 return
             end
-            if not (curProcess:isDead()) then
-                if not (paused) then
-                    if(event ~= "terminate") then
-                        resumeProcess(self, event, p1, p2, p3, p4)
-                    end
-                    if (self:isFocused()) then
-                        local obx, oby = self:getAnchorPosition()
+            if not curProcess:isDead() then
+                if not paused then
+                    resumeProcess(self, event, ...)
+                    if self:isFocused() then
+                        local parent = self:getParent()
+                        local obx, oby = self:getPosition()
                         local xCur, yCur = pWindow.getCursorPos()
-                        if (self.parent ~= nil) then
-                            local w,h = self:getSize()
-                            if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-                                self.parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
-                            end
-                        end
-
-                        if (event == "terminate") then
-                            resumeProcess(self, event)
-                            self.parent:setCursor(false)
-                            return true
+                        local w,h = self:getSize()
+                        if obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1 then
+                            parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
                         end
                     end
                 else
-                    table.insert(queuedEvent, { event = event, args = { p1, p2, p3, p4 } })
+                    table.insert(queuedEvent, { event = event, args = { ... } })
+                end
+            end
+        end,
+
+        resizeHandler = function(self, ...)
+            base.resizeHandler(self, ...)
+            if (curProcess ~= nil) then
+                if not (curProcess:isDead()) then
+                    if not (paused) then
+                        pWindow.basalt_resize(self:getSize())
+                        resumeProcess(self, "term_resize", self:getSize())
+                    else
+                        pWindow.basalt_resize(self:getSize())
+                        table.insert(queuedEvent, { event = "term_resize", args = { self:getSize() } })
+                    end
+                end
+            end
+        end,
+
+        repositionHandler = function(self, ...)
+            base.repositionHandler(self, ...)
+            if (curProcess ~= nil) then
+                if not (curProcess:isDead()) then
+                    pWindow.basalt_reposition(self:getPosition())
                 end
             end
         end,
 
         draw = function(self)
-            if (base.draw(self)) then
-                if (self.parent ~= nil) then
-                    local obx, oby = self:getAnchorPosition()
-                    local xCur, yCur = pWindow.getCursorPos()
-                    local w,h = self:getSize()
-                    pWindow.basalt_reposition(obx, oby)
-                    pWindow.basalt_update()
-                    if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-                        self.parent:setCursor(self:isFocused() and pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
-                    end
-                end
-            end
+            base.draw(self)
+            self:addDraw("program", function()
+                local parent = self:getParent()
+                local obx, oby = self:getPosition()
+                local xCur, yCur = pWindow.getCursorPos()
+                local w,h = self:getSize()
+                pWindow.basalt_update()
+            end)
         end,
 
         onError = function(self, ...)
@@ -778,9 +694,8 @@ return function(name, parent)
                     self:registerEvent("program_error", v)
                 end
             end
-            if(self.parent~=nil)then
-                self.parent:addEvent("other_event", self)
-            end
+            local parent = self:getParent()
+            self:listenEvent("other_event")
             return self
         end,
 
@@ -790,19 +705,13 @@ return function(name, parent)
                     self:registerEvent("program_done", v)
                 end
             end
-            if(self.parent~=nil)then
-                self.parent:addEvent("other_event", self)
-            end
+            local parent = self:getParent()
+            self:listenEvent("other_event")
             return self
-        end,
-
-        init = function(self)
-            if(base.init(self))then
-                self.bgColor = self.parent:getTheme("ProgramBG")
-            end
         end,
 
     }
 
+    object.__index = object
     return setmetatable(object, base)
 end

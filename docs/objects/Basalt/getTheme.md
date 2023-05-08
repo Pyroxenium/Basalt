@@ -1,9 +1,8 @@
-# Basalt
+## getTheme
 
-## basalt.getTheme
+### Description
 
-Returns the current base-theme. This base-theme can be set using setTheme.md.
-A list of base-theme keys can be found [here](https://github.com/Pyroxenium/Basalt/blob/master/Basalt/theme.lua).
+Returns the current base-theme. This base-theme can be set using setTheme.lua.
 
 ### Returns
 

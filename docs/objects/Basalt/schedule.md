@@ -1,6 +1,6 @@
-# Basalt
-
 ## schedule
+
+### Description
 
 Schedules a function which gets called in a coroutine. After the coroutine is finished it will get destroyed immediatly. It's something like threads, but with some limits.
 **A guide can be found [here](/tips/logic).**
@@ -15,7 +15,7 @@ Schedules a function which gets called in a coroutine. After the coroutine is fi
 
 ### Usage
 
-* Creates a schedule which switches the color between red and gray
+Creates a schedule which switches the color between red and gray:
 
 ```lua
 local mainFrame = basalt.createFrame()
@@ -33,4 +33,19 @@ aButton:onClick(basalt.schedule(function(self)
     os.sleep(0.1)
     self:setBackground(colors.gray)
 end))
+```
+
+Usage in XML layout:
+
+```xml
+<button text="Click me">
+    <onClick>
+        basalt.schedule(function()
+            local button = event[1]
+            button:setBackground(colors.lime)
+            os.sleep(1)
+            button:setBackground(colors.black)
+        end)()
+    </onClick>
+</button>
 ```

@@ -1,11 +1,17 @@
 ## getFontSize
+
+### Description
+
 Returns the current font size
 
-#### Returns:
+### Returns
+
 1. `number` font size
 
-#### Usage:
+### Usage
+
 * Creates a default label, sets the text to "Basalt!" and its font size to 2. Also prints the current fontsize.
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aLabel = mainFrame:addLabel():setText("Basalt!"):setFontSize(2)

@@ -1,14 +1,17 @@
 ## setImage
+
+### Description
+
 Sets a new image
 
-#### Parameter:
+### Parameter
 
 1. `table` A table in bimg or nfp format.
 1. `string` The format in which the image should be loaded (nfp or bimg)
 
-#### Usage:
+### Usage
 
-* Creates a default image and loads a test.nfp file
+* Creates a default image and loads a test.nfp
 
 ```lua
 local mainFrame = basalt.createFrame()

@@ -1,30 +1,52 @@
-local Object = require("Object")
 local utils = require("utils")
-local xmlValue = utils.getValueFromXML
+local tHex = require("tHex")
 
-return function(name)
+return function(name, basalt)
     -- Checkbox
-    local base = Object(name)
+    local base = basalt.getObject("ChangeableObject")(name, basalt)
     local objectType = "Checkbox"
 
     base:setZIndex(5)
     base:setValue(false)
-    base.width = 1
-    base.height = 1
+    base:setSize(1, 1)
 
-    local symbol = "\42"
+    local symbol,inactiveSymbol,text,textPos = "\42"," ","","right"
 
     local object = {
+        load = function(self)
+            self:listenEvent("mouse_click", self)
+            self:listenEvent("mouse_up", self)
+        end,
 
         getType = function(self)
             return objectType
-        end;
+        end,
+        isType = function(self, t)
+            return objectType==t or base.isType~=nil and base.isType(t) or false
+        end,
 
-        setSymbol = function(self, sym)
-            symbol = sym
+        setSymbol = function(self, sym, inactive)
+            symbol = sym or symbol
+            inactiveSymbol = inactive or inactiveSymbol
             self:updateDraw()
             return self
         end,
+
+        getSymbol = function(self)
+            return symbol, inactiveSymbol
+        end,
+
+        setText = function(self, _text)
+            text = _text
+            return self
+        end,
+
+        setTextPosition = function(self, pos)
+            textPos = pos or textPos
+            return self
+        end,
+
+        setChecked = base.setValue,
 
         mouseHandler = function(self, button, x, y)
             if (base.mouseHandler(self, button, x, y)) then
@@ -41,45 +63,26 @@ return function(name)
             return false
         end,
 
-        touchHandler = function(self, x, y)
-            return self:mouseHandler(1, x, y)
-        end,
-
-        setValuesByXMLData = function(self, data)
-            base.setValuesByXMLData(self, data)
-            if(xmlValue("checked", data)~=nil)then if(xmlValue("checked", data))then self:setValue(true) else self:setValue(false) end end
-            return self
-        end,
-
         draw = function(self)
-            if (base.draw(self)) then
-                if (self.parent ~= nil) then
-                    local obx, oby = self:getAnchorPosition()
-                    local w,h = self:getSize()
-                    local verticalAlign = utils.getTextVerticalAlign(h, "center")
-                    if(self.bgColor~=false)then self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor) end
-                    for n = 1, h do
-                        if (n == verticalAlign) then
-                            if (self:getValue() == true) then
-                                self.parent:writeText(obx, oby + (n - 1), utils.getTextHorizontalAlign(symbol, w, "center"), self.bgColor, self.fgColor)
-                            else
-                                self.parent:writeText(obx, oby + (n - 1), utils.getTextHorizontalAlign(" ", w, "center"), self.bgColor, self.fgColor)
-                            end
-                        end
-                    end
+            base.draw(self)
+            self:addDraw("checkbox", function()
+                local obx, oby = self:getPosition()
+                local w,h = self:getSize()
+                local verticalAlign = utils.getTextVerticalAlign(h, "center")
+                local bg,fg = self:getBackground(), self:getForeground()
+                if (self:getValue()) then
+                    self:addBlit(1, verticalAlign, utils.getTextHorizontalAlign(symbol, w, "center"), tHex[fg], tHex[bg])
+                else
+                    self:addBlit(1, verticalAlign, utils.getTextHorizontalAlign(inactiveSymbol, w, "center"), tHex[fg], tHex[bg])
                 end
-            end
-        end,
-        
-        init = function(self)
-            self.parent:addEvent("mouse_click", self)
-            self.parent:addEvent("mouse_up", self)
-            if(base.init(self))then
-                self.bgColor = self.parent:getTheme("CheckboxBG")
-                self.fgColor = self.parent:getTheme("CheckboxText")       
-            end
+                if(text~="")then
+                    local align = textPos=="left" and -text:len() or 3
+                    self:addText(align, verticalAlign, text)
+                end
+            end)
         end,
     }
 
+    object.__index = object
     return setmetatable(object, base)
 end

@@ -1,11 +1,17 @@
 ## getOffset
-Returns the current index offset
 
-#### Returns:
+### Description
+
+Returns the current index offset.
+
+### Returns
+
 1. `number` offset value
 
-#### Usage:
+### Usage
+
 * Creates a default dropdown with 6 entries and sets the offset to 3, also prints the current offset.
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aList = mainFrame:addList()

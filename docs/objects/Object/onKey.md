@@ -1,26 +1,29 @@
-# Object - Event
-
 ## onKey
+
+### Description
 
 `onKey(self, event, key)`
 
-The computercraft event which triggers this method is `key` and `char`.
+The onKey event is triggered when a key is pressed on the keyboard.
 
-Here is a example on how to add a onKey event to your frame:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onKey event to an object:
 
 ```lua
 local basalt = require("basalt")
 
 local main = basalt.createFrame()
-local subFrame = main:addFrame()
+local input = main:addInput()
   :setPosition(3,3)
-  :setSize(18,6)
-  :hide()
+  :setSize(12,1)
 
-function openSubFrame(self, event, key)
-  if(key==keys.c)then
-    subFrame:show()
-  end
+function inputnOnKey(self, event, key)
+  basalt.debug("Key pressed: " .. key)
 end
-main:onKey(openSubFrame)
+input:onKey(inputnOnKey)
 ```

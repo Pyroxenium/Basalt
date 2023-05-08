@@ -1,12 +1,18 @@
-# Object - Event
-
 ## onDrag
+
+### Description
 
 `onDrag(self, event, button, x, y, xOffset, yOffset)`
 
-The computercraft event which triggers this method is `mouse_drag`.
+The onDrag event is triggered when an object is being dragged with the mouse.
 
-This is a example on how you would create a movable button:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onDrag event to an object:
 
 ```lua
 local basalt = require("basalt")
@@ -15,25 +21,22 @@ local main = basalt.createFrame()
 local button = main:addButton()
   :setPosition(3,3)
   :setSize(12,3)
-  :setText("Click")
+  :setText("Drag")
 
-function buttonOnDrag(self, button, x, y, xOffset, yOffset)
-    self:setPosition(-xOffset, -yOffset, true) -- we need to reverse the offset and true means to add the offset instead of changing it.
+function buttonOnDrag(event, button, x, y)
+  basalt.debug("Button dragged at position: " .. x .. ", " .. y)
 end
 button:onDrag(buttonOnDrag)
-
-basalt.autoUpdate()
 ```
 
-Another example on how you could change the frame's offset by dragging around.
+* You can also change the frame's offset, by dragging around:
 
 ```lua
 local basalt = require("basalt")
 
 local main = basalt.createFrame()
     :onDrag(function(self, button, x, y, xOffset, yOffset)
-      local xO, yO = self:getOffset()
-      self:setOffset(xO-xOffset, yO-yOffset, true) -- we need to reverse the offset and true means to add the offset instead of changing it.
+      self:setOffset(-xOffset, -yOffset, true)
     end)
 
 local button = main:addButton()
@@ -48,7 +51,7 @@ local button2 = main:addButton()
 basalt.autoUpdate()
 ```
 
-Also very interesting is a button where you are able to resize the frame just by dragging the button.
+* Here is a example how to resize a frame by dragging a button around:
 
 ```lua
 local basalt = require("basalt")

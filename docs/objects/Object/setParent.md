@@ -1,12 +1,14 @@
-# Object
-
 ## setParent
 
-Sets the parent frame of the object
+### Description
+
+Sets the parent of the object
+
+This method is used to change the parent of the object, assigning it to a new containing object.
 
 ### Parameters
 
-1. `frame` The to-be parent frame
+1. `object` The new parent object
 
 ### Returns
 
@@ -14,14 +16,11 @@ Sets the parent frame of the object
 
 ### Usage
 
-* Sets the parent frame of the random frame, adding it to the main frame when the button is clicked"
+* Creates two frames and a button, then sets the parent of the button to the second frame
 
 ```lua
 local mainFrame = basalt.createFrame()
-local aRandomFrame = basalt.createFrame()
-local aButton = mainFrame:addButton():onClick(
-        function() 
-            aRandomFrame:setParent(mainFrame) 
-        end
-)
+local secondFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setText("My Button")
+aButton:setParent(secondFrame) -- Sets the parent of aButton to secondFrame
 ```

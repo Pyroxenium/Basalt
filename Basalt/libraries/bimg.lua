@@ -80,9 +80,11 @@ local function frame(base, manager)
     end
 
     if(base~=nil)then
-        w = #base[1][1]
-        h = #base
-        setFrame(base)
+        if(#base>0)then
+            w = #base[1][1]
+            h = #base
+            setFrame(base)
+        end
     end
 
     return {
@@ -134,7 +136,11 @@ local function frame(base, manager)
         end,
 
         getFrameData = function(key)
-            return (key~= nil and data[key] or data)
+            if(key~=nil)then
+                return data[key]
+            else
+                return data
+            end
         end,
 
         blit = function(text, fgCol, bgCol, x, y)
@@ -181,14 +187,22 @@ return function(img)
     local metadata = {creator="Bimg Library by NyoriE", date=os.date("!%Y-%m-%dT%TZ")}
     local width,height = 0, 0
 
+    if(img~=nil)then
+        if(img[1][1][1]~=nil)then
+            width,height = metadata.width or #img[1][1][1], metadata.height or #img[1]
+        end
+    end
+
     local manager = {}
 
     local function addFrame(id, data)
         id = id or #frames+1
-        table.insert(frames, id, frame(data, manager))
+        local f = frame(data, manager)
+        table.insert(frames, id, f)
         if(data==nil)then
             frames[id].setSize(width, height)
         end
+        return f
     end
 
     local function removeFrame(id)
@@ -283,7 +297,6 @@ return function(img)
         end,
 
         addFrame = function(id)
-            local f = frame()
             if(#frames<=1)then
                 if(metadata.animated==nil)then
                 metadata.animated = true
@@ -292,21 +305,10 @@ return function(img)
                     metadata.secondsPerFrame = 0.2
                 end
             end
-            addFrame(id)
-            return f
+            return addFrame(id)
         end,
 
-        removeFrame = function(id)
-            removeFrame(id)
-            if(#frames<=1)then
-                if(metadata.animated==nil)then
-                    metadata.animated = true
-                end
-                if(metadata.secondsPerFrame==nil)then
-                    metadata.secondsPerFrame = 0.2
-                end
-            end
-        end,
+        removeFrame = removeFrame,
 
         moveFrame = moveFrame,
 
@@ -317,7 +319,9 @@ return function(img)
         end,
 
         getFrameData = function(id, key)
-            return frames[id]~=nil and frames[id].getFrameData(key)
+            if(frames[id]~=nil)then
+                return frames[id].getFrameData(key)
+            end
         end,
 
         getSize = function()
@@ -339,7 +343,11 @@ return function(img)
         end,
 
         getMetadata = function(key)
-            return key~=nil and metadata[key] or metadata
+            if(key~=nil)then
+                return metadata[key]
+            else
+                return metadata
+            end
         end,
 
         createBimg = function()
@@ -361,17 +369,18 @@ return function(img)
         for k,v in pairs(img)do
             if(type(k)=="string")then
                 metadata[k] = v
-            else
-                addFrame(k, v)
             end
         end
         if(metadata.width==nil)or(metadata.height==nil)then
-            for k,v in pairs(frames)do
-                local w, h = v.getSize()
-                if(w>width)then w = width end
-                if(h>height)then h = height end
-            end
+            width = metadata.width or #img[1][1][1]
+            height = metadata.height or #img[1]
             manager.updateSize(width, height, true)
+        end
+
+        for k,v in pairs(img)do
+            if(type(k)=="number")then
+                addFrame(k, v)
+            end
         end
     else
         addFrame(1)

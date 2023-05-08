@@ -1,15 +1,19 @@
-# Object
-
 ## remove
 
-Removes the object from it's parent frame. This won't 'destroy' the object, It will continue to exist as long as you still have pointers to it.
+### Description
 
-Here is a example on how a button will be fully removed from the memory:
+Removes the object from its parent
+
+The object will no longer be visible and will not receive any events. Note that this does not destroy the object, and it can be re-added to another parent later if needed.
+
+### Returns
+
+1. `object` The object in use
+
+### Usage
 
 ```lua
-local main = basalt.createFrame()
-local button = main:addButton():setPosition(2,2):setText("Close")
-
-button:remove()
-button = nil
+local mainFrame = basalt.createFrame()
+local aButton = mainFrame:addButton():setText("My Button")
+aButton:remove()
 ```

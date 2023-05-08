@@ -1,11 +1,17 @@
 ## stop
-stops the currently running thread
 
-#### Returns:
+### Description
+
+Stops the currently running thread
+
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
+### Usage
+
 * Stops the current running thread by clicking on a button
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aThread = mainFrame:addThread()

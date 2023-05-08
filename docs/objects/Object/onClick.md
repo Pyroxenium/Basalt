@@ -1,10 +1,18 @@
-# onClick
+## onClick
+
+### Description
 
 `onClick(self, event, button, x, y)`
 
-The computercraft event which triggers this method is `mouse_click` and `monitor_touch`.
+The onClick event is triggered when a mouse click or monitor touch occurs on the object.
 
-Here is a example on how to add a onClick event to your button:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onClick event to a button:
 
 ```lua
 local basalt = require("basalt")
@@ -21,7 +29,7 @@ end
 button:onClick(buttonOnClick)
 ```
 
-Here is also a example on how you could create double clicks:
+* Create double clicks:
 
 ```lua
 local basalt = require("basalt")
@@ -30,7 +38,7 @@ local doubleClickMaxTime = 0.25 -- in seconds
 local main = basalt.createFrame()
 local button = main:addButton()
 
-local function createDoubleClick(btn, func) -- here we create a function where we can pass buttons (or other object if you'd like to) and a function which will get called by double clicking.
+local function createDoubleClick(btn, func)
     local doubleClick = 0
     btn:onClick(function()
         if(os.epoch("local")-doubleClickMaxTime*1000<=doubleClick)then
@@ -44,7 +52,7 @@ local function debugSomething()
     basalt.debug("hello")
 end
 
-createDoubleClick(button, debugSomething) -- this is how you will create a double click.
+createDoubleClick(button, debugSomething)
 
 basalt.autoUpdate()
 ```

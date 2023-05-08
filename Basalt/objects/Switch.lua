@@ -1,14 +1,8 @@
-local Object = require("Object")
-local xmlValue = require("utils").getValueFromXML
-
-return function(name)
-    local base = Object(name)
+return function(name, basalt)
+    local base = basalt.getObject("ChangeableObject")(name, basalt)
     local objectType = "Switch"
 
-    base.width = 2
-    base.height = 1
-    base.bgColor = colors.lightGray
-    base.fgColor = colors.gray
+    base:setSize(4, 1)
     base:setValue(false)
     base:setZIndex(5)
 
@@ -19,71 +13,53 @@ return function(name)
     local object = {
         getType = function(self)
             return objectType
-        end;
-
-        setSymbolColor = function(self, symbolColor)
-            bgSymbol = symbolColor
-            self:updateDraw()
-            return self
-        end;
-
-        setActiveBackground = function(self, bgcol)
-            activeBG = bgcol
-            self:updateDraw()
-            return self
-        end;
-
-        setInactiveBackground = function(self, bgcol)
-            inactiveBG = bgcol
-            self:updateDraw()
-            return self
-        end;
-
-        setValuesByXMLData = function(self, data)
-            base.setValuesByXMLData(self, data)
-            if(xmlValue("inactiveBG", data)~=nil)then inactiveBG = colors[xmlValue("inactiveBG", data)] end
-            if(xmlValue("activeBG", data)~=nil)then activeBG = colors[xmlValue("activeBG", data)] end
-            if(xmlValue("symbolColor", data)~=nil)then bgSymbol = colors[xmlValue("symbolColor", data)]  end
-
         end,
 
-        mouseHandler = function(self, button, x, y)
-            if (base.mouseHandler(self, button, x, y)) then
-                local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+        setSymbol = function(self, col)
+            bgSymbol = col
+            return self
+        end,
+
+        setActiveBackground = function(self, col)
+            activeBG = col
+            return self
+        end,
+
+        setInactiveBackground = function(self, col)
+            inactiveBG = col
+            return self
+        end,
+
+
+        load = function(self)
+            self:listenEvent("mouse_click")
+        end,
+
+        mouseHandler = function(self, ...)
+            if (base.mouseHandler(self, ...)) then
                 self:setValue(not self:getValue())
                 self:updateDraw()
                 return true
             end
-        end;
-
-        draw = function(self)
-            if (base.draw(self)) then
-                if (self.parent ~= nil) then
-                    local obx, oby = self:getAnchorPosition()
-                    local w,h = self:getSize()
-                    self.parent:drawBackgroundBox(obx, oby, w, h, self.bgColor)
-                    if(self:getValue())then
-                        self.parent:drawBackgroundBox(obx, oby, 1, h, activeBG)
-                        self.parent:drawBackgroundBox(obx+1, oby, 1, h, bgSymbol)
-                    else
-                        self.parent:drawBackgroundBox(obx, oby, 1, h, bgSymbol)
-                        self.parent:drawBackgroundBox(obx+1, oby, 1, h, inactiveBG)
-                    end
-                end
-            end
         end,
 
-        init = function(self)
-            self.parent:addEvent("mouse_click", self)
-            if(base.init(self))then
-                self.bgColor = self.parent:getTheme("SwitchBG")
-                self.fgColor = self.parent:getTheme("SwitchText")
-                bgSymbol = self.parent:getTheme("SwitchBGSymbol")
-                inactiveBG = self.parent:getTheme("SwitchInactive")
-                activeBG = self.parent:getTheme("SwitchActive")
-            end
+        draw = function(self)
+            base.draw(self)
+            self:addDraw("switch", function()
+                local parent = self:getParent()
+                local bgCol,fgCol = self:getBackground(), self:getForeground()
+                local w,h = self:getSize()
+                if(self:getValue())then
+                    self:addBackgroundBox(1, 1, w, h, activeBG)
+                    self:addBackgroundBox(w, 1, 1, h, bgSymbol)
+                else
+                    self:addBackgroundBox(1, 1, w, h, inactiveBG)
+                    self:addBackgroundBox(1, 1, 1, h, bgSymbol)
+                end
+            end)
         end,
     }
 
+    object.__index = object
     return setmetatable(object, base)
 end

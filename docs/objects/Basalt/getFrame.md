@@ -1,6 +1,6 @@
-# Basalt
-
 ## getFrame
+
+### Description
 
 Returns a base frame by the given id.
 

@@ -1,28 +1,29 @@
-# Object - Event
-
 ## onChar
+
+### Description
 
 `onChar(self, event, char)`
 
-The computercraft event which triggers this method is `char`.
+The onChar event is triggered when a character is typed on the keyboard.
 
-The char event always happens after the key event (just like in cc:tweaked)
+### Returns
 
-Here is a example on how to add a onChar event to your frame:
+1. `object` The object in use
+
+### Usage
+
+* Add an onChar event to an object:
 
 ```lua
 local basalt = require("basalt")
 
 local main = basalt.createFrame()
-local subFrame = main:addFrame()
+local input = main:addInput()
   :setPosition(3,3)
-  :setSize(18,6)
-  :hide()
+  :setSize(12,1)
 
-function openSubFrame(self, event, char)
-  if(char=="a")then
-    subFrame:show()
-  end
+function inputOnChar(self, event, char)
+  basalt.debug("Character typed: " .. char)
 end
-main:onChar(openSubFrame)
+input:onChar(inputOnChar)
 ```

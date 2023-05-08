@@ -1,12 +1,16 @@
-# Object - Event
-
 ## onScroll
 
 `onScroll(self, event, direction, x, y)`
 
-The computercraft event which triggers this method is `mouse_scroll`.
+The `onScroll` event is triggered when a mouse scroll occurs over the object.
 
-Here is a example on how to add a onScroll event to your button:
+### Returns
+
+1. `object` The object in use
+
+### Usage
+
+* Add an onScroll event to a button:
 
 ```lua
 local basalt = require("basalt")

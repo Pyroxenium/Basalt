@@ -1,23 +1,35 @@
 ## injectEvents
-Injects multiple events
 
-#### Parameters: 
-1. `table` a table, items should be {event="event", args={para1, para2, para3, para4}}
+### Description
 
-#### Returns:
+Injects multiple events into the program.
+
+### Parameters
+
+1. `table` ... - A table containing an "event" key and an "args" key. The "event" key should have a string value, and the "args" key should have a table value containing the parameters for the event.
+
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
+### Usage
+
 * injects a multiple char events by clicking a button
 
 ```lua
-local mainFrame = basalt.createFrame():show()
-local aProgram = mainFrame:addProgram():execute("rom/programs/shell.lua"):show()
+local basalt = require("basalt")
 
-local events = {
-{event="char", args={"h"}},
-{event="char", args={"e"}},
-{event="char", args={"y"}}
-}
-mainFrame:addButton():setText("inject"):onClick(function() aProgram:injectEvents(events) end):show()
+local mainFrame = basalt.createFrame()
+local aProgram = mainFrame:addProgram():execute("rom/programs/shell.lua")
+
+local function injectEventsOnClick()
+    aProgram:injectEvents(
+  {event="char", args={"h"}},
+  {event="char", args={"e"}},
+  {event="char", args={"y"}})
+end
+
+mainFrame:addButton()
+  :setText("Inject 'hey'")
+  :onClick(injectEventsOnClick)
 ```

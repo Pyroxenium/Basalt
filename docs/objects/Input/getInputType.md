@@ -1,11 +1,17 @@
 ## getInputType
-Gets the current input type
 
-#### Returns:
-1. `string` input type
+### Description
 
-#### Usage:
-* Creates a default input and sets it to numbers only. Also prints the current input type to log.
+Gets the current input type of the Input object.
+
+### Returns
+
+1. `string` inputType - The current input type.
+
+### Usage
+
+* Creates a default input, sets it to accept numbers only, and prints the current input type to the log.
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aInput = mainFrame:addInput():setInputType("number")

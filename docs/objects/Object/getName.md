@@ -2,11 +2,11 @@
 
 ## getName
 
-Returns the given name of the object
+Returns the name of the object
 
 ### Returns
 
-1. `string` name
+1. `string` The name of the object, or a uuid if no name was assigned
 
 #### Usage
 
@@ -14,7 +14,7 @@ Returns the given name of the object
 
 ```lua
 local main = basalt.createFrame()
-basalt.debug(main:getName()) -- returns the uuid
+basalt.debug(main:getName()) -- returns a uuid
 ```
 
 ```lua

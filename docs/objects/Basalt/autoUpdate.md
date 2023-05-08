@@ -1,6 +1,6 @@
-# Basalt
-
 ## autoUpdate
+
+### Description
 
 This starts the event and draw handler for you. The listeners will run until you stop them.
 
@@ -13,6 +13,12 @@ This starts the event and draw handler for you. The listeners will run until you
 * Enables the basalt listeners, otherwise the screen will not continue to update
 
 ```lua
+local basalt = require("basalt")
+
 local main = basalt.createFrame()
-basalt.autoUpdate()
+basalt.autoUpdate() -- Start the event and draw listeners
+
+-- Some code here...
+
+basalt.autoUpdate(false) -- Stop the event and draw listeners
 ```

@@ -1,14 +1,21 @@
 ## setScrollable
-Makes it possible to scroll while the mouse is over the list
 
-#### Parameters: 
+### Description
+
+Makes it possible to scroll while the mouse is over the list.
+
+### Parameters
+
 1. `boolean` If the list should be scrollable or not
 
-#### Returns:
+### Returns
+
 1. `object` The object in use
 
-#### Usage:
-* Creates a new list and makes it scrollable
+### Usage
+
+* Creates a new list and makes it scrollable.
+
 ```lua
 local mainFrame = basalt.createFrame()
 local aList = mainFrame:addList():setScrollable(true)
@@ -23,6 +30,7 @@ local aList = mainFrame:addList():setScrollable(true)
   :addItem("9. Entry")
 
 ```
+
 ```xml
 <dropdown scrollable="true">
   <item><text>1. Entry</text></item>

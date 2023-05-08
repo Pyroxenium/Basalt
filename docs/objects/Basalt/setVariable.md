@@ -1,17 +1,17 @@
-# Basalt
-
 ## setVariable
 
-This stores a variable which you're able to access via xml. You are also able to add a function, which then gets called by object events created in XML.
+### Description
+
+This method stores a variable that you can access via XML. You can also add a function, which is then called by object events created in XML.
 
 ### Parameters
 
-1. `string` a key name
-2. `any` any variable
+1. `string` key - A key name to store the variable.
+2. `any` value - Any variable to store under the key.
 
 ### Usage
 
-* Adds a function to basalt.
+* Adds a reusable function to Basalt.
 
 ```lua
 basalt.setVariable("clickMe", function()

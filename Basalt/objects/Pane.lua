@@ -1,28 +1,16 @@
-local Object = require("Object")
-local log = require("basaltLogs")
-
-return function(name)
+return function(name, basalt)
     -- Pane
-    local base = Object(name)
+    local base = basalt.getObject("VisualObject")(name, basalt)
     local objectType = "Pane"
+
+    base:setSize(25, 10)
 
     local object = {
         getType = function(self)
             return objectType
-        end;
-
-        setBackground = function(self, col, sym, symC)
-            base.setBackground(self, col, sym, symC)
-            return self
-        end,
-
-        init = function(self)
-            if(base.init(self))then
-                self.bgColor = self.parent:getTheme("PaneBG")
-                self.fgColor = self.parent:getTheme("PaneBG")
-            end
         end,
     }
 
+    object.__index = object
     return setmetatable(object, base)
 end

@@ -1,15 +1,44 @@
-Textfields are objects, where the user can write something in multiple lines. It behaves like the default edit script
+Textfields are objects that allow users to write text in multiple lines, similar to the default edit script.
 
-[Object](objects/Object.md) methods also apply for textfields.
+In addition to the Object and VisualObject methods, Textfield objects have the following methods:
 
 |   |   |
 |---|---|
-|[getLines](objects/Textfield/getLines.md)|
-|[getLine](objects/Textfield/getLine.md)|
-|[editLine](objects/Textfield/editLine.md)|
-|[addLine](objects/Textfield/addLine.md)|
-|[removeLine](objects/Textfield/removeLine.md)|
-|[getTextCursor](objects/Textfield/getTextCursor.md)|
-|[addKeywords](objects/Textfield/addKeywords.md)|
-|[addRule](objects/Textfield/addRule.md)|
+|[getLines](objects/Textfield/getLines.md)|Returns all lines of text
+|[getLine](objects/Textfield/getLine.md)|Returns a specific line of text
+|[editLine](objects/Textfield/editLine.md)|Edits a specific line of text
+|[addLine](objects/Textfield/addLine.md)|Adds a new line of text
+|[removeLine](objects/Textfield/removeLine.md)|Removes a specific line of text
+|[getTextCursor](objects/Textfield/getTextCursor.md)|Returns the current text cursor position
+|[addKeywords](objects/Textfield/addKeywords.md)|Adds syntax highlighting keywords
+|[addRule](objects/Textfield/addRule.md)|Adds a custom syntax highlighting rule
+|[editRule](objects/Textfield/addRule.md)|Edits an existing syntax highlighting rule
+|[removeRule](objects/Textfield/addRule.md)|Removes an existing syntax highlighting rule
+|[getOffset](objects/Textfield/addRule.md)|Returns the current offset inside the Textfield
+|[setOffset](objects/Textfield/addRule.md)|Changes the offset inside the Textfield
+|[clear](objects/Textfield/addRule.md)|Clears the Textfield content
+|[setSelection](objects/Textfield/addRule.md)|Sets the selection color (text color and background color)
+|[getSelection](objects/Textfield/addRule.md)|Returns the current selection color
 
+In version 1.7, Textfields now allow the user to select text with the mouse. The setSelection method is used to choose the text color and background color for selected text.
+
+## Example
+
+```lua
+local main = basalt.createFrame()
+local aTextfield = main:addTextfield()
+
+-- Add some lines of text to the Textfield
+aTextfield:addLine("This is the first line.")
+aTextfield:addLine("This is the second line.")
+aTextfield:addLine("This is the third line.")
+
+-- Edit the second line
+aTextfield:editLine(2, "This is the modified second line.")
+
+-- Remove the third line
+aTextfield:removeLine(3)
+
+-- Add a keyword for syntax highlighting
+aTextfield:addKeywords(colors.red, {"first", "second", "third"})
+```

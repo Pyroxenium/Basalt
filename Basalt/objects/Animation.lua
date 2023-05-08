@@ -1,6 +1,3 @@
-local xmlValue = require("utils").getValueFromXML
-local basaltEvent = require("basaltEvent")
-
 local floor,sin,cos,pi,sqrt,pow = math.floor,math.sin,math.cos,math.pi,math.sqrt,math.pow
 
 -- You can find the easing curves here https://easings.net
@@ -222,7 +219,8 @@ local lerp = {
 
 local activeAnimations = {}
 
-return function(name)
+return function(name, basalt)
+    local base = basalt.getObject("Object")(name, basalt)
     local object = {}
     local objectType = "Animation"
 
@@ -233,8 +231,6 @@ return function(name)
     local animationActive = false
     local index = 1
     local infinitePlay = false
-
-    local eventSystem = basaltEvent()
 
     local nextWaitTimer = 0
     local lastFunc
@@ -306,7 +302,7 @@ return function(name)
         local obj = _OBJ
         local x,y 
         local name = ""
-        if(obj.parent~=nil)then name = obj.parent:getName() end
+        if(obj:getParent()~=nil)then name = obj:getParent():getName() end
         name = name..obj:getName()
         addAnimationPart(t+0.05, function()
             if(typ~=nil)then
@@ -340,14 +336,7 @@ return function(name)
         name = name,
         getType = function(self)
             return objectType
-        end;
-
-        getBaseFrame = function(self)
-            if(self.parent~=nil)then
-                return self.parent:getBaseFrame()
-            end
-            return self
-        end;
+        end,
 
         setMode = function(self, newMode)
             mode = newMode
@@ -358,124 +347,6 @@ return function(name)
             lerp[modeId] = modeF
             return self
         end,
-
-        generateXMLEventFunction = function(self, func, val)
-            local createF = function(str)
-                if(str:sub(1,1)=="#")then
-                    local o = self:getBaseFrame():getDeepObject(str:sub(2,str:len()))
-                    if(o~=nil)and(o.internalObjetCall~=nil)then
-                        func(self,function()o:internalObjetCall()end)
-                    end
-                else
-                    func(self,self:getBaseFrame():getVariable(str))
-                end
-            end
-            if(type(val)=="string")then
-                createF(val)
-            elseif(type(val)=="table")then
-                for k,v in pairs(val)do
-                    createF(v)
-                end
-            end
-            return self
-        end,
-
-        setValuesByXMLData = function(self, data)
-            loop = xmlValue("loop", data)==true and true or false
-            if(xmlValue("object", data)~=nil)then 
-                local o = self:getBaseFrame():getDeepObject(xmlValue("object", data)) 
-                if(o==nil)then
-                    o = self:getBaseFrame():getVariable(xmlValue("object", data))
-                end
-                if(o~=nil)then
-                    self:setObject(o)
-                end
-            end
-            if(data["move"]~=nil)then 
-                local x = xmlValue("x", data["move"])
-                local y = xmlValue("y", data["move"])
-                local duration = xmlValue("duration", data["move"])
-                local time = xmlValue("time", data["move"])
-                self:move(x, y, duration, time)
-            end
-            if(data["size"]~=nil)then 
-                local w = xmlValue("width", data["size"])
-                local h = xmlValue("height", data["size"])
-                local duration = xmlValue("duration", data["size"])
-                local time = xmlValue("time", data["size"])
-                self:size(w, h, duration, time)
-            end
-            if(data["offset"]~=nil)then 
-                local x = xmlValue("x", data["offset"])
-                local y = xmlValue("y", data["offset"])
-                local duration = xmlValue("duration", data["offset"])
-                local time = xmlValue("time", data["offset"])
-                self:offset(x, y, duration, time)
-            end
-            if(data["textColor"]~=nil)then 
-                local duration = xmlValue("duration", data["textColor"])
-                local timer = xmlValue("time", data["textColor"])
-                local t = {}
-                local tab = data["textColor"]["color"]
-                if(tab~=nil)then
-                    if(tab.properties~=nil)then tab = {tab} end
-                    for k,v in pairs(tab)do
-                        table.insert(t, colors[v:value()])
-                    end
-                end
-                if(duration~=nil)and(#t>0)then
-                    self:changeTextColor(duration, timer or 0, table.unpack(t))
-                end
-            end
-            if(data["background"]~=nil)then 
-                local duration = xmlValue("duration", data["background"])
-                local timer = xmlValue("time", data["background"])
-                local t = {}
-                local tab = data["background"]["color"]
-                if(tab~=nil)then
-                    if(tab.properties~=nil)then tab = {tab} end
-                    for k,v in pairs(tab)do
-                        table.insert(t, colors[v:value()])
-                    end
-                end
-                if(duration~=nil)and(#t>0)then
-                    self:changeBackground(duration, timer or 0, table.unpack(t))
-                end
-            end
-            if(data["text"]~=nil)then 
-                local duration = xmlValue("duration", data["text"])
-                local timer = xmlValue("time", data["text"])
-                local t = {}
-                local tab = data["text"]["text"]
-                if(tab~=nil)then
-                    if(tab.properties~=nil)then tab = {tab} end
-                    for k,v in pairs(tab)do
-                        table.insert(t, v:value())
-                    end
-                end
-                if(duration~=nil)and(#t>0)then
-                    self:changeText(duration, timer or 0, table.unpack(t))
-                end
-            end
-            if(xmlValue("onDone", data)~=nil)then self:generateXMLEventFunction(self.onDone, xmlValue("onDone", data)) end
-            if(xmlValue("onStart", data)~=nil)then self:generateXMLEventFunction(self.onDone, xmlValue("onStart", data)) end
-            if(xmlValue("autoDestroy", data)~=nil)then
-                if(xmlValue("autoDestroy", data))then
-                    autoDestroy = true
-                end
-            end
-            mode = xmlValue("mode", data) or mode
-            if(xmlValue("play", data)~=nil)then if(xmlValue("play", data))then self:play(loop) end end
-            return self
-        end,
-
-        getZIndex = function(self)
-            return 1
-        end;
-
-        getName = function(self)
-            return self.name
-        end;
 
         setObject = function(self, obj)
             _OBJ = obj
@@ -557,12 +428,12 @@ return function(name)
         end;
 
         onDone = function(self, f)
-            eventSystem:registerEvent("animation_done", f)
+            self:registerEvent("animation_done", f)
             return self
         end,
 
         onStart = function(self, f)
-            eventSystem:registerEvent("animation_start", f)
+            self:registerEvent("animation_start", f)
             return self
         end,
 
@@ -572,16 +443,16 @@ return function(name)
         end,
 
         animationDoneHandler = function(self)
-            eventSystem:sendEvent("animation_done", self)
-            self.parent:removeEvent("other_event", self)
+            self:sendEvent("animation_done", self)
+            self:listenEvent("other_event", false)
             if(autoDestroy)then
-                self.parent:removeObject(self)
+                self:getParent():removeObject(self)
                 self = nil
             end
         end;
 
         animationStartHandler = function(self)
-            eventSystem:sendEvent("animation_start", self)
+            self:sendEvent("animation_start", self)
         end;
 
         clear = function(self)
@@ -609,7 +480,7 @@ return function(name)
             else
                 self:animationDoneHandler()
             end
-            self.parent:addEvent("other_event", self)
+            self:listenEvent("other_event")
             return self
         end;
 
@@ -619,7 +490,7 @@ return function(name)
                 infinitePlay = false
             end
             animationActive = false
-            self.parent:removeEvent("other_event", self)
+            self:listenEvent("other_event", false)
             return self
         end;
 
@@ -639,7 +510,7 @@ return function(name)
             end
         end;
     }
-    object.__index = object
 
-    return object
+    object.__index = object
+    return setmetatable(object, base)
 end

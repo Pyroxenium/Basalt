@@ -1,42 +1,40 @@
-local Object = require("Object")
-local xmlValue = require("utils").getValueFromXML
+local tHex = require("tHex")
 
-return function(name)
-    local base = Object(name)
+return function(name, basalt)
+    local base = basalt.getObject("VisualObject")(name, basalt)
     local objectType = "Scrollbar"
 
-    base.width = 1
-    base.height = 8
-    base:setValue(1)
     base:setZIndex(2)
+    base:setSize(1, 8)
+    base:setBackground(colors.lightGray, "\127", colors.gray)
 
     local barType = "vertical"
     local symbol = " "
-    local symbolColor
-    local bgSymbol = "\127"
-    local maxValue = base.height
+    local symbolBG = colors.black
+    local symbolFG = colors.black
+    local scrollAmount = 3
     local index = 1
     local symbolSize = 1
+    local symbolAutoSize = true
+
+    local function updateSymbolSize()
+        local w,h = base:getSize()
+        if(symbolAutoSize)then
+            symbolSize = math.max((barType == "vertical" and h or w-(#symbol)) - (scrollAmount-1), 1)
+        end
+    end
+    updateSymbolSize()
 
     local function mouseEvent(self, button, x, y)
-    local obx, oby = self:getAbsolutePosition(self:getAnchorPosition())
+    local obx, oby = self:getAbsolutePosition()
     local w,h = self:getSize()
-        if (barType == "horizontal") then
-            for _index = 0, w do
-                if (obx + _index == x) and (oby <= y) and (oby + h > y) then
-                    index = math.min(_index + 1, w - (symbolSize - 1))
-                    self:setValue(maxValue / w * (index))
-                    self:updateDraw()
-                end
-            end
-        end
-        if (barType == "vertical") then
-            for _index = 0, h do
-                if (oby + _index == y) and (obx <= x) and (obx + w > x) then
-                    index = math.min(_index + 1, h - (symbolSize - 1))
-                    self:setValue(maxValue / h * (index))
-                    self:updateDraw()
-                end
+        updateSymbolSize()
+        local size = barType == "vertical" and h or w
+        for i = 0, size do
+            if ((barType == "vertical" and oby + i == y) or (barType == "horizontal" and obx + i == x)) and (obx <= x) and (obx + w > x) and (oby <= y) and (oby + h > y) then
+                index = math.min(i + 1, size - (#symbol + symbolSize - 2))
+                self:scrollbarMoveHandler()
+                self:updateDraw()
             end
         end
     end
@@ -44,23 +42,24 @@ return function(name)
     local object = {
         getType = function(self)
             return objectType
-        end;
+        end,
 
-        setSymbol = function(self, _symbol)
-            symbol = _symbol:sub(1, 1)
+        load = function(self)
+            base.load(self)
+            local parent = self:getParent()
+            self:listenEvent("mouse_click")
+            self:listenEvent("mouse_up")
+            self:listenEvent("mouse_scroll")
+            self:listenEvent("mouse_drag")
+        end,
+
+        setSymbol = function(self, _symbol, bg, fg)
+            symbol = _symbol:sub(1,1)
+            symbolBG = bg or symbolBG
+            symbolFG = fg or symbolFG
+            updateSymbolSize()
             self:updateDraw()
             return self
-        end;
-
-        setValuesByXMLData = function(self, data)
-            base.setValuesByXMLData(self, data)
-            if(xmlValue("maxValue", data)~=nil)then maxValue = xmlValue("maxValue", data) end
-            if(xmlValue("backgroundSymbol", data)~=nil)then bgSymbol = xmlValue("backgroundSymbol", data):sub(1,1) end
-            if(xmlValue("symbol", data)~=nil)then symbol = xmlValue("symbol", data):sub(1,1) end
-            if(xmlValue("barType", data)~=nil)then barType = xmlValue("barType", data):lower() end
-            if(xmlValue("symbolSize", data)~=nil)then self:setSymbolSize(xmlValue("symbolSize", data)) end
-            if(xmlValue("symbolColor", data)~=nil)then symbolColor = colors[xmlValue("symbolColor", data)] end
-            if(xmlValue("index", data)~=nil)then self:setIndex(xmlValue("index", data)) end
         end,
 
         setIndex = function(self, _index)
@@ -69,54 +68,41 @@ return function(name)
                 index = 1
             end
             local w,h = self:getSize()
-            index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
-            self:setValue(maxValue / (barType == "vertical" and h or w) * index)
+            --index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
+            updateSymbolSize()
+            self:updateDraw()
+            return self
+        end,
+
+        setScrollAmount = function(self, amount)
+            scrollAmount = amount
+            updateSymbolSize()
             self:updateDraw()
             return self
         end,
 
         getIndex = function(self)
-            return index
+            local w,h = self:getSize()
+            return scrollAmount > (barType=="vertical" and h or w) and math.floor(scrollAmount/(barType=="vertical" and h or w) * index) or index
         end,
 
         setSymbolSize = function(self, size)
             symbolSize = tonumber(size) or 1
-            local w,h = self:getSize()
-            if (barType == "vertical") then
-                self:setValue(index - 1 * (maxValue / (h - (symbolSize - 1))) - (maxValue / (h - (symbolSize - 1))))
-            elseif (barType == "horizontal") then
-                self:setValue(index - 1 * (maxValue / (w - (symbolSize - 1))) - (maxValue / (w - (symbolSize - 1))))
-            end
+            symbolAutoSize = size~=false and false or true
+            updateSymbolSize()
             self:updateDraw()
             return self
-        end;
-
-        setMaxValue = function(self, val)
-            maxValue = val
-            self:updateDraw()
-            return self
-        end;
-
-        setBackgroundSymbol = function(self, _bgSymbol)
-            bgSymbol = string.sub(_bgSymbol, 1, 1)
-            self:updateDraw()
-            return self
-        end;
-
-        setSymbolColor = function(self, col)
-            symbolColor = col
-            self:updateDraw()
-            return self
-        end;
+        end,
 
         setBarType = function(self, _typ)
             barType = _typ:lower()
+            updateSymbolSize()
             self:updateDraw()
             return self
-        end;
+        end,
 
-        mouseHandler = function(self, button, x, y)
-            if (base.mouseHandler(self, button, x, y)) then
+        mouseHandler = function(self, button, x, y, ...)
+            if (base.mouseHandler(self, button, x, y, ...)) then
                 mouseEvent(self, button, x, y)
                 return true
             end
@@ -131,58 +117,70 @@ return function(name)
             return false
         end,
 
+        setSize = function(self, ...)
+            base.setSize(self, ...)
+            updateSymbolSize()
+            return self
+        end,
+
         scrollHandler = function(self, dir, x, y)
             if(base.scrollHandler(self, dir, x, y))then
                 local w,h = self:getSize()
+                updateSymbolSize()
                 index = index + dir
                 if (index < 1) then
                     index = 1
                 end
-                index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
-                self:setValue(maxValue / (barType == "vertical" and h or w) * index)
+                index = math.min(index, (barType == "vertical" and h or w) - (barType == "vertical" and symbolSize - 1 or #symbol+symbolSize-2))
+                self:scrollbarMoveHandler()
                 self:updateDraw()
             end
         end,
 
-        draw = function(self)
-            if (base.draw(self)) then
-                if (self.parent ~= nil) then
-                    local obx, oby = self:getAnchorPosition()
-                    local w,h = self:getSize()
-                    if (barType == "horizontal") then
-                        self.parent:writeText(obx, oby, bgSymbol:rep(index - 1), self.bgColor, self.fgColor)
-                        self.parent:writeText(obx + index - 1, oby, symbol:rep(symbolSize), symbolColor, symbolColor)
-                        self.parent:writeText(obx + index + symbolSize - 1, oby, bgSymbol:rep(w - (index + symbolSize - 1)), self.bgColor, self.fgColor)
-                    end
+        onChange = function(self, ...)
+            for _,v in pairs(table.pack(...))do
+                if(type(v)=="function")then
+                    self:registerEvent("scrollbar_moved", v)
+                end
+            end
+            return self
+        end,
 
-                    if (barType == "vertical") then
-                        for n = 0, h - 1 do
-                            if (index == n + 1) then
-                                for curIndexOffset = 0, math.min(symbolSize - 1, h) do
-                                    self.parent:writeText(obx, oby + n + curIndexOffset, symbol, symbolColor, symbolColor)
-                                end
-                            else
-                                if (n + 1 < index) or (n + 1 > index - 1 + symbolSize) then
-                                    self.parent:writeText(obx, oby + n, bgSymbol, self.bgColor, self.fgColor)
-                                end
+
+        scrollbarMoveHandler = function(self)
+            self:sendEvent("scrollbar_moved", self:getIndex())
+        end,
+
+        customEventHandler = function(self, event, ...)
+            base.customEventHandler(self, event, ...)
+            if(event=="basalt_FrameResize")then
+                updateSymbolSize()
+            end 
+        end,
+
+        draw = function(self)
+            base.draw(self)
+            self:addDraw("scrollbar", function()
+                local parent = self:getParent()
+                local w,h = self:getSize()
+                local bgCol,fgCol = self:getBackground(), self:getForeground()
+                if (barType == "horizontal") then
+                    for n = 0, h - 1 do
+                        self:addBlit(index, 1 + n, symbol:rep(symbolSize), tHex[symbolFG]:rep(#symbol*symbolSize), tHex[symbolBG]:rep(#symbol*symbolSize))
+                    end
+                elseif (barType == "vertical") then
+                    for n = 0, h - 1 do
+                        if (index == n + 1) then
+                            for curIndexOffset = 0, math.min(symbolSize - 1, h) do
+                                self:addBlit(1, index + curIndexOffset, symbol:rep(math.max(#symbol, w)), tHex[symbolFG]:rep(math.max(#symbol, w)), tHex[symbolBG]:rep(math.max(#symbol, w)))
                             end
                         end
                     end
                 end
-            end
-        end,
-
-        init = function(self)
-            self.parent:addEvent("mouse_click", self)
-            self.parent:addEvent("mouse_drag", self)
-            self.parent:addEvent("mouse_scroll", self)
-            if(base.init(self))then
-                self.bgColor = self.parent:getTheme("ScrollbarBG")
-                self.fgColor = self.parent:getTheme("ScrollbarText")
-                symbolColor = self.parent:getTheme("ScrollbarSymbolColor")
-            end
+            end)
         end,
     }
 
+    object.__index = object
     return setmetatable(object, base)
 end

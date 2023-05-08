@@ -1,8 +1,8 @@
-# Basalt
-
 ## setActiveFrame
 
-Sets what should be the active baseframe.
+### Description
+
+Sets the active base frame.
 
 ### Parameters
 
@@ -10,4 +10,23 @@ Sets what should be the active baseframe.
 
 ### Usage
 
-TODO
+```lua
+local basalt = require("basalt")
+
+local main1 = basalt.createFrame("firstBaseFrame")
+local main2 = basalt.createFrame("secondBaseFrame")
+
+main1:addButton()
+    :setText("Switch to main2")
+    :onClick(function()
+        basalt.setActiveFrame(main2)
+    end)
+
+main2:addButton()
+    :setText("Switch to main1")
+    :onClick(function()
+        basalt.setActiveFrame(main1)
+    end)
+
+basalt.autoUpdate()
+```

@@ -1,6 +1,6 @@
-# Basalt
-
 ## getVariable
+
+### Description
 
 Returns a variable defined with [setVariable](objects/Basalt/setVariable)
 
