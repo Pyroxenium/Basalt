@@ -25,11 +25,11 @@ return function(name, basalt)
     
         local availableSpace = (flexDirection == "row" and width or height) - totalChildSize - (spacing * (totalElements - 1))
     
-        local currentOffset = 0
+        local currentOffset = 1
         if justifyContent == "center" then
-            currentOffset = availableSpace / 2
+            currentOffset = 1 + availableSpace / 2
         elseif justifyContent == "flex-end" then
-            currentOffset = availableSpace
+            currentOffset = 1 + availableSpace
         end
     
         for _, obj in ipairs(objects) do
