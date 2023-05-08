@@ -438,6 +438,22 @@ return {
                     scripts.env.basalt = basalt
                     scripts.env.main = self
                     scripts.env.shared = {}
+                    scripts.env.sharedObservers = {}
+                    local shared = {}
+                    setmetatable(scripts.env.shared, {
+                        __index = function(_, k)
+                            return shared[k]
+                        end,
+                        __newindex = function(_, k, v)
+                            local observers = scripts.env.sharedObservers[k]
+                            if observers ~= nil then
+                                for _,observer in pairs(observers) do
+                                    observer(v)
+                                end
+                            end
+                            shared[k] = v
+                        end
+                    })
                     local f = fs.open(path, "r")
                     local data = XmlParser:ParseXmlText(f.readAll())
                     f.close()
