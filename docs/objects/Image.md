@@ -29,6 +29,7 @@ In addition to the Object and VisualObject methods, Progressbar objects have the
 |[setText](objects/Image/setText.md)|Writes text into the image
 |[setBg](objects/Image/setBg.md)|Writes background color into the image
 |[setFg](objects/Image/setFg.md)|Writes text color into the image
+|[shrink](objects/Image/shrink.md)|Shrinks the image to a blit version using pixelbox
 
 ## About Bimg
 
