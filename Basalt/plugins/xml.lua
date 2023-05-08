@@ -8,6 +8,7 @@ local function newNode(name)
     node.___name = name
     node.___children = {}
     node.___props = {}
+    node.___reactiveProps = {}
 
     function node:value() return self.___value end
     function node:setValue(val) self.___value = val end
@@ -43,7 +44,12 @@ local function newNode(name)
         else
             self[lName] = value
         end
-        table.insert(self.___props, { name = name, value = self[name] })
+        table.insert(self.___props, { name = name, value = self[lName] })
+    end
+
+    function node:reactiveProperties() return self.___reactiveProps end
+    function node:addReactiveProperty(name, value)
+        self.___reactiveProps[name] = value
     end
 
     return node
@@ -80,9 +86,15 @@ function XmlParser:FromXmlString(value)
     return value;
 end
 
-function XmlParser:ParseArgs(node, s)
+function XmlParser:ParseProps(node, s)
     string.gsub(s, "(%w+)=([\"'])(.-)%2", function(w, _, a)
         node:addProperty(w, self:FromXmlString(a))
+    end)
+end
+
+function XmlParser:ParseReactiveProps(node, s)
+    string.gsub(s, "(%w+)={(.-)}", function(w, a)
+        node:addReactiveProperty(w, a)
     end)
 end
 
@@ -102,11 +114,13 @@ function XmlParser:ParseXmlText(xmlText)
         end
         if empty == "/" then -- empty element tag
             local lNode = newNode(label)
-            self:ParseArgs(lNode, xarg)
+            self:ParseProps(lNode, xarg)
+            self:ParseReactiveProps(lNode, xarg)
             top:addChild(lNode)
         elseif c == "" then -- start tag
             local lNode = newNode(label)
-            self:ParseArgs(lNode, xarg)
+            self:ParseProps(lNode, xarg)
+            self:ParseReactiveProps(lNode, xarg)
             table.insert(stack, lNode)
     top = lNode
         else -- end tag
@@ -128,24 +142,6 @@ function XmlParser:ParseXmlText(xmlText)
         error("XmlParser: unclosed " .. stack[#stack]:name())
     end
     return top
-end
-
-function XmlParser:loadFile(xmlFilename, base)
-    if not base then
-        base = ""
-    end
-
-    local path = fs.combine(base, xmlFilename)
-    local hFile, err = io.open(path, "r");
-
-    if hFile and not err then
-        local xmlText = hFile:read("*a"); -- read file content
-        io.close(hFile);
-        return self:ParseXmlText(xmlText), nil;
-    else
-        print(err)
-        return nil
-    end
 end
 
 local function executeScript(scripts)
@@ -174,20 +170,62 @@ local function registerFunctionEvent(self, data, event, scripts)
     end
 end
 
-return { 
+return {
     VisualObject = function(base, basalt)
 
         local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                local x, y = self:getPosition()
+                local w, h = self:getSize()
+                if (name == "x") then
+                    self:setPosition(value, y)
+                elseif (name == "y") then
+                    self:setPosition(x, value)
+                elseif (name == "width") then
+                    self:setSize(value, h)
+                elseif (name == "height") then
+                    self:setSize(w, value)
+                elseif (name == "background") then
+                    self:setBackground(colors[value])
+                elseif (name == "foreground") then
+                    self:setForeground(colors[value])
+                end
+            end,
+
+            updateSpecifiedValuesByXMLData = function(self, data, valueNames)
+                for _, name in ipairs(valueNames) do
+                    local value = xmlValue(name, data)
+                    if (value ~= nil) then
+                        self:updateValue(name, value)
+                    end
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 scripts.env[self:getName()] = self
-                local x, y = self:getPosition()
-                local w, h = nil, nil
-                if(xmlValue("x", data)~=nil)then x = xmlValue("x", data) end
-                if(xmlValue("y", data)~=nil)then y = xmlValue("y", data) end
-                if(xmlValue("width", data)~=nil)then w = xmlValue("width", data) end
-                if(xmlValue("height", data)~=nil)then h = xmlValue("height", data) end
-                if(xmlValue("background", data)~=nil)then self:setBackground(colors[xmlValue("background", data)]) end
-                if(xmlValue("foreground", data)~=nil)then self:setForeground(colors[xmlValue("foreground", data)]) end
+                for k,v in pairs(data:reactiveProperties()) do
+                    local sharedVariable = string.sub(v, 8, -1)
+                    local sharedObservers = scripts.env.sharedObservers
+                    if (sharedObservers[sharedVariable]) == nil then
+                        sharedObservers[sharedVariable] = {}
+                    end
+                    table.insert(
+                        sharedObservers[sharedVariable],
+                        function(val)
+                            self:updateValue(k, val)
+                        end
+                    )
+                end
+
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "background",
+                    "foreground"
+                })
 
 
                 if(xmlValue("script", data)~=nil)then
@@ -203,13 +241,6 @@ return {
                         registerFunctionEvent(self, xmlValue(v, data), self[v], scripts)
                     end
                 end
-                self:setPosition(x, y)
-                if(w~=nil or h~=nil)then
-                    local w1, h1 = self:getSize()
-                    if w==nil then w = w1 end
-                    if h==nil then h = h1 end
-                    self:setSize(w, h)
-                end
 
                 return self
             end,
@@ -219,10 +250,20 @@ return {
 
     ChangeableObject = function(base, basalt)
         local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "value") then
+                    self:setValue(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("value", data)~=nil)then self:setValue(xmlValue("value", data)) end
-                if(xmlValue("onChange", data)~=nil)then 
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "value"
+                })
+                if(xmlValue("onChange", data)~=nil)then
                     registerFunctionEvent(self, xmlValue("onChange", data), self.onChange, scripts)
                 end
                 return self
@@ -251,14 +292,25 @@ return {
             end
         end
 
-        local object = {                       
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local xOffset, yOffset = self:getOffset()
+                if (name == "layout") then
+                    self:setLayout(value)
+                elseif (name == "xOffset") then
+                    self:setOffset(value, yOffset)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 lastXMLReferences = {}
                 base.setValuesByXMLData(self, data, scripts)
-                local xOffset, yOffset = self:getOffset()
-                if(xmlValue("layout", data)~=nil)then self:loadLayout(xmlValue("layout", data)) end
-                if(xmlValue("xOffset", data)~=nil)then xOffset = xmlValue("xOffset", data) end
-                self:setOffset(xOffset, yOffset)
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "layout",
+                    "xOffset"
+                })
     
                 local objectList = data:children()
                 local _OBJECTS = basalt.getObjects()
@@ -286,6 +338,22 @@ return {
                     scripts.env = _ENV
                     scripts.env.basalt = basalt
                     scripts.env.shared = {}
+                    scripts.env.sharedObservers = {}
+                    local shared = {}
+                    setmetatable(scripts.env.shared, {
+                        __index = function(_, k)
+                            return shared[k]
+                        end,
+                        __newindex = function(_, k, v)
+                            local observers = scripts.env.sharedObservers[k]
+                            if observers ~= nil then
+                                for _,observer in pairs(observers) do
+                                    observer(v)
+                                end
+                            end
+                            shared[k] = v
+                        end
+                    })
                     local f = fs.open(path, "r")
                     local data = XmlParser:ParseXmlText(f.readAll())
                     f.close()
@@ -320,14 +388,27 @@ return {
             end
         end
 
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local xOffset, yOffset = self:getOffset()
+                if (name == "layout") then
+                    self:setLayout(value)
+                elseif (name == "xOffset") then
+                    self:setOffset(value, yOffset)
+                elseif (name == "yOffset") then
+                    self:setOffset(xOffset, value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                local xOffset, yOffset = self:getOffset()
-                if(xmlValue("layout", data)~=nil)then self:loadLayout(xmlValue("layout", data)) end
-                if(xmlValue("xOffset", data)~=nil)then xOffset = xmlValue("xOffset", data) end
-                if(xmlValue("yOffset", data)~=nil)then yOffset = xmlValue("yOffset", data) end
-                self:setOffset(xOffset, yOffset)
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "layout",
+                    "xOffset",
+                    "yOffset"
+                })
     
                 local objectList = data:children()
                 local _OBJECTS = basalt.getObjects()
@@ -356,6 +437,22 @@ return {
                     scripts.env.basalt = basalt
                     scripts.env.main = self
                     scripts.env.shared = {}
+                    scripts.env.sharedObservers = {}
+                    local shared = {}
+                    setmetatable(scripts.env.shared, {
+                        __index = function(_, k)
+                            return shared[k]
+                        end,
+                        __newindex = function(_, k, v)
+                            local observers = scripts.env.sharedObservers[k]
+                            if observers ~= nil then
+                                for _,observer in pairs(observers) do
+                                    observer(v)
+                                end
+                            end
+                            shared[k] = v
+                        end
+                    })
                     local f = fs.open(path, "r")
                     local data = XmlParser:ParseXmlText(f.readAll())
                     f.close()
@@ -370,12 +467,29 @@ return {
     end,
 
     Flexbox = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "flexDirection") then
+                    self:setFlexDirection(value)
+                elseif (name == "justifyContent") then
+                    self:setJustifyContent(value)
+                elseif (name == "alignItems") then
+                    self:setAlignItems(value)
+                elseif (name == "spacing") then
+                    self:setSpacing(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("flexDirection", data)~=nil)then self:setFlexDirection(xmlValue("flexDirection", data)) end
-                if(xmlValue("justifyContent", data)~=nil)then self:setJustifyContent(xmlValue("justifyContent", data)) end
-                if(xmlValue("spacing", data)~=nil)then self:setSpacing(xmlValue("spacing", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "flexDirection",
+                    "justifyContent",
+                    "alignItems",
+                    "spacing"
+                })
                 return self
             end,
         }
@@ -383,12 +497,26 @@ return {
     end,
 
     Button = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "text") then
+                    self:setText(value)
+                elseif (name == "horizontalAlign") then
+                    self:setHorizontalAlign(value)
+                elseif (name == "verticalAlign") then
+                    self:setVerticalAlign(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("text", data)~=nil)then self:setText(xmlValue("text", data)) end
-                if(xmlValue("horizontalAlign", data)~=nil)then self:setHorizontalAlign(xmlValue("horizontalAlign", data)) end
-                if(xmlValue("verticalAlign", data)~=nil)then self:setText(xmlValue("verticalAlign", data)) end                
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "text",
+                    "horizontalAlign",
+                    "verticalAlign"
+                })
                 return self
             end,
         }
@@ -396,11 +524,23 @@ return {
     end,
 
     Label = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "text") then
+                    self:setText(value)
+                elseif (name == "align") then
+                    self:setAlign(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("text", data)~=nil)then self:setText(xmlValue("text", data)) end
-                if(xmlValue("align", data)~=nil)then self:setTextAlign(xmlValue("align", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "text",
+                    "align"
+                })
                 return self
             end,
         }
@@ -408,18 +548,39 @@ return {
     end,
 
     Input = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local defaultText, defaultFG, defaultBG = self:getDefaultText()
+                if (name == "defaultText") then
+                    self:setDefaultText(value, defaultFG, defaultBG)
+                elseif (name == "defaultFG") then
+                    self:setDefaultText(defaultText, value, defaultBG)
+                elseif (name == "defaultBG") then
+                    self:setDefaultText(defaultText, defaultFG, value)
+                elseif (name == "offset") then
+                    self:setOffset(value)
+                elseif (name == "textOffset") then
+                    self:setTextOffset(value)
+                elseif (name == "text") then
+                    self:setText(value)
+                elseif (name == "inputLimit") then
+                    self:setInputLimit(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                local defaultText, defaultFG, defaultBG = self:getDefaultText()
-                if(xmlValue("defaultText", data)~=nil)then defaultText = xmlValue("defaultText", data) end   
-                if(xmlValue("defaultFG", data)~=nil)then defaultFG = xmlValue("defaultFG", data) end   
-                if(xmlValue("defaultBG", data)~=nil)then defaultBG = xmlValue("defaultBG", data) end   
-                self:setDefaultText(defaultText, defaultFG, defaultBG)
-                if(xmlValue("offset", data)~=nil)then self:setOffset(xmlValue("offset", data)) end
-                if(xmlValue("textOffset", data)~=nil)then self:setTextOffset(xmlValue("textOffset", data)) end
-                if(xmlValue("text", data)~=nil)then self:setValue(xmlValue("text", data)) end
-                if(xmlValue("inputLimit", data)~=nil)then self:setInputLimit(xmlValue("inputLimit", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "defaultText",
+                    "defaultFG",
+                    "defaultBG",
+                    "offset",
+                    "textOffset",
+                    "text",
+                    "inputLimit"
+                })
                 return self
             end,
         }
@@ -427,16 +588,34 @@ return {
     end,
 
     Image = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local xOffset, yOffset = self:getOffset()
+                if (name == "xOffset") then
+                    self:setOffset(value, yOffset)
+                elseif (name == "yOffset") then
+                    self:setOffset(xOffset, value)
+                elseif (name == "path") then
+                    self:loadImage(value)
+                elseif (name == "usePalette") then
+                    self:usePalette(value)
+                elseif (name == "play") then
+                    self:play(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
                 local xOffset, yOffset = self:getOffset()
-                if(xmlValue("xOffset", data)~=nil)then xOffset = xmlValue("xOffset", data) end
-                if(xmlValue("yOffset", data)~=nil)then yOffset = xmlValue("yOffset", data) end
-                self:setOffset(xOffset, yOffset)
-                if(xmlValue("path", data)~=nil)then self:loadImage(xmlValue("path", data)) end
-                if(xmlValue("usePalette", data)~=nil)then self:usePalette(xmlValue("usePalette", data)) end
-                if(xmlValue("play", data)~=nil)then self:play(xmlValue("play", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "xOffset",
+                    "yOffset",
+                    "path",
+                    "usePalette",
+                    "play"
+                })
                 return self
             end,
         }
@@ -444,16 +623,33 @@ return {
     end,
 
     Checkbox = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local activeSymbol, inactiveSymbol = self:getSymbol()
+                if (name == "text") then
+                    self:setText(value)
+                elseif (name == "checked") then
+                    self:setChecked(value)
+                elseif (name == "textPosition") then
+                    self:setTextPosition(value)
+                elseif (name == "activeSymbol") then
+                    self:setSymbol(value, inactiveSymbol)
+                elseif (name == "inactiveSymbol") then
+                    self:setSymbol(activeSymbol, value)
+                end
+            end,
+
             setValuesByXMLData = function(self, dat, scriptsa)
                 base.setValuesByXMLData(self, data, scripts)
-                local activeSymbol, inactiveSymbol = self:getSymbol()
-                if(xmlValue("text", data)~=nil)then self:setText(xmlValue("text", data)) end
-                if(xmlValue("checked", data)~=nil)then self:setChecked(xmlValue("checked", data)) end
-                if(xmlValue("textPosition", data)~=nil)then self:setTextPosition(xmlValue("textPosition", data)) end
-                if(xmlValue("activeSymbol", data)~=nil)then activeSymbol = xmlValue("activeSymbol", data) end
-                if(xmlValue("inactiveSymbol", data)~=nil)then inactiveSymbol = xmlValue("inactiveSymbol", data) end
-                self:setSymbol(activeSymbol, inactiveSymbol)
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "text",
+                    "checked",
+                    "textPosition",
+                    "activeSymbol",
+                    "inactiveSymbol"
+                })
                 return self
             end,
         }
@@ -461,10 +657,20 @@ return {
     end,
 
     Program = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "execute") then
+                    self:execute(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("execute", data)~=nil)then self:execute(xmlValue("execute", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "execute"
+                })
                 return self
             end,
         }
@@ -472,16 +678,36 @@ return {
     end,
 
     Progressbar = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local activeBarColor, activeBarSymbol, activeBarSymbolCol = self:getProgressBar()
+                if (name == "direction") then
+                    self:setDirection(value)
+                elseif (name == "activeBarColor") then
+                    self:setProgressBar(value, activeBarSymbol, activeBarSymbolCol)
+                elseif (name == "activeBarSymbol") then
+                    self:setProgressBar(activeBarColor, value, activeBarSymbolCol)
+                elseif (name == "activeBarSymbolColor") then
+                    self:setProgressBar(activeBarColor, activeBarSymbol, value)
+                elseif (name == "backgroundSymbol") then
+                    self:setBackgroundSymbol(value)
+                elseif (name == "progress") then
+                    self:setProgress(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                local activeBarColor, activeBarSymbol, activeBarSymbolCol = self:getProgressBar()
-                if(xmlValue("direction", data)~=nil)then self:setDirection(xmlValue("direction", data)) end
-                if(xmlValue("activeBarColor", data)~=nil)then activeBarColor = colors[xmlValue("activeBarColor", data)] end
-                if(xmlValue("activeBarSymbol", data)~=nil)then activeBarSymbol = xmlValue("activeBarSymbol", data) end
-                if(xmlValue("activeBarSymbolColor", data)~=nil)then activeBarSymbolCol = colors[xmlValue("activeBarSymbolColor", data)] end
-                if(xmlValue("backgroundSymbol", data)~=nil)then self:setBackgroundSymbol(xmlValue("backgroundSymbol", data)) end
-                if(xmlValue("progress", data)~=nil)then self:setProgress(xmlValue("progress", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "direction",
+                    "activeBarColor",
+                    "activeBarSymbol",
+                    "activeBarSymbolColor",
+                    "backgroundSymbol",
+                    "progress"
+                })
                 return self
             end,
         }
@@ -489,14 +715,32 @@ return {
     end,
 
     Slider = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "symbol") then
+                    self:setSymbol(value)
+                elseif (name == "symbolColor") then
+                    self:setSymbolColor(value)
+                elseif (name == "index") then
+                    self:setIndex(value)
+                elseif (name == "maxValue") then
+                    self:setMaxValue(value)
+                elseif (name == "barType") then
+                    self:setBarType(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("symbol", data)~=nil)then self:setSymbol(xmlValue("symbol", data)) end
-                if(xmlValue("symbolColor", data)~=nil)then self:setSymbolColor(xmlValue("symbolColor", data)) end
-                if(xmlValue("index", data)~=nil)then self:setIndex(xmlValue("index", data)) end
-                if(xmlValue("maxValue", data)~=nil)then self:setIndex(xmlValue("maxValue", data)) end
-                if(xmlValue("barType", data)~=nil)then self:setBarType(xmlValue("barType", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "symbol",
+                    "symbolColor",
+                    "index",
+                    "maxValue",
+                    "barType"
+                })
                 return self
             end,
         }
@@ -504,16 +748,38 @@ return {
     end,
 
     Scrollbar = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "symbol") then
+                    self:setSymbol(value)
+                elseif (name == "symbolColor") then
+                    self:setSymbolColor(value)
+                elseif (name == "symbolSize") then
+                    self:setSymbolSize(value)
+                elseif (name == "scrollAmount") then
+                    self:setScrollAmount(value)
+                elseif (name == "index") then
+                    self:setIndex(value)
+                elseif (name == "maxValue") then
+                    self:setMaxValue(value)
+                elseif (name == "barType") then
+                    self:setBarType(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("symbol", data)~=nil)then self:setSymbol(xmlValue("symbol", data)) end
-                if(xmlValue("symbolColor", data)~=nil)then self:setSymbolColor(xmlValue("symbolColor", data)) end
-                if(xmlValue("symbolSize", data)~=nil)then self:setSymbolSize(xmlValue("symbolSize", data)) end
-                if(xmlValue("scrollAmount", data)~=nil)then self:setScrollAmount(xmlValue("scrollAmount", data)) end
-                if(xmlValue("index", data)~=nil)then self:setIndex(xmlValue("index", data)) end
-                if(xmlValue("maxValue", data)~=nil)then self:setIndex(xmlValue("maxValue", data)) end
-                if(xmlValue("barType", data)~=nil)then self:setBarType(xmlValue("barType", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "symbol",
+                    "symbolColor",
+                    "symbolSize",
+                    "scrollAmount",
+                    "index",
+                    "maxValue",
+                    "barType"
+                })
                 return self
             end,
         }
@@ -521,10 +787,20 @@ return {
     end,
 
     MonitorFrame = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "monitor") then
+                    self:setMonitor(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("monitor", data)~=nil)then self:setSymbol(xmlValue("monitor", data)) end                
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "monitor"
+                })
                 return self
             end,
         }
@@ -532,12 +808,26 @@ return {
     end,
 
     Switch = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "symbol") then
+                    self:setSymbol(value)
+                elseif (name == "activeBackground") then
+                    self:setActiveBackground(value)
+                elseif (name == "inactiveBackground") then
+                    self:setInactiveBackground(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("symbol", data)~=nil)then self:setSymbol(xmlValue("symbol", data)) end
-                if(xmlValue("activeBackground", data)~=nil)then self:setActiveBackground(xmlValue("activeBackground", data)) end
-                if(xmlValue("inactiveBackground", data)~=nil)then self:setInactiveBackground(xmlValue("inactiveBackground", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "symbol",
+                    "activeBackground",
+                    "inactiveBackground"
+                })
                 return self
             end,
         }
@@ -545,55 +835,69 @@ return {
     end,
 
     Textfield = function(base, basalt)
-        local object = { 
-            setValuesByXMLData = function(self, data, scripts)
-            base.setValuesByXMLData(self, data, scripts)
-            local bgSel, fgSel = self:getSelection()
-            local xOffset, yOffset = self:getOffset()
-            if(xmlValue("bgSelection", data)~=nil)then bgSel = xmlValue("bgSelection", data) end
-            if(xmlValue("fgSelection", data)~=nil)then fgSel = xmlValue("fgSelection", data) end
-            if(xmlValue("xOffset", data)~=nil)then xOffset = xmlValue("xOffset", data) end
-            if(xmlValue("yOffset", data)~=nil)then yOffset = xmlValue("yOffset", data) end
-            self:setSelection(fgSel, bgSel)
-            self:setOffset(xOffset, yOffset)
-
-
-            if(data["lines"]~=nil)then
-                local l = data["lines"]["line"]
-                if(l.properties~=nil)then l = {l} end
-                for k,v in pairs(l)do
-                    self:addLine(v:value())
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local fgSel, bgSel = self:getSelection()
+                local xOffset, yOffset = self:getOffset()
+                if (name == "bgSelection") then
+                    self:setSelection(fgSel, value)
+                elseif (name == "fgSelection") then
+                    self:setSelection(value, bgSel)
+                elseif (name == "xOffset") then
+                    self:setOffset(value, yOffset)
+                elseif (name == "yOffset") then
+                    self:setOffset(xOffset, value)
                 end
-            end
-            if(data["keywords"]~=nil)then
-                for k,v in pairs(data["keywords"])do
-                    if(colors[k]~=nil)then
-                        local entry = v
-                        if(entry.properties~=nil)then entry = {entry} end
-                        local tab = {}
-                        for a,b in pairs(entry)do
-                            local keywordList = b["keyword"]
-                            if(b["keyword"].properties~=nil)then keywordList = {b["keyword"]} end
-                            for c,d in pairs(keywordList)do
-                                table.insert(tab, d:value())
+            end,
+
+            setValuesByXMLData = function(self, data, scripts)
+                base.setValuesByXMLData(self, data, scripts)
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "bgSelection",
+                    "fgSelection",
+                    "xOffset",
+                    "yOffset"
+                })
+
+
+                if(data["lines"]~=nil)then
+                    local l = data["lines"]["line"]
+                    if(l.properties~=nil)then l = {l} end
+                    for k,v in pairs(l)do
+                        self:addLine(v:value())
+                    end
+                end
+                if(data["keywords"]~=nil)then
+                    for k,v in pairs(data["keywords"])do
+                        if(colors[k]~=nil)then
+                            local entry = v
+                            if(entry.properties~=nil)then entry = {entry} end
+                            local tab = {}
+                            for a,b in pairs(entry)do
+                                local keywordList = b["keyword"]
+                                if(b["keyword"].properties~=nil)then keywordList = {b["keyword"]} end
+                                for c,d in pairs(keywordList)do
+                                    table.insert(tab, d:value())
+                                end
+                            end
+                            self:addKeywords(colors[k], tab)
+                        end
+                    end
+                end
+                if(data["rules"]~=nil)then
+                    if(data["rules"]["rule"]~=nil)then
+                        local tab = data["rules"]["rule"]
+                        if(data["rules"]["rule"].properties~=nil)then tab = {data["rules"]["rule"]} end
+                        for k,v in pairs(tab)do
+
+                            if(xmlValue("pattern", v)~=nil)then
+                                self:addRule(xmlValue("pattern", v), colors[xmlValue("fg", v)], colors[xmlValue("bg", v)])
                             end
                         end
-                        self:addKeywords(colors[k], tab)
                     end
                 end
-            end
-            if(data["rules"]~=nil)then
-                if(data["rules"]["rule"]~=nil)then
-                    local tab = data["rules"]["rule"]
-                    if(data["rules"]["rule"].properties~=nil)then tab = {data["rules"]["rule"]} end
-                    for k,v in pairs(tab)do
-
-                        if(xmlValue("pattern", v)~=nil)then
-                            self:addRule(xmlValue("pattern", v), colors[xmlValue("fg", v)], colors[xmlValue("bg", v)])
-                        end
-                    end
-                end
-            end
                 return self
             end,
         }
@@ -614,11 +918,23 @@ return {
     end,
 
     Timer = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "start") then
+                    self:start(value)
+                elseif (name == "time") then
+                    self:setTime(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("start", data)~=nil)then self:start(xmlValue("start", data)) end
-                if(xmlValue("time", data)~=nil)then self:setTime(xmlValue("time", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "start",
+                    "time"
+                })
 
                 if(xmlValue("onCall", data)~=nil)then 
                     registerFunctionEvent(self, xmlValue("onCall", data), self.onCall, scripts)
@@ -630,17 +946,33 @@ return {
     end,
 
     List = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local selBg, selFg = self:getSelectionColor()
+                if (name == "align") then
+                    self:setTextAlign(value)
+                elseif (name == "offset") then
+                    self:setOffset(value)
+                elseif (name == "selectionBg") then
+                    self:setSelectionColor(value, selFg)
+                elseif (name == "selectionFg") then
+                    self:setSelectionColor(selBg, value)
+                elseif (name == "scrollable") then
+                    self:setScrollable(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                local selBg, selFg = self:getSelectionColor()
-                if(xmlValue("align", data)~=nil)then self:setTextAlign(xmlValue("align", data)) end
-                if(xmlValue("offset", data)~=nil)then self:setOffset(xmlValue("offset", data)) end
-                if(xmlValue("selectionBg", data)~=nil)then selBg = xmlValue("selectionBg", data) end
-                if(xmlValue("selectionFg", data)~=nil)then selFg = xmlValue("selectionFg", data) end
-                self:setSelectionColor(selBg, selFg)
-
-                if(xmlValue("scrollable", data)~=nil)then self:setScrollable(xmlValue("scrollable", data)) end                
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "align",
+                    "offset",
+                    "selectionBg",
+                    "selectionFg",
+                    "scrollable"
+                })
 
                 if(data["item"]~=nil)then
                     local tab = data["item"]
@@ -658,13 +990,24 @@ return {
     end,
 
     Dropdown = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local w, h = self:getDropdownSize()
+                if (name == "dropdownWidth") then
+                    self:setDropdownSize(value, h)
+                elseif (name == "dropdownHeight") then
+                    self:setDropdownSize(w, value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                local w, h = self:getDropdownSize()
-                if(xmlValue("dropdownWidth", data)~=nil)then w = xmlValue("dropdownWidth", data) end
-                if(xmlValue("dropdownHeight", data)~=nil)then h = xmlValue("dropdownHeight", data) end
-                self:setDropdownSize(w, h)                
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "dropdownWidth",
+                    "dropdownHeight"
+                })
                 return self
             end,
         }
@@ -672,19 +1015,31 @@ return {
     end,
 
     Radio = function(base, basalt)
-        local object = { 
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
                 local selBg, selFg = self:getBoxSelectionColor()
                 local defBg, defFg = self:setBoxDefaultColor()
-                
-                if(xmlValue("selectionBg", data)~=nil)then selBg = xmlValue("selectionBg", data) end
-                if(xmlValue("selectionFg", data)~=nil)then selFg = xmlValue("selectionFg", data) end
-                self:setBoxSelectionColor(selBg, selFg)
+                if (name == "selectionBg") then
+                    self:setBoxSelectionColor(value, selFg)
+                elseif (name == "selectionFg") then
+                    self:setBoxSelectionColor(selBg, value)
+                elseif (name == "defaultBg") then
+                    self:setBoxDefaultColor(value, defFg)
+                elseif (name == "defaultFg") then
+                    self:setBoxDefaultColor(defBg, value)
+                end
+            end,
 
-                if(xmlValue("defaultBg", data)~=nil)then defBg = xmlValue("defaultBg", data) end
-                if(xmlValue("defaultFg", data)~=nil)then defFg = xmlValue("defaultFg", data) end
-                self:setBoxDefaultColor(defBg, defFg)
+            setValuesByXMLData = function(self, data, scripts)
+                base.setValuesByXMLData(self, data, scripts)
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "selectionBg",
+                    "selectionFg",
+                    "defaultBg",
+                    "defaultFg"
+                })
 
                 if(data["item"]~=nil)then
                     local tab = data["item"]
@@ -700,11 +1055,23 @@ return {
     end,
 
     Menubar = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                if (name == "space") then
+                    self:setSpace(value)
+                elseif (name == "scrollable") then
+                    self:setScrollable(value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("space", data)~=nil)then self:setSpace(xmlValue("space", data)) end
-                if(xmlValue("scrollable", data)~=nil)then self:setScrollable(xmlValue("scrollable", data)) end
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "space",
+                    "scrollable"
+                })
                 return self
             end,
         }
@@ -712,17 +1079,36 @@ return {
     end,
 
     Graph = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local symbol, symbolCol = self:getGraphSymbol()
+                if (name == "maxEntries") then
+                    self:setMaxEntries(value)
+                elseif (name == "type") then
+                    self:setType(value)
+                elseif (name == "minValue") then
+                    self:setMinValue(value)
+                elseif (name == "maxValue") then
+                    self:setMaxValue(value)
+                elseif (name == "symbol") then
+                    self:setGraphSymbol(value, symbolCol)
+                elseif (name == "symbolColor") then
+                    self:setGraphSymbol(symbol, value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                local symbol, symbolCol = self:getGraphSymbol()
-                if(xmlValue("maxEntries", data)~=nil)then self:setMaxEntries(xmlValue("maxEntries", data)) end
-                if(xmlValue("type", data)~=nil)then self:setGraphType(xmlValue("type", data)) end
-                if(xmlValue("minValue", data)~=nil)then self:setMinValue(xmlValue("minValue", data)) end
-                if(xmlValue("maxValue", data)~=nil)then self:setMaxValue(xmlValue("maxValue", data)) end
-                if(xmlValue("symbol", data)~=nil)then symbol = xmlValue("symbol", data) end
-                if(xmlValue("symbolColor", data)~=nil)then symbolCol = xmlValue("symbolColor", data) end
-                self:setGraphSymbol(symbol, symbolCol)
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "maxEntries",
+                    "type",
+                    "minValue",
+                    "maxValue",
+                    "symbol",
+                    "symbolColor"
+                })
                 if(data["item"]~=nil)then
                     local tab = data["item"]
                     if(tab.properties~=nil)then tab = {tab} end
@@ -737,19 +1123,39 @@ return {
     end,
 
     Treeview = function(base, basalt)
-        local object = { 
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == null) then return end
+                base.updateValue(self, name, value)
+                local selBg, selFg = self:getSelectionColor()
+                local xOffset, yOffset = self:getOffset()
+                if (name == "space") then
+                    self:setSpace(value)
+                elseif (name == "scrollable") then
+                    self:setScrollable(value)
+                elseif (name == "selectionBg") then
+                    self:setSelectionColor(value, selFg)
+                elseif (name == "selectionFg") then
+                    self:setSelectionColor(selBg, value)
+                elseif (name == "xOffset") then
+                    self:setOffset(value, yOffset)
+                elseif (name == "yOffset") then
+                    self:setOffset(xOffset, value)
+                end
+            end,
+
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
                 local selBg, selFg = self:getSelectionColor()
                 local xOffset, yOffset = self:getOffset()
-                if(xmlValue("space", data)~=nil)then self:setSpace(xmlValue("space", data)) end
-                if(xmlValue("scrollable", data)~=nil)then self:setScrollable(xmlValue("scrollable", data)) end
-                if(xmlValue("selectionBg", data)~=nil)then selBg = xmlValue("selectionBg", data) end
-                if(xmlValue("selectionFg", data)~=nil)then selFg = xmlValue("selectionFg", data) end
-                self:setSelectionColor(selBg, selFg)
-                if(xmlValue("xOffset", data)~=nil)then xOffset = xmlValue("xOffset", data) end
-                if(xmlValue("yOffset", data)~=nil)then yOffset = xmlValue("yOffset", data) end
-                self:setOffset(xOffset, yOffset)
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "space",
+                    "scrollable",
+                    "selectionBg",
+                    "selectionFg",
+                    "xOffset",
+                    "yOffset"
+                })
                 local function addNode(node, data)
                     if(data["node"]~=nil)then
                         local tab = data["node"]
