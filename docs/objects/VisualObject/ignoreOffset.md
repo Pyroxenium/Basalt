@@ -2,7 +2,7 @@
 
 ### Description
 
-Sets whether the object should ignore the offset of its parent frame. If set to `true`, the object's position will be absolute on the screen, disregarding any parent offset. By default, this value is set to `false`.
+Sets whether the object should ignore the offset of its parent frame. If set to `true`, the object's position will be absolute. By default, this value is set to `false`.
 
 ### Parameters
 
@@ -19,7 +19,7 @@ Sets whether the object should ignore the offset of its parent frame. If set to 
 ```lua
 local basalt = require("basalt")
 
-local mainFrame = basalt.createFrame():setPosition(5, 5)
+local mainFrame = basalt.createFrame():setOffset(5, 5)
 local aButton = mainFrame:addButton():setSize(8, 1):setPosition(2, 2):ignoreOffset(true)
 
 -- The button will be displayed at position (2,2) on the screen, 
