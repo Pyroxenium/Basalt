@@ -91,7 +91,7 @@ return function(name, basalt)
             self:addDraw("label", function()
                 local w, h = self:getSize()
                 local align = textAlign=="center" and math.floor(w/2-text:len()/2+0.5) or textAlign=="right" and w-(text:len()-1) or 1
-                writeWrappedText(self, align, 1, text, w, h)
+                writeWrappedText(self, align, 1, text, w+1, h)
             end)
         end,
         
