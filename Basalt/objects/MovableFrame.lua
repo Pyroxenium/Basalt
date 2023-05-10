@@ -5,7 +5,7 @@ return function(name, basalt)
     local objectType = "MovableFrame"
     local parent
 
-    local dragXOffset, dragYOffset = 0, 0
+    local dragXOffset, dragYOffset, isDragging = 0, 0, false
 
     local dragMap = {
         {x1 = 1, x2 = "width", y1 = 1, y2 = 1}

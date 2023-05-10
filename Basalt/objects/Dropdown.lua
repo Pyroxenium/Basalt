@@ -98,7 +98,7 @@ return function(name, basalt)
                                 if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
                                     self:setValue(list[n + yOffset])
                                     self:updateDraw()
-                                    local val = self:sendEvent("mouse_click", self, "mouse_click", dir, x, y)
+                                    local val = self:sendEvent("mouse_click", self, "mouse_click", button, x, y)
                                     if(val==false)then return val end
                                     if(isMon)then
                                         basalt.schedule(function()
@@ -139,7 +139,7 @@ return function(name, basalt)
                                 if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
                                     isOpened = false
                                     self:updateDraw()
-                                    local val = self:sendEvent("mouse_up", self, "mouse_up", dir, x, y)
+                                    local val = self:sendEvent("mouse_up", self, "mouse_up", button, x, y)
                                     if(val==false)then return val end
                                     return true
                                 end
@@ -147,6 +147,12 @@ return function(name, basalt)
                         end
                     end
                 end
+            end
+        end,
+
+        dragHandler = function(self, btn, x, y)
+            if(base.dragHandler(self, btn, x, y))then
+                isOpened = true
             end
         end,
 
