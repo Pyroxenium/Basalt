@@ -33,6 +33,8 @@ You are now able to access the following list of methods:
 |[setVariable](objects/Basalt/setVariable.md)|Sets a variable which you can access via XML
 |[stopUpdate / stop](objects/Basalt/stopUpdate.md)|Stops the currently active event and draw listener
 |[update](objects/Basalt/update.md)|Starts the event and draw listener once
+|[addObject](objects/Basalt/addObject.md)|Adds new object files/folders
+|[addPlugin](objects/Basalt/addPlugin.md)|Adds new plugin files/folders
 
 ## Examples
 

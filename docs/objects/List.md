@@ -21,6 +21,12 @@ In addition to the Object and VisualObject methods, lists also have the followin
 |[getSelectionColor](objects/List/getSelectionColor.md)|Returns default bg and fg selection color
 |[isSelectionColorActive](objects/List/isSelectionColorActive.md)|Returns if it is using selection color
 
+## Events
+
+|   |   |
+|---|---|
+|[onSelect](objects/List/onSelect.md)|Fires when a item on the list get's selected
+
 A item-table in lists looks like the following example:
 
 ```lua
@@ -43,7 +49,7 @@ aList:addItem("Item 1")
 aList:addItem("Item 2", colors.yellow)
 aList:addItem("Item 3", colors.yellow, colors.green)
 
-aList:onChange(function(self, item)
+aList:onSelect(function(self, item)
   basalt.debug("Selected item: ", item.text)
 end)
 ```
