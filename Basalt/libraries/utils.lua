@@ -2,19 +2,21 @@ local tHex = require("tHex")
 local sub,find,reverse,rep,insert,len = string.sub,string.find,string.reverse,string.rep,table.insert,string.len
 
 local function splitString(str, delimiter)
-    local result = {}
+    local results = {}
+    local nResults = 1
     if str == "" or delimiter == "" then
-        return result
+        return results
     end
     local start = 1
     local delim_start, delim_end = find(str, delimiter, start)
         while delim_start do
-            insert(result, sub(str, start, delim_start - 1))
+            insert(results, sub(str, start, delim_start - 1))
+            nResults = nResults + 1
             start = delim_end + 1
             delim_start, delim_end = find(str, delimiter, start)
         end
-    insert(result, sub(str, start))
-    return result
+    insert(results, sub(str, start))
+    return results, nResults
 end
 
 local function removeTags(input)
