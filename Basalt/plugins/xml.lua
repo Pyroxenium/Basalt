@@ -205,17 +205,26 @@ return {
             setValuesByXMLData = function(self, data, scripts)
                 scripts.env[self:getName()] = self
                 for k,v in pairs(data:reactiveProperties()) do
-                    local sharedVariable = string.sub(v, 8, -1)
-                    local sharedObservers = scripts.env.sharedObservers
-                    if (sharedObservers[sharedVariable]) == nil then
-                        sharedObservers[sharedVariable] = {}
+                    local parts, nParts = utils.splitString(v, "%.")
+                    if (nParts ~= 2) then
+                        return
                     end
-                    table.insert(
-                        sharedObservers[sharedVariable],
-                        function(val)
-                            self:updateValue(k, val)
+                    local tableName = parts[1]
+                    local entryName = parts[2]
+                    if (tableName == "props") then
+                        self:updateValue(k, scripts.env.props[entryName])
+                    elseif (tableName == "shared") then
+                        local sharedObservers = scripts.env.sharedObservers
+                        if (sharedObservers[entryName]) == nil then
+                            sharedObservers[entryName] = {}
                         end
-                    )
+                        table.insert(
+                            sharedObservers[entryName],
+                            function(val)
+                                self:updateValue(k, val)
+                            end
+                        )
+                    end
                 end
 
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -332,11 +341,12 @@ return {
                 return lastXMLReferences
             end,
 
-            loadLayout = function(self, path)
+            loadLayout = function(self, path, props)
                 if(fs.exists(path))then
                     local scripts = {}
                     scripts.env = _ENV
                     scripts.env.basalt = basalt
+                    scripts.env.props = props
                     scripts.env.shared = {}
                     scripts.env.sharedObservers = {}
                     local shared = {}
@@ -430,12 +440,13 @@ return {
                 return lastXMLReferences
             end,
 
-            loadLayout = function(self, path)
+            loadLayout = function(self, path, props)
                 if(fs.exists(path))then
                     local scripts = {}
                     scripts.env = _ENV
                     scripts.env.basalt = basalt
                     scripts.env.main = self
+                    scripts.env.props = props
                     scripts.env.shared = {}
                     scripts.env.sharedObservers = {}
                     local shared = {}
