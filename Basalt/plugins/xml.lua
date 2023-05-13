@@ -167,6 +167,8 @@ local function registerFunctionEvent(self, data, event, renderContext)
     end
 end
 
+local effectStack = {}
+
 local clearEffectDependencies = function(effect)
     for _, dependency in ipairs(effect.dependencies) do
         for index, backlink in ipairs(dependency) do
@@ -178,10 +180,8 @@ local clearEffectDependencies = function(effect)
     effect.dependencies = {};
 end
 
-local effectStack = {}
-
 return {
-    basalt = function()
+    basalt = function(basalt)
         local object = {
             reactive = function(initialValue)
                 local value = initialValue
@@ -217,6 +217,14 @@ return {
                 end
                 effect.execute = execute
                 effect.execute()
+            end,
+
+            derived = function(computeFn)
+                local getValue, setValue = basalt.reactive();
+                basalt.effect(function()
+                    setValue(computeFn())
+                end)
+                return getValue;
             end
         }
         return object
