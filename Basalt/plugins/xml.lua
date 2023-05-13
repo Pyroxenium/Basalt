@@ -144,9 +144,10 @@ function XmlParser:ParseXmlText(xmlText)
     return top
 end
 
-local function maybeExecuteScript(renderContext)
-    if (renderContext.script ~= nil) then
-        load(renderContext.script, nil, "t", renderContext.env)()
+local function maybeExecuteScript(data, renderContext)
+    local script = xmlValue('script', data)
+    if (script ~= nil) then
+        load(script, nil, "t", renderContext.env)()
     end
 end
 
@@ -210,6 +211,7 @@ return {
                     if (tableName == "props") then
                         self:updateValue(k, renderContext.env.props[entryName])
                     elseif (tableName == "shared") then
+                        self:updateValue(k, renderContext.env.shared[entryName])
                         local sharedObservers = renderContext.sharedObservers
                         if (sharedObservers[entryName]) == nil then
                             sharedObservers[entryName] = {}
@@ -231,11 +233,6 @@ return {
                     "background",
                     "foreground"
                 })
-
-
-                if(xmlValue("script", data)~=nil)then
-                    renderContext.script = xmlValue("script", data)
-                end
 
                 local events = {"onClick", "onClickUp", "onHover", "onScroll", "onDrag", "onKey", "onKeyUp", "onRelease", "onChar", "onGetFocus", "onLoseFocus", "onResize", "onReposition", "onEvent", "onLeave"}
                 for _,v in pairs(events)do
@@ -361,7 +358,7 @@ return {
                     local data = XmlParser:ParseXmlText(f.readAll())
                     f.close()
                     lastXMLReferences = {}
-                    maybeExecuteScript(renderContext)
+                    maybeExecuteScript(data, renderContext)
                     self:setValuesByXMLData(data, renderContext)
                 end
                 return self
@@ -461,7 +458,7 @@ return {
                     local data = XmlParser:ParseXmlText(f.readAll())
                     f.close()
                     lastXMLReferences = {}
-                    maybeExecuteScript(renderContext)
+                    maybeExecuteScript(data, renderContext)
                     self:setValuesByXMLData(data, renderContext)
                 end
                 return self
