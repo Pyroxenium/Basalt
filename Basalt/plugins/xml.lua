@@ -167,27 +167,64 @@ local function registerFunctionEvent(self, data, event, renderContext)
     end
 end
 
-local potentialObservers = {}
+local effectStack = {}
+
+local clearEffectDependencies = function(effect)
+    for _, dependency in ipairs(effect.dependencies) do
+        for index, backlink in ipairs(dependency) do
+            if (backlink == effect) then
+                table.remove(dependency, index)
+            end
+        end
+    end
+    effect.dependencies = {};
+end
 
 return {
-    basalt = function()
+    basalt = function(basalt)
         local object = {
             reactive = function(initialValue)
-                local internalValue = initialValue
-                local observers = {}
+                local value = initialValue
+                local observerEffects = {}
                 local getter = function()
-                    if (potentialObservers ~= nil) then
-                        table.insert(observers, potentialObservers[#potentialObservers])
+                    local invokingEffect = effectStack[#effectStack]
+                    if (invokingEffect ~= nil) then
+                        table.insert(observerEffects, invokingEffect)
+                        table.insert(invokingEffect.dependencies, observerEffects)
                     end
-                    return internalValue
+                    return value
                 end
-                local setter = function(value)
-                    internalValue = value
-                    for _, updateFn in ipairs(observers) do
-                        updateFn(internalValue)
+                local setter = function(newValue)
+                    value = newValue
+                    local observerEffectsCopy = {}
+                    for index, effect in ipairs(observerEffects) do
+                        observerEffectsCopy[index] = effect
+                    end
+                    for _, effect in ipairs(observerEffectsCopy) do
+                        effect.execute()
                     end
                 end
                 return getter, setter
+            end,
+
+            effect = function(effectFn)
+                local effect = {dependencies = {}}
+                local execute = function()
+                    clearEffectDependencies(effect)
+                    table.insert(effectStack, effect)
+                    effectFn()
+                    table.remove(effectStack)
+                end
+                effect.execute = execute
+                effect.execute()
+            end,
+
+            derived = function(computeFn)
+                local getValue, setValue = basalt.reactive();
+                basalt.effect(function()
+                    setValue(computeFn())
+                end)
+                return getValue;
             end
         }
         return object
@@ -231,9 +268,7 @@ return {
                         local value = load("return " .. expression, nil, "t", renderContext.env)()
                         self:updateValue(prop, value)
                     end
-                    table.insert(potentialObservers, update)
-                    update()
-                    table.remove(potentialObservers)
+                    basalt.effect(update)
                 end
 
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -345,7 +380,6 @@ return {
             loadLayout = function(self, path, props)
                 if(fs.exists(path))then
                     local renderContext = {}
-                    renderContext.potentialObservers = {}
                     renderContext.env = _ENV
                     renderContext.env.props = props
                     local f = fs.open(path, "r")
@@ -475,6 +509,7 @@ return {
     Button = function(base, basalt)
         local object = {
             updateValue = function(self, name, value)
+                basalt.log("Updating value, " .. name .. " = " .. value)
                 if (value == nil) then return end
                 base.updateValue(self, name, value)
                 if (name == "text") then
