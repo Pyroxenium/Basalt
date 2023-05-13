@@ -167,7 +167,32 @@ local function registerFunctionEvent(self, data, event, renderContext)
     end
 end
 
+local potentialObservers = {}
+
 return {
+    basalt = function()
+        local object = {
+            reactive = function(initialValue)
+                local internalValue = initialValue
+                local observers = {}
+                local getter = function()
+                    if (potentialObservers ~= nil) then
+                        table.insert(observers, potentialObservers[#potentialObservers])
+                    end
+                    return internalValue
+                end
+                local setter = function(value)
+                    internalValue = value
+                    for _, updateFn in ipairs(observers) do
+                        updateFn(internalValue)
+                    end
+                end
+                return getter, setter
+            end
+        }
+        return object
+    end,
+
     VisualObject = function(base, basalt)
 
         local object = {
@@ -201,28 +226,14 @@ return {
 
             setValuesByXMLData = function(self, data, renderContext)
                 renderContext.env[self:getName()] = self
-                for k,v in pairs(data:reactiveProperties()) do
-                    local parts, nParts = utils.splitString(v, "%.")
-                    if (nParts ~= 2) then
-                        return
+                for prop, expression in pairs(data:reactiveProperties()) do
+                    local update = function()
+                        local value = load("return " .. expression, nil, "t", renderContext.env)()
+                        self:updateValue(prop, value)
                     end
-                    local tableName = parts[1]
-                    local entryName = parts[2]
-                    if (tableName == "props") then
-                        self:updateValue(k, renderContext.env.props[entryName])
-                    elseif (tableName == "shared") then
-                        self:updateValue(k, renderContext.env.shared[entryName])
-                        local sharedObservers = renderContext.sharedObservers
-                        if (sharedObservers[entryName]) == nil then
-                            sharedObservers[entryName] = {}
-                        end
-                        table.insert(
-                            sharedObservers[entryName],
-                            function(val)
-                                self:updateValue(k, val)
-                            end
-                        )
-                    end
+                    table.insert(potentialObservers, update)
+                    update()
+                    table.remove(potentialObservers)
                 end
 
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -334,26 +345,9 @@ return {
             loadLayout = function(self, path, props)
                 if(fs.exists(path))then
                     local renderContext = {}
+                    renderContext.potentialObservers = {}
                     renderContext.env = _ENV
-                    renderContext.env.basalt = basalt
                     renderContext.env.props = props
-                    renderContext.env.shared = {}
-                    renderContext.sharedObservers = {}
-                    local shared = {}
-                    setmetatable(renderContext.env.shared, {
-                        __index = function(_, k)
-                            return shared[k]
-                        end,
-                        __newindex = function(_, k, v)
-                            local observers = renderContext.sharedObservers[k]
-                            if observers ~= nil then
-                                for _,observer in pairs(observers) do
-                                    observer(v)
-                                end
-                            end
-                            shared[k] = v
-                        end
-                    })
                     local f = fs.open(path, "r")
                     local data = XmlParser:ParseXmlText(f.readAll())
                     f.close()
@@ -434,26 +428,7 @@ return {
                 if(fs.exists(path))then
                     local renderContext = {}
                     renderContext.env = _ENV
-                    renderContext.env.basalt = basalt
-                    renderContext.env.main = self
                     renderContext.env.props = props
-                    renderContext.env.shared = {}
-                    renderContext.sharedObservers = {}
-                    local shared = {}
-                    setmetatable(renderContext.env.shared, {
-                        __index = function(_, k)
-                            return shared[k]
-                        end,
-                        __newindex = function(_, k, v)
-                            local observers = renderContext.sharedObservers[k]
-                            if observers ~= nil then
-                                for _,observer in pairs(observers) do
-                                    observer(v)
-                                end
-                            end
-                            shared[k] = v
-                        end
-                    })
                     local f = fs.open(path, "r")
                     local data = XmlParser:ParseXmlText(f.readAll())
                     f.close()

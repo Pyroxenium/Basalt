@@ -3,7 +3,6 @@ local sub,find,reverse,rep,insert,len = string.sub,string.find,string.reverse,st
 
 local function splitString(str, delimiter)
     local results = {}
-    local nResults = 1
     if str == "" or delimiter == "" then
         return results
     end
@@ -11,12 +10,11 @@ local function splitString(str, delimiter)
     local delim_start, delim_end = find(str, delimiter, start)
         while delim_start do
             insert(results, sub(str, start, delim_start - 1))
-            nResults = nResults + 1
             start = delim_end + 1
             delim_start, delim_end = find(str, delimiter, start)
         end
     insert(results, sub(str, start))
-    return results, nResults
+    return results
 end
 
 local function removeTags(input)
