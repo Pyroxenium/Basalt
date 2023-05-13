@@ -317,20 +317,22 @@ return {
         return object
     end,
 
-    BaseFrame = function(base, basalt)
+    Container = function(base, basalt)
         local lastXMLReferences = {}
 
         local function xmlDefaultValues(data, obj, renderContext)
-            if(obj~=nil)then
+            if (obj~=nil) then
                 obj:setValuesByXMLData(data, renderContext)
             end
         end
 
-        local function addXMLObjectType(tab, f, self, renderContext)
-            if(tab~=nil)then
-                if(tab.properties~=nil)then tab = {tab} end
-                for _,v in pairs(tab)do
-                    local obj = f(self, v["@id"] or uuid())
+        local function addXMLObjectType(tab, addFn, self, renderContext)
+            if (tab ~= nil) then
+                if (tab.properties ~= nil) then
+                    tab = {tab}
+                end
+                for _, v in pairs(tab) do
+                    local obj = addFn(self, v["@id"] or uuid())
                     lastXMLReferences[obj:getName()] = obj
                     xmlDefaultValues(v, obj, renderContext)
                 end
@@ -338,43 +340,25 @@ return {
         end
 
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local _, yOffset = self:getOffset()
-                if (name == "layout") then
-                    self:setLayout(value)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 lastXMLReferences = {}
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "layout",
-                    "xOffset"
-                })
     
-                local objectList = data:children()
+                local children = data:children()
                 local _OBJECTS = basalt.getObjects()
 
-                for _,v in pairs(objectList)do
-                    if(v.___name~="animation")then
-                        local name = v.___name:gsub("^%l", string.upper)
-                        if(_OBJECTS[name]~=nil)then
-                            addXMLObjectType(v, self["add"..name], self, renderContext)
+                for _, childNode in pairs(children) do
+                    if (childNode.___name~="animation") then
+                        local objectKey = childNode.___name:gsub("^%l", string.upper)
+                        if(_OBJECTS[objectKey] ~= nil) then
+                            local addFn = self["add" .. objectKey]
+                            addXMLObjectType(childNode, addFn, self, renderContext)
                         end
                     end
                 end
                 
                 addXMLObjectType(data["animation"], self.addAnimation, self, renderContext)
                 return self
-            end,
-
-            getXMLElements = function(self)
-                return lastXMLReferences
             end,
 
             loadLayout = function(self, path, props)
@@ -392,30 +376,39 @@ return {
                 return self
             end,
 
+            getXMLElements = function(self)
+                return lastXMLReferences
+            end,
+        }
+        return object
+    end,
+
+    BaseFrame = function(base, basalt)
+        local object = {
+            updateValue = function(self, name, value)
+                if (value == nil) then return end
+                base.updateValue(self, name, value)
+                local _, yOffset = self:getOffset()
+                if (name == "layout") then
+                    self:setLayout(value)
+                elseif (name == "xOffset") then
+                    self:setOffset(value, yOffset)
+                end
+            end,
+
+            setValuesByXMLData = function(self, data, renderContext)
+                base.setValuesByXMLData(self, data, renderContext)
+                self:updateSpecifiedValuesByXMLData(data, {
+                    "layout",
+                    "xOffset"
+                })
+                return self
+            end,
         }
         return object
     end,
 
     Frame = function(base, basalt)
-        local lastXMLReferences = {}
-
-        local function xmlDefaultValues(data, obj, renderContext)
-            if(obj~=nil)then
-                obj:setValuesByXMLData(data, renderContext)
-            end
-        end
-
-        local function addXMLObjectType(tab, f, self, renderContext)
-            if(tab~=nil)then
-                if(tab.properties~=nil)then tab = {tab} end
-                for _,v in pairs(tab)do
-                    local obj = f(self, v["@id"] or uuid())
-                    lastXMLReferences[obj:getName()] = obj
-                    xmlDefaultValues(v, obj, renderContext)
-                end
-            end
-        end
-
         local object = {
             updateValue = function(self, name, value)
                 if (value == nil) then return end
@@ -437,39 +430,6 @@ return {
                     "xOffset",
                     "yOffset"
                 })
-    
-                local objectList = data:children()
-                local _OBJECTS = basalt.getObjects()
-                
-                for _,v in pairs(objectList)do
-                    if(v.___name~="animation")then
-                        local name = v.___name:gsub("^%l", string.upper)
-                        if(_OBJECTS[name]~=nil)then
-                            addXMLObjectType(v, self["add"..name], self, renderContext)
-                        end
-                    end
-                end
-                
-                addXMLObjectType(data["animation"], self.addAnimation, self, renderContext)
-                return self
-            end,
-
-            getXMLElements = function(self)
-                return lastXMLReferences
-            end,
-
-            loadLayout = function(self, path, props)
-                if(fs.exists(path))then
-                    local renderContext = {}
-                    renderContext.env = _ENV
-                    renderContext.env.props = props
-                    local f = fs.open(path, "r")
-                    local data = XmlParser:ParseXmlText(f.readAll())
-                    f.close()
-                    lastXMLReferences = {}
-                    maybeExecuteScript(data, renderContext)
-                    self:setValuesByXMLData(data, renderContext)
-                end
                 return self
             end,
         }
@@ -509,7 +469,6 @@ return {
     Button = function(base, basalt)
         local object = {
             updateValue = function(self, name, value)
-                basalt.log("Updating value, " .. name .. " = " .. value)
                 if (value == nil) then return end
                 base.updateValue(self, name, value)
                 if (name == "text") then
