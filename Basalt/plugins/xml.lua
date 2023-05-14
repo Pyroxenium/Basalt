@@ -183,6 +183,12 @@ end
 return {
     basalt = function(basalt)
         local object = {
+            layout = function(path)
+                return {
+                    path = path,
+                }
+            end,
+
             reactive = function(initialValue)
                 local value = initialValue
                 local observerEffects = {}
