@@ -17,16 +17,17 @@ if(packaged)then
             end
         end
     end
-end
-if(fs.exists(pluginDir))then
-    for _,v in pairs(fs.list(pluginDir))do
-        table.insert(pluginNames, v)
-        local newPlugin = require(v:gsub(".lua", ""))
-        if(type(newPlugin)=="table")then
-            for a,b in pairs(newPlugin)do
-                if(type(a)=="string")then
-                    if(plugins[a]==nil)then plugins[a] = {} end
-                    table.insert(plugins[a], b)
+else
+    if(fs.exists(pluginDir))then
+        for _,v in pairs(fs.list(pluginDir))do
+            table.insert(pluginNames, v)
+            local newPlugin = require(v:gsub(".lua", ""))
+            if(type(newPlugin)=="table")then
+                for a,b in pairs(newPlugin)do
+                    if(type(a)=="string")then
+                        if(plugins[a]==nil)then plugins[a] = {} end
+                        table.insert(plugins[a], b)
+                    end
                 end
             end
         end
