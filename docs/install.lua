@@ -423,7 +423,7 @@ function installer.executeUI()
     env.basalt = installer.get("https://basalt.madefor.cc/bTemp.lua") -- bTemp needs to be replaced later
     local ui = installer.get("https://basalt.madefor.cc/ui.lua")
     if(ui~=nil)then
-        load(ui, "b", env)()
+        load(ui, nil, "t", env)()
     else
         error("Unable to connect to https://basalt.madefor.cc/ui.lua")
     end
