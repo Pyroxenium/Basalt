@@ -1,5 +1,3 @@
-local basalt = require("BasaltDev2")
-
 local installerPath = "https://basalt.madefor.cc/install.lua"
 local installer = require("installer") -- basalts installing api
 
