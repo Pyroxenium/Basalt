@@ -207,10 +207,10 @@ return {
             end,
 
             untracked = function(getter)
-                local prevEffect = currentEffect
+                local parentEffect = currentEffect
                 currentEffect = nil
                 local value = getter()
-                currentEffect = prevEffect
+                currentEffect = parentEffect
                 return value
             end,
 
@@ -218,10 +218,10 @@ return {
                 local effect = {dependencies = {}}
                 local execute = function()
                     clearEffectDependencies(effect)
-                    local prevEffect = currentEffect
+                    local parentEffect = currentEffect
                     currentEffect = effect
                     effectFn()
-                    currentEffect = prevEffect
+                    currentEffect = parentEffect
                 end
                 effect.execute = execute
                 effect.execute()
@@ -347,6 +347,25 @@ return {
             end
         end
 
+        local function insertChildLayout(self, layout, node, renderContext)
+            local props = {}
+            for _, prop in ipairs(node:properties()) do
+                props[prop.name] = prop.value
+            end
+            local updateFns = {}
+            for prop, expression in pairs(node:reactiveProperties()) do
+                updateFns[prop] = basalt.derived(function()
+                    return load("return " .. expression, nil, "t", renderContext.env)()
+                end)
+            end
+            setmetatable(props, {
+                __index = function(_, k)
+                    return updateFns[k]()
+                end
+            })
+            self:loadLayout(layout.path, props)
+        end
+
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 lastXMLReferences = {}
@@ -358,8 +377,11 @@ return {
                 for _, childNode in pairs(children) do
                     local tagName = childNode.___name
                     if (tagName ~= "animation") then
+                        local layout = renderContext.env[tagName]
                         local objectKey = tagName:gsub("^%l", string.upper)
-                        if (_OBJECTS[objectKey] ~= nil) then
+                        if (layout ~= nil) then
+                            insertChildLayout(self, layout, childNode, renderContext)
+                        elseif (_OBJECTS[objectKey] ~= nil) then
                             local addFn = self["add" .. objectKey]
                             addXMLObjectType(childNode, addFn, self, renderContext)
                         end
