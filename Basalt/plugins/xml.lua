@@ -167,7 +167,7 @@ local function registerFunctionEvent(self, data, event, renderContext)
     end
 end
 
-local effectStack = {}
+local currentEffect = nil
 
 local clearEffectDependencies = function(effect)
     for _, dependency in ipairs(effect.dependencies) do
@@ -186,15 +186,14 @@ return {
             reactive = function(initialValue)
                 local value = initialValue
                 local observerEffects = {}
-                local getter = function()
-                    local invokingEffect = effectStack[#effectStack]
-                    if (invokingEffect ~= nil) then
-                        table.insert(observerEffects, invokingEffect)
-                        table.insert(invokingEffect.dependencies, observerEffects)
+                local get = function()
+                    if (currentEffect ~= nil) then
+                        table.insert(observerEffects, currentEffect)
+                        table.insert(currentEffect.dependencies, observerEffects)
                     end
                     return value
                 end
-                local setter = function(newValue)
+                local set = function(newValue)
                     value = newValue
                     local observerEffectsCopy = {}
                     for index, effect in ipairs(observerEffects) do
@@ -204,16 +203,25 @@ return {
                         effect.execute()
                     end
                 end
-                return getter, setter
+                return get, set
+            end,
+
+            untracked = function(getter)
+                local lastEffect = currentEffect
+                currentEffect = nil
+                local value = getter()
+                currentEffect = lastEffect
+                return value
             end,
 
             effect = function(effectFn)
                 local effect = {dependencies = {}}
                 local execute = function()
                     clearEffectDependencies(effect)
-                    table.insert(effectStack, effect)
+                    local lastEffect = currentEffect
+                    currentEffect = effect
                     effectFn()
-                    table.remove(effectStack)
+                    currentEffect = lastEffect
                 end
                 effect.execute = execute
                 effect.execute()
@@ -326,12 +334,12 @@ return {
             end
         end
 
-        local function addXMLObjectType(tab, addFn, self, renderContext)
-            if (tab ~= nil) then
-                if (tab.properties ~= nil) then
-                    tab = {tab}
+        local function addXMLObjectType(node, addFn, self, renderContext)
+            if (node ~= nil) then
+                if (node.properties ~= nil) then
+                    node = {node}
                 end
-                for _, v in pairs(tab) do
+                for _, v in pairs(node) do
                     local obj = addFn(self, v["@id"] or uuid())
                     lastXMLReferences[obj:getName()] = obj
                     xmlDefaultValues(v, obj, renderContext)
@@ -348,9 +356,10 @@ return {
                 local _OBJECTS = basalt.getObjects()
 
                 for _, childNode in pairs(children) do
-                    if (childNode.___name~="animation") then
-                        local objectKey = childNode.___name:gsub("^%l", string.upper)
-                        if(_OBJECTS[objectKey] ~= nil) then
+                    local tagName = childNode.___name
+                    if (tagName ~= "animation") then
+                        local objectKey = tagName:gsub("^%l", string.upper)
+                        if (_OBJECTS[objectKey] ~= nil) then
                             local addFn = self["add" .. objectKey]
                             addXMLObjectType(childNode, addFn, self, renderContext)
                         end
