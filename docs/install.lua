@@ -420,7 +420,7 @@ end
 
 function installer.executeUI()
     local env = _ENV
-    env.basalt = installer.get("https://basalt.madefor.cc/bTemp.lua") -- bTemp needs to be replaced later
+    env.basalt = load(installer.get("https://basalt.madefor.cc/bTemp.lua"))() -- bTemp needs to be replaced later
     local ui = installer.get("https://basalt.madefor.cc/ui.lua")
     if(ui~=nil)then
         load(ui, nil, "t", env)()
