@@ -1,5 +1,5 @@
 local installerPath = "https://basalt.madefor.cc/install.lua"
-local installer = require("installer") -- basalts installing api
+local installer
 
 local main = basalt.createFrame():setTheme({FrameBG = colors.lightGray, FrameFG=colors.black})
 
@@ -27,7 +27,7 @@ local function downloadInstaller()
     if(fs.exists("installer.lua"))then
         local f = fs.open("installer.lua", "r")
         if(f~=nil)then
-            --installer = load(f.readAll())()
+            installer = load(f.readAll())()
             f.close()
             return
         end
