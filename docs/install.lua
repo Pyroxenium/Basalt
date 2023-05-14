@@ -4,11 +4,69 @@ local args = table.pack(...)
 local installer = {printStatus=true}
 installer.githubPath = "https://raw.githubusercontent.com/Pyroxenium/Basalt/"
 
+local projectContentStart = 
+[[
+local project = {} 
+local packaged = true 
+local baseRequire = require 
+local require = function(path)
+    for k,v in pairs(project)do
+        if(type(v)=="table")then
+            for name,b in pairs(v)do
+                if(name==path)then
+                    return b()
+                end
+            end
+        else
+            if(k==path)then
+                return v()
+            end
+        end
+    end
+    return baseRequire(path);
+end
+local getProject = function(subDir)
+    if(subDir~=nil)then
+        return project[subDir]
+    end
+    return project
+end
+]]
+
+local projectContentEnd = '\n return project["main"]()'
+
+local function split(s, delimiter)
+    local result = {}
+    if(s~=nil)then
+        for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+            table.insert(result, match)
+        end
+    end
+    return result
+end
+
+local function getFileName(path)
+    local parts = split(path, "/")
+    return parts[#parts]
+end
+
+local function isInIgnoreList(file, ignList)
+    if(ignList~=nil) then
+        local filePathParts = split(file, "/")
+        for k,v in pairs(ignList) do
+            if(v == filePathParts[1]) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 local function printStatus(...)
-    if(installer.printStatus)then
-        print(...)
-    elseif(type(installer.printStatus)=="function")then
+    if(type(installer.printStatus)=="function")then
         installer.printStatus(...)
+    elseif(installer.printStatus)then
+        print(...)
     end
 end
 
@@ -24,26 +82,9 @@ function installer.get(url)
     end
 end
 
-local basaltDataCache
-function installer.getBasaltData()
-    if(basaltDataCache~=nil)then return basaltDataCache end
-    local content
-    printStatus("Downloading basalt data...")
-    if(fs.exists("basaltdata.json"))then
-        content = fs.open("basaltdata.json", "r")
-    else
-        content = installer.get("https://basalt.madefor.cc/basaltdata.json")
-    end
-    if(content~=nil)then
-        content = content.readAll()
-        basaltDataCache = textutils.unserializeJSON(content)
-        printStatus("Successfully downloaded basalt data!")
-        return basaltDataCache
-    end
-end
-
 -- Creates a filetree based on my github project, ofc you can use this in your projects if you'd like to
-function installer.createTree(page, branch, dirName)
+function installer.createTree(page, branch, dirName, ignList)
+    ignList = ignList or {}
     dirName = dirName or ""
     printStatus("Receiving file tree for "..(dirName~="" and "Basalt/"..dirName or "Basalt"))
     local tree = {}
@@ -52,49 +93,25 @@ function installer.createTree(page, branch, dirName)
     if(request==nil)then error("API rate limit exceeded. It will be available again in one hour.") end
     for _,v in pairs(textutils.unserialiseJSON(request.readAll()).tree)do
         if(v.type=="blob")then
-            table.insert(tree, {name = v.path, path=fs.combine(dirName, v.path), url=installer.githubPath..branch.."/Basalt/"..fs.combine(dirName, v.path), size=v.size})
+            local filePath = fs.combine(dirName, v.path)
+            if not isInIgnoreList(filePath, ignList) then
+                table.insert(tree, {name = v.path, path=filePath, url=installer.githubPath..branch.."/Basalt/"..filePath, size=v.size})
+            end
         elseif(v.type=="tree")then
-            tree[v.path] = installer.createTree(v.url, branch, fs.combine(dirName, v.path))
+            local dirPath = fs.combine(dirName, v.path)
+            if not isInIgnoreList(dirPath, ignList) then
+                tree[v.path] = installer.createTree(v.url, branch, dirPath)
+            end
         end
     end
     return tree
 end
 
-function installer.createTreeByBasaltData(page, branch, dirName)
-    dirName = dirName or ""
-    printStatus("Receiving file tree for "..(dirName~="" and "Basalt/"..dirName or "Basalt"))
-    local bData = installer.getBasaltData()
-    if(bData~=nil)then
-        local tree = {}
-        for k,v in pairs(bData.structure)do
-            if(k=="base")then
-                for a,b in pairs(v)do
-                    table.insert(tree, b)
-                end
-            else
-                tree[k] = v
-            end
-        end
-        return tree
-    end
-end
-
-local function splitString(str, sep)
-    if sep == nil then
-        sep = "%s"
-    end
-    local t={}
-    for v in string.gmatch(str, "([^"..sep.."]+)") do
-        table.insert(t, v)
-    end
-    return t
-end
-
 function installer.createIgnoreList(str)
-    local files = splitString(str, ":")
+    local files = split(str, ":")
     local ignList = {}
     for k,v in pairs(files)do
-        local a = splitString(v, "/")
+        local a = split(v, "/")
         if(#a>1)then
             if(ignList[a[1]]==nil)then ignList[a[1]] = {} end
             table.insert(ignList[a[1]], a[2])
@@ -124,7 +141,7 @@ function installer.getRelease(version)
     end
 end
 
-function installer.downloadRelease(version, file)
+function installer.downloadRelease(file, version)
     local content = installer.getRelease(version)
     if(content~=nil)then
         local f = fs.open(file or "basalt.lua", "w")
@@ -135,45 +152,143 @@ function installer.downloadRelease(version, file)
     return false
 end
 
+function installer.getReleases()
+    local content = installer.get("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/master:docs/versions")
+    local versions = {}
+    if(content~=nil)then
+        content = textutils.unserializeJSON(content)
+        for k,v in pairs(content.tree)do
+            if(v.type=="blob")then
+                table.insert(versions, {name=v.path, url="https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/versions/"..v.path})
+            end
+        end
+        return versions
+    end
+end
+
+function installer.getBasaltObjectList(branch)
+    branch = branch or "master"
+    local content = installer.get("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/"..branch..":Basalt/objects")
+    if(content==nil)then
+        error("Could not connect to github - rate limit exceeded")
+    end
+    local objects = {}
+    content = textutils.unserializeJSON(content)
+    for k,v in pairs(content.tree)do
+        if(v.type=="blob")then
+            table.insert(objects, {name=v.path, url="https://raw.githubusercontent.com/Pyroxenium/Basalt/"..branch.."/Basalt/objects/"..v.path})
+        end
+    end
+    return objects
+end
+
+function installer.getAdditionalObjectList()
+    local content = installer.get("https://api.github.com/repos/Pyroxenium/BasaltAdditions/git/trees/main:objects")
+    if(content==nil)then
+        error("Could not connect to github - rate limit exceeded")
+    end
+    local objects = {}
+    content = textutils.unserializeJSON(content)
+    for k,v in pairs(content.tree)do
+        if(v.type=="blob")then
+            table.insert(objects, {name=v.path, url="https://raw.githubusercontent.com/Pyroxenium/BasaltAdditions/main/objects/"..v.path})
+        end
+    end
+    return objects
+end
+
+function installer.getAdditionalProgramList()
+    local content = installer.get("https://api.github.com/repos/Pyroxenium/BasaltAdditions/git/trees/main:programs")
+    if(content==nil)then
+        error("Could not connect to github - rate limit exceeded")
+    end
+    local objects = {}
+    content = textutils.unserializeJSON(content)
+    for k,v in pairs(content.tree)do
+        if(v.type=="blob")then
+            table.insert(objects, {name=v.path, url="https://raw.githubusercontent.com/Pyroxenium/BasaltAdditions/main/programs/"..v.path})
+        end
+    end
+    return objects
+end
+
+function installer.downloadAdditionalObject(file, path)
+    local content = installer.get("https://raw.githubusercontent.com/Pyroxenium/BasaltAdditions/main/objects/"..file)
+    if(content==nil)then
+        error("Could not connect to github - rate limit exceeded")
+    end
+    if(content~=nil)then
+        local f = fs.open(path, "w")
+        f.write(content)
+        f.close()
+        return true
+    end
+    return false
+end
+
+function installer.downloadAdditionalPlugin(file, path)
+    local content = installer.get("https://raw.githubusercontent.com/Pyroxenium/BasaltAdditions/main/plugins/"..file)
+    if(content==nil)then
+        error("Could not connect to github - rate limit exceeded")
+    end
+        local f = fs.open(path, "w")
+        f.write(content)
+        f.close()
+    return true
+end
+
+function installer.downloadProgram(file, path)
+    local content = installer.get("https://raw.githubusercontent.com/Pyroxenium/BasaltAdditions/main/programs/"..file)
+    if(content==nil)then
+        error("Could not connect to github - rate limit exceeded")
+    end
+        local f = fs.open(path, "w")
+        f.write(content)
+        f.close()
+    return true
+end
+
+function installer.getBasaltPluginList(branch)
+    branch = branch or "master"
+    local content = installer.get("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/"..branch..":Basalt/plugins")
+    local plugins = {}
+    if(content~=nil)then
+        content = textutils.unserializeJSON(content)
+        for k,v in pairs(content.tree)do
+            if(v.type=="blob")then
+                table.insert(plugins, {name=v.path, url="https://raw.githubusercontent.com/Pyroxenium/Basalt/"..branch.."/Basalt/plugins/"..v.path})
+            end
+        end
+        return plugins
+    end
+end
+
+function installer.getAdditionalPluginList()
+    local content = installer.get("https://api.github.com/repos/Pyroxenium/BasaltAdditions/git/trees/main:plugins")
+    local plugins = {}
+    if(content~=nil)then
+        content = textutils.unserializeJSON(content)
+        for k,v in pairs(content.tree)do
+            if(v.type=="blob")then
+                table.insert(plugins, {name=v.path, url="https://raw.githubusercontent.com/Pyroxenium/BasaltAdditions/main/plugins/"..v.path})
+            end
+        end
+        return plugins
+    end
+end
+
 function installer.getPackedProject(branch, ignoreList)
     if (ignoreList==nil)then 
         ignoreList = {"init.lua"} 
     else
         table.insert(ignoreList, "init.lua")
     end
-    local projTree = installer.createTree("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/"..branch..":Basalt", branch, "")
-    local filteredList = {}
+    local projTree = installer.createTree("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/"..branch..":Basalt", branch, "", ignoreList)
     local project = {}
-
-    local function isInIgnoreList(file, ign)
-        if(ign~=nil)then
-            for k,v in pairs(ign)do
-                if(v==file.name)then
-                    return true
-                end
-            end
-        end
-        return false
-    end
-
-    for k,v in pairs(projTree)do
-        if(type(k)=="string")then
-            for a,b in pairs(v)do
-                if not(isInIgnoreList(b, ignoreList~=nil and ignoreList[k] or nil))then
-                    if(filteredList[k]==nil)then filteredList[k] = {} end
-                    table.insert(filteredList[k], b)
-                end
-            end
-        else
-            if not(isInIgnoreList(v, ignoreList))then
-                table.insert(filteredList, v)
-            end
-        end
-    end
 
     local fList = {}
     local delay = 0
-    for k,v in pairs(filteredList)do
+    for k,v in pairs(projTree)do
         if(type(k)=="string")then
             for a,b in pairs(v)do
                 table.insert(fList, function() sleep(delay) 
@@ -189,34 +304,7 @@ function installer.getPackedProject(branch, ignoreList)
 
     parallel.waitForAll(table.unpack(fList))
 
-    local projectContent = 
-[[
-local project = {} 
-local packaged = true 
-local baseRequire = require 
-local require = function(path)
-    for k,v in pairs(project)do
-        if(type(v)=="table")then
-            for name,b in pairs(v)do
-                if(name==path)then
-                    return b()
-                end
-            end
-        else
-            if(k==path)then
-                return v()
-            end
-        end
-    end
-    return baseRequire(path);
-end
-local getProject = function(subDir)
-    if(subDir~=nil)then
-        return project[subDir]
-    end
-    return project
-end
-]]
+    local projectContent = projectContentStart
     
     for k,v in pairs(project)do
         if(type(k)=="string")then
@@ -231,7 +319,7 @@ end
             projectContent = projectContent.."\n"..newFile
         end
     end
-    projectContent = projectContent..'\n return project["main"]()'
+    projectContent = projectContent..projectContentEnd
     
     return projectContent
 end
@@ -264,36 +352,8 @@ end
 end
 
 function installer.getProjectFiles(branch, ignoreList)
-    local projTree = installer.createTree("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/"..branch..":Basalt", branch, "")
-    local filteredList = {}
+    local projTree = installer.createTree("https://api.github.com/repos/Pyroxenium/Basalt/git/trees/"..branch..":Basalt", branch, "", ignoreList)
     local project = {}
-
-    local function isInIgnoreList(file)
-        if(ignoreList~=nil)then
-            for k,v in pairs(ignoreList)do
-                if(v==file)then
-                    return true
-                end
-            end
-        end
-        return false
-    end
-
-    for k,v in pairs(projTree)do
-        if not(isInIgnoreList(v.name))then
-            if(type(k)=="string")then
-                local sub = {}
-                for a,b in pairs(v)do
-                    if not(isInIgnoreList(b.name))then
-                        table.insert(sub, b)
-                    end
-                end
-                filteredList[k] = sub
-            else
-                table.insert(filteredList, v)
-            end
-        end
-    end
 
     local function downloadFile(url, path)
         project[path] = installer.get(url)
@@ -301,7 +361,7 @@ function installer.getProjectFiles(branch, ignoreList)
 
     local fList = {}
     local delay = 0
-    for k,v in pairs(filteredList)do
+    for k,v in pairs(projTree)do
         if(type(k)=="string")then
             for a,b in pairs(v)do
                 table.insert(fList, function() sleep(delay) downloadFile(b.url, b.path) end)
@@ -323,12 +383,14 @@ function installer.downloadPacked(filename, branch, ignoreList, minify)
     if(minify)then
         local min
         if(fs.exists("packager.lua"))then
-            min = require("packager")
+            local f = fs.open("packager.lua", "r")
+            min = load(f.readAll())()
+            f.close()
         else
             min = load(installer.get("https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/packager.lua"))()
         end
         if(min~=nil)then
-            success, data = min(projectContent)
+            local success, data = min(projectContent)
             if(success)then
                 projectContent = data
             else
@@ -339,7 +401,7 @@ function installer.downloadPacked(filename, branch, ignoreList, minify)
     local f = fs.open(filename, "w")
     f.write(projectContent)
     f.close()
-    printStatus("Packed version successfully downloaded!")  
+    printStatus("Packed version successfully downloaded!")
 end
 
 function installer.downloadProject(projectDir, branch, ignoreList)
@@ -356,11 +418,105 @@ function installer.downloadProject(projectDir, branch, ignoreList)
     printStatus("Source version successfully downloaded!")
 end
 
+function installer.executeUI()
+    local ui = installer.get("https://basalt.madefor.cc/ui.lua")
+    if(ui~=nil)then
+        load(ui)()
+    else
+        error("Unable to connect to https://basalt.madefor.cc/ui.lua")
+    end
+end
+
+function installer.generateCustomBasalt(files, basePath, branch)
+    branch = branch or "master"
+    local projectFiles = installer.getProjectFiles(branch, {"plugins", "objects"})
+    local project = {}
+
+    local function downloadFile(url, path)
+        local folder = split(path, "/")
+        if(#folder>1)then
+            project[basePath..path] = {content=installer.get(url), folder=folder[1], filename=folder[#folder], url=url}
+        else
+            project[basePath..path] = {content=installer.get(url), folder="", filename=folder[1], url=url}
+        end
+    end
+
+    local fList = {}
+    local delay = 0
+
+    for k,v in pairs(projectFiles)do
+        local folder = split(k, "/")
+        if(#folder>1)then
+            project[fs.combine(basePath, k)] = {content=v, folder=folder[1], url=""}
+        else
+            project[fs.combine(basePath, k)] = {content=v, folder="", url=""}
+        end
+    end
+
+    if(files.objects~=nil)then
+        for _,v in pairs(files.objects)do
+            table.insert(fList, function() sleep(delay) downloadFile(v.url, "/objects/"..v.name) end)
+        end
+    end
+    if(files.plugins~=nil)then
+        for _,v in pairs(files.plugins)do
+            table.insert(fList, function() sleep(delay) downloadFile(v.url, "/plugins/"..v.name) end)
+        end
+    end
+
+    parallel.waitForAll(table.unpack(fList))
+    return project
+end
+
+function installer.downloadCustomBasalt(files, version, basePath, branch, minify)
+    local project = installer.generateCustomBasalt(files, basePath, branch)
+
+    if(version=="source")then
+        for k,v in pairs(project)do
+            local f = fs.open(k, "w")
+            f.write(v.content)
+            f.close()
+        end
+    elseif(version=="packed")then
+        local projectContent = projectContentStart.."\nproject = {objects={}, plugins={}, libraries={}}\n"
+        for _,v in pairs(project)do
+            if(v.folder~="")then
+                projectContent = projectContent.."project['"..v.folder.."']['"..v.filename:gsub(".lua", "").."'] =".."function(...) "..v.content.." end\n"
+            else
+                projectContent = projectContent.."project['"..v.filename:gsub(".lua", "").."'] =".."function(...) "..v.content.." end\n"
+            end
+        end
+        projectContent = projectContent..projectContentEnd
+        if(minify)then
+            local min
+            if(fs.exists("packager.lua"))then
+                local f = fs.open("packager.lua", "r")
+                min = load(f.readAll())()
+                f.close()
+            else
+                min = load(installer.get("https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/packager.lua"))()
+            end
+            if(min~=nil)then
+                local success, data = min(projectContent)
+                if(success)then
+                    local f = fs.open(basePath, "w")
+                    f.write(data)
+                    f.close()
+                else
+                    error(data)
+                end
+            end
+        else
+            local f = fs.open(basePath, "w")
+            f.write(projectContent)
+            f.close()
+        end
+    end
+end
+
 if(#args>0)then
-    if(string.lower(args[1])=="bpm")or(string.lower(args[1])=="basaltpackagemanager")or(string.lower(args[1])=="gui")then
-        installer.download("https://raw.githubusercontent.com/Pyroxenium/Basalt/master/basaltPackageManager.lua", "basaltPackageManager.lua")
-        if(args[2]=="true")then shell.run("basaltPackageManager.lua") fs.delete("basaltPackageManager.lua") end
-            
+    if(string.lower(args[1])=="bpm")or(string.lower(args[1])=="basaltpackagemanager")or(string.lower(args[1])=="gui")or(string.lower(args[1])=="ui")then
+        installer.executeUI()
     elseif(string.lower(args[1])=="packed")then
         installer.downloadPacked(args[2] or "basalt.lua", args[3] or "master", args[4]~=nil and installer.createIgnoreList(args[4]) or nil, args[5] == "false" and false or true)
     elseif(string.lower(args[1])=="source")then
@@ -368,7 +524,7 @@ if(#args>0)then
     elseif(string.lower(args[1])=="web")then
         installer.generateWebVersion(args[3] or "basaltWeb.lua", args[2] or "latest.lua")
     elseif(string.lower(args[1])=="file")or(string.lower(args[1])=="release")then
-        installer.download("https://basalt.madefor.cc/versions/"..args[2] or "latest.lua", args[3] or "basalt.lua")
+        installer.downloadRelease(args[2] or "latest.lua", args[3] or "basalt.lua")
     end
 end
 
