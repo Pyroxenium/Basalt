@@ -167,6 +167,15 @@ local function registerFunctionEvent(self, data, event, renderContext)
     end
 end
 
+local function registerFunctionEvents(self, data, events, renderContext)
+    for _, event in pairs(events) do
+        local expression = data:reactiveProperties()[event]
+        if (expression ~= nil) then
+            registerFunctionEvent(self, expression .. "()", self[event], renderContext)
+        end
+    end
+end
+
 local currentEffect = nil
 
 local clearEffectDependencies = function(effect)
@@ -284,7 +293,6 @@ return {
                     end
                     basalt.effect(update)
                 end
-
                 self:updateSpecifiedValuesByXMLData(data, {
                     "x",
                     "y",
@@ -293,14 +301,23 @@ return {
                     "background",
                     "foreground"
                 })
-
-                local events = {"onClick", "onClickUp", "onHover", "onScroll", "onDrag", "onKey", "onKeyUp", "onRelease", "onChar", "onGetFocus", "onLoseFocus", "onResize", "onReposition", "onEvent", "onLeave"}
-                for _,v in pairs(events)do
-                    if(xmlValue(v, data)~=nil)then 
-                        registerFunctionEvent(self, xmlValue(v, data), self[v], renderContext)
-                    end
-                end
-
+                registerFunctionEvents(self, data, {
+                    "onClick",
+                    "onClickUp",
+                    "onHover",
+                    "onScroll",
+                    "onDrag",
+                    "onKey",
+                    "onKeyUp",
+                    "onRelease",
+                    "onChar",
+                    "onGetFocus",
+                    "onLoseFocus",
+                    "onResize",
+                    "onReposition",
+                    "onEvent",
+                    "onLeave"
+                }, renderContext)
                 return self
             end,
         }
@@ -322,9 +339,9 @@ return {
                 self:updateSpecifiedValuesByXMLData(data, {
                     "value"
                 })
-                if(xmlValue("onChange", data)~=nil)then
-                    registerFunctionEvent(self, xmlValue("onChange", data), self.onChange, renderContext)
-                end
+                registerFunctionEvent(self, data, {
+                    "onChange"
+                }, renderContext)
                 return self
             end,
         }
@@ -942,10 +959,9 @@ return {
                     "start",
                     "time"
                 })
-
-                if(xmlValue("onCall", data)~=nil)then 
-                    registerFunctionEvent(self, xmlValue("onCall", data), self.onCall, renderContext)
-                end
+                registerFunctionEvents(self, data, {
+                    "onCall"
+                }, renderContext)
                 return self
             end,
         }
