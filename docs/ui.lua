@@ -319,13 +319,13 @@ local function installBasalt()
     end
 
     if(version:getValue().text=="Single File")then
-        installer.downloadCustomBasalt({objects = objectList, plugins = pluginList}, "packed", fileName, branch:getValue(), minified:getValue())
+        installer.downloadCustomBasalt({objects = objectList, plugins = pluginList}, "packed", fileName, branch:getValue().text, minified:getValue())
     end
     if(version:getValue().text=="Release")then
         installer.downloadRelease(fileName, release:getValue().args[1])
     end
     if(version:getValue().text=="Source")then
-        installer.downloadCustomBasalt({objects = objectList, plugins = pluginList}, "source", fileName, branch:getValue())
+        installer.downloadCustomBasalt({objects = objectList, plugins = pluginList}, "source", fileName, branch:getValue().text)
     end
 
     doneBtn:show()
