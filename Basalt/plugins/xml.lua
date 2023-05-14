@@ -207,10 +207,10 @@ return {
             end,
 
             untracked = function(getter)
-                local lastEffect = currentEffect
+                local prevEffect = currentEffect
                 currentEffect = nil
                 local value = getter()
-                currentEffect = lastEffect
+                currentEffect = prevEffect
                 return value
             end,
 
@@ -218,10 +218,10 @@ return {
                 local effect = {dependencies = {}}
                 local execute = function()
                     clearEffectDependencies(effect)
-                    local lastEffect = currentEffect
+                    local prevEffect = currentEffect
                     currentEffect = effect
                     effectFn()
-                    currentEffect = lastEffect
+                    currentEffect = prevEffect
                 end
                 effect.execute = execute
                 effect.execute()
