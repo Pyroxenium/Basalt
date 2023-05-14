@@ -319,7 +319,6 @@ local function installBasalt()
     end
 
     if(version:getValue().text=="Single File")then
-        installer.downloadPacked(fileName, branch:getValue().text, nil, minified:getValue())
         installer.downloadCustomBasalt({objects = objectList, plugins = pluginList}, "packed", fileName, minified:getValue())
     end
     if(version:getValue().text=="Release")then
