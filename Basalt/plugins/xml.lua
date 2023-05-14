@@ -167,6 +167,15 @@ local function registerFunctionEvent(self, data, event, renderContext)
     end
 end
 
+local function registerFunctionEvents(self, data, events, renderContext)
+    for _, event in pairs(events) do
+        local expression = data:reactiveProperties()[event]
+        if (expression ~= nil) then
+            registerFunctionEvent(self, expression .. "()", self[event], renderContext)
+        end
+    end
+end
+
 local currentEffect = nil
 
 local clearEffectDependencies = function(effect)
@@ -183,6 +192,12 @@ end
 return {
     basalt = function(basalt)
         local object = {
+            layout = function(path)
+                return {
+                    path = path,
+                }
+            end,
+
             reactive = function(initialValue)
                 local value = initialValue
                 local observerEffects = {}
@@ -207,10 +222,10 @@ return {
             end,
 
             untracked = function(getter)
-                local prevEffect = currentEffect
+                local parentEffect = currentEffect
                 currentEffect = nil
                 local value = getter()
-                currentEffect = prevEffect
+                currentEffect = parentEffect
                 return value
             end,
 
@@ -218,10 +233,10 @@ return {
                 local effect = {dependencies = {}}
                 local execute = function()
                     clearEffectDependencies(effect)
-                    local prevEffect = currentEffect
+                    local parentEffect = currentEffect
                     currentEffect = effect
                     effectFn()
-                    currentEffect = prevEffect
+                    currentEffect = parentEffect
                 end
                 effect.execute = execute
                 effect.execute()
@@ -278,7 +293,6 @@ return {
                     end
                     basalt.effect(update)
                 end
-
                 self:updateSpecifiedValuesByXMLData(data, {
                     "x",
                     "y",
@@ -287,14 +301,23 @@ return {
                     "background",
                     "foreground"
                 })
-
-                local events = {"onClick", "onClickUp", "onHover", "onScroll", "onDrag", "onKey", "onKeyUp", "onRelease", "onChar", "onGetFocus", "onLoseFocus", "onResize", "onReposition", "onEvent", "onLeave"}
-                for _,v in pairs(events)do
-                    if(xmlValue(v, data)~=nil)then 
-                        registerFunctionEvent(self, xmlValue(v, data), self[v], renderContext)
-                    end
-                end
-
+                registerFunctionEvents(self, data, {
+                    "onClick",
+                    "onClickUp",
+                    "onHover",
+                    "onScroll",
+                    "onDrag",
+                    "onKey",
+                    "onKeyUp",
+                    "onRelease",
+                    "onChar",
+                    "onGetFocus",
+                    "onLoseFocus",
+                    "onResize",
+                    "onReposition",
+                    "onEvent",
+                    "onLeave"
+                }, renderContext)
                 return self
             end,
         }
@@ -316,9 +339,9 @@ return {
                 self:updateSpecifiedValuesByXMLData(data, {
                     "value"
                 })
-                if(xmlValue("onChange", data)~=nil)then
-                    registerFunctionEvent(self, xmlValue("onChange", data), self.onChange, renderContext)
-                end
+                registerFunctionEvent(self, data, {
+                    "onChange"
+                }, renderContext)
                 return self
             end,
         }
@@ -347,6 +370,25 @@ return {
             end
         end
 
+        local function insertChildLayout(self, layout, node, renderContext)
+            local props = {}
+            for _, prop in ipairs(node:properties()) do
+                props[prop.name] = prop.value
+            end
+            local updateFns = {}
+            for prop, expression in pairs(node:reactiveProperties()) do
+                updateFns[prop] = basalt.derived(function()
+                    return load("return " .. expression, nil, "t", renderContext.env)()
+                end)
+            end
+            setmetatable(props, {
+                __index = function(_, k)
+                    return updateFns[k]()
+                end
+            })
+            self:loadLayout(layout.path, props)
+        end
+
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 lastXMLReferences = {}
@@ -358,8 +400,11 @@ return {
                 for _, childNode in pairs(children) do
                     local tagName = childNode.___name
                     if (tagName ~= "animation") then
+                        local layout = renderContext.env[tagName]
                         local objectKey = tagName:gsub("^%l", string.upper)
-                        if (_OBJECTS[objectKey] ~= nil) then
+                        if (layout ~= nil) then
+                            insertChildLayout(self, layout, childNode, renderContext)
+                        elseif (_OBJECTS[objectKey] ~= nil) then
                             local addFn = self["add" .. objectKey]
                             addXMLObjectType(childNode, addFn, self, renderContext)
                         end
@@ -914,10 +959,9 @@ return {
                     "start",
                     "time"
                 })
-
-                if(xmlValue("onCall", data)~=nil)then 
-                    registerFunctionEvent(self, xmlValue("onCall", data), self.onCall, renderContext)
-                end
+                registerFunctionEvents(self, data, {
+                    "onCall"
+                }, renderContext)
                 return self
             end,
         }
