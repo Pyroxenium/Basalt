@@ -24,8 +24,8 @@ local function switchPage(id)
 end
 
 local function downloadInstaller()
-    if(fs.exists("installer.lua"))then
-        local f = fs.open("installer.lua", "r")
+    if(fs.exists("install.lua"))then
+        local f = fs.open("install.lua", "r")
         if(f~=nil)then
             installer = load(f.readAll())()
             f.close()

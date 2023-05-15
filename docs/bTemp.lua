@@ -1,11368 +1,3173 @@
-local project = {} 
-local packaged = true 
-local baseRequire = require 
-local require = function(path)
-    for k,v in pairs(project)do
-        if(type(v)=="table")then
-            for name,b in pairs(v)do
-                if(name==path)then
-                    return b()
-                end
-            end
-        else
-            if(k==path)then
-                return v()
-            end
-        end
-    end
-    return baseRequire(path);
-end
-local getProject = function(subDir)
-    if(subDir~=nil)then
-        return project[subDir]
-    end
-    return project
-end
-
-project["main"] = function(...)
-local basaltEvent = require("basaltEvent")()
-local baseObjects = require("loadObjects")
-local moddedObjects
-local pluginSystem = require("plugin")
-local utils = require("utils")
-local log = require("basaltLogs")
-local uuid = utils.uuid
-local wrapText = utils.wrapText
-local count = utils.tableCount
-local moveThrottle = 300
-local dragThrottle = 0
-local renderingThrottle = 0
-local newObjects = {}
-
-local baseTerm = term.current()
-local version = "1.7.0"
-
-local projectDirectory = fs.getDir(table.pack(...)[2] or "")
-
-local activeKey, frames, monFrames, variables, schedules = {}, {}, {}, {}, {}
-local mainFrame, activeFrame, focusedObject, updaterActive
-
-local basalt = {}
-
-if not  term.isColor or not term.isColor() then
-    error('Basalt requires an advanced (golden) computer to run.', 0)
-end
-
-local defaultColors = {}
-for k,v in pairs(colors)do
-    if(type(v)=="number")then
-        defaultColors[k] = {baseTerm.getPaletteColor(v)}
-    end
-end
-
-
-local function stop()
-    updaterActive = false    
-    baseTerm.clear()
-    baseTerm.setCursorPos(1, 1)
-    for k,v in pairs(colors)do
-        if(type(v)=="number")then
-            baseTerm.setPaletteColor(v, colors.packRGB(table.unpack(defaultColors[k])))
-        end
-    end
-end
-
-local function schedule(f)
-assert(f~="function", "Schedule needs a function in order to work!")
-return function(...)
-        local co = coroutine.create(f)
-        local ok, result = coroutine.resume(co, ...)
-        if(ok)then
-            table.insert(schedules, co)
-        else
-            basalt.basaltError(result)
-        end
-    end
-end
-
-basalt.log = function(...)
-    log(...)
-end
-
-local setVariable = function(name, var)
-    variables[name] = var
-end
-
-local getVariable = function(name)
-    return variables[name]
-end
-
-local bInstance = {
-    getDynamicValueEventSetting = function()
-        return basalt.dynamicValueEvents
-    end,
-    
-    getMainFrame = function()
-        return mainFrame
-    end,
-
-    setVariable = setVariable,
-    getVariable = getVariable,
-
-    setMainFrame = function(mFrame)
-        mainFrame = mFrame
-    end,
-
-    getActiveFrame = function()
-        return activeFrame
-    end,
-
-    setActiveFrame = function(aFrame)
-        activeFrame = aFrame
-    end,
-
-    getFocusedObject = function()
-        return focusedObject
-    end,
-
-    setFocusedObject = function(focused)
-        focusedObject = focused
-    end,
-    
-    getMonitorFrame = function(name)
-        return monFrames[name] or monGroups[name][1]
-    end,
-
-    setMonitorFrame = function(name, frame, isGroupedMon)
-        if(mainFrame == frame)then mainFrame = nil end
-        if(isGroupedMon)then
-            monGroups[name] = {frame, sides}
-        else
-            monFrames[name] = frame
-        end
-        if(frame==nil)then
-            monGroups[name] = nil
-        end
-    end,
-
-    getTerm = function()
-        return baseTerm
-    end,
-
-    schedule = schedule,
-
-    stop = stop,
-    debug = basalt.debug,
-    log = basalt.log,
-
-    getObjects = function()
-        return moddedObjects
-    end,
-
-    getObject = function(id)
-        return moddedObjects[id]
-    end,
-
-    getDirectory = function()
-        return projectDirectory
-    end
-}
-
-local function defaultErrorHandler(errMsg)
-    baseTerm.clear()
-    baseTerm.setBackgroundColor(colors.black)
-    baseTerm.setTextColor(colors.red)
-    local w,h = baseTerm.getSize()
-    if(basalt.logging)then
-        log(errMsg, "Error")
-    end
-
-    local text = wrapText("Basalt error: "..errMsg, w)
-    local yPos = 1
-    for _,v in pairs(text)do
-        baseTerm.setCursorPos(1,yPos)
-        baseTerm.write(v)
-        yPos = yPos + 1
-    end 
-    baseTerm.setCursorPos(1,yPos+1)
-    updaterActive = false
-end
-
-local function handleSchedules(event, p1, p2, p3, p4)
-    if(#schedules>0)then
-        local finished = {}
-        for n=1,#schedules do
-            if(schedules[n]~=nil)then 
-                if (coroutine.status(schedules[n]) == "suspended")then
-                    local ok, result = coroutine.resume(schedules[n], event, p1, p2, p3, p4)
-                    if not(ok)then
-                        basalt.basaltError(result)
-                    end
-                else
-                    table.insert(finished, n)
-                end
-            end
-        end
-        for n=1,#finished do
-            table.remove(schedules, finished[n]-(n-1))
-        end
-    end
-end
-
-local function drawFrames()
-    if(updaterActive==false)then return end
-    if(mainFrame~=nil)then
-        mainFrame:render()
-        mainFrame:updateTerm()
-    end
-    for _,v in pairs(monFrames)do
-        v:render()
-        v:updateTerm()
-    end
-end
-
-local stopped, moveX, moveY = nil, nil, nil
-local moveTimer = nil
-local function mouseMoveEvent(_, stp, x, y)
-    stopped, moveX, moveY = stp, x, y
-    if(moveTimer==nil)then
-        moveTimer = os.startTimer(moveThrottle/1000)
-    end
-end
-
-local function moveHandlerTimer()
-    moveTimer = nil
-    mainFrame:hoverHandler(moveX, moveY, stopped)
-    activeFrame = mainFrame
-end
-
-local btn, dragX, dragY = nil, nil, nil
-local dragTimer = nil
-local function dragHandlerTimer()
-    dragTimer = nil
-    mainFrame:dragHandler(btn, dragX, dragY)
-    activeFrame = mainFrame
-end
-
-local function mouseDragEvent(_, b, x, y)
-    btn, dragX, dragY = b, x, y
-    if(dragThrottle<50)then 
-        dragHandlerTimer() 
-    else
-        if(dragTimer==nil)then
-            dragTimer = os.startTimer(dragThrottle/1000)
-        end
-    end
-end
-
-
-local renderingTimer = nil
-local function renderingUpdateTimer()
-    renderingTimer = nil
-    drawFrames() 
-end
-
-local function renderingUpdateEvent(timer)
-    if(renderingThrottle<50)then 
-        drawFrames() 
-    else
-        if(renderingTimer==nil)then
-            renderingTimer = os.startTimer(renderingThrottle/1000)
-        end
-    end
-end
-
-local function basaltUpdateEvent(event, ...)
-    local a = {...}
-    if(basaltEvent:sendEvent("basaltEventCycle", event, ...)==false)then return end
-    if(event=="terminate")then basalt.stop() end
-    if(mainFrame~=nil)then
-        local mouseEvents = {
-            mouse_click = mainFrame.mouseHandler,
-            mouse_up = mainFrame.mouseUpHandler,
-            mouse_scroll = mainFrame.scrollHandler,
-            mouse_drag = mouseDragEvent,
-            mouse_move = mouseMoveEvent,
-        }
-        local mouseEvent = mouseEvents[event]
-        if(mouseEvent~=nil)then
-            mouseEvent(mainFrame, ...)
-            handleSchedules(event, ...)
-            renderingUpdateEvent()
-            return
-        end
-    end
-
-    if(event == "monitor_touch") then
-        for k,v in pairs(monFrames)do
-            if(v:mouseHandler(1, a[2], a[3], true, a[1]))then
-                activeFrame = v
-            end
-        end
-        handleSchedules(event, ...)
-        renderingUpdateEvent()
-        return
-    end
-
-    if(activeFrame~=nil)then
-    local keyEvents = {
-        char = activeFrame.charHandler,
-        key = activeFrame.keyHandler,
-        key_up = activeFrame.keyUpHandler,
-    }
-    local keyEvent = keyEvents[event]
-        if(keyEvent~=nil)then
-            if(event == "key")then
-                activeKey[a[1]] = true
-            elseif(event == "key_up")then
-                activeKey[a[1]] = false
-            end
-            keyEvent(activeFrame, ...)
-            handleSchedules(event, ...)
-            renderingUpdateEvent()
-            return
-        end
-    end
-
-    if(event=="timer")and(a[1]==moveTimer)then
-        moveHandlerTimer()
-    elseif(event=="timer")and(a[1]==dragTimer)then
-        dragHandlerTimer()
-    elseif(event=="timer")and(a[1]==renderingTimer)then
-        renderingUpdateTimer()
-    else
-        for _, v in pairs(frames) do
-            v:eventHandler(event, ...)
-        end
-        for _, v in pairs(monFrames) do
-            v:eventHandler(event, ...)
-        end
-        handleSchedules(event, ...)
-        renderingUpdateEvent()
-    end
-end
-
-local loadedObjects = false
-local loadedPlugins = false
-local function InitializeBasalt()
-    if not(loadedObjects)then
-        for _,v in pairs(newObjects)do
-            if(fs.exists(v))then
-                if(fs.isDir(v))then
-                    local files = fs.list(v)
-                    for _,object in pairs(files)do
-                        if not(fs.isDir(v.."/"..object))then
-                            local name = object:gsub(".lua", "")
-                            if(name~="example.lua")and not(name:find(".disabled"))then
-                                if(baseObjects[name]==nil)then
-                                    baseObjects[name] = require(v.."."..object:gsub(".lua", ""))
-                                else
-                                    error("Duplicate object name: "..name)
-                                end
-                            end
-                        end
-                    end
-                else
-                    local name = v:gsub(".lua", "")
-                    if(baseObjects[name]==nil)then
-                        baseObjects[name] = require(name)
-                    else
-                        error("Duplicate object name: "..name)
-                    end
-                end
-            end
-        end
-        loadedObjects = true
-    end
-    if not(loadedPlugins)then
-        moddedObjects = pluginSystem.loadPlugins(baseObjects, bInstance)
-        local basaltPlugins = pluginSystem.get("basalt")
-        if(basaltPlugins~=nil)then
-            for k,v in pairs(basaltPlugins)do
-                for a,b in pairs(v(basalt))do
-                    basalt[a] = b
-                    bInstance[a] = b
-                end
-            end
-        end
-        local basaltPlugins = pluginSystem.get("basaltInternal")
-        if(basaltPlugins~=nil)then
-            for _,v in pairs(basaltPlugins)do
-                for a,b in pairs(v(basalt))do
-                    bInstance[a] = b
-                end
-            end
-        end
-        loadedPlugins = true
-    end
-end
-
-local function createFrame(name)
-    InitializeBasalt()
-    for _, v in pairs(frames) do
-        if (v:getName() == name) then
-            return nil
-        end
-    end
-    local newFrame = moddedObjects["BaseFrame"](name, bInstance)
-    newFrame:init()
-    newFrame:load()
-    newFrame:draw()
-    table.insert(frames, newFrame)
-    if(mainFrame==nil)and(newFrame:getName()~="basaltDebuggingFrame")then
-        newFrame:show()
-    end
-    return newFrame
-end
-
-basalt = {
-    basaltError = defaultErrorHandler,
-    logging = false,
-    dynamicValueEvents = false,
-    drawFrames = drawFrames,
-    log = log,
-    getVersion = function()
-        return version
-    end,
-
-    memory = function()
-        return math.floor(collectgarbage("count")+0.5).."KB"
-    end,
-    
-    addObject = function(path)
-        if(fs.exists(path))then
-            table.insert(newObjects, path)
-        end
-    end,
-
-    addPlugin = function(path)
-        pluginSystem.addPlugin(path)
-    end,
-
-    getAvailablePlugins = function()
-        return pluginSystem.getAvailablePlugins()
-    end,
-
-    getAvailableObjects = function()
-        local objectNames = {}
-        for k,_ in pairs(baseObjects)do
-            table.insert(objectNames, k)
-        end
-        return objectNames
-    end,
-
-    setVariable = setVariable,
-    getVariable = getVariable,
-
-    setBaseTerm = function(_baseTerm)
-        baseTerm = _baseTerm
-    end,
-
-    resetPalette = function()
-        for k,v in pairs(colors)do
-            if(type(v)=="number")then
-                --baseTerm.setPaletteColor(v, colors.packRGB(table.unpack(defaultColors[k])))
-            end
-        end
-    end,
-
-    setMouseMoveThrottle = function(amount)
-        if(_HOST:find("CraftOS%-PC"))then
-            if(config.get("mouse_move_throttle")~=10)then config.set("mouse_move_throttle", 10) end
-            if(amount<100)then
-                moveThrottle = 100
-            else
-                moveThrottle = amount
-            end
-            return true
-        end
-        return false
-    end,
-
-    setRenderingThrottle = function(amount)
-        if(amount<=0)then
-            renderingThrottle = 0
-        else
-            renderingTimer = nil
-            renderingThrottle = amount
-        end
-    end,
-
-    setMouseDragThrottle = function(amount)
-        if(amount<=0)then
-            dragThrottle = 0
-        else
-            dragTimer = nil
-            dragThrottle = amount
-        end
-    end,
-
-    autoUpdate = function(isActive)
-        updaterActive = isActive
-        if(isActive==nil)then updaterActive = true end
-        local function f()
-            drawFrames()
-            while updaterActive do
-                basaltUpdateEvent(os.pullEventRaw())
-            end
-        end
-        while updaterActive do
-            local ok, err = xpcall(f, debug.traceback)
-            if not(ok)then
-                basalt.basaltError(err)
-            end
-        end
-    end,
-    
-    update = function(event, ...)
-        if (event ~= nil) then
-            local args = {...}
-            local ok, err = xpcall(function() basaltUpdateEvent(event, table.unpack(args)) end, debug.traceback)
-            if not(ok)then
-                basalt.basaltError(err)
-                return
-            end
-        end
-    end,
-    
-    stop = stop,
-    stopUpdate = stop,
-    
-    isKeyDown = function(key)
-        if(activeKey[key]==nil)then return false end
-        return activeKey[key];
-    end,
-    
-    getFrame = function(name)
-        for _, value in pairs(frames) do
-            if (value.name == name) then
-                return value
-            end
-        end
-    end,
-    
-    getActiveFrame = function()
-        return activeFrame
-    end,
-    
-    setActiveFrame = function(frame)
-        if (frame:getType() == "Container") then
-            activeFrame = frame
-            return true
-        end
-        return false
-    end,
-
-    getMainFrame = function()
-        return mainFrame
-    end,
-    
-    onEvent = function(...)
-        for _,v in pairs(table.pack(...))do
-            if(type(v)=="function")then
-                basaltEvent:registerEvent("basaltEventCycle", v)
-            end
-        end
-    end,
-
-    schedule = schedule,
-    
-    addFrame  = createFrame,
-    createFrame = createFrame,
-
-    addMonitor = function(name)
-        InitializeBasalt()
-        for _, v in pairs(frames) do
-            if (v:getName() == name) then
-                return nil
-            end
-        end
-        local newFrame = moddedObjects["MonitorFrame"](name, bInstance)
-        newFrame:init()
-        newFrame:load()
-        newFrame:draw()
-        table.insert(monFrames, newFrame)
-        return newFrame
-    end,
-    
-    removeFrame = function(name)
-        frames[name] = nil
-    end,
-
-    setProjectDir = function(dir)
-        projectDirectory = dir
-    end,
-}
-
-local basaltPlugins = pluginSystem.get("basalt")
-if(basaltPlugins~=nil)then
-    for k,v in pairs(basaltPlugins)do
-        for a,b in pairs(v(basalt))do
-            basalt[a] = b
-            bInstance[a] = b
-        end
-    end
-end
-local basaltPlugins = pluginSystem.get("basaltInternal")
-if(basaltPlugins~=nil)then
-    for k,v in pairs(basaltPlugins)do
-        for a,b in pairs(v(basalt))do
-            bInstance[a] = b
-        end
-    end
-end
-
-return basalt
-
-end
-project["loadObjects"] = function(...)
-local _OBJECTS = {}
-
-if(packaged)then
-    for k,v in pairs(getProject("objects"))do
-        _OBJECTS[k] = v()
-    end
-    return _OBJECTS
-end
-
-local args = table.pack(...)
-local dir = fs.getDir(args[2] or "Basalt")
-if(dir==nil)then
-    error("Unable to find directory "..args[2].." please report this bug to our discord.")
-end
-
-for _,v in pairs(fs.list(fs.combine(dir, "objects")))do
-    if(v~="example.lua")and not(v:find(".disabled"))then
-        local name = v:gsub(".lua", "")
-        _OBJECTS[name] = require(name)
-    end
-end
-return _OBJECTS
-end
-project["plugins"] = {}
-
-project["plugins"]["basaltAdditions"] = function(...)
-return {
-    basalt = function()
-        return {
-            cool = function()
-                print("ello")
-                sleep(2)
-            end
-        }
-    end
-}
-end
-project["plugins"]["advancedBackground"] = function(...)
-local utils = require("utils")
-local xmlValue = utils.xmlValue
-
-return {
-    VisualObject = function(base)
-        local bgSymbol = false
-        local bgSymbolColor = colors.black  
-
-        local object = {
-            setBackground = function(self, bg, symbol, symbolCol)
-                base.setBackground(self, bg)
-                bgSymbol = symbol or bgSymbol
-                bgSymbolColor = symbolCol or bgSymbolColor
-                return self
-            end,
-
-            setBackgroundSymbol = function(self, symbol, symbolCol)
-                bgSymbol = symbol
-                bgSymbolColor = symbolCol or bgSymbolColor
-                self:updateDraw()
-                return self
-            end,
-
-            getBackgroundSymbol = function(self)
-                return bgSymbol
-            end,
-
-            getBackgroundSymbolColor = function(self)
-                return bgSymbolColor
-            end,
-
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("background-symbol", data)~=nil)then self:setBackgroundSymbol(xmlValue("background-symbol", data), xmlValue("background-symbol-color", data)) end
-                return self
-            end,
-
-            draw = function(self)
-                base.draw(self)
-                self:addDraw("advanced-bg", function()
-                    local w, h = self:getSize()
-                    if(bgSymbol~=false)then
-                        self:addTextBox(1, 1, w, h, bgSymbol:sub(1,1))
-                        if(bgSymbol~=" ")then
-                            self:addForegroundBox(1, 1, w, h, bgSymbolColor)
-                        end
-                    end
-            end, 2)
-            end,
-        }
-
-        return object
-    end
-}
-end
-project["plugins"]["bigfonts"] = function(...)
--------------------------------------------------------------------------------------
--- Wojbies API 5.0 - Bigfont - functions to write bigger font using drawing sybols --
--------------------------------------------------------------------------------------
---   Copyright (c) 2015-2022 Wojbie (wojbie@wojbie.net)
---   Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
---   1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
---   2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
---   3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
---   4. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
---   5. The origin of this software must not be misrepresented; you must not claim that you wrote the original software.
---   NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. YOU ACKNOWLEDGE THAT THIS SOFTWARE IS NOT DESIGNED, LICENSED OR INTENDED FOR USE IN THE DESIGN, CONSTRUCTION, OPERATION OR MAINTENANCE OF ANY NUCLEAR FACILITY.
-
--- Basalt - Nyorie: Please don't copy paste this code to your projects, this code is slightly changed (to fit the way basalt draws stuff), if you want the original code, checkout this:
--- http://www.computercraft.info/forums2/index.php?/topic/25367-bigfont-api-write-bigger-letters-v10/
-
-local tHex = require("tHex")
-
-local rawFont = {{"\32\32\32\137\156\148\158\159\148\135\135\144\159\139\32\136\157\32\159\139\32\32\143\32\32\143\32\32\32\32\32\32\32\32\147\148\150\131\148\32\32\32\151\140\148\151\140\147", "\32\32\32\149\132\149\136\156\149\144\32\133\139\159\129\143\159\133\143\159\133\138\32\133\138\32\133\32\32\32\32\32\32\150\150\129\137\156\129\32\32\32\133\131\129\133\131\132", "\32\32\32\130\131\32\130\131\32\32\129\32\32\32\32\130\131\32\130\131\32\32\32\32\143\143\143\32\32\32\32\32\32\130\129\32\130\135\32\32\32\32\131\32\32\131\32\131", "\139\144\32\32\143\148\135\130\144\149\32\149\150\151\149\158\140\129\32\32\32\135\130\144\135\130\144\32\149\32\32\139\32\159\148\32\32\32\32\159\32\144\32\148\32\147\131\132", "\159\135\129\131\143\149\143\138\144\138\32\133\130\149\149\137\155\149\159\143\144\147\130\132\32\149\32\147\130\132\131\159\129\139\151\129\148\32\32\139\131\135\133\32\144\130\151\32", "\32\32\32\32\32\32\130\135\32\130\32\129\32\129\129\131\131\32\130\131\129\140\141\132\32\129\32\32\129\32\32\32\32\32\32\32\131\131\129\32\32\32\32\32\32\32\32\32", "\32\32\32\32\149\32\159\154\133\133\133\144\152\141\132\133\151\129\136\153\32\32\154\32\159\134\129\130\137\144\159\32\144\32\148\32\32\32\32\32\32\32\32\32\32\32\151\129", "\32\32\32\32\133\32\32\32\32\145\145\132\141\140\132\151\129\144\150\146\129\32\32\32\138\144\32\32\159\133\136\131\132\131\151\129\32\144\32\131\131\129\32\144\32\151\129\32", "\32\32\32\32\129\32\32\32\32\130\130\32\32\129\32\129\32\129\130\129\129\32\32\32\32\130\129\130\129\32\32\32\32\32\32\32\32\133\32\32\32\32\32\129\32\129\32\32", "\150\156\148\136\149\32\134\131\148\134\131\148\159\134\149\136\140\129\152\131\32\135\131\149\150\131\148\150\131\148\32\148\32\32\148\32\32\152\129\143\143\144\130\155\32\134\131\148", "\157\129\149\32\149\32\152\131\144\144\131\148\141\140\149\144\32\149\151\131\148\32\150\32\150\131\148\130\156\133\32\144\32\32\144\32\130\155\32\143\143\144\32\152\129\32\134\32", "\130\131\32\131\131\129\131\131\129\130\131\32\32\32\129\130\131\32\130\131\32\32\129\32\130\131\32\130\129\32\32\129\32\32\133\32\32\32\129\32\32\32\130\32\32\32\129\32", "\150\140\150\137\140\148\136\140\132\150\131\132\151\131\148\136\147\129\136\147\129\150\156\145\138\143\149\130\151\32\32\32\149\138\152\129\149\32\32\157\152\149\157\144\149\150\131\148", "\149\143\142\149\32\149\149\32\149\149\32\144\149\32\149\149\32\32\149\32\32\149\32\149\149\32\149\32\149\32\144\32\149\149\130\148\149\32\32\149\32\149\149\130\149\149\32\149", "\130\131\129\129\32\129\131\131\32\130\131\32\131\131\32\131\131\129\129\32\32\130\131\32\129\32\129\130\131\32\130\131\32\129\32\129\131\131\129\129\32\129\129\32\129\130\131\32", "\136\140\132\150\131\148\136\140\132\153\140\129\131\151\129\149\32\149\149\32\149\149\32\149\137\152\129\137\152\129\131\156\133\149\131\32\150\32\32\130\148\32\152\137\144\32\32\32", "\149\32\32\149\159\133\149\32\149\144\32\149\32\149\32\149\32\149\150\151\129\138\155\149\150\130\148\32\149\32\152\129\32\149\32\32\32\150\32\32\149\32\32\32\32\32\32\32", "\129\32\32\130\129\129\129\32\129\130\131\32\32\129\32\130\131\32\32\129\32\129\32\129\129\32\129\32\129\32\131\131\129\130\131\32\32\32\129\130\131\32\32\32\32\140\140\132", "\32\154\32\159\143\32\149\143\32\159\143\32\159\144\149\159\143\32\159\137\145\159\143\144\149\143\32\32\145\32\32\32\145\149\32\144\32\149\32\143\159\32\143\143\32\159\143\32", "\32\32\32\152\140\149\151\32\149\149\32\145\149\130\149\157\140\133\32\149\32\154\143\149\151\32\149\32\149\32\144\32\149\149\153\32\32\149\32\149\133\149\149\32\149\149\32\149", "\32\32\32\130\131\129\131\131\32\130\131\32\130\131\129\130\131\129\32\129\32\140\140\129\129\32\129\32\129\32\137\140\129\130\32\129\32\130\32\129\32\129\129\32\129\130\131\32", "\144\143\32\159\144\144\144\143\32\159\143\144\159\138\32\144\32\144\144\32\144\144\32\144\144\32\144\144\32\144\143\143\144\32\150\129\32\149\32\130\150\32\134\137\134\134\131\148", "\136\143\133\154\141\149\151\32\129\137\140\144\32\149\32\149\32\149\154\159\133\149\148\149\157\153\32\154\143\149\159\134\32\130\148\32\32\149\32\32\151\129\32\32\32\32\134\32", "\133\32\32\32\32\133\129\32\32\131\131\32\32\130\32\130\131\129\32\129\32\130\131\129\129\32\129\140\140\129\131\131\129\32\130\129\32\129\32\130\129\32\32\32\32\32\129\32", "\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32", "\32\32\32\32\32\32\32\32\32\32\32\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\32\32\32\32\32\32\32\32\32\32\32", "\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32", "\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32", "\32\32\32\32\32\32\32\32\32\32\32\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\32\32\32\32\32\32\32\32\32\32\32", "\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32", "\32\32\32\32\145\32\159\139\32\151\131\132\155\143\132\134\135\145\32\149\32\158\140\129\130\130\32\152\147\155\157\134\32\32\144\144\32\32\32\32\32\32\152\131\155\131\131\129", "\32\32\32\32\149\32\149\32\145\148\131\32\149\32\149\140\157\132\32\148\32\137\155\149\32\32\32\149\154\149\137\142\32\153\153\32\131\131\149\131\131\129\149\135\145\32\32\32", "\32\32\32\32\129\32\130\135\32\131\131\129\134\131\132\32\129\32\32\129\32\131\131\32\32\32\32\130\131\129\32\32\32\32\129\129\32\32\32\32\32\32\130\131\129\32\32\32", "\150\150\32\32\148\32\134\32\32\132\32\32\134\32\32\144\32\144\150\151\149\32\32\32\32\32\32\145\32\32\152\140\144\144\144\32\133\151\129\133\151\129\132\151\129\32\145\32", "\130\129\32\131\151\129\141\32\32\142\32\32\32\32\32\149\32\149\130\149\149\32\143\32\32\32\32\142\132\32\154\143\133\157\153\132\151\150\148\151\158\132\151\150\148\144\130\148", "\32\32\32\140\140\132\32\32\32\32\32\32\32\32\32\151\131\32\32\129\129\32\32\32\32\134\32\32\32\32\32\32\32\129\129\32\129\32\129\129\130\129\129\32\129\130\131\32", "\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\159\142\32\150\151\129\150\131\132\140\143\144\143\141\145\137\140\148\141\141\144\157\142\32\159\140\32\151\134\32\157\141\32", "\157\140\149\157\140\149\157\140\149\157\140\149\157\140\149\157\140\149\151\151\32\154\143\132\157\140\32\157\140\32\157\140\32\157\140\32\32\149\32\32\149\32\32\149\32\32\149\32", "\129\32\129\129\32\129\129\32\129\129\32\129\129\32\129\129\32\129\129\131\129\32\134\32\131\131\129\131\131\129\131\131\129\131\131\129\130\131\32\130\131\32\130\131\32\130\131\32", "\151\131\148\152\137\145\155\140\144\152\142\145\153\140\132\153\137\32\154\142\144\155\159\132\150\156\148\147\32\144\144\130\145\136\137\32\146\130\144\144\130\145\130\136\32\151\140\132", "\151\32\149\151\155\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\152\137\144\157\129\149\149\32\149\149\32\149\149\32\149\149\32\149\130\150\32\32\157\129\149\32\149", "\131\131\32\129\32\129\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\32\32\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\129\32\130\131\32\133\131\32", "\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\159\142\32\159\159\144\152\140\144\156\143\32\159\141\129\153\140\132\157\141\32\130\145\32\32\147\32\136\153\32\130\146\32", "\152\140\149\152\140\149\152\140\149\152\140\149\152\140\149\152\140\149\149\157\134\154\143\132\157\140\133\157\140\133\157\140\133\157\140\133\32\149\32\32\149\32\32\149\32\32\149\32", "\130\131\129\130\131\129\130\131\129\130\131\129\130\131\129\130\131\129\130\130\131\32\134\32\130\131\129\130\131\129\130\131\129\130\131\129\32\129\32\32\129\32\32\129\32\32\129\32", "\159\134\144\137\137\32\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\32\132\32\159\143\32\147\32\144\144\130\145\136\137\32\146\130\144\144\130\145\130\138\32\146\130\144", "\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\131\147\129\138\134\149\149\32\149\149\32\149\149\32\149\149\32\149\154\143\149\32\157\129\154\143\149", "\130\131\32\129\32\129\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\32\32\130\131\32\130\131\129\130\131\129\130\131\129\130\131\129\140\140\129\130\131\32\140\140\129" }, {"000110000110110000110010101000000010000000100101", "000000110110000000000010101000000010000000100101", "000000000000000000000000000000000000000000000000", "100010110100000010000110110000010100000100000110", "000000110000000010110110000110000000000000110000", "000000000000000000000000000000000000000000000000", "000000110110000010000000100000100000000000000010", "000000000110110100010000000010000000000000000100", "000000000000000000000000000000000000000000000000", "010000000000100110000000000000000000000110010000", "000000000000000000000000000010000000010110000000", "000000000000000000000000000000000000000000000000", "011110110000000100100010110000000100000000000000", "000000000000000000000000000000000000000000000000", "000000000000000000000000000000000000000000000000", "110000110110000000000000000000010100100010000000", "000010000000000000110110000000000100010010000000", "000000000000000000000000000000000000000000000000", "010110010110100110110110010000000100000110110110", "000000000000000000000110000000000110000000000000", "000000000000000000000000000000000000000000000000", "010100010110110000000000000000110000000010000000", "110110000000000000110000110110100000000010000000", "000000000000000000000000000000000000000000000000", "000100011111000100011111000100011111000100011111", "000000000000100100100100011011011011111111111111", "000000000000000000000000000000000000000000000000", "000100011111000100011111000100011111000100011111", "000000000000100100100100011011011011111111111111", "100100100100100100100100100100100100100100100100", "000000110100110110000010000011110000000000011000", "000000000100000000000010000011000110000000001000", "000000000000000000000000000000000000000000000000", "010000100100000000000000000100000000010010110000", "000000000000000000000000000000110110110110110000", "000000000000000000000000000000000000000000000000", "110110110110110110000000110110110110110110110110", "000000000000000000000110000000000000000000000000", "000000000000000000000000000000000000000000000000", "000000000000110110000110010000000000000000010010", "000010000000000000000000000000000000000000000000", "000000000000000000000000000000000000000000000000", "110110110110110110110000110110110110000000000000", "000000000000000000000110000000000000000000000000", "000000000000000000000000000000000000000000000000", "110110110110110110110000110000000000000000010000", "000000000000000000000000100000000000000110000110", "000000000000000000000000000000000000000000000000" }}
-
---### Genarate fonts using 3x3 chars per a character. (1 character is 6x9 pixels)
-local fonts = {}
-local firstFont = {}
-do
-    local char = 0
-    local height = #rawFont[1]
-    local length = #rawFont[1][1]
-    for i = 1, height, 3 do
-        for j = 1, length, 3 do
-            local thisChar = string.char(char)
-
-            local temp = {}
-            temp[1] = rawFont[1][i]:sub(j, j + 2)
-            temp[2] = rawFont[1][i + 1]:sub(j, j + 2)
-            temp[3] = rawFont[1][i + 2]:sub(j, j + 2)
-
-            local temp2 = {}
-            temp2[1] = rawFont[2][i]:sub(j, j + 2)
-            temp2[2] = rawFont[2][i + 1]:sub(j, j + 2)
-            temp2[3] = rawFont[2][i + 2]:sub(j, j + 2)
-
-            firstFont[thisChar] = {temp, temp2}
-            char = char + 1
-        end
-    end
-    fonts[1] = firstFont
-end
-
-local function generateFontSize(size,yeld)
-    local inverter = {["0"] = "1", ["1"] = "0"} --:gsub("[01]",inverter)
-    if size<= #fonts then return true end
-    for f = #fonts+1, size do
-        --automagicly make bigger fonts using firstFont and fonts[f-1].
-        local nextFont = {}
-        local lastFont = fonts[f - 1]
-        for char = 0, 255 do
-            local thisChar = string.char(char)
-            --sleep(0) print(f,thisChar)
-
-            local temp = {}
-            local temp2 = {}
-
-            local templateChar = lastFont[thisChar][1]
-            local templateBack = lastFont[thisChar][2]
-            for i = 1, #templateChar do
-                local line1, line2, line3, back1, back2, back3 = {}, {}, {}, {}, {}, {}
-                for j = 1, #templateChar[1] do
-                    local currentChar = firstFont[templateChar[i]:sub(j, j)][1]
-                    table.insert(line1, currentChar[1])
-                    table.insert(line2, currentChar[2])
-                    table.insert(line3, currentChar[3])
-
-                    local currentBack = firstFont[templateChar[i]:sub(j, j)][2]
-                    if templateBack[i]:sub(j, j) == "1" then
-                        table.insert(back1, (currentBack[1]:gsub("[01]", inverter)))
-                        table.insert(back2, (currentBack[2]:gsub("[01]", inverter)))
-                        table.insert(back3, (currentBack[3]:gsub("[01]", inverter)))
-                    else
-                        table.insert(back1, currentBack[1])
-                        table.insert(back2, currentBack[2])
-                        table.insert(back3, currentBack[3])
-                    end
-                end
-                table.insert(temp, table.concat(line1))
-                table.insert(temp, table.concat(line2))
-                table.insert(temp, table.concat(line3))
-                table.insert(temp2, table.concat(back1))
-                table.insert(temp2, table.concat(back2))
-                table.insert(temp2, table.concat(back3))
-            end
-
-            nextFont[thisChar] = {temp, temp2}
-            if yeld then yeld = "Font"..f.."Yeld"..char os.queueEvent(yeld) os.pullEvent(yeld) end
-        end
-        fonts[f] = nextFont
-    end
-    return true
-end
-
-local function makeText(nSize, sString, nFC, nBC, bBlit)
-    if not type(sString) == "string" then error("Not a String",3) end --this should never happend with expects in place.
-    local cFC = type(nFC) == "string" and nFC:sub(1, 1) or tHex[nFC] or error("Wrong Front Color",3)
-    local cBC = type(nBC) == "string" and nBC:sub(1, 1) or tHex[nBC] or error("Wrong Back Color",3)
-    if(fonts[nSize]==nil)then generateFontSize(3,false) end
-    local font = fonts[nSize] or error("Wrong font size selected",3)
-    if sString == "" then return {{""}, {""}, {""}} end
-    
-    local input = {}
-    for i in sString:gmatch('.') do table.insert(input, i) end
-
-    local tText = {}
-    local height = #font[input[1]][1]
-
-
-    for nLine = 1, height do
-        local outLine = {}
-        for i = 1, #input do
-            outLine[i] = font[input[i]] and font[input[i]][1][nLine] or ""
-        end
-        tText[nLine] = table.concat(outLine)
-    end
-
-    local tFront = {}
-    local tBack = {}
-    local tFrontSub = {["0"] = cFC, ["1"] = cBC}
-    local tBackSub = {["0"] = cBC, ["1"] = cFC}
-
-    for nLine = 1, height do
-        local front = {}
-        local back = {}
-        for i = 1, #input do
-            local template = font[input[i]] and font[input[i]][2][nLine] or ""
-            front[i] = template:gsub("[01]", bBlit and {["0"] = nFC:sub(i, i), ["1"] = nBC:sub(i, i)} or tFrontSub)
-            back[i] = template:gsub("[01]", bBlit and {["0"] = nBC:sub(i, i), ["1"] = nFC:sub(i, i)} or tBackSub)
-        end
-        tFront[nLine] = table.concat(front)
-        tBack[nLine] = table.concat(back)
-    end
-
-    return {tText, tFront, tBack}
-end
-
--- The following code is related to basalt and has nothing to do with bigfonts, it creates a plugin which will be added to labels:
-local utils = require("utils")
-local xmlValue = utils.xmlValue
-return {
-    Label = function(base)
-        local fontsize = 1
-        local bigfont
-    
-        local object = {
-            setFontSize = function(self, newFont)
-                if(type(newFont)=="number")then
-                    fontsize = newFont
-                    if(fontsize>1)then
-                        self:setDrawState("label", false)
-                        bigfont = makeText(fontsize-1, self:getText(), self:getForeground(), self:getBackground() or colors.lightGray)
-                        if(self:getAutoSize())then
-                            self:getBase():setSize(#bigfont[1][1], #bigfont[1]-1)
-                        end
-                    else
-                        self:setDrawState("label", true)
-                    end
-                    self:updateDraw()
-                end
-                return self
-            end,
-
-            getFontSize = function(self)
-                return fontsize
-            end,
-
-            getSize = function(self)
-                local w, h = base.getSize(self)
-                if(fontsize>1)and(self:getAutoSize())then
-                    return fontsize==2 and self:getText():len()*3 or math.floor(self:getText():len() * 8.5), fontsize==2 and h * 2 or math.floor(h)
-                else
-                    return w, h
-                end
-            end,
-
-            getWidth = function(self)
-                local w = base.getWidth(self)
-                if(fontsize>1)and(self:getAutoSize())then
-                    return fontsize==2 and self:getText():len()*3 or math.floor(self:getText():len() * 8.5)
-                else
-                    return w
-                end
-            end,
-
-            getHeight = function(self)
-                local h = base.getHeight(self)
-                if(fontsize>1)and(self:getAutoSize())then
-                    return fontsize==2 and h * 2 or math.floor(h)
-                else
-                    return h
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("fontSize", data)~=nil)then self:setFontSize(xmlValue("fontSize", data)) end
-                return self
-            end,
-
-            draw = function(self)
-                base.draw(self)
-                self:addDraw("bigfonts", function()
-                    if(fontsize>1)then
-                        local obx, oby = self:getPosition()
-                        local parent = self:getParent()
-                        local oX, oY = parent:getSize()
-                        local cX, cY = #bigfont[1][1], #bigfont[1]
-                        obx = obx or math.floor((oX - cX) / 2) + 1
-                        oby = oby or math.floor((oY - cY) / 2) + 1
-                    
-                        for i = 1, cY do
-                            self:addFG(1, i, bigfont[2][i])
-                            self:addBG(1, i, bigfont[3][i])
-                            self:addText(1, i, bigfont[1][i])
-                        end
-                    end
-                end)
-            end,
-        }
-        return object
-    end
-}
-end
-project["plugins"]["border"] = function(...)
-local utils = require("utils")
-local xmlValue = utils.xmlValue
-
-return {
-    VisualObject = function(base)
-        local inline = true
-        local borderColors = {top = false, bottom = false, left = false, right = false}
-
-        local object = {
-            setBorder = function(self, ...)
-                local t = {...}
-                if(t~=nil)then
-                    for k,v in pairs(t)do
-                        if(v=="left")or(#t==1)then
-                            borderColors["left"] = t[1]
-                        end
-                        if(v=="top")or(#t==1)then
-                            borderColors["top"] = t[1]
-                        end
-                        if(v=="right")or(#t==1)then
-                            borderColors["right"] = t[1]
-                        end
-                        if(v=="bottom")or(#t==1)then
-                            borderColors["bottom"] = t[1]
-                        end
-                    end
-                end
-                self:updateDraw()
-                return self
-            end,
-
-            draw = function(self)
-                base.draw(self)
-                self:addDraw("border", function()
-                    local x, y = self:getPosition()
-                    local w,h = self:getSize()      
-                    local bgCol = self:getBackground()          
-                    if(inline)then
-                        if(borderColors["left"]~=false)then
-                            self:addTextBox(1, 1, 1, h, "\149")
-                            if(bgCol~=false)then self:addBackgroundBox(1, 1, 1, h, bgCol) end
-                            self:addForegroundBox(1, 1, 1, h, borderColors["left"])
-                        end
-                        
-                        if(borderColors["top"]~=false)then
-                            self:addTextBox(1, 1, w, 1, "\131")
-                            if(bgCol~=false)then self:addBackgroundBox(1, 1, w, 1, bgCol) end
-                            self:addForegroundBox(1, 1, w, 1, borderColors["top"])
-                        end
-                        
-                        if(borderColors["left"]~=false)and(borderColors["top"]~=false)then
-                            self:addTextBox(1, 1, 1, 1, "\151")
-                            if(bgCol~=false)then self:addBackgroundBox(1, 1, 1, 1, bgCol) end
-                            self:addForegroundBox(1, 1, 1, 1, borderColors["left"])
-                        end
-                        if(borderColors["right"]~=false)then
-                            self:addTextBox(w, 1, 1, h, "\149")
-                            if(bgCol~=false)then self:addForegroundBox(w, 1, 1, h, bgCol) end
-                            self:addBackgroundBox(w, 1, 1, h, borderColors["right"])
-                        end
-                        if(borderColors["bottom"]~=false)then
-                            self:addTextBox(1, h, w, 1, "\143")
-                            if(bgCol~=false)then self:addForegroundBox(1, h, w, 1, bgCol) end
-                            self:addBackgroundBox(1, h, w, 1, borderColors["bottom"])
-                        end
-                        if(borderColors["top"]~=false)and(borderColors["right"]~=false)then
-                            self:addTextBox(w, 1, 1, 1, "\148")
-                            if(bgCol~=false)then self:addForegroundBox(w, 1, 1, 1, bgCol) end
-                            self:addBackgroundBox(w, 1, 1, 1, borderColors["right"])
-                        end
-                        if(borderColors["right"]~=false)and(borderColors["bottom"]~=false)then
-                            self:addTextBox(w, h, 1, 1, "\133")
-                            if(bgCol~=false)then self:addForegroundBox(w, h, 1, 1, bgCol) end
-                            self:addBackgroundBox(w, h, 1, 1, borderColors["right"])
-                        end
-                        if(borderColors["bottom"]~=false)and(borderColors["left"]~=false)then
-                            self:addTextBox(1, h, 1, 1, "\138")
-                            if(bgCol~=false)then self:addForegroundBox(0, h, 1, 1, bgCol) end
-                            self:addBackgroundBox(1, h, 1, 1, borderColors["left"])
-                        end
-                    end
-                end)
-            end,
-
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data)
-                local borders = {}
-                if(xmlValue("border", data)~=nil)then 
-                    borders["top"] = colors[xmlValue("border", data)]
-                    borders["bottom"] = colors[xmlValue("border", data)]
-                    borders["left"] = colors[xmlValue("border", data)]
-                    borders["right"] = colors[xmlValue("border", data)]
-                end
-                if(xmlValue("borderTop", data)~=nil)then borders["top"] = colors[xmlValue("borderTop", data)] end
-                if(xmlValue("borderBottom", data)~=nil)then borders["bottom"] = colors[xmlValue("borderBottom", data)] end
-                if(xmlValue("borderLeft", data)~=nil)then borders["left"] = colors[xmlValue("borderLeft", data)] end
-                if(xmlValue("borderRight", data)~=nil)then borders["right"] = colors[xmlValue("borderRight", data)] end
-                self:setBorder(borders["top"], borders["bottom"], borders["left"], borders["right"])
-                return self
-            end
-        }
-
-        return object
-    end
-}
-end
-project["plugins"]["betterError"] = function(...)
-local utils = require("utils")
-local wrapText = utils.wrapText
-
-return {
-    basalt = function(basalt)
-        local frame
-        local errorList
-        return {
-            getBasaltErrorFrame = function()
-                return frame
-            end,
-            basaltError = function(err)
-                if(frame==nil)then
-                    local mainFrame = basalt.getMainFrame()
-                    local w, h = mainFrame:getSize()
-                    frame = mainFrame:addMovableFrame("basaltErrorFrame"):setSize(w-10, h-4):setBackground(colors.lightGray):setForeground(colors.white):setZIndex(500)
-                    frame:addPane("titleBackground"):setSize(w, 1):setPosition(1, 1):setBackground(colors.black):setForeground(colors.white)
-                    frame:setPosition(w/2-frame:getWidth()/2, h/2-frame:getHeight()/2):setBorder(colors.black)
-                    frame:addLabel("title"):setText("Basalt Unexpected Error"):setPosition(2, 1):setBackground(colors.black):setForeground(colors.white)
-                    errorList = frame:addList("errorList"):setSize(frame:getWidth()-2, frame:getHeight()-6):setPosition(2, 3):setBackground(colors.lightGray):setForeground(colors.white):setSelectionColor(colors.lightGray, colors.gray)
-                    frame:addButton("xButton"):setText("x"):setPosition(frame:getWidth(), 1):setSize(1, 1):setBackground(colors.black):setForeground(colors.red):onClick(function() 
-                        frame:hide()
-                    end)
-                    frame:addButton("Clear"):setText("Clear"):setPosition(frame:getWidth()-19, frame:getHeight()-1):setSize(9, 1):setBackground(colors.black):setForeground(colors.white):onClick(function() 
-                        errorList:clear()
-                    end)
-                    frame:addButton("Close"):setText("Close"):setPosition(frame:getWidth()-9, frame:getHeight()-1):setSize(9, 1):setBackground(colors.black):setForeground(colors.white):onClick(function() 
-                        basalt.autoUpdate(false)
-                        term.clear()
-                        term.setCursorPos(1, 1)
-                    end)
-                end
-                frame:show()
-                errorList:addItem(("-"):rep(frame:getWidth()-2))
-                local err = wrapText(err, frame:getWidth()-2)
-                for i=1, #err do
-                    errorList:addItem(err[i])
-                end
-            end
-        }
-    end
-}
-end
-project["plugins"]["animations"] = function(...)
-local floor,sin,cos,pi,sqrt,pow = math.floor,math.sin,math.cos,math.pi,math.sqrt,math.pow
-
--- You can find the easing curves here https://easings.net
-
-local function lerp(s, e, pct)
-    return s + (e - s) * pct
-end
-
-local function linear(t)
-    return t
-end
-
-local function flip(t)
-    return 1 - t
-end
-
-local function easeIn(t)
-    return t * t * t
-end
-
-local function easeOut(t)
-    return flip(easeIn(flip(t)))
-end
-
-local function easeInOut(t)
-    return lerp(easeIn(t), easeOut(t), t)
-end
-
-local function easeOutSine(t)
-    return sin((t * pi) / 2);
-end
-
-local function easeInSine(t)
-    return flip(cos((t * pi) / 2))
-end
-
-local function easeInOutSine(t)
-    return -(cos(pi * x) - 1) / 2
-end
-
-local function easeInBack(t)
-    local c1 = 1.70158;
-    local c3 = c1 + 1
-    return c3*t^3-c1*t^2
-end
-
-local function easeInCubic(t)
-    return t^3
-end
-
-local function easeInElastic(t)
-    local c4 = (2*pi)/3;
-    return t == 0 and 0 or (t == 1 and 1 or (
-        -2^(10*t-10)*sin((t*10-10.75)*c4)
-    ))
-end
-
-local function easeInExpo(t)
-    return t == 0 and 0 or 2^(10*t-10)
-end
-
-local function easeInExpo(t)
-    return t == 0 and 0 or 2^(10*t-10)
-end
-
-local function easeInOutBack(t)
-    local c1 = 1.70158;
-    local c2 = c1 * 1.525;
-    return t < 0.5 and ((2*t)^2*((c2+1)*2*t-c2))/2 or ((2*t-2)^2*((c2+1)*(t*2-2)+c2)+2)/2
-end
-
-local function easeInOutCubic(t)
-    return t < 0.5 and 4 * t^3 or 1-(-2*t+2)^3 / 2
-end
-
-local function easeInOutElastic(t)
-    local c5 = (2*pi) / 4.5
-    return t==0 and 0 or (t == 1 and 1 or (t < 0.5 and -(2^(20*t-10) * sin((20*t - 11.125) * c5))/2 or (2^(-20*t+10) * sin((20*t - 11.125) * c5))/2 + 1))
-end
-
-local function easeInOutExpo(t)
-    return t == 0 and 0 or (t == 1 and 1 or (t < 0.5 and 2^(20*t-10)/2 or (2-2^(-20*t+10)) /2))
-end
-
-local function easeInOutQuad(t)
-    return t < 0.5 and 2*t^2 or 1-(-2*t+2)^2/2
-end
-
-local function easeInOutQuart(t)
-    return t < 0.5 and 8*t^4 or 1 - (-2*t+2)^4 / 2
-end
-
-local function easeInOutQuint(t)
-    return t < 0.5 and 16*t^5 or 1-(-2*t+2)^5 / 2
-end
-
-local function easeInQuad(t)
-    return t^2
-end
-
-local function easeInQuart(t)
-    return t^4
-end
-
-local function easeInQuint(t)
-    return t^5
-end
-
-local function easeOutBack(t)
-    local c1 = 1.70158;
-    local c3 = c1 + 1
-    return 1+c3*(t-1)^3+c1*(t-1)^2
-end
-
-local function easeOutCubic(t)
-    return 1 - (1-t)^3
-end
-
-local function easeOutElastic(t)
-    local c4 = (2*pi)/3;
-
-    return t == 0 and 0 or (t == 1 and 1 or (2^(-10*t)*sin((t*10-0.75)*c4)+1))
-end
-
-local function easeOutExpo(t)
-    return t == 1 and 1 or 1-2^(-10*t)
-end
-
-local function easeOutQuad(t)
-    return 1 - (1 - t) * (1 - t)
-end
-
-local function easeOutQuart(t)
-    return 1 - (1-t)^4
-end
-
-local function easeOutQuint(t)
-    return 1 - (1 - t)^5
-end
-
-local function easeInCirc(t)
-    return 1 - sqrt(1 - pow(t, 2))
-end
-
-local function easeOutCirc(t)
-    return sqrt(1 - pow(t - 1, 2))
-end
-
-local function easeInOutCirc(t)
-    return t < 0.5 and (1 - sqrt(1 - pow(2 * t, 2))) / 2 or (sqrt(1 - pow(-2 * t + 2, 2)) + 1) / 2;
-end
-
-local function easeOutBounce(t)
-    local n1 = 7.5625;
-    local d1 = 2.75;
-
-    if (t < 1 / d1)then
-        return n1 * t * t
-    elseif (t < 2 / d1)then
-        local a = t - 1.5 / d1
-        return n1 * a * a + 0.75;
-    elseif (t < 2.5 / d1)then
-        local a = t - 2.25 / d1
-        return n1 * a * a + 0.9375;
-    else
-        local a = t - 2.625 / d1
-        return n1 * a * a + 0.984375;
-    end
-end
-
-local function easeInBounce(t)
-    return 1 - easeOutBounce(1 - t)
-end
-
-local function easeInOutBounce(t)
-    return x < 0.5 and (1 - easeOutBounce(1 - 2 * t)) / 2 or (1 + easeOutBounce(2 * t - 1)) / 2;
-end
-
-local lerp = {
-    linear = linear,
-    lerp = lerp,
-    flip=flip,
-    easeIn=easeIn,
-    easeInSine = easeInSine,
-    easeInBack=easeInBack,
-    easeInCubic=easeInCubic,
-    easeInElastic=easeInElastic,
-    easeInExpo=easeInExpo,
-    easeInQuad=easeInQuad,
-    easeInQuart=easeInQuart,
-    easeInQuint=easeInQuint,
-    easeInCirc=easeInCirc,
-    easeInBounce=easeInBounce,
-    easeOut=easeOut,
-    easeOutSine = easeOutSine,
-    easeOutBack=easeOutBack,
-    easeOutCubic=easeOutCubic,
-    easeOutElastic=easeOutElastic,
-    easeOutExpo=easeOutExpo,
-    easeOutQuad=easeOutQuad,
-    easeOutQuart=easeOutQuart,
-    easeOutQuint=easeOutQuint,
-    easeOutCirc=easeOutCirc,
-    easeOutBounce=easeOutBounce,
-    easeInOut=easeInOut,
-    easeInOutSine = easeInOutSine,
-    easeInOutBack=easeInOutBack,
-    easeInOutCubic=easeInOutCubic,
-    easeInOutElastic=easeInOutElastic,
-    easeInOutExpo=easeInOutExpo,
-    easeInOutQuad=easeInOutQuad,
-    easeInOutQuart=easeInOutQuart,
-    easeInOutQuint=easeInOutQuint,
-    easeInOutCirc=easeInOutCirc,
-    easeInOutBounce=easeInOutBounce,
-}
-
-local utils = require("utils")
-local xmlValue = utils.xmlValue
-
-return {
-    VisualObject = function(base, basalt)
-        local activeAnimations = {}
-        local defaultMode = "linear"
-
-        local function getAnimation(self, timerId)
-            for k,v in pairs(activeAnimations)do
-                if(v.timerId==timerId)then
-                    return v
-                end
-            end
-        end
-
-        local function createAnimation(self, v1, v2, duration, timeOffset, mode, typ, f, get, set)
-            local v1Val, v2Val = get(self)
-            if(activeAnimations[typ]~=nil)then
-                os.cancelTimer(activeAnimations[typ].timerId)
-            end
-            activeAnimations[typ] = {}
-            activeAnimations[typ].call = function()
-                local progress = activeAnimations[typ].progress
-                local _v1 = math.floor(lerp.lerp(v1Val, v1, lerp[mode](progress / duration))+0.5)
-                local _v2 = math.floor(lerp.lerp(v2Val, v2, lerp[mode](progress / duration))+0.5)
-                set(self, _v1, _v2)
-            end
-            activeAnimations[typ].finished = function()
-                set(self, v1, v2)
-                if(f~=nil)then f(self) end
-            end
-
-            activeAnimations[typ].timerId=os.startTimer(0.05+timeOffset)
-            activeAnimations[typ].progress=0
-            activeAnimations[typ].duration=duration
-            activeAnimations[typ].mode=mode
-            self:listenEvent("other_event")
-        end
-
-        local function createColorAnimation(self, duration, timeOffset, typ, set, ...)
-            local newColors = {...}
-            if(activeAnimations[typ]~=nil)then
-                os.cancelTimer(activeAnimations[typ].timerId)
-            end
-            activeAnimations[typ] = {}
-            local colorIndex = 1
-            activeAnimations[typ].call = function()
-                local color = newColors[colorIndex]
-                set(self, color)
-            end
-        end
-
-        local object = {
-            animatePosition = function(self, x, y, duration, timeOffset, mode, f)
-                mode = mode or defaultMode
-                duration = duration or 1
-                timeOffset = timeOffset or 0
-                x = math.floor(x+0.5)
-                y = math.floor(y+0.5)
-                createAnimation(self, x, y, duration, timeOffset, mode, "position", f, self.getPosition, self.setPosition)
-                return self
-            end,
-
-            animateSize = function(self, w, h, duration, timeOffset, mode, f)
-                mode = mode or defaultMode
-                duration = duration or 1
-                timeOffset = timeOffset or 0
-                createAnimation(self, w, h, duration, timeOffset, mode, "size", f, self.getSize, self.setSize)
-                return self
-            end,
-
-            animateOffset = function(self, x, y, duration, timeOffset, mode, f)
-                mode = mode or defaultMode
-                duration = duration or 1
-                timeOffset = timeOffset or 0
-                createAnimation(self, x, y, duration, timeOffset, mode, "offset", f, self.getOffset, self.setOffset)
-                return self
-            end,
-
-            animateBackground = function(self, color, duration, timeOffset, mode, f)
-                mode = mode or defaultMode
-                duration = duration or 1
-                timeOffset = timeOffset or 0
-                createColorAnimation(self, color, nil, duration, timeOffset, mode, "background", f, self.getBackground, self.setBackground)
-                return self
-            end,
-
-            doneHandler = function(self, timerId, ...)
-                for k,v in pairs(activeAnimations)do
-                    if(v.timerId==timerId)then
-                        activeAnimations[k] = nil
-                        self:sendEvent("animation_done", self, "animation_done", k)
-                    end
-                end
-            end,
-
-            onAnimationDone = function(self, ...)
-                for _,v in pairs(table.pack(...))do
-                    if(type(v)=="function")then
-                        self:registerEvent("animation_done", v)
-                    end
-                end
-
-                return self
-            end,
-
-            eventHandler = function(self, event, timerId, ...)
-                base.eventHandler(self, event, timerId, ...)
-                if(event=="timer")then
-                    local animation = getAnimation(self, timerId)
-                    if(animation~=nil)then
-                        if(animation.progress<animation.duration)then
-                            animation.call()
-                            animation.progress = animation.progress+0.05
-                            animation.timerId=os.startTimer(0.05)
-                        else
-                            animation.finished()
-                            self:doneHandler(timerId)
-                        end
-                    end
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                local animX, animY, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateX", data), xmlValue("animateY", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
-                local animW, animH, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateW", data), xmlValue("animateH", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
-                local animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateXOffset", data), xmlValue("animateYOffset", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
-                if(animX~=nil and animY~=nil)then
-                    self:animatePosition(animX, animY, animateDuration, animeteTimeOffset, animateMode)
-                end
-                if(animW~=nil and animH~=nil)then
-                    self:animateSize(animW, animH, animateDuration, animeteTimeOffset, animateMode)
-                end
-                if(animXOffset~=nil and animYOffset~=nil)then
-                    self:animateOffset(animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode)
-                end                
-                return self
-            end,
-        }
-
-        return object
-    end
-}
-end
-project["plugins"]["debug"] = function(...)
-local utils = require("utils")
-local wrapText = utils.wrapText
-
-return {
-    basalt = function(basalt)
-        local mainFrame = basalt.getMainFrame()
-        local debugFrame
-        local debugList
-        local debugLabel
-        local debugExitButton
-
-        local function createDebuggingFrame()
-            local minW = 16
-            local minH = 6
-            local maxW = 99
-            local maxH = 99
-            local w, h = mainFrame:getSize()
-            debugFrame = mainFrame:addMovableFrame("basaltDebuggingFrame"):setSize(w-20, h-10):setBackground(colors.gray):setForeground(colors.white):setZIndex(100):hide()
-            debugFrame:addPane():setSize("parent.w", 1):setPosition(1, 1):setBackground(colors.black):setForeground(colors.white)
-            debugFrame:setPosition(-w, h/2-debugFrame:getHeight()/2):setBorder(colors.black)
-            local resizeButton = debugFrame:addButton()
-                :setPosition("parent.w", "parent.h")
-                :setSize(1, 1)
-                :setText("\133")
-                :setForeground(colors.gray)
-                :setBackground(colors.black)
-                :onClick(function() end)
-                :onDrag(function(self, event, btn, xOffset, yOffset)
-                    local w, h = debugFrame:getSize()
-                    local wOff, hOff = w, h
-                    if(w+xOffset-1>=minW)and(w+xOffset-1<=maxW)then
-                        wOff = w+xOffset-1
-                    end
-                    if(h+yOffset-1>=minH)and(h+yOffset-1<=maxH)then
-                        hOff = h+yOffset-1
-                    end
-                    debugFrame:setSize(wOff, hOff)
-                end)
-
-            debugExitButton = debugFrame:addButton():setText("Close"):setPosition("parent.w - 6", 1):setSize(7, 1):setBackground(colors.red):setForeground(colors.white):onClick(function() 
-                debugFrame:animatePosition(-w, h/2-debugFrame:getHeight()/2, 0.5)
-            end)
-            debugList = debugFrame:addList()
-                        :setSize("parent.w - 2", "parent.h - 3")
-                        :setPosition(2, 3)
-                        :setBackground(colors.gray)
-                        :setForeground(colors.white)
-                        :setSelectionColor(colors.gray, colors.white)
-            if(debugLabel==nil)then 
-                debugLabel = mainFrame:addLabel()
-                :setPosition(1, "parent.h")
-                :setBackground(colors.black)
-                :setForeground(colors.white)
-                :setZIndex(100)
-                :onClick(function()
-                    debugFrame:show()
-                    debugFrame:animatePosition(w/2-debugFrame:getWidth()/2, h/2-debugFrame:getHeight()/2, 0.5)
-                end)
-            end
-        end
-
-        return {
-            debug = function(...)
-                local args = { ... }
-                if(mainFrame==nil)then 
-                    mainFrame = basalt.getMainFrame() 
-                    if(mainFrame~=nil)then
-                        createDebuggingFrame()
-                    else
-                        print(...) return
-                    end
-                end
-                if (mainFrame:getName() ~= "basaltDebuggingFrame") then
-                    if (mainFrame ~= debugFrame) then
-                        debugLabel:setParent(mainFrame)
-                    end
-                end
-                local str = ""
-                for key, value in pairs(args) do
-                    str = str .. tostring(value) .. (#args ~= key and ", " or "")
-                end
-                debugLabel:setText("[Debug] " .. str)
-                for k,v in pairs(wrapText(str, debugList:getWidth()))do
-                    debugList:addItem(v)
-                end
-                if (debugList:getItemCount() > 50) then
-                    debugList:removeItem(1)
-                end
-                debugList:setValue(debugList:getItem(debugList:getItemCount()))
-                if(debugList.getItemCount() > debugList:getHeight())then
-                    debugList:setOffset(debugList:getItemCount() - debugList:getHeight())
-                end
-                debugLabel:show()
-            end
-        }
-    end
-}
-end
-project["plugins"]["dynamicValues"] = function(...)
-local utils = require("utils")
-local count = utils.tableCount
-local xmlValue = utils.xmlValue
-
-return {
-    VisualObject = function(base, basalt)
-        local dynObjects = {}
-        local curProperties = {}
-        local properties = {x="getX", y="getY", w="getWidth", h="getHeight"}
-
-        local function stringToNumber(str)
-            local ok, result = pcall(load("return " .. str, "", nil, {math=math}))
-            if not(ok)then error(str.." - is not a valid dynamic value string") end
-            return result
-        end
-
-        local function createDynamicValue(self, key, val)
-            local objectGroup = {}
-            local properties = properties
-            for a,b in pairs(properties)do
-                for v in val:gmatch("%a+%."..a)do
-                    local name = v:gsub("%."..a, "")
-                    if(name~="self")and(name~="parent")then 
-                        table.insert(objectGroup, name) 
-                    end
-                end
-            end
-
-            local parent = self:getParent()
-            local objects = {}
-            for k,v in pairs(objectGroup)do
-                objects[v] = parent:getObject(v)
-                if(objects[v]==nil)then
-                    error("Dynamic Values - unable to find object: "..v)
-                end
-            end
-            objects["self"] = self
-            objects["parent"] = parent
-
-            dynObjects[key] = function()
-                local mainVal = val
-                for a,b in pairs(properties)do
-                    for v in val:gmatch("%w+%."..a) do
-                        local obj = objects[v:gsub("%."..a, "")]
-                        if(obj~=nil)then
-                            mainVal = mainVal:gsub(v, obj[b](obj))
-                        else
-                            error("Dynamic Values - unable to find object: "..v)
-                        end
-                    end
-                end
-                curProperties[key] = math.floor(stringToNumber(mainVal)+0.5)
-            end
-            dynObjects[key]()
-        end
-
-        local function updatePositions(self)
-            if(count(dynObjects)>0)then
-                for k,v in pairs(dynObjects)do
-                    v()
-                end
-                local properties = {x="getX", y="getY", w="getWidth", h="getHeight"}
-                for k,v in pairs(properties)do
-                    if(dynObjects[k]~=nil)then
-                        if(curProperties[k]~=self[v](self))then
-                            if(k=="x")or(k=="y")then
-                                base.setPosition(self, curProperties["x"] or self:getX(), curProperties["y"] or self:getY())
-                            end
-                            if(k=="w")or(k=="h")then
-                                base.setSize(self, curProperties["w"] or self:getWidth(), curProperties["h"] or self:getHeight())
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        local object = {
-            updatePositions = updatePositions,
-            createDynamicValue = createDynamicValue,
-
-            setPosition = function(self, xPos, yPos, rel)
-                curProperties.x = xPos
-                curProperties.y = yPos
-                if(type(xPos)=="string")then
-                    createDynamicValue(self, "x", xPos)
-                else
-                    dynObjects["x"] = nil
-                end
-                if(type(yPos)=="string")then
-                    createDynamicValue(self, "y", yPos)
-                else
-                    dynObjects["y"] = nil
-                end
-                base.setPosition(self, curProperties.x, curProperties.y, rel)
-                return self
-            end,
-
-            setSize = function(self, w, h, rel)
-                curProperties.w = w
-                curProperties.h = h
-                if(type(w)=="string")then
-                    createDynamicValue(self, "w", w)
-                else
-                    dynObjects["w"] = nil
-                end
-                if(type(h)=="string")then
-                    createDynamicValue(self, "h", h)
-                else
-                    dynObjects["h"] = nil
-                end
-                base.setSize(self, curProperties.w, curProperties.h, rel)
-                return self
-            end,
-
-            customEventHandler = function(self, event, ...)
-                base.customEventHandler(self, event, ...)
-                if(event=="basalt_FrameReposition")or(event=="basalt_FrameResize")then
-                    updatePositions(self)
-                end
-            end,
-        }
-        return object
-    end
-}
-end
-project["plugins"]["pixelbox"] = function(...)
--- Most of this is made by Dev9551, you can find his awesome work here: https://github.com/9551-Dev/apis/blob/main/pixelbox_lite.lua
--- Slighly modified by NyoriE to work with Basalt
-
---[[
-The MIT License (MIT)
-Copyright © 2022 Oliver Caha (9551Dev)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the ?Software?), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED ?AS IS?, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-]]
-local t_sort,t_cat,s_char  = table.sort,table.concat,string.char
-local function sort(a,b) return a[2] > b[2] end
-
-local distances = {
-    {5,256,16,8,64,32},
-    {4,16,16384,256,128},
-    [4] = {4,64,1024,256,128},
-    [8] = {4,512,2048,256,1},
-    [16] = {4,2,16384,256,1},
-    [32] = {4,8192,4096,256,1},
-    [64] = {4,4,1024,256,1},
-    [128] = {6,32768,256,1024,2048,4096,16384},
-    [256] = {6,1,128,2,512,4,8192},
-    [512] = {4,8,2048,256,128},
-    [1024] = {4,4,64,128,32768},
-    [2048] = {4,512,8,128,32768},
-    [4096] = {4,8192,32,128,32768},
-    [8192] = {3,32,4096,256128},
-    [16384] = {4,2,16,128,32768},
-    [32768] = {5,128,1024,2048,4096,16384}
-}
-
-local to_colors = {}
-for i = 0, 15 do
-    to_colors[("%x"):format(i)] = 2^i
-end
-
-local to_blit = {}
-for i = 0, 15 do
-    to_blit[2^i] = ("%x"):format(i)
-end
-
-local function pixelbox(colTable, defaultCol)
-    defaultCol = defaultCol or "f"
-    local width, height = #colTable[1], #colTable
-    local cache = {}
-    local canv = {}
-    local cached = false
-    
-    local function generateCanvas()
-        for y = 1, height * 3 do
-            for x = 1, width * 2 do
-                if not canv[y] then canv[y] = {} end
-                canv[y][x] = defaultCol
-            end
-        end
-
-        for k, v in ipairs(colTable) do
-            for x = 1, #v do
-                local col = v:sub(x, x)
-                canv[k][x] = to_colors[col]
-            end
-        end
-    end
-    generateCanvas()
-
-    local function setSize(w,h)
-        width, height = w, h
-        canv = {}
-        cached = false
-        generateCanvas()
-    end
-
-
-    local function generateChar(a,b,c,d,e,f)
-        local arr = {a,b,c,d,e,f}
-        local c_types = {}
-        local sortable = {}
-        local ind = 0
-        for i=1,6 do
-            local c = arr[i]
-            if not c_types[c] then
-                ind = ind + 1
-                c_types[c] = {0,ind}
-            end
-    
-            local t = c_types[c]
-            local t1 = t[1] + 1
-    
-            t[1] = t1
-            sortable[t[2]] = {c,t1}
-        end
-        local n = #sortable
-        while n > 2 do
-            t_sort(sortable,sort)
-            local bit6 = distances[sortable[n][1]]
-            local index,run = 1,false
-            local nm1 = n - 1
-            for i=2,bit6[1] do
-                if run then break end
-                local tab = bit6[i]
-                for j=1,nm1 do
-                    if sortable[j][1] == tab then
-                        index = j
-                        run = true
-                        break
-                    end
-                end
-            end
-            local from,to = sortable[n][1],sortable[index][1]
-            for i=1,6 do
-                if arr[i] == from then
-                    arr[i] = to
-                    local sindex = sortable[index]
-                    sindex[2] = sindex[2] + 1
-                end
-            end
-    
-            sortable[n] = nil
-            n = n - 1
-        end
-    
-        local n = 128
-        local a6 = arr[6]
-    
-        if arr[1] ~= a6 then n = n + 1 end
-        if arr[2] ~= a6 then n = n + 2 end
-        if arr[3] ~= a6 then n = n + 4 end
-        if arr[4] ~= a6 then n = n + 8 end
-        if arr[5] ~= a6 then n = n + 16 end
-    
-        if sortable[1][1] == arr[6] then
-            return s_char(n),sortable[2][1],arr[6]
-        else
-            return s_char(n),sortable[1][1],arr[6]
-        end
-    end
-
-    local function convert()
-        local w_double = width * 2
-
-        local sy = 0
-        for y = 1, height * 3, 3 do
-            sy = sy + 1
-            local layer_1 = canv[y]
-            local layer_2 = canv[y + 1]
-            local layer_3 = canv[y + 2]
-            local char_line, fg_line, bg_line = {}, {}, {}
-            local n = 0
-            for x = 1, w_double, 2 do
-                local xp1 = x + 1
-                local b11, b21, b12, b22, b13, b23 = layer_1[x], layer_1[xp1], layer_2[x], layer_2[xp1], layer_3[x], layer_3[xp1]
-
-                local char, fg, bg = " ", 1, b11
-                if not (b21 == b11 and b12 == b11 and b22 == b11 and b13 == b11 and b23 == b11) then
-                    char, fg, bg = generateChar(b11, b21, b12, b22, b13, b23)
-                end
-                n = n + 1
-                char_line[n] = char
-                fg_line[n] = to_blit[fg]
-                bg_line[n] = to_blit[bg]
-            end
-
-            cache[sy] = {t_cat(char_line), t_cat(fg_line), t_cat(bg_line)}
-        end
-        cached = true
-    end
-
-    return {
-        convert = convert,
-        generateCanvas = generateCanvas,
-        setSize = setSize,
-        getSize = function()
-            return width, height
-        end,
-        set = function(colTab, defCol)
-            colTable = colTab
-            defaultCol = defCol or defaultCol
-            canv = {}
-            cached = false
-            generateCanvas()
-        end,
-        get = function(y)
-            if not cached then convert() end
-            return y~= nil and cache[y] or cache
-        end
-    }
-end
-
-return {
-    Image = function(base, basalt)
-        return {
-            shrink = function(self)
-                local bimg = self:getImageFrame(1)
-                local img = {}
-                for k,v in pairs(bimg)do
-                    if(type(k)=="number")then
-                        table.insert(img,v[3])
-                    end
-                end
-                local shrinkedImg = pixelbox(img, self:getBackground()).get()
-                self:setImage(shrinkedImg)
-                return self
-            end,
-
-            getShrinkedImage = function(self)
-                local bimg = self:getImageFrame(1)
-                local img = {}
-                for k,v in pairs(bimg)do
-                    if(type(k)=="number")then
-                        table.insert(img, v[3])
-                    end
-                end
-                return pixelbox(img, self:getBackground()).get()
-            end,
-        }
-    end,
-}
-end
-project["plugins"]["shadow"] = function(...)
-local utils = require("utils")
-local xmlValue = utils.xmlValue
-
-return {
-    VisualObject = function(base)
-        local shadow = false        
-
-        local object = {
-            setShadow = function(self, color)
-                shadow = color
-                self:updateDraw()
-                return self
-            end,
-
-            getShadow = function(self)
-                return shadow
-            end,
-
-            draw = function(self)
-                base.draw(self)
-                self:addDraw("shadow", function()
-                    if(shadow~=false)then
-                        local w,h = self:getSize()
-                        if(shadow)then               
-                            self:addBackgroundBox(w+1, 2, 1, h, shadow)
-                            self:addBackgroundBox(2, h+1, w, 1, shadow)
-                            self:addForegroundBox(w+1, 2, 1, h, shadow)
-                            self:addForegroundBox(2, h+1, w, 1, shadow)
-                        end
-                    end
-                end)
-            end,
-
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("shadow", data)~=nil)then self:setShadow(xmlValue("shadow", data)) end
-                return self
-            end
-        }
-
-        return object
-    end
-}
-end
-project["plugins"]["textures"] = function(...)
-local images = require("images")
-local utils = require("utils")
-local xmlValue = utils.xmlValue
-return {
-    VisualObject = function(base)
-        local textureId, infinitePlay = 1, true
-        local bimg, texture, textureTimerId
-        local textureMode = "default"
-
-        local object = {
-            addTexture = function(self, path, animate)
-                bimg = images.loadImageAsBimg(path)
-                texture = bimg[1]
-                if(animate)then
-                    if(bimg.animated)then
-                        self:listenEvent("other_event")
-                        local t = bimg[textureId].duration or bimg.secondsPerFrame or 0.2
-                        textureTimerId = os.startTimer(t)
-                    end
-                end
-                self:setBackground(false)
-                self:setForeground(false)
-                self:setDrawState("texture-base", true)
-                self:updateDraw()
-                return self
-            end,
-
-            setTextureMode = function(self, mode)
-                textureMode = mode or textureMode
-                self:updateDraw()
-                return self
-            end,
-
-            setInfinitePlay = function(self, state)
-                infinitePlay = state
-                return self
-            end,
-
-            eventHandler = function(self, event, timerId, ...)
-                base.eventHandler(self, event, timerId, ...)
-                if(event=="timer")then
-                    if(timerId == textureTimerId)then
-                        if(bimg[textureId+1]~=nil)then
-                            textureId = textureId + 1
-                            texture = bimg[textureId]
-                            local t = bimg[textureId].duration or bimg.secondsPerFrame or 0.2
-                            textureTimerId = os.startTimer(t)
-                            self:updateDraw()
-                        else
-                            if(infinitePlay)then
-                                textureId = 1
-                                texture = bimg[1]
-                                local t = bimg[textureId].duration or bimg.secondsPerFrame or 0.2
-                                textureTimerId = os.startTimer(t)
-                                self:updateDraw()
-                            end
-                        end
-                    end
-                end
-            end,
-
-            draw = function(self)
-                base.draw(self)
-                self:addDraw("texture-base", function()
-                    local obj = self:getParent() or self
-                    local x, y = self:getPosition()
-                    local w,h = self:getSize()
-                    local wP,hP = obj:getSize()
-
-                    local textureWidth = bimg.width or #bimg[textureId][1][1]
-                    local textureHeight = bimg.height or #bimg[textureId]
-
-                    local startX, startY = 0, 0
-
-                    if (textureMode == "center") then
-                        startX = x + math.floor((w - textureWidth) / 2 + 0.5) - 1
-                        startY = y + math.floor((h - textureHeight) / 2 + 0.5) - 1
-                    elseif (textureMode == "default") then
-                        startX, startY = x, y
-                    elseif (textureMode == "right") then
-                        startX, startY = x + w - textureWidth, y + h - textureHeight
-                    end
-
-                    local textureX = x - startX
-                    local textureY = y - startY
-
-                    if startX < x then
-                        startX = x
-                        textureWidth = textureWidth - textureX
-                    end
-                    if startY < y then
-                        startY = y
-                        textureHeight = textureHeight - textureY
-                    end
-                    if startX + textureWidth > x + w then
-                        textureWidth = (x + w) - startX
-                    end
-                    if startY + textureHeight > y + h then
-                        textureHeight = (y + h) - startY
-                    end
-
-                    for k = 1, textureHeight do
-                        if(texture[k+textureY]~=nil)then
-                        local t, f, b = table.unpack(texture[k+textureY])
-                            self:addBlit(1, k, t:sub(textureX, textureX + textureWidth), f:sub(textureX, textureX + textureWidth), b:sub(textureX, textureX + textureWidth))
-                        end
-                    end
-                end, 1)
-                self:setDrawState("texture-base", false)
-            end,
-
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("texture", data)~=nil)then self:addTexture(xmlValue("texture", data), xmlValue("animate", data)) end
-                if(xmlValue("textureMode", data)~=nil)then self:setTextureMode(xmlValue("textureMode", data)) end
-                if(xmlValue("infinitePlay", data)~=nil)then self:setInfinitePlay(xmlValue("infinitePlay", data)) end
-                return self
-            end
-        }
-
-        return object
-    end
-}
-end
-project["plugins"]["xml"] = function(...)
-local utils = require("utils")
-local uuid = utils.uuid
-local xmlValue = utils.xmlValue
-
-local function newNode(name)
-    local node = {}
-    node.___value = nil
-    node.___name = name
-    node.___children = {}
-    node.___props = {}
-    node.___reactiveProps = {}
-
-    function node:value() return self.___value end
-    function node:setValue(val) self.___value = val end
-    function node:name() return self.___name end
-    function node:setName(name) self.___name = name end
-    function node:children() return self.___children end
-    function node:numChildren() return #self.___children end
-    function node:addChild(child)
-        if self[child:name()] ~= nil then
-            if type(self[child:name()].name) == "function" then
-                local tempTable = {}
-                table.insert(tempTable, self[child:name()])
-                self[child:name()] = tempTable
-            end
-            table.insert(self[child:name()], child)
-        else
-            self[child:name()] = child
-        end
-        table.insert(self.___children, child)
-    end
-
-    function node:properties() return self.___props end
-    function node:numProperties() return #self.___props end
-    function node:addProperty(name, value)
-        local lName = "@" .. name
-        if self[lName] ~= nil then
-            if type(self[lName]) == "string" then
-                local tempTable = {}
-                table.insert(tempTable, self[lName])
-                self[lName] = tempTable
-            end
-            table.insert(self[lName], value)
-        else
-            self[lName] = value
-        end
-        table.insert(self.___props, { name = name, value = self[lName] })
-    end
-
-    function node:reactiveProperties() return self.___reactiveProps end
-    function node:addReactiveProperty(name, value)
-        self.___reactiveProps[name] = value
-    end
-
-    return node
-end
-
-local XmlParser = {}
-
-function XmlParser:ToXmlString(value)
-    value = string.gsub(value, "&", "&amp;"); -- '&' -> "&amp;"
-    value = string.gsub(value, "<", "&lt;"); -- '<' -> "&lt;"
-    value = string.gsub(value, ">", "&gt;"); -- '>' -> "&gt;"
-    value = string.gsub(value, "\"", "&quot;"); -- '"' -> "&quot;"
-    value = string.gsub(value, "([^%w%&%;%p%\t% ])",
-        function(c)
-            return string.format("&#x%X;", string.byte(c))
-        end);
-    return value;
-end
-
-function XmlParser:FromXmlString(value)
-    value = string.gsub(value, "&#x([%x]+)%;",
-        function(h)
-            return string.char(tonumber(h, 16))
-        end);
-    value = string.gsub(value, "&#([0-9]+)%;",
-        function(h)
-            return string.char(tonumber(h, 10))
-        end);
-    value = string.gsub(value, "&quot;", "\"");
-    value = string.gsub(value, "&apos;", "'");
-    value = string.gsub(value, "&gt;", ">");
-    value = string.gsub(value, "&lt;", "<");
-    value = string.gsub(value, "&amp;", "&");
-    return value;
-end
-
-function XmlParser:ParseProps(node, s)
-    string.gsub(s, "(%w+)=([\"'])(.-)%2", function(w, _, a)
-        node:addProperty(w, self:FromXmlString(a))
-    end)
-end
-
-function XmlParser:ParseReactiveProps(node, s)
-    string.gsub(s, "(%w+)={(.-)}", function(w, a)
-        node:addReactiveProperty(w, a)
-    end)
-end
-
-function XmlParser:ParseXmlText(xmlText)
-    local stack = {}
-    local top = newNode()
-    table.insert(stack, top)
-    local ni, c, label, xarg, empty
-    local i, j = 1, 1
-    while true do
-        ni, j, c, label, xarg, empty = string.find(xmlText, "<(%/?)([%w_:]+)(.-)(%/?)>", i)
-        if not ni then break end
-        local text = string.sub(xmlText, i, ni - 1);
-        if not string.find(text, "^%s*$") then
-            local lVal = (top:value() or "") .. self:FromXmlString(text)
-            stack[#stack]:setValue(lVal)
-        end
-        if empty == "/" then -- empty element tag
-            local lNode = newNode(label)
-            self:ParseProps(lNode, xarg)
-            self:ParseReactiveProps(lNode, xarg)
-            top:addChild(lNode)
-        elseif c == "" then -- start tag
-            local lNode = newNode(label)
-            self:ParseProps(lNode, xarg)
-            self:ParseReactiveProps(lNode, xarg)
-            table.insert(stack, lNode)
-    top = lNode
-        else -- end tag
-            local toclose = table.remove(stack) -- remove top
-
-            top = stack[#stack]
-            if #stack < 1 then
-                error("XmlParser: nothing to close with " .. label)
-            end
-            if toclose:name() ~= label then
-                error("XmlParser: trying to close " .. toclose.name .. " with " .. label)
-            end
-            top:addChild(toclose)
-        end
-        i = j + 1
-    end
-    local text = string.sub(xmlText, i);
-    if #stack > 1 then
-        error("XmlParser: unclosed " .. stack[#stack]:name())
-    end
-    return top
-end
-
-local function maybeExecuteScript(data, renderContext)
-    local script = xmlValue('script', data)
-    if (script ~= nil) then
-        load(script, nil, "t", renderContext.env)()
-    end
-end
-
-local function registerFunctionEvent(self, data, event, renderContext)
-    local eventEnv = renderContext.env
-    if(data:sub(1,1)=="$")then
-        local data = data:sub(2)
-        event(self, self:getBasalt().getVariable(data))
-    else
-        event(self, function(...)
-            eventEnv.event = {...}
-            local success, msg = pcall(load(data, nil, "t", eventEnv))
-            if not success then
-                error("XML Error: "..msg)
-            end
-        end)
-    end
-end
-
-local function registerFunctionEvents(self, data, events, renderContext)
-    for _, event in pairs(events) do
-        local expression = data:reactiveProperties()[event]
-        if (expression ~= nil) then
-            registerFunctionEvent(self, expression .. "()", self[event], renderContext)
-        end
-    end
-end
-
-local currentEffect = nil
-
-local clearEffectDependencies = function(effect)
-    for _, dependency in ipairs(effect.dependencies) do
-        for index, backlink in ipairs(dependency) do
-            if (backlink == effect) then
-                table.remove(dependency, index)
-            end
-        end
-    end
-    effect.dependencies = {};
-end
-
-return {
-    basalt = function(basalt)
-        local object = {
-            layout = function(path)
-                return {
-                    path = path,
-                }
-            end,
-
-            reactive = function(initialValue)
-                local value = initialValue
-                local observerEffects = {}
-                local get = function()
-                    if (currentEffect ~= nil) then
-                        table.insert(observerEffects, currentEffect)
-                        table.insert(currentEffect.dependencies, observerEffects)
-                    end
-                    return value
-                end
-                local set = function(newValue)
-                    value = newValue
-                    local observerEffectsCopy = {}
-                    for index, effect in ipairs(observerEffects) do
-                        observerEffectsCopy[index] = effect
-                    end
-                    for _, effect in ipairs(observerEffectsCopy) do
-                        effect.execute()
-                    end
-                end
-                return get, set
-            end,
-
-            untracked = function(getter)
-                local parentEffect = currentEffect
-                currentEffect = nil
-                local value = getter()
-                currentEffect = parentEffect
-                return value
-            end,
-
-            effect = function(effectFn)
-                local effect = {dependencies = {}}
-                local execute = function()
-                    clearEffectDependencies(effect)
-                    local parentEffect = currentEffect
-                    currentEffect = effect
-                    effectFn()
-                    currentEffect = parentEffect
-                end
-                effect.execute = execute
-                effect.execute()
-            end,
-
-            derived = function(computeFn)
-                local getValue, setValue = basalt.reactive();
-                basalt.effect(function()
-                    setValue(computeFn())
-                end)
-                return getValue;
-            end
-        }
-        return object
-    end,
-
-    VisualObject = function(base, basalt)
-
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                local x, y = self:getPosition()
-                local w, h = self:getSize()
-                if (name == "x") then
-                    self:setPosition(value, y)
-                elseif (name == "y") then
-                    self:setPosition(x, value)
-                elseif (name == "width") then
-                    self:setSize(value, h)
-                elseif (name == "height") then
-                    self:setSize(w, value)
-                elseif (name == "background") then
-                    self:setBackground(colors[value])
-                elseif (name == "foreground") then
-                    self:setForeground(colors[value])
-                end
-            end,
-
-            updateSpecifiedValuesByXMLData = function(self, data, valueNames)
-                for _, name in ipairs(valueNames) do
-                    local value = xmlValue(name, data)
-                    if (value ~= nil) then
-                        self:updateValue(name, value)
-                    end
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                renderContext.env[self:getName()] = self
-                for prop, expression in pairs(data:reactiveProperties()) do
-                    local update = function()
-                        local value = load("return " .. expression, nil, "t", renderContext.env)()
-                        self:updateValue(prop, value)
-                    end
-                    basalt.effect(update)
-                end
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "x",
-                    "y",
-                    "width",
-                    "height",
-                    "background",
-                    "foreground"
-                })
-                registerFunctionEvents(self, data, {
-                    "onClick",
-                    "onClickUp",
-                    "onHover",
-                    "onScroll",
-                    "onDrag",
-                    "onKey",
-                    "onKeyUp",
-                    "onRelease",
-                    "onChar",
-                    "onGetFocus",
-                    "onLoseFocus",
-                    "onResize",
-                    "onReposition",
-                    "onEvent",
-                    "onLeave"
-                }, renderContext)
-                return self
-            end,
-        }
-        return object
-    end,
-
-    ChangeableObject = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "value") then
-                    self:setValue(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "value"
-                })
-                registerFunctionEvent(self, data, {
-                    "onChange"
-                }, renderContext)
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Container = function(base, basalt)
-        local lastXMLReferences = {}
-
-        local function xmlDefaultValues(data, obj, renderContext)
-            if (obj~=nil) then
-                obj:setValuesByXMLData(data, renderContext)
-            end
-        end
-
-        local function addXMLObjectType(node, addFn, self, renderContext)
-            if (node ~= nil) then
-                if (node.properties ~= nil) then
-                    node = {node}
-                end
-                for _, v in pairs(node) do
-                    local obj = addFn(self, v["@id"] or uuid())
-                    lastXMLReferences[obj:getName()] = obj
-                    xmlDefaultValues(v, obj, renderContext)
-                end
-            end
-        end
-
-        local function insertChildLayout(self, layout, node, renderContext)
-            local props = {}
-            for _, prop in ipairs(node:properties()) do
-                props[prop.name] = prop.value
-            end
-            local updateFns = {}
-            for prop, expression in pairs(node:reactiveProperties()) do
-                updateFns[prop] = basalt.derived(function()
-                    return load("return " .. expression, nil, "t", renderContext.env)()
-                end)
-            end
-            setmetatable(props, {
-                __index = function(_, k)
-                    return updateFns[k]()
-                end
-            })
-            self:loadLayout(layout.path, props)
-        end
-
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                lastXMLReferences = {}
-                base.setValuesByXMLData(self, data, renderContext)
-    
-                local children = data:children()
-                local _OBJECTS = basalt.getObjects()
-
-                for _, childNode in pairs(children) do
-                    local tagName = childNode.___name
-                    if (tagName ~= "animation") then
-                        local layout = renderContext.env[tagName]
-                        local objectKey = tagName:gsub("^%l", string.upper)
-                        if (layout ~= nil) then
-                            insertChildLayout(self, layout, childNode, renderContext)
-                        elseif (_OBJECTS[objectKey] ~= nil) then
-                            local addFn = self["add" .. objectKey]
-                            addXMLObjectType(childNode, addFn, self, renderContext)
-                        end
-                    end
-                end
-                
-                addXMLObjectType(data["animation"], self.addAnimation, self, renderContext)
-                return self
-            end,
-
-            loadLayout = function(self, path, props)
-                if(fs.exists(path))then
-                    local renderContext = {}
-                    renderContext.env = _ENV
-                    renderContext.env.props = props
-                    local f = fs.open(path, "r")
-                    local data = XmlParser:ParseXmlText(f.readAll())
-                    f.close()
-                    lastXMLReferences = {}
-                    maybeExecuteScript(data, renderContext)
-                    self:setValuesByXMLData(data, renderContext)
-                end
-                return self
-            end,
-
-            getXMLElements = function(self)
-                return lastXMLReferences
-            end,
-        }
-        return object
-    end,
-
-    BaseFrame = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local _, yOffset = self:getOffset()
-                if (name == "layout") then
-                    self:setLayout(value)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "layout",
-                    "xOffset"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Frame = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local xOffset, yOffset = self:getOffset()
-                if (name == "layout") then
-                    self:setLayout(value)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                elseif (name == "yOffset") then
-                    self:setOffset(xOffset, value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "layout",
-                    "xOffset",
-                    "yOffset"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Flexbox = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "flexDirection") then
-                    self:setFlexDirection(value)
-                elseif (name == "justifyContent") then
-                    self:setJustifyContent(value)
-                elseif (name == "alignItems") then
-                    self:setAlignItems(value)
-                elseif (name == "spacing") then
-                    self:setSpacing(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "flexDirection",
-                    "justifyContent",
-                    "alignItems",
-                    "spacing"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Button = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "text") then
-                    self:setText(value)
-                elseif (name == "horizontalAlign") then
-                    self:setHorizontalAlign(value)
-                elseif (name == "verticalAlign") then
-                    self:setVerticalAlign(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "text",
-                    "horizontalAlign",
-                    "verticalAlign"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Label = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "text") then
-                    self:setText(value)
-                elseif (name == "align") then
-                    self:setAlign(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "text",
-                    "align"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Input = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local defaultText, defaultFG, defaultBG = self:getDefaultText()
-                if (name == "defaultText") then
-                    self:setDefaultText(value, defaultFG, defaultBG)
-                elseif (name == "defaultFG") then
-                    self:setDefaultText(defaultText, value, defaultBG)
-                elseif (name == "defaultBG") then
-                    self:setDefaultText(defaultText, defaultFG, value)
-                elseif (name == "offset") then
-                    self:setOffset(value)
-                elseif (name == "textOffset") then
-                    self:setTextOffset(value)
-                elseif (name == "text") then
-                    self:setText(value)
-                elseif (name == "inputLimit") then
-                    self:setInputLimit(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "defaultText",
-                    "defaultFG",
-                    "defaultBG",
-                    "offset",
-                    "textOffset",
-                    "text",
-                    "inputLimit"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Image = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local xOffset, yOffset = self:getOffset()
-                if (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                elseif (name == "yOffset") then
-                    self:setOffset(xOffset, value)
-                elseif (name == "path") then
-                    self:loadImage(value)
-                elseif (name == "usePalette") then
-                    self:usePalette(value)
-                elseif (name == "play") then
-                    self:play(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "xOffset",
-                    "yOffset",
-                    "path",
-                    "usePalette",
-                    "play"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Checkbox = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local activeSymbol, inactiveSymbol = self:getSymbol()
-                if (name == "text") then
-                    self:setText(value)
-                elseif (name == "checked") then
-                    self:setChecked(value)
-                elseif (name == "textPosition") then
-                    self:setTextPosition(value)
-                elseif (name == "activeSymbol") then
-                    self:setSymbol(value, inactiveSymbol)
-                elseif (name == "inactiveSymbol") then
-                    self:setSymbol(activeSymbol, value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "text",
-                    "checked",
-                    "textPosition",
-                    "activeSymbol",
-                    "inactiveSymbol"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Program = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "execute") then
-                    self:execute(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "execute"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Progressbar = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local activeBarColor, activeBarSymbol, activeBarSymbolCol = self:getProgressBar()
-                if (name == "direction") then
-                    self:setDirection(value)
-                elseif (name == "activeBarColor") then
-                    self:setProgressBar(value, activeBarSymbol, activeBarSymbolCol)
-                elseif (name == "activeBarSymbol") then
-                    self:setProgressBar(activeBarColor, value, activeBarSymbolCol)
-                elseif (name == "activeBarSymbolColor") then
-                    self:setProgressBar(activeBarColor, activeBarSymbol, value)
-                elseif (name == "backgroundSymbol") then
-                    self:setBackgroundSymbol(value)
-                elseif (name == "progress") then
-                    self:setProgress(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "direction",
-                    "activeBarColor",
-                    "activeBarSymbol",
-                    "activeBarSymbolColor",
-                    "backgroundSymbol",
-                    "progress"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Slider = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "symbol") then
-                    self:setSymbol(value)
-                elseif (name == "symbolColor") then
-                    self:setSymbolColor(value)
-                elseif (name == "index") then
-                    self:setIndex(value)
-                elseif (name == "maxValue") then
-                    self:setMaxValue(value)
-                elseif (name == "barType") then
-                    self:setBarType(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "symbol",
-                    "symbolColor",
-                    "index",
-                    "maxValue",
-                    "barType"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Scrollbar = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "symbol") then
-                    self:setSymbol(value)
-                elseif (name == "symbolColor") then
-                    self:setSymbolColor(value)
-                elseif (name == "symbolSize") then
-                    self:setSymbolSize(value)
-                elseif (name == "scrollAmount") then
-                    self:setScrollAmount(value)
-                elseif (name == "index") then
-                    self:setIndex(value)
-                elseif (name == "maxValue") then
-                    self:setMaxValue(value)
-                elseif (name == "barType") then
-                    self:setBarType(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "symbol",
-                    "symbolColor",
-                    "symbolSize",
-                    "scrollAmount",
-                    "index",
-                    "maxValue",
-                    "barType"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    MonitorFrame = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "monitor") then
-                    self:setMonitor(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "monitor"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Switch = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "symbol") then
-                    self:setSymbol(value)
-                elseif (name == "activeBackground") then
-                    self:setActiveBackground(value)
-                elseif (name == "inactiveBackground") then
-                    self:setInactiveBackground(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "symbol",
-                    "activeBackground",
-                    "inactiveBackground"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Textfield = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local fgSel, bgSel = self:getSelection()
-                local xOffset, yOffset = self:getOffset()
-                if (name == "bgSelection") then
-                    self:setSelection(fgSel, value)
-                elseif (name == "fgSelection") then
-                    self:setSelection(value, bgSel)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                elseif (name == "yOffset") then
-                    self:setOffset(xOffset, value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "bgSelection",
-                    "fgSelection",
-                    "xOffset",
-                    "yOffset"
-                })
-
-
-                if(data["lines"]~=nil)then
-                    local l = data["lines"]["line"]
-                    if(l.properties~=nil)then l = {l} end
-                    for _,v in pairs(l)do
-                        self:addLine(v:value())
-                    end
-                end
-                if(data["keywords"]~=nil)then
-                    for k,v in pairs(data["keywords"])do
-                        if(colors[k]~=nil)then
-                            local entry = v
-                            if(entry.properties~=nil)then entry = {entry} end
-                            local tab = {}
-                            for a,b in pairs(entry)do
-                                local keywordList = b["keyword"]
-                                if(b["keyword"].properties~=nil)then keywordList = {b["keyword"]} end
-                                for c,d in pairs(keywordList)do
-                                    table.insert(tab, d:value())
-                                end
-                            end
-                            self:addKeywords(colors[k], tab)
-                        end
-                    end
-                end
-                if(data["rules"]~=nil)then
-                    if(data["rules"]["rule"]~=nil)then
-                        local tab = data["rules"]["rule"]
-                        if(data["rules"]["rule"].properties~=nil)then tab = {data["rules"]["rule"]} end
-                        for k,v in pairs(tab)do
-
-                            if(xmlValue("pattern", v)~=nil)then
-                                self:addRule(xmlValue("pattern", v), colors[xmlValue("fg", v)], colors[xmlValue("bg", v)])
-                            end
-                        end
-                    end
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Thread = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                local script = xmlValue("start", data)~=nil
-                if(script~=nil)then
-                    local f = load(script, nil, "t", renderContext.env)
-                    self:start(f)
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Timer = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "start") then
-                    self:start(value)
-                elseif (name == "time") then
-                    self:setTime(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "start",
-                    "time"
-                })
-                registerFunctionEvents(self, data, {
-                    "onCall"
-                }, renderContext)
-                return self
-            end,
-        }
-        return object
-    end,
-
-    List = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local selBg, selFg = self:getSelectionColor()
-                if (name == "align") then
-                    self:setTextAlign(value)
-                elseif (name == "offset") then
-                    self:setOffset(value)
-                elseif (name == "selectionBg") then
-                    self:setSelectionColor(value, selFg)
-                elseif (name == "selectionFg") then
-                    self:setSelectionColor(selBg, value)
-                elseif (name == "scrollable") then
-                    self:setScrollable(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "align",
-                    "offset",
-                    "selectionBg",
-                    "selectionFg",
-                    "scrollable"
-                })
-
-                if(data["item"]~=nil)then
-                    local tab = data["item"]
-                    if(tab.properties~=nil)then tab = {tab} end
-                    for _,v in pairs(tab)do
-                        if(self:getType()~="Radio")then
-                            self:addItem(xmlValue("text", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
-                        end
-                    end
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Dropdown = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local w, h = self:getDropdownSize()
-                if (name == "dropdownWidth") then
-                    self:setDropdownSize(value, h)
-                elseif (name == "dropdownHeight") then
-                    self:setDropdownSize(w, value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "dropdownWidth",
-                    "dropdownHeight"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Radio = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local selBg, selFg = self:getBoxSelectionColor()
-                local defBg, defFg = self:setBoxDefaultColor()
-                if (name == "selectionBg") then
-                    self:setBoxSelectionColor(value, selFg)
-                elseif (name == "selectionFg") then
-                    self:setBoxSelectionColor(selBg, value)
-                elseif (name == "defaultBg") then
-                    self:setBoxDefaultColor(value, defFg)
-                elseif (name == "defaultFg") then
-                    self:setBoxDefaultColor(defBg, value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "selectionBg",
-                    "selectionFg",
-                    "defaultBg",
-                    "defaultFg"
-                })
-
-                if(data["item"]~=nil)then
-                    local tab = data["item"]
-                    if(tab.properties~=nil)then tab = {tab} end
-                    for _,v in pairs(tab)do
-                        self:addItem(xmlValue("text", v), xmlValue("x", v), xmlValue("y", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
-                    end
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Menubar = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "space") then
-                    self:setSpace(value)
-                elseif (name == "scrollable") then
-                    self:setScrollable(value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "space",
-                    "scrollable"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Graph = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local symbol, symbolCol = self:getGraphSymbol()
-                if (name == "maxEntries") then
-                    self:setMaxEntries(value)
-                elseif (name == "type") then
-                    self:setType(value)
-                elseif (name == "minValue") then
-                    self:setMinValue(value)
-                elseif (name == "maxValue") then
-                    self:setMaxValue(value)
-                elseif (name == "symbol") then
-                    self:setGraphSymbol(value, symbolCol)
-                elseif (name == "symbolColor") then
-                    self:setGraphSymbol(symbol, value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "maxEntries",
-                    "type",
-                    "minValue",
-                    "maxValue",
-                    "symbol",
-                    "symbolColor"
-                })
-                if(data["item"]~=nil)then
-                    local tab = data["item"]
-                    if(tab.properties~=nil)then tab = {tab} end
-                    for _,_ in pairs(tab)do
-                        self:addDataPoint(xmlValue("value"))
-                    end
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Treeview = function(base, basalt)
-        local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local selBg, selFg = self:getSelectionColor()
-                local xOffset, yOffset = self:getOffset()
-                if (name == "space") then
-                    self:setSpace(value)
-                elseif (name == "scrollable") then
-                    self:setScrollable(value)
-                elseif (name == "selectionBg") then
-                    self:setSelectionColor(value, selFg)
-                elseif (name == "selectionFg") then
-                    self:setSelectionColor(selBg, value)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                elseif (name == "yOffset") then
-                    self:setOffset(xOffset, value)
-                end
-            end,
-
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "space",
-                    "scrollable",
-                    "selectionBg",
-                    "selectionFg",
-                    "xOffset",
-                    "yOffset"
-                })
-                local function addNode(node, data)
-                    if(data["node"]~=nil)then
-                        local tab = data["node"]
-                        if(tab.properties~=nil)then tab = {tab} end
-                        for _,v in pairs(tab)do
-                            local n = node:addNode(xmlValue("text", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
-                            addNode(n, v)
-                        end
-                    end
-                end
-                if(data["node"]~=nil)then
-                    local tab = data["node"]
-                    if(tab.properties~=nil)then tab = {tab} end
-                    for _,v in pairs(tab)do
-                        local n = self:addNode(xmlValue("text", v), colors[xmlValue("bg", v)], colors[xmlValue("fg", v)])
-                        addNode(n, v)
-                    end
-                end
-
-
-                return self
-            end,
-        }
-        return object
-    end,
-
-}
-
-end
-project["plugins"]["themes"] = function(...)
-local baseTheme = { -- The default main theme for basalt!
-    BaseFrameBG = colors.lightGray,
-    BaseFrameText = colors.black,
-    FrameBG = colors.gray,
-    FrameText = colors.black,
-    ButtonBG = colors.gray,
-    ButtonText = colors.black,
-    CheckboxBG = colors.lightGray,
-    CheckboxText = colors.black,
-    InputBG = colors.black,
-    InputText = colors.lightGray,
-    TextfieldBG = colors.black,
-    TextfieldText = colors.white,
-    ListBG = colors.gray,
-    ListText = colors.black,
-    MenubarBG = colors.gray,
-    MenubarText = colors.black,
-    DropdownBG = colors.gray,
-    DropdownText = colors.black,
-    RadioBG = colors.gray,
-    RadioText = colors.black,
-    SelectionBG = colors.black,
-    SelectionText = colors.lightGray,
-    GraphicBG = colors.black,
-    ImageBG = colors.black,
-    PaneBG = colors.black,
-    ProgramBG = colors.black,
-    ProgressbarBG = colors.gray,
-    ProgressbarText = colors.black,
-    ProgressbarActiveBG = colors.black,
-    ScrollbarBG = colors.lightGray,
-    ScrollbarText = colors.gray,
-    ScrollbarSymbolColor = colors.black,
-    SliderBG = false,
-    SliderText = colors.gray,
-    SliderSymbolColor = colors.black,
-    SwitchBG = colors.lightGray,
-    SwitchText = colors.gray,
-    LabelBG = false,
-    LabelText = colors.black,
-    GraphBG = colors.gray,
-    GraphText = colors.black    
-}
-
-local plugin = {
-    Container = function(base, name, basalt)
-        local theme = {}
-
-        local object = {
-            getTheme = function(self, name)
-                local parent = self:getParent()
-                return theme[name] or (parent~=nil and parent:getTheme(name) or baseTheme[name])
-            end,
-            setTheme = function(self, _theme, col)
-                if(type(_theme)=="table")then
-                    theme = _theme
-                elseif(type(_theme)=="string")then
-                    theme[_theme] = col
-                end
-                self:updateDraw()
-                return self
-            end,
-        }
-        return object
-    end,
-
-    basalt = function()
-        return {
-            getTheme = function(name)
-                return baseTheme[name]
-            end,
-            setTheme = function(_theme, col)
-                if(type(_theme)=="table")then
-                    baseTheme = _theme
-                elseif(type(_theme)=="string")then
-                    baseTheme[_theme] = col
-                end
-            end
-        }
-    end
-    
-}
-
-for k,v in pairs({"BaseFrame", "Frame", "ScrollableFrame", "MovableFrame", "Button", "Checkbox", "Dropdown", "Graph", "Graphic", "Input", "Label", "List", "Menubar", "Pane", "Program", "Progressbar", "Radio", "Scrollbar", "Slider", "Switch", "Textfield"})do
-plugin[v] = function(base, name, basalt)
-        local object = {
-            init = function(self)
-                if(base.init(self))then
-                    local parent = self:getParent() or self
-                    self:setBackground(parent:getTheme(v.."BG"))
-                    self:setForeground(parent:getTheme(v.."Text"))      
-                end
-            end
-        }
-        return object
-    end
-end
-
-return plugin
-end
-project["libraries"] = {}
-
-project["libraries"]["basaltDraw"] = function(...)
-local tHex = require("tHex")
-local utils = require("utils")
-local split = utils.splitString
-local sub,rep = string.sub,string.rep
-
-return function(drawTerm)
-    local terminal = drawTerm or term.current()
-    local mirrorTerm
-    local width, height = terminal.getSize()
-    local cacheT = {}
-    local cacheBG = {}
-    local cacheFG = {}
-
-    local emptySpaceLine
-    local emptyColorLines = {}
-    
-    local function createEmptyLines()
-        emptySpaceLine = rep(" ", width)
-        for n = 0, 15 do
-            local nColor = 2 ^ n
-            local sHex = tHex[nColor]
-            emptyColorLines[nColor] = rep(sHex, width)
-        end
-    end
-    ----
-    createEmptyLines()
-
-    local function recreateWindowArray()
-        createEmptyLines()
-        local emptyText = emptySpaceLine
-        local emptyFG = emptyColorLines[colors.white]
-        local emptyBG = emptyColorLines[colors.black]
-        for currentY = 1, height do
-            cacheT[currentY] = sub(cacheT[currentY] == nil and emptyText or cacheT[currentY] .. emptyText:sub(1, width - cacheT[currentY]:len()), 1, width)
-            cacheFG[currentY] = sub(cacheFG[currentY] == nil and emptyFG or cacheFG[currentY] .. emptyFG:sub(1, width - cacheFG[currentY]:len()), 1, width)
-            cacheBG[currentY] = sub(cacheBG[currentY] == nil and emptyBG or cacheBG[currentY] .. emptyBG:sub(1, width - cacheBG[currentY]:len()), 1, width)
-        end
-    end
-    recreateWindowArray()
-
-    local function blit(x, y, t, fg, bg)
-        if #t == #fg and #t == #bg then
-            if y >= 1 and y <= height then
-                if x + #t > 0 and x <= width then
-                    local newCacheT, newCacheFG, newCacheBG
-                    local oldCacheT, oldCacheFG, oldCacheBG = cacheT[y], cacheFG[y], cacheBG[y]
-                    local startN, endN = 1, #t
-    
-                    if x < 1 then
-                        startN = 1 - x + 1
-                        endN = width - x + 1
-                    elseif x + #t > width then
-                        endN = width - x + 1
-                    end
-    
-                    newCacheT = sub(oldCacheT, 1, x - 1) .. sub(t, startN, endN)
-                    newCacheFG = sub(oldCacheFG, 1, x - 1) .. sub(fg, startN, endN)
-                    newCacheBG = sub(oldCacheBG, 1, x - 1) .. sub(bg, startN, endN)
-    
-                    if x + #t <= width then
-                        newCacheT = newCacheT .. sub(oldCacheT, x + #t, width)
-                        newCacheFG = newCacheFG .. sub(oldCacheFG, x + #t, width)
-                        newCacheBG = newCacheBG .. sub(oldCacheBG, x + #t, width)
-                    end
-    
-                    cacheT[y], cacheFG[y], cacheBG[y] = newCacheT,newCacheFG,newCacheBG
-                end
-            end
-        end
-    end
-
-    local function setText(x, y, t)
-        if y >= 1 and y <= height then
-            if x + #t > 0 and x <= width then
-                local newCacheT
-                local oldCacheT = cacheT[y]
-                local startN, endN = 1, #t
-
-                if x < 1 then
-                    startN = 1 - x + 1
-                    endN = width - x + 1
-                elseif x + #t > width then
-                    endN = width - x + 1
-                end
-
-                newCacheT = sub(oldCacheT, 1, x - 1) .. sub(t, startN, endN)
-
-                if x + #t <= width then
-                    newCacheT = newCacheT .. sub(oldCacheT, x + #t, width)
-                end
-
-                cacheT[y] = newCacheT
-            end
-        end
-    end
-
-    local function setBG(x, y, bg)
-        if y >= 1 and y <= height then
-            if x + #bg > 0 and x <= width then
-                local newCacheBG
-                local oldCacheBG = cacheBG[y]
-                local startN, endN = 1, #bg
-
-                if x < 1 then
-                    startN = 1 - x + 1
-                    endN = width - x + 1
-                elseif x + #bg > width then
-                    endN = width - x + 1
-                end
-
-                newCacheBG = sub(oldCacheBG, 1, x - 1) .. sub(bg, startN, endN)
-
-                if x + #bg <= width then
-                    newCacheBG = newCacheBG .. sub(oldCacheBG, x + #bg, width)
-                end
-
-                cacheBG[y] = newCacheBG
-            end
-        end
-    end
-
-    local function setFG(x, y, fg)
-        if y >= 1 and y <= height then
-            if x + #fg > 0 and x <= width then
-                local newCacheFG
-                local oldCacheFG = cacheFG[y]
-                local startN, endN = 1, #fg
-
-                if x < 1 then
-                    startN = 1 - x + 1
-                    endN = width - x + 1
-                elseif x + #fg > width then
-                    endN = width - x + 1
-                end
-
-                newCacheFG = sub(oldCacheFG, 1, x - 1) .. sub(fg, startN, endN)
-
-                if x + #fg <= width then
-                    newCacheFG = newCacheFG .. sub(oldCacheFG, x + #fg, width)
-                end
-
-                cacheFG[y] = newCacheFG
-            end
-        end
-    end
-
-    --[[
-    local function setText(x, y, text)
-        if (y >= 1) and (y <= height) then
-            local emptyLine = rep(" ", #text)
-            blit(x, y, text, emptyLine, emptyLine)
-        end
-    end
-
-    local function setFG(x, y, colorStr)
-        if (y >= 1) and (y <= height) then
-            local w = #colorStr
-            local emptyLine = rep(" ", w)
-            local text = sub(cacheT[y], x, w)
-            blit(x, y, text, colorStr, emptyLine)
-        end
-    end
-
-    local function setBG(x, y, colorStr)
-        if (y >= 1) and (y <= height) then
-            local w = #colorStr
-            local emptyLine = rep(" ", w)
-            local text = sub(cacheT[y], x, w)
-            blit(x, y, text, emptyLine, colorStr)
-        end
-    end]]
-
-    local drawHelper = {
-        setSize = function(w, h)
-            width, height = w, h
-            recreateWindowArray()
-        end,
-
-        setMirror = function(mirror)
-            mirrorTerm = mirror
-        end,
-
-        setBG = function(x, y, colorStr)
-            setBG(x, y, colorStr)
-        end,
-
-        setText = function(x, y, text)
-            setText(x, y, text)
-        end,
-
-        setFG = function(x, y, colorStr)
-            setFG(x, y, colorStr)
-        end;
-
-        blit = function(x, y, t, fg, bg)
-            blit(x, y, t, fg, bg)
-        end,
-
-        drawBackgroundBox = function(x, y, width, height, bgCol)
-            local colorStr = rep(tHex[bgCol], width)
-            for n = 1, height do
-                setBG(x, y + (n - 1), colorStr)
-            end
-        end,
-        drawForegroundBox = function(x, y, width, height, fgCol)
-            local colorStr = rep(tHex[fgCol], width)
-            for n = 1, height do
-                setFG(x, y + (n - 1), colorStr)
-            end
-        end,
-        drawTextBox = function(x, y, width, height, symbol)
-            local textStr = rep(symbol, width)
-            for n = 1, height do
-                setText(x, y + (n - 1), textStr)
-            end
-        end,
-
-        update = function()
-            local xC, yC = terminal.getCursorPos()
-            local isBlinking = false
-            if (terminal.getCursorBlink ~= nil) then
-                isBlinking = terminal.getCursorBlink()
-            end
-            terminal.setCursorBlink(false)
-            if(mirrorTerm~=nil)then mirrorTerm.setCursorBlink(false) end
-            for n = 1, height do
-                terminal.setCursorPos(1, n)
-                terminal.blit(cacheT[n], cacheFG[n], cacheBG[n])
-                if(mirrorTerm~=nil)then 
-                    mirrorTerm.setCursorPos(1, n) 
-                    mirrorTerm.blit(cacheT[n], cacheFG[n], cacheBG[n])
-                end
-            end
-            terminal.setBackgroundColor(colors.black)
-            terminal.setCursorBlink(isBlinking)
-            terminal.setCursorPos(xC, yC)
-            if(mirrorTerm~=nil)then 
-                mirrorTerm.setBackgroundColor(colors.black)
-                mirrorTerm.setCursorBlink(isBlinking)
-                mirrorTerm.setCursorPos(xC, yC)
-            end
-            
-        end,
-
-        setTerm = function(newTerm)
-            terminal = newTerm
-        end,
-    }
-    return drawHelper
-end
-end
-project["libraries"]["basaltEvent"] = function(...)
-return function()
-    local events = {}
-
-    local event = {
-        registerEvent = function(self, _event, func)
-            if (events[_event] == nil) then
-                events[_event] = {}
-            end
-            table.insert(events[_event], func)
-        end,
-
-        removeEvent = function(self, _event, index)
-            events[_event][index[_event]] = nil
-        end,
-
-        hasEvent = function(self, _event)
-            return events[_event]~=nil
-        end,
-        
-        getEventCount = function(self, _event)
-            return events[_event]~=nil and #events[_event] or 0
-        end,
-
-        getEvents = function(self)
-            local t = {}
-            for k,v in pairs(events)do
-                table.insert(t, k)
-            end
-            return t
-        end,
-
-        clearEvent = function(self, _event)
-            events[_event] = nil
-        end,
-
-        clear = function(self, _event)
-            events = {}
-        end,
-
-        sendEvent = function(self, _event, ...)
-            local returnValue
-            if (events[_event] ~= nil) then
-                for _, value in pairs(events[_event]) do
-                    local val = value(...)
-                    if(val==false)then
-                        returnValue = val
-                    end
-                end
-            end
-            return returnValue
-        end,
-    }
-    event.__index = event
-    return event
-end
-end
-project["libraries"]["basaltLogs"] = function(...)
-local logDir = ""
-local logFileName = "basaltLog.txt"
-
-local defaultLogType = "Debug"
-
-fs.delete(logDir~="" and logDir.."/"..logFileName or logFileName)
-
-local mt = {
-    __call = function(_,text, typ)
-        if(text==nil)then return end
-        local dirStr = logDir~="" and logDir.."/"..logFileName or logFileName
-        local handle = fs.open(dirStr, fs.exists(dirStr) and "a" or "w")
-        handle.writeLine("[Basalt]["..os.date("%Y-%m-%d %H:%M:%S").."]["..(typ and typ or defaultLogType).."]: "..tostring(text))
-        handle.close()
-    end,
-}
-
-return setmetatable({}, mt)
-
---Work in progress
-end
-project["libraries"]["basaltMon"] = function(...)
--- Right now this doesn't support scroll(n)
--- Because this lbirary is mainly made for basalt - it doesn't need scroll support, maybe i will add it in the future
-
-local tHex = {
-    [colors.white] = "0",
-    [colors.orange] = "1",
-    [colors.magenta] = "2",
-    [colors.lightBlue] = "3",
-    [colors.yellow] = "4",
-    [colors.lime] = "5",
-    [colors.pink] = "6",
-    [colors.gray] = "7",
-    [colors.lightGray] = "8",
-    [colors.cyan] = "9",
-    [colors.purple] = "a",
-    [colors.blue] = "b",
-    [colors.brown] = "c",
-    [colors.green] = "d",
-    [colors.red] = "e",
-    [colors.black] = "f",
-}
-
-local type,len,rep,sub = type,string.len,string.rep,string.sub
-
-
-return function (monitorNames)
-    local monitors = {}
-    for k,v in pairs(monitorNames)do
-        monitors[k] = {}
-        for a,b in pairs(v)do
-            local mon = peripheral.wrap(b)
-            if(mon==nil)then
-                error("Unable to find monitor "..b)
-            end
-            monitors[k][a] = mon
-            monitors[k][a].name = b
-        end
-    end
-
-
-    local x,y,monX,monY,monW,monH,w,h = 1,1,1,1,0,0,0,0
-    local blink,scale = false,1
-    local fg,bg = colors.white,colors.black
-
-  
-    local function calcSize()
-        local maxW,maxH = 0,0
-        for k,v in pairs(monitors)do
-            local _maxW,_maxH = 0,0
-            for a,b in pairs(v)do
-                local nw,nh = b.getSize()
-                _maxW = _maxW + nw
-                _maxH = nh > _maxH and nh or _maxH
-            end
-            maxW = maxW > _maxW and maxW or _maxW
-            maxH = maxH + _maxH
-        end
-        w,h = maxW,maxH
-    end
-    calcSize()
-
-    local function calcPosition()
-        local relY = 0
-        local mX,mY = 0,0
-        for k,v in pairs(monitors)do
-            local relX = 0
-            local _mh = 0
-            for a,b in pairs(v)do
-                local mw,mh = b.getSize()
-                if(x-relX>=1)and(x-relX<=mw)then
-                    mX = a
-                end
-                b.setCursorPos(x-relX, y-relY)
-                relX = relX + mw
-                if(_mh<mh)then _mh = mh end
-            end
-            if(y-relY>=1)and(y-relY<=_mh)then
-                mY = k
-            end
-            relY = relY + _mh
-        end
-        monX,monY = mX,mY
-    end
-    calcPosition()
-
-    local function call(f, ...)
-        local t = {...}
-        return function()
-            for k,v in pairs(monitors)do
-                for a,b in pairs(v)do
-                    b[f](table.unpack(t))
-                end
-            end
-        end
-    end
-
-    local function cursorBlink()
-        call("setCursorBlink", false)()
-        if not(blink)then return end
-        if(monitors[monY]==nil)then return end
-        local mon = monitors[monY][monX]
-        if(mon==nil)then return end
-        mon.setCursorBlink(blink)
-    end
-
-    local function blit(text, tCol, bCol)
-        if(monitors[monY]==nil)then return end
-        local mon = monitors[monY][monX]
-        if(mon==nil)then return end
-        mon.blit(text, tCol, bCol)
-        local mW, mH = mon.getSize()
-        if(len(text)+x>mW)then
-            local monRight = monitors[monY][monX+1]
-            if(monRight~=nil)then
-                monRight.blit(text, tCol, bCol)
-                monX = monX + 1
-                x = x + len(text)
-            end
-        end
-        calcPosition()
-    end
-
-   return {
-        clear = call("clear"),
-
-        setCursorBlink = function(_blink)
-            blink = _blink
-            cursorBlink()
-        end,
-
-        getCursorBlink = function()
-            return blink
-        end,
-
-        getCursorPos = function()
-            return x, y
-        end,
-        
-        setCursorPos = function(newX,newY)
-            x, y = newX, newY
-            calcPosition()
-            cursorBlink()
-        end,
-
-        setTextScale = function(_scale)
-            call("setTextScale", _scale)()
-            calcSize()
-            calcPosition()
-            scale = _scale
-        end,
-
-        getTextScale = function()
-            return scale
-        end,
-
-        blit = function(text,fgCol,bgCol)
-            blit(text,fgCol,bgCol)
-        end,
-
-        write = function(text)
-            text = tostring(text)
-            local l = len(text)
-            blit(text, rep(tHex[fg], l), rep(tHex[bg], l))
-        end,
-
-        getSize = function()
-            return w,h
-        end,
-
-        setBackgroundColor = function(col)
-            call("setBackgroundColor", col)()
-            bg = col
-        end,
-
-        setTextColor = function(col)
-            call("setTextColor", col)()
-            fg = col
-        end,
-
-        calculateClick = function(name, xClick, yClick)
-            local relY = 0
-            for k,v in pairs(monitors)do
-                local relX = 0
-                local maxY = 0
-                for a,b in pairs(v)do
-                    local wM,hM = b.getSize()
-                    if(b.name==name)then
-                        return xClick + relX, yClick + relY
-                    end
-                    relX = relX + wM
-                    if(hM > maxY)then maxY = hM end
-                end
-                relY = relY + maxY
-            end
-            return xClick, yClick
-        end,
-
-   }
-end
-end
-project["libraries"]["images"] = function(...)
-local sub,floor = string.sub,math.floor
-
-local function loadNFPAsBimg(path)
-    return {[1]={{}, {}, paintutils.loadImage(path)}}, "bimg"
-end
-
-local function loadNFP(path)
-    return paintutils.loadImage(path), "nfp"
-end
-
-local function loadBIMG(path, binaryMode)
-    local f = fs.open(path, binaryMode and "rb" or "r")
-    if(f==nil)then error("Path - "..path.." doesn't exist!") end
-    local content = textutils.unserialize(f.readAll())
-
-    f.close()
-    if(content~=nil)then
-        return content, "bimg"
-    end
-end
-
-local function loadBBF(path)
-
-end
-
-local function loadBBFAsBimg(path)
-
-end
-
-local function loadImage(path, f, binaryMode)
-    if(sub(path, -4) == ".bimg")then
-        return loadBIMG(path, binaryMode)
-    elseif(sub(path, -3) == ".bbf")then
-        return loadBBF(path, binaryMode)
-    else
-        return loadNFP(path, binaryMode)
-    end
-    -- ...
-end
-
-local function loadImageAsBimg(path)
-    if(path:find(".bimg"))then
-        return loadBIMG(path)
-    elseif(path:find(".bbf"))then
-        return loadBBFAsBimg(path)
-    else
-        return loadNFPAsBimg(path)
-    end
-end
-
-local function resizeBIMG(source, w, h)
-    local oW, oH = source.width or #source[1][1][1], source.height or #source[1]
-    local newImg = {}
-    for k,v in pairs(source)do
-        if(type(k)=="number")then
-            local frame = {}
-            for y=1, h do
-                local xT,xFG,xBG = "","",""
-                local yR = floor(y / h * oH + 0.5)
-                if(v[yR]~=nil)then
-                    for x=1, w do
-                        local xR = floor(x / w * oW + 0.5)
-                        xT = xT..sub(v[yR][1], xR,xR)
-                        xFG = xFG..sub(v[yR][2], xR,xR)
-                        xBG = xBG..sub(v[yR][3], xR,xR)
-                    end
-                    table.insert(frame, {xT, xFG, xBG})
-                end
-            end
-            table.insert(newImg, k, frame)
-        else
-            newImg[k] = v
-        end
-    end
-    newImg.width = w
-    newImg.height = h
-    return newImg
-end
-
-return {
-    loadNFP = loadNFP,
-    loadBIMG = loadBIMG,
-    loadImage = loadImage,
-    resizeBIMG = resizeBIMG,
-    loadImageAsBimg = loadImageAsBimg,
-
-}
-end
-project["libraries"]["bimg"] = function(...)
-local sub,rep = string.sub,string.rep
-
-local function frame(base, manager)
-    local w, h = 0, 0
-    local t,fg,bg = {}, {}, {}
-    local x, y = 1,1
-
-    local data = {}
-
-    local function recalculateSize()
-        for y=1,h do
-            if(t[y]==nil)then
-                t[y] = rep(" ", w)
-            else
-                t[y] = t[y]..rep(" ", w-#t[y])
-            end
-            if(fg[y]==nil)then
-                fg[y] = rep("0", w)
-            else
-                fg[y] = fg[y]..rep("0", w-#fg[y])
-            end
-            if(bg[y]==nil)then
-                bg[y] = rep("f", w)
-            else
-                bg[y] = bg[y]..rep("f", w-#bg[y])
-            end
-        end
-    end
-
-    local addText = function(text, _x, _y)
-        x = _x or x
-        y = _y or y
-        if(t[y]==nil)then
-            t[y] = rep(" ", x-1)..text..rep(" ", w-(#text+x))
-        else
-            t[y] = sub(t[y], 1, x-1)..rep(" ", x-#t[y])..text..sub(t[y], x+#text, w)
-        end
-        if(#t[y]>w)then w = #t[y] end
-        if(y > h)then h = y end  
-        manager.updateSize(w, h)
-    end
-
-    local addBg = function(b, _x, _y)
-        x = _x or x
-        y = _y or y
-        if(bg[y]==nil)then
-            bg[y] = rep("f", x-1)..b..rep("f", w-(#b+x))
-        else
-            bg[y] = sub(bg[y], 1, x-1)..rep("f", x-#bg[y])..b..sub(bg[y], x+#b, w)
-        end
-        if(#bg[y]>w)then w = #bg[y] end
-        if(y > h)then h = y end  
-        manager.updateSize(w, h)
-    end
-
-    local addFg = function(f, _x, _y)
-        x = _x or x
-        y = _y or y
-        if(fg[y]==nil)then
-            fg[y] = rep("0", x-1)..f..rep("0", w-(#f+x))
-        else
-            fg[y] = sub(fg[y], 1, x-1)..rep("0", x-#fg[y])..f..sub(fg[y], x+#f, w)
-        end
-        if(#fg[y]>w)then w = #fg[y] end
-        if(y > h)then h = y end  
-        manager.updateSize(w, h)
-    end
-
-    local function setFrame(frm)
-        data = {}
-        t, fg, bg = {}, {}, {}
-        for k,v in pairs(base)do
-            if(type(k)=="string")then
-                data[k] = v
-            else
-                t[k], fg[k], bg[k] = v[1], v[2], v[3]
-            end
-        end
-        manager.updateSize(w, h)
-    end
-
-    if(base~=nil)then
-        if(#base>0)then
-            w = #base[1][1]
-            h = #base
-            setFrame(base)
-        end
-    end
-
-    return {
-        recalculateSize = recalculateSize,
-        setFrame = setFrame,
-
-        getFrame = function()
-            local f = {}
-
-            for k,v in pairs(t)do
-                table.insert(f, {v, fg[k], bg[k]})
-            end
-
-            for k,v in pairs(data)do
-                f[k] = v
-            end
-            
-            return f, w, h
-        end,
-
-        getImage = function()
-            local i = {}
-            for k,v in pairs(t)do
-                table.insert(i, {v, fg[k], bg[k]})
-            end
-            return i
-        end,
-
-        setFrameData = function(key, value)
-            if(value~=nil)then
-                data[key] = value
-            else
-                if(type(key)=="table")then
-                    data = key
-                end
-            end
-        end,
-
-        setFrameImage = function(imgData)
-            for k,v in pairs(imgData.t)do
-                t[k] = imgData.t[k]
-                fg[k] = imgData.fg[k]
-                bg[k] = imgData.bg[k]
-            end
-        end,
-
-        getFrameImage = function()
-            return {t = t, fg = fg, bg = bg}
-        end,
-
-        getFrameData = function(key)
-            if(key~=nil)then
-                return data[key]
-            else
-                return data
-            end
-        end,
-
-        blit = function(text, fgCol, bgCol, x, y)
-            addText(text, x, y)
-            addFg(fgCol, x, y)
-            addBg(bgCol, x, y)
-        end,
-        
-        text = addText,
-        fg = addFg,
-        bg = addBg,
-
-        getSize = function()
-            return w, h
-        end,
-
-        setSize = function(_w, _h)
-            local nt,nfg,nbg = {}, {}, {}
-            for _y=1,_h do
-                if(t[_y]~=nil)then
-                    nt[_y] = sub(t[_y], 1, _w)..rep(" ", _w - w)
-                else
-                    nt[_y] = rep(" ", _w)
-                end
-                if(fg[_y]~=nil)then
-                    nfg[_y] = sub(fg[_y], 1, _w)..rep("0", _w - w)
-                else
-                    nfg[_y] = rep("0", _w)
-                end
-                if(bg[_y]~=nil)then
-                    nbg[_y] = sub(bg[_y], 1, _w)..rep("f", _w - w)
-                else
-                    nbg[_y] = rep("f", _w)
-                end
-            end
-            t, fg, bg = nt, nfg, nbg
-            w, h = _w, _h
-        end,
-    }
-end
-
-return function(img)
-    local frames = {}
-    local metadata = {creator="Bimg Library by NyoriE", date=os.date("!%Y-%m-%dT%TZ")}
-    local width,height = 0, 0
-
-    if(img~=nil)then
-        if(img[1][1][1]~=nil)then
-            width,height = metadata.width or #img[1][1][1], metadata.height or #img[1]
-        end
-    end
-
-    local manager = {}
-
-    local function addFrame(id, data)
-        id = id or #frames+1
-        local f = frame(data, manager)
-        table.insert(frames, id, f)
-        if(data==nil)then
-            frames[id].setSize(width, height)
-        end
-        return f
-    end
-
-    local function removeFrame(id)
-        table.remove(frames, id or #frames)
-    end
-
-    local function moveFrame(id, dir)
-        local f = frames[id]
-        if(f~=nil)then
-        local newId = id+dir
-            if(newId>=1)and(newId<=#frames)then
-                table.remove(frames, id)
-                table.insert(frames, newId, f)
-            end
-        end
-    end
-
-    manager = {
-        updateSize = function(w, h, force)
-            local changed = force==true and true or false
-            if(w > width)then changed = true width = w end
-            if(h > height)then changed = true height = h end
-            if(changed)then
-                for k,v in pairs(frames)do
-                    v.setSize(width, height)
-                    v.recalculateSize()
-                end
-            end
-        end,
-
-        text = function(frame, text, x, y)
-            local f = frames[frame]
-            if(f==nil)then
-                f = addFrame(frame)
-            end
-            f.text(text, x, y)
-        end,
-
-        fg = function(frame, fg, x, y)
-            local f = frames[frame]
-            if(f==nil)then
-                f = addFrame(frame)
-            end
-            f.fg(fg, x, y)
-        end,
-
-        bg = function(frame, bg, x, y)
-            local f = frames[frame]
-            if(f==nil)then
-                f = addFrame(frame)
-            end
-            f.bg(bg, x, y)
-        end,
-
-        blit = function(frame, text, fg, bg, x, y)
-            local f = frames[frame]
-            if(f==nil)then
-                f = addFrame(frame)
-            end
-            f.blit(text, fg, bg, x, y)
-        end,
-
-        setSize = function(w, h)
-            width = w
-            height = h
-            for k,v in pairs(frames)do
-                v.setSize(w, h)
-            end
-        end,
-
-        getFrame = function(id)
-            if(frames[id]~=nil)then
-                return frames[id].getFrame()
-            end
-        end,
-
-        getFrameObjects = function()
-            return frames
-        end,
-
-        getFrames = function()
-            local f = {}
-            for k,v in pairs(frames)do
-                local frame = v.getFrame()
-                table.insert(f, frame)
-            end
-            return f
-        end,
-
-        getFrameObject = function(id)
-            return frames[id]
-        end,
-
-        addFrame = function(id)
-            if(#frames<=1)then
-                if(metadata.animated==nil)then
-                metadata.animated = true
-                end
-                if(metadata.secondsPerFrame==nil)then
-                    metadata.secondsPerFrame = 0.2
-                end
-            end
-            return addFrame(id)
-        end,
-
-        removeFrame = removeFrame,
-
-        moveFrame = moveFrame,
-
-        setFrameData = function(id, key, value)
-            if(frames[id]~=nil)then
-                frames[id].setFrameData(key, value)
-            end
-        end,
-
-        getFrameData = function(id, key)
-            if(frames[id]~=nil)then
-                return frames[id].getFrameData(key)
-            end
-        end,
-
-        getSize = function()
-            return width, height
-        end,
-
-        setAnimation = function(anim)
-            metadata.animation = anim
-        end,
-
-        setMetadata = function(key, val)
-            if(val~=nil)then
-                metadata[key] = val
-            else
-               if(type(key)=="table")then
-                    metadata = key
-               end
-            end
-        end,
-
-        getMetadata = function(key)
-            if(key~=nil)then
-                return metadata[key]
-            else
-                return metadata
-            end
-        end,
-
-        createBimg = function()
-            local bimg = {}
-            for k,v in pairs(frames)do
-                local f = v.getFrame()
-                table.insert(bimg, f)
-            end
-            for k,v in pairs(metadata)do
-                bimg[k] = v
-            end
-            bimg.width = width
-            bimg.height = height
-            return bimg
-        end,
-    }
-
-    if(img~=nil)then
-        for k,v in pairs(img)do
-            if(type(k)=="string")then
-                metadata[k] = v
-            end
-        end
-        if(metadata.width==nil)or(metadata.height==nil)then
-            width = metadata.width or #img[1][1][1]
-            height = metadata.height or #img[1]
-            manager.updateSize(width, height, true)
-        end
-
-        for k,v in pairs(img)do
-            if(type(k)=="number")then
-                addFrame(k, v)
-            end
-        end
-    else
-        addFrame(1)
-    end
-
-    return manager
-end
-end
-project["libraries"]["tHex"] = function(...)
-local cols = {}
-
-for i = 0, 15 do
-    cols[2^i] = ("%x"):format(i)
-end
-return cols
-end
-project["libraries"]["utils"] = function(...)
-local tHex = require("tHex")
-local sub,find,reverse,rep,insert,len = string.sub,string.find,string.reverse,string.rep,table.insert,string.len
-
-local function splitString(str, delimiter)
-    local results = {}
-    if str == "" or delimiter == "" then
-        return results
-    end
-    local start = 1
-    local delim_start, delim_end = find(str, delimiter, start)
-        while delim_start do
-            insert(results, sub(str, start, delim_start - 1))
-            start = delim_end + 1
-            delim_start, delim_end = find(str, delimiter, start)
-        end
-    insert(results, sub(str, start))
-    return results
-end
-
-local function removeTags(input)
-    return input:gsub("{[^}]+}", "")
-end
-
-
-local function wrapText(str, width)
-    str = removeTags(str)
-    if(str=="")or(width==0)then
-        return {""}
-    end
-    local uniqueLines = splitString(str, "\n")
-    local result = {}
-    for k, v in pairs(uniqueLines) do
-        if #v == 0 then
-            table.insert(result, "")
-        else
-            while #v > width do
-                local last_space = width
-                for i = width, 1, -1 do
-                    if sub(v, i, i) == " " then
-                        last_space = i
-                        break
-                    end
-                end
-
-                if last_space == width then
-                    local line = sub(v, 1, last_space - 1) .. "-"
-                    table.insert(result, line)
-                    v = sub(v, last_space)
-                else
-                    local line = sub(v, 1, last_space - 1)
-                    table.insert(result, line)
-                    v = sub(v, last_space + 1)
-                end
-
-                if #v <= width then
-                    break
-                end
-            end
-            if #v > 0 then
-                table.insert(result, v)
-            end
-        end
-    end
-    return result
-end
-
---- Coonverts a string with special tags to a table with colors and text
--- @param input The string to convert
--- @return A table with the following structure: { {text = "Hello", color = colors.red}, {text = "World", color = colors.blue} }
-local function convertRichText(input)
-    local parsedResult = {}
-    local currentPosition = 1
-    local rawPosition = 1
-
-    while currentPosition <= #input do
-        local closestColor, closestBgColor
-        local color, bgColor
-        local colorEnd, bgColorEnd
-
-        for colorName, _ in pairs(colors) do
-            local fgPattern = "{fg:" .. colorName.."}"
-            local bgColorPattern = "{bg:" .. colorName.."}"
-            local colorStart, colorEndCandidate = input:find(fgPattern, currentPosition)
-            local bgColorStart, bgColorEndCandidate = input:find(bgColorPattern, currentPosition)
-
-            if colorStart and (not closestColor or colorStart < closestColor) then
-                closestColor = colorStart
-                color = colorName
-                colorEnd = colorEndCandidate
-            end
-
-            if bgColorStart and (not closestBgColor or bgColorStart < closestBgColor) then
-                closestBgColor = bgColorStart
-                bgColor = colorName
-                bgColorEnd = bgColorEndCandidate
-            end
-        end
-
-        local nextPosition
-        if closestColor and (not closestBgColor or closestColor < closestBgColor) then
-            nextPosition = closestColor
-        elseif closestBgColor then
-            nextPosition = closestBgColor
-        else
-            nextPosition = #input + 1
-        end
-
-        local text = input:sub(currentPosition, nextPosition - 1)
-        if #text > 0 then
-            table.insert(parsedResult, {
-                color = nil,
-                bgColor = nil,
-                text = text,
-                position = rawPosition
-            })
-            rawPosition = rawPosition + #text
-            currentPosition = currentPosition + #text
-        end
-
-        if closestColor and (not closestBgColor or closestColor < closestBgColor) then
-            table.insert(parsedResult, {
-                color = color,
-                bgColor = nil,
-                text = "",
-                position = rawPosition,
-            })
-            currentPosition = colorEnd + 1
-        elseif closestBgColor then
-            table.insert(parsedResult, {
-                color = nil,
-                bgColor = bgColor,
-                text = "",
-                position = rawPosition,
-            })
-            currentPosition = bgColorEnd + 1
-        else
-            break
-        end
-    end
-
-    return parsedResult
-end
-
---- Wrapts text with special color tags, like {fg:red} or {bg:blue} to multiple lines
---- @param text string Text to wrap
---- @param width number Width of the line
---- @return table Table of lines
-local function wrapRichText(text, width)
-    local colorData = convertRichText(text)
-    local formattedLines = {}
-    local x, y = 1, 1
-    local currentColor, currentBgColor
-
-    local function addFormattedEntry(entry)
-        table.insert(formattedLines, {
-            x = x,
-            y = y,
-            text = entry.text,
-            color = entry.color or currentColor,
-            bgColor = entry.bgColor or currentBgColor
-        })
-    end
-
-    for _, entry in ipairs(colorData) do
-        if entry.color then
-            currentColor = entry.color
-        elseif entry.bgColor then
-            currentBgColor = entry.bgColor
-        else
-            local words = splitString(entry.text, " ")
-
-            for i, word in ipairs(words) do
-                local wordLength = #word
-
-                if i > 1 then
-                    if x + 1 + wordLength <= width then
-                        addFormattedEntry({ text = " " })
-                        x = x + 1
-                    else
-                        x = 1
-                        y = y + 1
-                    end
-                end
-
-                while wordLength > 0 do
-                    local line = word:sub(1, width - x + 1)
-                    word = word:sub(width - x + 2)
-                    wordLength = #word
-
-                    addFormattedEntry({ text = line })
-
-                    if wordLength > 0 then
-                        x = 1
-                        y = y + 1
-                    else
-                        x = x + #line
-                    end
-                end
-            end
-        end
-
-        if x > width then
-            x = 1
-            y = y + 1
-        end
-    end
-
-    return formattedLines
-end
-
-
-    
-
-return {
-getTextHorizontalAlign = function(text, width, textAlign, replaceChar)
-    text = sub(text, 1, width)
-    local offset = width - len(text)
-    if (textAlign == "right") then
-        text = rep(replaceChar or " ", offset) .. text
-    elseif (textAlign == "center") then
-        text = rep(replaceChar or " ", math.floor(offset / 2)) .. text .. rep(replaceChar or " ", math.floor(offset / 2))
-        text = text .. (len(text) < width and (replaceChar or " ") or "")
-    else
-        text = text .. rep(replaceChar or " ", offset)
-    end
-    return text
-end,
-
-getTextVerticalAlign = function(h, textAlign)
-    local offset = 0
-    if (textAlign == "center") then
-        offset = math.ceil(h / 2)
-        if (offset < 1) then
-            offset = 1
-        end
-    end
-    if (textAlign == "bottom") then
-        offset = h
-    end
-    if(offset<1)then offset=1 end
-    return offset
-end,
-
-orderedTable = function(t)
-    local newTable = {}
-    for _, v in pairs(t) do
-        newTable[#newTable+1] = v
-    end
-    return newTable
-end,
-
-rpairs = function(t)
-    return function(t, i)
-        i = i - 1
-        if i ~= 0 then
-            return i, t[i]
-        end
-    end, t, #t + 1
-end,
-
-tableCount = function(t)
-    local n = 0
-    if(t~=nil)then
-        for k,v in pairs(t)do
-            n = n + 1
-        end
-    end
-    return n
-end,
-
-splitString = splitString,
-removeTags = removeTags,
-
-wrapText = wrapText,
-
-xmlValue = function(name, tab)
-    local var
-    if(type(tab)~="table")then return end
-    if(tab[name]~=nil)then
-        if(type(tab[name])=="table")then
-            if(tab[name].value~=nil)then
-                var = tab[name]:value()
-            end
-        end
-    end
-    if(var==nil)then var = tab["@"..name] end
-
-    if(var=="true")then 
-        var = true 
-    elseif(var=="false")then 
-        var = false
-    elseif(tonumber(var)~=nil)then 
-        var = tonumber(var)
-    end
-    return var
-end,
-
-convertRichText = convertRichText,
-
---- Writes text with special color tags
---- @param obj object The object to write to
---- @param x number X-Position
---- @param y number Y-Position
---- @param text string The text to write
-writeRichText = function(obj, x, y, text)
-    local richText = convertRichText(text)
-    if(#richText==0)then
-        obj:addText(x, y, text)
-        return
-    end
-
-    local defaultFG, defaultBG = obj:getForeground(), obj:getBackground()
-    for _,v in pairs(richText)do
-        obj:addText(x+v.position-1, y, v.text)
-        if(v.color~=nil)then
-            obj:addFG(x+v.position-1, y, tHex[colors[v.color] ]:rep(#v.text))
-            defaultFG = colors[v.color]
-        else
-            obj:addFG(x+v.position-1, y, tHex[defaultFG]:rep(#v.text))
-        end
-        if(v.bgColor~=nil)then
-            obj:addBG(x+v.position-1, y, tHex[colors[v.bgColor] ]:rep(#v.text))
-            defaultBG = colors[v.bgColor]
-        else
-            if(defaultBG~=false)then
-                obj:addBG(x+v.position-1, y, tHex[defaultBG]:rep(#v.text))
-            end
-        end
-    end
-end,
-
-wrapRichText = wrapRichText,
-
---- Writes wrapped Text with special tags.
---- @param obj object The object to write to
---- @param x number X-Position
---- @param y number Y-Position
---- @param text string Text
---- @param width number Width
---- @param height number Height
-writeWrappedText = function(obj, x, y, text, width, height)
-    local wrapped = wrapRichText(text, width)
-    for _,v in pairs(wrapped)do
-        if(v.y>height)then
-            break
-        end
-        if(v.text~=nil)then
-            obj:addText(x+v.x-1, y+v.y-1, v.text)
-        end
-        if(v.color~=nil)then
-            obj:addFG(x+v.x-1, y+v.y-1, tHex[colors[v.color] ]:rep(#v.text))
-        end
-        if(v.bgColor~=nil)then
-            obj:addBG(x+v.x-1, y+v.y-1, tHex[colors[v.bgColor] ]:rep(#v.text))
-        end
-    end
-end,
-
---- Returns a random UUID.
---- @return string UUID.
-uuid = function()
-    return string.gsub(string.format('%x-%x-%x-%x-%x', math.random(0, 0xffff), math.random(0, 0xffff), math.random(0, 0xffff), math.random(0, 0x0fff) + 0x4000, math.random(0, 0x3fff) + 0x8000), ' ', '0')
-end
-
-}
-end
-project["libraries"]["process"] = function(...)
-local processes = {}
-local process = {}
-local processId = 0
-
-local newPackage = dofile("rom/modules/main/cc/require.lua").make
-
-function process:new(path, window, newEnv, ...)
-    local args = {...}
-    local newP = setmetatable({ path = path }, { __index = self })
-    newP.window = window
-    window.current = term.current
-    window.redirect = term.redirect
-    newP.processId = processId
-    if(type(path)=="string")then
-    newP.coroutine = coroutine.create(function()
-        local pPath = shell.resolveProgram(path)
-        local env = setmetatable(newEnv, {__index=_ENV})
-        env.shell = shell
-        env.basaltProgram=true
-        env.arg = {[0]=path, table.unpack(args)}
-        if(pPath==nil)then
-            error("The path "..path.." does not exist!")
-        end
-        env.require, env.package = newPackage(env, fs.getDir(pPath))
-        if(fs.exists(pPath))then
-            local file = fs.open(pPath, "r")
-            local content = file.readAll()
-            file.close()
-            local program = load(content, path, "bt", env)
-            if(program~=nil)then
-                return program()
-            end
-        end
-    end)
-    elseif(type(path)=="function")then
-        newP.coroutine = coroutine.create(function()
-            path(table.unpack(args))
-        end)
-    else
-        return
-    end
-    processes[processId] = newP
-    processId = processId + 1
-    return newP
-end
-
-function process:resume(event, ...)
-    local cur = term.current()
-    term.redirect(self.window)
-    if(self.filter~=nil)then
-        if(event~=self.filter)then return end
-        self.filter=nil
-    end
-    local ok, result = coroutine.resume(self.coroutine, event, ...)
-
-    if ok then
-        self.filter = result
-    else
-        printError(result)
-    end
-    term.redirect(cur)
-    return ok, result
-end
-
-function process:isDead()
-    if (self.coroutine ~= nil) then
-        if (coroutine.status(self.coroutine) == "dead") then
-            table.remove(processes, self.processId)
-            return true
-        end
-    else
-        return true
-    end
-    return false
-end
-
-function process:getStatus()
-    if (self.coroutine ~= nil) then
-        return coroutine.status(self.coroutine)
-    end
-    return nil
-end
-
-function process:start()
-    coroutine.resume(self.coroutine)
-end
-
-return process
-end
-project["plugin"] = function(...)
-local args = {...}
-local plugins = {}
-local pluginNames = {}
-
-local dir = fs.getDir(args[2] or "Basalt")
-local pluginDir = fs.combine(dir, "plugins")
-if(packaged)then
-    for k,v in pairs(getProject("plugins"))do
-        table.insert(pluginNames, k)
-        local newPlugin = v()
-        if(type(newPlugin)=="table")then
-            for a,b in pairs(newPlugin)do
-                if(type(a)=="string")then
-                    if(plugins[a]==nil)then plugins[a] = {} end
-                    table.insert(plugins[a], b)
-                end
-            end
-        end
-    end
-end
-if(fs.exists(pluginDir))then
-    for _,v in pairs(fs.list(pluginDir))do
-        table.insert(pluginNames, v)
-        local newPlugin = require(v:gsub(".lua", ""))
-        if(type(newPlugin)=="table")then
-            for a,b in pairs(newPlugin)do
-                if(type(a)=="string")then
-                    if(plugins[a]==nil)then plugins[a] = {} end
-                    table.insert(plugins[a], b)
-                end
-            end
-        end
-    end
-end
-
-local function get(name)
-    return plugins[name]
-end
-
-return {
-    --- Gets a plugin list
-    --- @param name string name of plugin list
-    --- @return table plugins
-    get = get,
-    getAvailablePlugins = function()
-        return pluginNames
-    end,
-
-    --- Adds a plugin to basalt's plugin list
-    --- @param path string path to plugin
-    addPlugin = function(path)
-        if(fs.exists(path))then
-            if(fs.isDir(path))then
-                for _,v in pairs(fs.list(path))do
-                    table.insert(pluginNames, v)
-                    if not(fs.isDir(fs.combine(path, v)))then
-                        local pluginName = v:gsub(".lua", "")
-                        local newPlugin = require(fs.combine(path, pluginName))
-                        if(type(newPlugin)=="table")then
-                            for a,b in pairs(newPlugin)do
-                                if(type(a)=="string")then
-                                    if(plugins[a]==nil)then plugins[a] = {} end
-                                    table.insert(plugins[a], b)
-                                end
-                            end
-                        end
-                    end
-                end
-            else
-                local newPlugin = require(path:gsub(".lua", ""))
-                table.insert(pluginNames, path:match("[\\/]?([^\\/]-([^%.]+))$"))
-                if(type(newPlugin)=="table")then
-                    for a,b in pairs(newPlugin)do
-                        if(type(a)=="string")then
-                            if(plugins[a]==nil)then plugins[a] = {} end
-                            table.insert(plugins[a], b)
-                        end
-                    end
-                end
-            end
-        end
-    end,
-
-    --- Loads all available plugins into basalt's objects
-    --- @param objects table objects to load plugins into
-    --- @param basalt table basalt
-    --- @return table objects modified objects
-    loadPlugins = function(objects, basalt)
-        for k,v in pairs(objects)do
-            local plugList = plugins[k]
-            if(plugList~=nil)then
-                objects[k] = function(...)
-                    local moddedObject = v(...)
-                    for _,b in pairs(plugList)do
-                        local ext = b(moddedObject, basalt, ...)
-                        ext.__index = ext
-                        moddedObject = setmetatable(ext, moddedObject)
-                    end
-                    return moddedObject
-                end
-            end
-        end
-        return objects
-    end
-}
-end
-project["objects"] = {}
-
-project["objects"]["Button"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-return function(name, basalt)
-    -- Button
-    local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Button"
-    local textHorizontalAlign = "center"
-    local textVerticalAlign = "center"
-
-    local text = "Button"
-
-    base:setSize(12, 3)
-    base:setZIndex(5)
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        getBase = function(self)
-            return base
-        end,  
-        
-        setHorizontalAlign = function(self, pos)
-            textHorizontalAlign = pos
-            self:updateDraw()
-            return self
-        end,
-
-        setVerticalAlign = function(self, pos)
-            textVerticalAlign = pos
-            self:updateDraw()
-            return self
-        end,
-
-        setText = function(self, newText)
-            text = newText
-            self:updateDraw()
-            return self
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("button", function()
-                local w,h = self:getSize()
-                local verticalAlign = utils.getTextVerticalAlign(h, textVerticalAlign)
-                local xOffset
-                if(textHorizontalAlign=="center")then
-                    xOffset = math.floor((w - text:len()) / 2)
-                elseif(textHorizontalAlign=="right")then
-                    xOffset = w - text:len()
-                end
-
-                self:addText(xOffset + 1, verticalAlign, text)
-                self:addFG(xOffset + 1, verticalAlign, tHex[self:getForeground() or colors.white]:rep(text:len()))
-            end)
-        end,
-    }
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Checkbox"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-return function(name, basalt)
-    -- Checkbox
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Checkbox"
-
-    base:setZIndex(5)
-    base:setValue(false)
-    base:setSize(1, 1)
-
-    local symbol,inactiveSymbol,text,textPos = "\42"," ","","right"
-
-    local object = {
-        load = function(self)
-            self:listenEvent("mouse_click", self)
-            self:listenEvent("mouse_up", self)
-        end,
-
-        getType = function(self)
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        setSymbol = function(self, sym, inactive)
-            symbol = sym or symbol
-            inactiveSymbol = inactive or inactiveSymbol
-            self:updateDraw()
-            return self
-        end,
-
-        getSymbol = function(self)
-            return symbol, inactiveSymbol
-        end,
-
-        setText = function(self, _text)
-            text = _text
-            return self
-        end,
-
-        setTextPosition = function(self, pos)
-            textPos = pos or textPos
-            return self
-        end,
-
-        setChecked = base.setValue,
-
-        mouseHandler = function(self, button, x, y)
-            if (base.mouseHandler(self, button, x, y)) then
-                if(button == 1)then
-                    if (self:getValue() ~= true) and (self:getValue() ~= false) then
-                        self:setValue(false)
-                    else
-                        self:setValue(not self:getValue())
-                    end
-                self:updateDraw()
-                return true
-                end
-            end
-            return false
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("checkbox", function()
-                local obx, oby = self:getPosition()
-                local w,h = self:getSize()
-                local verticalAlign = utils.getTextVerticalAlign(h, "center")
-                local bg,fg = self:getBackground(), self:getForeground()
-                if (self:getValue()) then
-                    self:addBlit(1, verticalAlign, utils.getTextHorizontalAlign(symbol, w, "center"), tHex[fg], tHex[bg])
-                else
-                    self:addBlit(1, verticalAlign, utils.getTextHorizontalAlign(inactiveSymbol, w, "center"), tHex[fg], tHex[bg])
-                end
-                if(text~="")then
-                    local align = textPos=="left" and -text:len() or 3
-                    self:addText(align, verticalAlign, text)
-                end
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Dropdown"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-return function(name, basalt)
-    local base = basalt.getObject("List")(name, basalt)
-    local objectType = "Dropdown"
-
-    base:setSize(12, 1)
-    base:setZIndex(6)
-
-    local selectionColorActive = true
-    local align = "left"
-    local yOffset = 0
-
-    local dropdownW = 0
-    local dropdownH = 0
-    local autoSize = true
-    local closedSymbol = "\16"
-    local openedSymbol = "\31"
-    local isOpened = false
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        load = function(self)
-            self:listenEvent("mouse_click", self)
-            self:listenEvent("mouse_up", self)
-            self:listenEvent("mouse_scroll", self)
-            self:listenEvent("mouse_drag", self)
-        end,
-
-        setOffset = function(self, yOff)
-            yOffset = yOff
-            self:updateDraw()
-            return self
-        end,
-
-        getOffset = function(self)
-            return yOffset
-        end,
-
-        addItem = function(self, t, ...)
-            base.addItem(self, t, ...)
-            if(autoSize)then
-                dropdownW = math.max(dropdownW, #t)
-                dropdownH = dropdownH + 1
-            end
-            return self
-        end,
-
-        removeItem = function(self, index)
-            base.removeItem(self, index)
-            if(autoSize)then
-                dropdownW = 0
-                dropdownH = 0
-                for n = 1, #list do
-                    dropdownW = math.max(dropdownW, #list[n].text)
-                end
-                dropdownH = #list
-            end
-        end,
-
-        isOpened = function(self)
-            return isOpened
-        end,
-
-        setOpened = function(self, open)
-            isOpened = open
-            self:updateDraw()
-            return self
-        end,
-
-        setDropdownSize = function(self, width, height)
-            dropdownW, dropdownH = width, height
-            autoSize = false
-            self:updateDraw()
-            return self
-        end,
-
-        getDropdownSize = function(self)
-            return dropdownW, dropdownH
-        end,
-
-        mouseHandler = function(self, button, x, y, isMon)
-            if (isOpened) then
-                local obx, oby = self:getAbsolutePosition()
-                if(button==1)then
-                    local list = self:getAll()
-                    if (#list > 0) then
-                        for n = 1, dropdownH do
-                            if (list[n + yOffset] ~= nil) then
-                                if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
-                                    self:setValue(list[n + yOffset])
-                                    self:updateDraw()
-                                    local val = self:sendEvent("mouse_click", self, "mouse_click", button, x, y)
-                                    if(val==false)then return val end
-                                    if(isMon)then
-                                        basalt.schedule(function()
-                                            sleep(0.1)
-                                            self:mouseUpHandler(button, x, y)
-                                        end)()
-                                    end
-                                    return true
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-            local base = base:getBase()
-            if (base.mouseHandler(self, button, x, y)) then
-                isOpened = not isOpened
-                self:getParent():setImportant(self)
-                self:updateDraw()
-                return true
-            else
-                if(isOpened)then 
-                    self:updateDraw()
-                    isOpened = false
-                end 
-                return false
-            end
-        end,
-
-        mouseUpHandler = function(self, button, x, y)
-            if (isOpened) then
-                local obx, oby = self:getAbsolutePosition()
-                if(button==1)then
-                    local list = self:getAll()
-                    if (#list > 0) then
-                        for n = 1, dropdownH do
-                            if (list[n + yOffset] ~= nil) then
-                                if (obx <= x) and (obx + dropdownW > x) and (oby + n == y) then
-                                    isOpened = false
-                                    self:updateDraw()
-                                    local val = self:sendEvent("mouse_up", self, "mouse_up", button, x, y)
-                                    if(val==false)then return val end
-                                    return true
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end,
-
-        dragHandler = function(self, btn, x, y)
-            if(base.dragHandler(self, btn, x, y))then
-                isOpened = true
-            end
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if(isOpened)then
-                local xPos, yPos = self:getAbsolutePosition()
-                if(x >= xPos)and(x <= xPos + dropdownW)and(y >= yPos)and(y <= yPos + dropdownH)then
-                    self:setFocus()
-                end
-            end
-            if (isOpened)and(self:isFocused()) then
-                local xPos, yPos = self:getAbsolutePosition()
-                if(x < xPos)or(x > xPos + dropdownW)or(y < yPos)or(y > yPos + dropdownH)then
-                    return false
-                end
-                if(#self:getAll() <= dropdownH)then return false end
-
-                local list = self:getAll()
-                yOffset = yOffset + dir
-                if (yOffset < 0) then
-                    yOffset = 0
-                end
-                if (dir == 1) then
-                    if (#list > dropdownH) then
-                        if (yOffset > #list - dropdownH) then
-                            yOffset = #list - dropdownH
-                        end
-                    else
-                        yOffset = math.min(#list - 1, 0)
-                    end
-                end
-                local val = self:sendEvent("mouse_scroll", self, "mouse_scroll", dir, x, y)
-                if(val==false)then return val end
-                self:updateDraw()
-                return true
-            end
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:setDrawState("list", false)
-            self:addDraw("dropdown", function()
-                local obx, oby = self:getPosition()
-                local w,h = self:getSize()
-                local val = self:getValue()
-                local list = self:getAll()
-                local bgCol, fgCol = self:getBackground(), self:getForeground()
-                local text = utils.getTextHorizontalAlign((val~=nil and val.text or ""), w, align):sub(1, w - 1)  .. (isOpened and openedSymbol or closedSymbol)
-                self:addBlit(1, 1, text, tHex[fgCol]:rep(#text), tHex[bgCol]:rep(#text))
-
-                if (isOpened) then
-                    self:addTextBox(1, 2, dropdownW, dropdownH, " ")
-                    self:addBackgroundBox(1, 2, dropdownW, dropdownH, bgCol)
-                    self:addForegroundBox(1, 2, dropdownW, dropdownH, fgCol)
-                    for n = 1, dropdownH do
-                        if (list[n + yOffset] ~= nil) then
-                            local t =utils.getTextHorizontalAlign(list[n + yOffset].text, dropdownW, align)
-                            if (list[n + yOffset] == val) then
-                                if (selectionColorActive) then
-                                    local itemSelectedBG, itemSelectedFG = self:getSelectionColor()
-                                    self:addBlit(1, n+1, t, tHex[itemSelectedFG]:rep(#t), tHex[itemSelectedBG]:rep(#t))
-                                else
-                                    self:addBlit(1, n+1, t, tHex[list[n + yOffset].fgCol]:rep(#t), tHex[list[n + yOffset].bgCol]:rep(#t))
-                                end
-                            else
-                                self:addBlit(1, n+1, t, tHex[list[n + yOffset].fgCol]:rep(#t), tHex[list[n + yOffset].bgCol]:rep(#t))
-                            end
-                        end
-                    end
-                end
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["BaseFrame"] = function(...)
-local drawSystem = require("basaltDraw")
-local utils = require("utils")
-
-local max,min,sub,rep = math.max,math.min,string.sub,string.rep
-
-return function(name, basalt)
-    local base = basalt.getObject("Container")(name, basalt)
-    local objectType = "BaseFrame"
-
-    local xOffset, yOffset = 0, 0
-
-    local colorTheme = {}
-
-    local updateRender = true
-    
-    local termObject = basalt.getTerm()
-    local basaltDraw = drawSystem(termObject)
-
-    local xCursor, yCursor, cursorBlink, cursorColor = 1, 1, false, colors.white
-
-    local object = {   
-        getType = function()
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        getBase = function(self)
-            return base
-        end,
-
-        getOffset = function(self)
-            return xOffset, yOffset
-        end,
-
-        setOffset = function(self, xOff, yOff)
-            xOffset = xOff or xOffset
-            yOffset = yOff or yOffset
-            self:updateDraw()
-            return self
-        end,
-
-        setPalette = function(self, col, ...)            
-            if(self==basalt.getActiveFrame())then
-                if(type(col)=="string")then
-                    colorTheme[col] = ...
-                    termObject.setPaletteColor(type(col)=="number" and col or colors[col], ...)
-                elseif(type(col)=="table")then
-                    for k,v in pairs(col)do
-                        colorTheme[k] = v
-                        if(type(v)=="number")then
-                            termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
-                        else
-                            local r,g,b = table.unpack(v)
-                            termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
-                        end
-                    end
-                end
-            end
-            return self
-        end,
-
-        setSize = function(self, ...)
-            base.setSize(self, ...)
-            basaltDraw = drawSystem(termObject)
-            return self
-        end,
-
-        getSize = function()
-            return termObject.getSize()
-        end,
-
-        getWidth = function(self)
-            return ({termObject.getSize()})[1]
-        end,
-
-        getHeight = function(self)
-            return ({termObject.getSize()})[2]
-        end,
-
-        show = function(self)
-            base.show(self)
-            basalt.setActiveFrame(self)
-            for k,v in pairs(colors)do
-                if(type(v)=="number")then
-                    termObject.setPaletteColor(v, colors.packRGB(term.nativePaletteColor((v))))
-                end
-            end
-            for k,v in pairs(colorTheme)do
-                if(type(v)=="number")then
-                    termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
-                else
-                    local r,g,b = table.unpack(v)
-                    termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
-                end
-            end
-            basalt.setMainFrame(self)
-            return self
-        end,
-
-        render = function(self)
-            if(base.render~=nil)then
-                if(self:isVisible())then
-                    if(updateRender)then
-                        base.render(self)
-                        local objects = self:getObjects()
-                        for _, obj in ipairs(objects) do
-                            if (obj.element.render ~= nil) then
-                                obj.element:render()
-                            end
-                        end
-                        updateRender = false
-                    end
-                end
-            end
-        end,
-
-        updateDraw = function(self)
-            updateRender = true
-            return self
-        end,
-
-        eventHandler = function(self, event, ...)
-            base.eventHandler(self, event, ...)
-            if(event=="term_resize")then
-                self:setSize(termObject.getSize())
-            end
-        end,
-
-        updateTerm = function(self)
-            if(basaltDraw~=nil)then
-                basaltDraw.update()
-            end
-        end,
-
-        setTerm = function(self, newTerm)
-            termObject = newTerm
-            if(newTerm==nil)then
-                basaltDraw = nil
-            else
-                basaltDraw = drawSystem(termObject)
-            end
-            return self
-        end,
-
-        getTerm = function()
-            return termObject
-        end,
-
-        blit = function (self, x, y, t, f, b)
-            local obx, oby = self:getPosition()
-            local w, h = self:getSize()
-            if y >= 1 and y <= h then
-                local t_visible = sub(t, max(1 - x + 1, 1), max(w - x + 1, 1))
-                local f_visible = sub(f, max(1 - x + 1, 1), max(w - x + 1, 1))
-                local b_visible = sub(b, max(1 - x + 1, 1), max(w - x + 1, 1))
-                basaltDraw.blit(max(x + (obx - 1), obx), oby + y - 1, t_visible, f_visible, b_visible)
-            end
-        end,
-
-        setCursor = function(self, _blink, _xCursor, _yCursor, color)
-            local obx, oby = self:getAbsolutePosition()
-            local xO, yO = self:getOffset()
-            cursorBlink = _blink or false
-            if (_xCursor ~= nil) then
-                xCursor = obx + _xCursor - 1 - xO
-            end
-            if (_yCursor ~= nil) then
-                yCursor = oby + _yCursor - 1 - yO
-            end
-            cursorColor = color or cursorColor
-            if (cursorBlink) then
-                termObject.setTextColor(cursorColor)
-                termObject.setCursorPos(xCursor, yCursor)
-                termObject.setCursorBlink(cursorBlink)
-            else
-                termObject.setCursorBlink(false)
-            end
-            return self
-        end,
-    }
-
-    for k,v in pairs({mouse_click={"mouseHandler", true},mouse_up={"mouseUpHandler", false},mouse_drag={"dragHandler", false},mouse_scroll={"scrollHandler", true},mouse_hover={"hoverHandler", false}})do
-        object[v[1]] = function(self, btn, x, y, ...)
-            if(base[v[1]](self, btn, x, y, ...))then
-                basalt.setActiveFrame(self)
-            end
-        end
-    end
-
-    for k,v in pairs({"drawBackgroundBox", "drawForegroundBox", "drawTextBox"})do
-        object[v] = function(self, x, y, width, height, symbol)
-            local obx, oby = self:getPosition()
-            local w, h  = self:getSize()
-            height = (y < 1 and (height + y > self:getHeight() and self:getHeight() or height + y - 1) or (height + y > self:getHeight() and self:getHeight() - y + 1 or height))
-            width = (x < 1 and (width + x > self:getWidth() and self:getWidth() or width + x - 1) or (width + x > self:getWidth() and self:getWidth() - x + 1 or width))
-            basaltDraw[v](max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, symbol)
-        end
-    end
-
-    for k,v in pairs({"setBG", "setFG", "setText"}) do
-        object[v] = function(self, x, y, str)
-            local obx, oby = self:getPosition()
-            local w, h  = self:getSize()
-            if (y >= 1) and (y <= h) then
-                basaltDraw[v](max(x + (obx - 1), obx), oby + y - 1, sub(str, max(1 - x + 1, 1), max(w - x + 1,1)))
-            end
-        end
-    end
-
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Container"] = function(...)
-local utils = require("utils")
-local tableCount = utils.tableCount
-
-return function(name, basalt)
-    local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Container"
-
-    local elements = {}
-
-    local events = {}
-
-    local container = {}
-
-    local focusedObject
-    local sorted = true
-    local objId, evId = 0, 0
-
-    local objSort = function(a, b)
-        if a.zIndex == b.zIndex then
-            return a.objId < b.objId
-        else
-            return a.zIndex < b.zIndex
-        end
-    end
-    local evSort = function(a, b)
-        if a.zIndex == b.zIndex then
-            return a.evId > b.evId
-        else
-            return a.zIndex > b.zIndex
-        end
-    end
-
-    local function getObject(self, name)
-        if(type(name)=="table")then name = name:getName() end
-        for i, v in ipairs(elements) do
-            if v.element:getName() == name then
-                return v.element
-            end
-        end    
-    end
-
-    local function getDeepObject(self, name)
-        local o = getObject(name)
-        if(o~=nil)then return o end
-        for _, value in pairs(objects) do            
-            if (b:getType() == "Container") then
-                local oF = b:getDeepObject(name)
-                if(oF~=nil)then return oF end
-            end
-        end
-    end
-
-    local function addObject(self, element, el2)
-        if (getObject(element:getName()) ~= nil) then
-            return
-        end
-        objId = objId + 1
-        local zIndex = element:getZIndex()
-        table.insert(elements, {element = element, zIndex = zIndex, objId = objId})
-        sorted = false
-        element:setParent(self, true)
-        if(element.init~=nil)then element:init() end
-        if(element.load~=nil)then element:load() end
-        if(element.draw~=nil)then element:draw() end
-        return element
-    end
-
-    local function updateZIndex(self, element, newZ)
-        objId = objId + 1
-        evId = evId + 1
-        for _,v in pairs(elements)do
-            if(v.element==element)then
-                v.zIndex = newZ
-                v.objId = objId
-                break
-            end
-        end
-        for _,v in pairs(events)do
-            for a,b in pairs(v)do
-                if(b.element==element)then
-                    b.zIndex = newZ
-                    b.evId = evId
-                end
-            end
-        end
-        sorted = false
-        self:updateDraw()
-    end
-
-    local function removeObject(self, element)
-        if(type(element)=="string")then element = getObject(element:getName()) end
-        if(element==nil)then return end
-        for i, v in ipairs(elements) do
-            if v.element == element then
-                table.remove(elements, i)
-                return true
-            end
-        end
-        sorted = false
-    end
-
-    local function removeEvents(self, element)
-        local parent = self:getParent()
-        for a, b in pairs(events) do
-            for c, d in pairs(b) do
-                if(d.element == element)then
-                    table.remove(events[a], c)
-                end
-            end
-            if(tableCount(events[a])<=0)then
-                if(parent~=nil)then
-                    parent:removeEvent(a, self)
-                end
-            end
-        end
-        sorted = false
-    end
-
-    local function getEvent(self, event, name)
-        if(type(name)=="table")then name = name:getName() end
-        if(events[event]~=nil)then
-            for _, obj in pairs(events[event]) do
-                if (obj.element:getName() == name) then
-                    return obj
-                end
-            end
-        end
-    end
-
-    local function addEvent(self, event, element)
-        if (getEvent(self, event, element:getName()) ~= nil) then
-            return
-        end
-        local zIndex = element:getZIndex() 
-        evId = evId + 1
-        if(events[event]==nil)then events[event] = {} end
-        table.insert(events[event], {element = element, zIndex = zIndex, evId = evId})
-        sorted = false
-        self:listenEvent(event)
-        return element
-    end
-
-    local function removeEvent(self, event, element)
-        if(events[event]~=nil)then
-            for a, b in pairs(events[event]) do
-                if(b.element == element)then
-                    table.remove(events[event], a)
-                end
-            end
-            if(tableCount(events[event])<=0)then
-                self:listenEvent(event, false)
-            end
-        end
-        sorted = false
-    end
-
-    local function getObjects(self)
-        self:sortElementOrder()
-        return elements
-    end
-
-    local function getEvents(self, event)
-        return event~=nil and events[event] or events
-    end
-
-    container = {
-        getType = function()
-            return objectType
-        end,
-
-        getBase = function(self)
-            return base
-        end,  
-        
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-        
-        setSize = function(self, ...)
-            base.setSize(self, ...)
-            self:customEventHandler("basalt_FrameResize")
-            return self
-        end,
-
-        setPosition = function(self, ...)
-            base.setPosition(self, ...)
-            self:customEventHandler("basalt_FrameReposition")
-            return self
-        end,
-
-        searchObjects = function(self, name)
-            local t = {}
-            for k,v in pairs(elements)do
-                if(string.find(k:getName(), name))then
-                    table.insert(t, v)
-                end
-            end
-            return t
-        end,
-
-        getObjectsByType = function(self, t)
-            local t = {}
-            for k,v in pairs(elements)do
-                if(v:isType(t))then
-                    table.insert(t, v)
-                end
-            end
-            return t
-        end,
-
-        setImportant = function(self, element)
-            objId = objId + 1
-            evId = evId + 1
-            for a, b in pairs(events) do
-                for c, d in pairs(b) do
-                    if(d.element == element)then
-                        d.evId = evId
-                        table.remove(events[a], c)
-                        table.insert(events[a], d)
-                        break
-                    end
-                end
-            end
-            for i, v in ipairs(elements) do
-                if v.element == element then
-                    v.objId = objId
-                    table.remove(elements, i)
-                    table.insert(elements, v)
-                    break
-                end
-            end
-            if(self.updateDraw~=nil)then
-                self:updateDraw()
-            end
-            sorted = false
-        end,
-
-        sortElementOrder = function(self)
-            if(sorted)then return end
-            table.sort(elements, objSort)
-            for a, b in pairs(events) do
-                table.sort(events[a], evSort)
-            end
-            sorted = true
-        end,
-
-        removeFocusedObject = function(self)
-            if(focusedObject~=nil)then
-                if(getObject(self, focusedObject)~=nil)then
-                    focusedObject:loseFocusHandler()
-                end
-            end
-            focusedObject = nil
-            return self
-        end,
-
-        setFocusedObject = function(self, obj)
-            if(focusedObject~=obj)then
-                if(focusedObject~=nil)then
-                    if(getObject(self, focusedObject)~=nil)then
-                        focusedObject:loseFocusHandler()
-                    end
-                end
-                if(obj~=nil)then
-                    if(getObject(self, obj)~=nil)then
-                        obj:getFocusHandler()
-                    end
-                end
-                focusedObject = obj
-                return true
-            end
-            return false
-        end,
-
-        getFocusedObject = function(self)
-            return focusedObject
-        end,
-        
-        getObject = getObject,
-        getObjects = getObjects,
-        getDeepObject = getDeepObject,
-        addObject = addObject,
-        removeObject = removeObject,
-        getEvents = getEvents,
-        getEvent = getEvent,
-        addEvent = addEvent,
-        removeEvent = removeEvent,
-        removeEvents = removeEvents,
-        updateZIndex = updateZIndex,
-
-        listenEvent = function(self, event, active)
-            base.listenEvent(self, event, active)
-            if(events[event]==nil)then events[event] = {} end
-            return self
-        end,
-
-        customEventHandler = function(self, ...)
-            base.customEventHandler(self, ...)
-            for _, o in pairs(elements) do
-                if (o.element.customEventHandler ~= nil) then
-                    o.element:customEventHandler(...)
-                end
-            end
-        end,
-
-        loseFocusHandler = function(self)
-            base.loseFocusHandler(self)
-            if(focusedObject~=nil)then focusedObject:loseFocusHandler() focusedObject = nil end
-        end,
-
-        getBasalt = function(self)
-            return basalt
-        end,
-
-        setPalette = function(self, col, ...)
-            local parent = self:getParent()
-            parent:setPalette(col, ...)
-            return self
-        end,
-
-        eventHandler = function(self, ...)
-            if(base.eventHandler~=nil)then
-                base.eventHandler(self, ...)
-                if(events["other_event"]~=nil)then
-                    self:sortElementOrder()
-                    for _, obj in ipairs(events["other_event"]) do
-                        if (obj.element.eventHandler ~= nil) then
-                            obj.element.eventHandler(obj.element, ...)
-                        end
-                    end
-                end
-            end
-        end,
-    }
-
-    for k,v in pairs({mouse_click={"mouseHandler", true},mouse_up={"mouseUpHandler", false},mouse_drag={"dragHandler", false},mouse_scroll={"scrollHandler", true},mouse_hover={"hoverHandler", false}})do
-        container[v[1]] = function(self, btn, x, y, ...)
-            if(base[v[1]]~=nil)then
-                if(base[v[1]](self, btn, x, y, ...))then
-                    if(events[k]~=nil)then
-                        self:sortElementOrder()
-                        for _, obj in ipairs(events[k]) do
-                            if (obj.element[v[1]] ~= nil) then
-                                local xO, yO = 0, 0
-                                if(self.getOffset~=nil)then
-                                    xO, yO = self:getOffset()
-                                end
-                                if(obj.element.getIgnoreOffset~=nil)then
-                                    if(obj.element.getIgnoreOffset())then
-                                        xO, yO = 0, 0
-                                    end
-                                end
-                                if (obj.element[v[1]](obj.element, btn, x+xO, y+yO, ...)) then      
-                                    return true
-                                end
-                            end
-                        end
-                    if(v[2])then
-                        self:removeFocusedObject()
-                    end
-                    end
-                    return true
-                end
-            end
-        end
-    end
-
-    for k,v in pairs({key="keyHandler",key_up="keyUpHandler",char="charHandler"})do
-        container[v] = function(self, ...)
-            if(base[v]~=nil)then
-                if(base[v](self, ...))then
-                    if(events[k]~=nil)then  
-                        self:sortElementOrder()                  
-                        for _, obj in ipairs(events[k]) do
-                            if (obj.element[v] ~= nil) then
-                                if (obj.element[v](obj.element, ...)) then
-                                    return true
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    for k,v in pairs(basalt.getObjects())do
-        container["add"..k] = function(self, name)
-            return addObject(self, v(name, basalt))
-        end
-    end
-
-    container.__index = container
-    return setmetatable(container, base)
-end
-end
-project["objects"]["List"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-return function(name, basalt)
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "List"
-
-    local list = {}
-    local itemSelectedBG = colors.black
-    local itemSelectedFG = colors.lightGray
-    local selectionColorActive = true
-    local textAlign = "left"
-    local yOffset = 0
-    local scrollable = true
-
-    base:setSize(16, 8)
-    base:setZIndex(5)
-
-    local object = {
-        init = function(self)
-            local parent = self:getParent()
-            self:listenEvent("mouse_click")
-            self:listenEvent("mouse_drag")
-            self:listenEvent("mouse_scroll")
-            return base.init(self)
-        end,
-
-        getBase = function(self)
-            return base
-        end,
-
-        setTextAlign = function(self, align)
-            textAlign = align
-            return self
-        end,
-
-        getTextAlign = function(self)
-            return textAlign
-        end,
-
-        getBase = function(self)
-            return base
-        end,  
-
-        getType = function(self)
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        addItem = function(self, text, bgCol, fgCol, ...)
-            table.insert(list, { text = text, bgCol = bgCol or self:getBackground(), fgCol = fgCol or self:getForeground(), args = { ... } })
-            if (#list <= 1) then
-                self:setValue(list[1], false)
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        setOptions = function(self, ...)
-            list = {}
-            for k,v in pairs(...)do
-                if(type(v)=="string")then
-                    table.insert(list, { text = v, bgCol = self:getBackground(), fgCol = self:getForeground(), args = {} })
-                else
-                    table.insert(list, { text = v[1], bgCol = v[2] or self:getBackground(), fgCol = v[3] or self:getForeground(), args = v[4] or {} })
-                end
-            end
-            self:setValue(list[1], false)
-            self:updateDraw()
-            return self
-        end,
-
-        setOffset = function(self, yOff)
-            yOffset = yOff
-            self:updateDraw()
-            return self
-        end,
-
-        getOffset = function(self)
-            return yOffset
-        end,
-
-        removeItem = function(self, index)
-            if(type(index)=="number")then
-                table.remove(list, index)
-            elseif(type(index)=="table")then
-                for k,v in pairs(list)do
-                    if(v==index)then
-                        table.remove(list, k)
-                        break
-                    end
-                end
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        getItem = function(self, index)
-            return list[index]
-        end,
-
-        getAll = function(self)
-            return list
-        end,
-
-        getOptions = function(self)
-            return list
-        end,
-
-        getItemIndex = function(self)
-            local selected = self:getValue()
-            for key, value in pairs(list) do
-                if (value == selected) then
-                    return key
-                end
-            end
-        end,
-
-        clear = function(self)
-            list = {}
-            self:setValue({}, false)
-            self:updateDraw()
-            return self
-        end,
-
-        getItemCount = function(self)
-            return #list
-        end,
-
-        editItem = function(self, index, text, bgCol, fgCol, ...)
-            table.remove(list, index)
-            table.insert(list, index, { text = text, bgCol = bgCol or self:getBackground(), fgCol = fgCol or self:getForeground(), args = { ... } })
-            self:updateDraw()
-            return self
-        end,
-
-        selectItem = function(self, index)
-            self:setValue(list[index] or {}, false)
-            self:updateDraw()
-            return self
-        end,
-
-        setSelectionColor = function(self, bgCol, fgCol, active)
-            itemSelectedBG = bgCol or self:getBackground()
-            itemSelectedFG = fgCol or self:getForeground()
-            selectionColorActive = active~=nil and active or true
-            self:updateDraw()
-            return self
-        end,
-
-        getSelectionColor = function(self)
-            return itemSelectedBG, itemSelectedFG
-        end,
-
-        isSelectionColorActive = function(self)
-            return selectionColorActive
-        end,
-
-        setScrollable = function(self, scroll)
-            scrollable = scroll
-            if(scroll==nil)then scrollable = true end
-            self:updateDraw()
-            return self
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if(base.scrollHandler(self, dir, x, y))then
-                if(scrollable)then
-                    local w,h = self:getSize()
-                    yOffset = yOffset + dir
-                    if (yOffset < 0) then
-                        yOffset = 0
-                    end
-                    if (dir >= 1) then
-                        if (#list > h) then
-                            if (yOffset > #list - h) then
-                                yOffset = #list - h
-                            end
-                            if (yOffset >= #list) then
-                                yOffset = #list - 1
-                            end
-                        else
-                            yOffset = yOffset - 1
-                        end
-                    end
-                    self:updateDraw()
-                end
-                return true
-            end
-            return false
-        end,
-
-        mouseHandler = function(self, button, x, y)
-            if(base.mouseHandler(self, button, x, y))then
-                local obx, oby = self:getAbsolutePosition()
-                local w,h = self:getSize()
-                if (#list > 0) then
-                    for n = 1, h do
-                        if (list[n + yOffset] ~= nil) then
-                            if (obx <= x) and (obx + w > x) and (oby + n - 1 == y) then
-                                self:setValue(list[n + yOffset])
-                                self:selectHandler()
-                                self:updateDraw()
-                            end
-                        end
-                    end
-                end
-                return true
-            end
-            return false
-        end,
-
-        dragHandler = function(self, button, x, y)
-            return self:mouseHandler(button, x, y)
-        end,
-
-        touchHandler = function(self, x, y)
-            return self:mouseHandler(1, x, y)
-        end,
-
-        onSelect = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("select_item", v)
-                end
-            end
-            return self
-        end,
-
-        selectHandler = function(self)
-            self:sendEvent("select_item", self:getValue())
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("list", function()
-                local w, h = self:getSize()
-                for n = 1, h do
-                    if list[n + yOffset] then
-                        local t = list[n + yOffset].text
-                        local fg, bg = list[n + yOffset].fgCol, list[n + yOffset].bgCol
-                        if list[n + yOffset] == self:getValue() and selectionColorActive then
-                            fg, bg = itemSelectedFG, itemSelectedBG
-                        end
-                        self:addText(1, n, t:sub(1,w))
-                        self:addBG(1, n, tHex[bg]:rep(w))
-                        self:addFG(1, n, tHex[fg]:rep(w))
-                    end
-                end
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Frame"] = function(...)
-local utils = require("utils")
-
-local max,min,sub,rep,len = math.max,math.min,string.sub,string.rep,string.len
-
-return function(name, basalt)
-    local base = basalt.getObject("Container")(name, basalt)
-    local objectType = "Frame"
-    local parent
-    
-    local updateRender = true
-
-    local xOffset, yOffset = 0, 0
-
-    base:setSize(30, 10)
-    base:setZIndex(10)
-
-    local object = {    
-        getType = function()
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        getBase = function(self)
-            return base
-        end,  
-        
-        getOffset = function(self)
-            return xOffset, yOffset
-        end,
-
-        setOffset = function(self, xOff, yOff)
-            xOffset = xOff or xOffset
-            yOffset = yOff or yOffset
-            self:updateDraw()
-            return self
-        end,
-
-        setParent = function(self, p, ...)
-            base.setParent(self, p, ...)
-            parent = p
-            return self
-        end,
-
-        render = function(self)
-            if(base.render~=nil)then
-                if(self:isVisible())then
-                    base.render(self)
-                    local objects = self:getObjects()
-                    for _, obj in ipairs(objects) do
-                        if (obj.element.render ~= nil) then
-                            obj.element:render()
-                        end
-                    end
-                end
-            end
-        end,
-
-        updateDraw = function(self)
-            if(parent~=nil)then
-                parent:updateDraw()
-            end
-            return self
-        end,
-
-        blit = function (self, x, y, t, f, b)
-            local obx, oby = self:getPosition()
-            local xO, yO = parent:getOffset()
-            obx = obx - xO
-            oby = oby - yO
-            local w, h = self:getSize()        
-            if y >= 1 and y <= h then
-                local t_visible = sub(t, max(1 - x + 1, 1), max(w - x + 1, 1))
-                local f_visible = sub(f, max(1 - x + 1, 1), max(w - x + 1, 1))
-                local b_visible = sub(b, max(1 - x + 1, 1), max(w - x + 1, 1))        
-                parent:blit(max(x + (obx - 1), obx), oby + y - 1, t_visible, f_visible, b_visible)
-            end
-        end,      
-
-        setCursor = function(self, blink, x, y, color)
-            local obx, oby = self:getPosition()
-            local xO, yO = self:getOffset()
-            parent:setCursor(blink or false, (x or 0)+obx-1 - xO, (y or 0)+oby-1 - yO, color or colors.white)
-            return self
-        end,
-    }
-
-    for k,v in pairs({"drawBackgroundBox", "drawForegroundBox", "drawTextBox"})do
-        object[v] = function(self, x, y, width, height, symbol)
-            local obx, oby = self:getPosition()
-            local xO, yO = parent:getOffset()
-            obx = obx - xO
-            oby = oby - yO
-            height = (y < 1 and (height + y > self:getHeight() and self:getHeight() or height + y - 1) or (height + y > self:getHeight() and self:getHeight() - y + 1 or height))
-            width = (x < 1 and (width + x > self:getWidth() and self:getWidth() or width + x - 1) or (width + x > self:getWidth() and self:getWidth() - x + 1 or width))
-            parent[v](parent, max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, symbol)
-        end
-    end
-
-    for k,v in pairs({"setBG", "setFG", "setText"})do
-        object[v] = function(self, x, y, str)
-            local obx, oby = self:getPosition()
-            local xO, yO = parent:getOffset()
-            obx = obx - xO
-            oby = oby - yO
-            local w, h  = self:getSize()
-            if (y >= 1) and (y <= h) then
-                parent[v](parent, max(x + (obx - 1), obx), oby + y - 1, sub(str, max(1 - x + 1, 1), max(w - x + 1,1)))
-            end
-        end
-    end
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Input"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-return function(name, basalt)
-    -- Input
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Input"
-
-    local inputType = "text"
-    local inputLimit = 0
-    base:setZIndex(5)
-    base:setValue("")
-    base:setSize(12, 1)
-
-    local textX = 1
-    local wIndex = 1
-
-    local defaultText = ""
-    local defaultBGCol = colors.black
-    local defaultFGCol = colors.lightGray
-    local showingText = defaultText
-    local internalValueChange = false
-
-    local object = {
-        load = function(self)
-            self:listenEvent("mouse_click")
-            self:listenEvent("key")
-            self:listenEvent("char")
-            self:listenEvent("other_event")
-            self:listenEvent("mouse_drag")
-        end,
-
-        getType = function(self)
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        setDefaultText = function(self, text, fCol, bCol)
-            defaultText = text
-            defaultFGCol = fCol or defaultFGCol
-            defaultBGCol = bCol or defaultBGCol
-            if (self:isFocused()) then
-                showingText = ""
-            else
-                showingText = defaultText
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        getDefaultText = function(self)
-            return defaultText, defaultFGCol, defaultBGCol
-        end,
-
-        setOffset = function(self, x)
-            wIndex = x
-            self:updateDraw()
-            return self
-        end,
-
-        getOffset = function(self)
-            return wIndex
-        end,
-
-        setTextOffset = function(self, x)
-            textX = x
-            self:updateDraw()
-            return self
-        end,
-
-        getTextOffset = function(self)
-            return textX
-        end,
-
-        setInputType = function(self, t)
-            inputType = t
-            self:updateDraw()
-            return self
-        end,
-
-        getInputType = function(self)
-            return inputType
-        end,
-
-        setValue = function(self, val)
-            base.setValue(self, tostring(val))
-            if not (internalValueChange) then
-                textX = tostring(val):len() + 1
-                wIndex = math.max(1, textX-self:getWidth()+1)
-                if(self:isFocused())then
-                    local parent = self:getParent()
-                    local obx, oby = self:getPosition()
-                    parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self:getHeight()/2), self:getForeground())
-                end
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        getValue = function(self)
-            local val = base.getValue(self)
-            return inputType == "number" and tonumber(val) or val
-        end,
-
-        setInputLimit = function(self, limit)
-            inputLimit = tonumber(limit) or inputLimit
-            self:updateDraw()
-            return self
-        end,
-
-        getInputLimit = function(self)
-            return inputLimit
-        end,
-
-        getFocusHandler = function(self)
-            base.getFocusHandler(self)
-            local parent = self:getParent()
-            if (parent ~= nil) then
-                local obx, oby = self:getPosition()
-                showingText = ""
-                if(defaultText~="")then
-                    self:updateDraw()
-                end
-                parent:setCursor(true, obx + textX - wIndex, oby+math.max(math.ceil(self:getHeight()/2-1, 1)), self:getForeground())
-            end
-        end,
-
-        loseFocusHandler = function(self)
-            base.loseFocusHandler(self)
-            local parent = self:getParent()
-            showingText = defaultText
-            if(defaultText~="")then
-                self:updateDraw()
-            end
-            parent:setCursor(false)
-        end,
-
-        keyHandler = function(self, key)
-            if (base.keyHandler(self, key)) then
-                local w,h = self:getSize()
-                local parent = self:getParent()
-                internalValueChange = true
-                    if (key == keys.backspace) then
-                        -- on backspace
-                        local text = tostring(base.getValue())
-                        if (textX > 1) then
-                            self:setValue(text:sub(1, textX - 2) .. text:sub(textX, text:len()))
-                            textX = math.max(textX - 1, 1)
-                            if (textX < wIndex) then
-                                wIndex = math.max(wIndex - 1, 1)
-                            end
-                        end
-                    end
-                    if (key == keys.enter) then
-                        parent:removeFocusedObject(self)
-                    end
-                    if (key == keys.right) then
-                        local tLength = tostring(base.getValue()):len()
-                        textX = textX + 1
-
-                        if (textX > tLength) then
-                            textX = tLength + 1
-                        end
-                        textX = math.max(textX, 1)
-                        if (textX < wIndex) or (textX >= w + wIndex) then
-                            wIndex = textX - w + 1
-                        end
-                        wIndex = math.max(wIndex, 1)
-                    end
-
-                    if (key == keys.left) then
-                        -- left arrow
-                        textX = textX - 1
-                        if (textX >= 1) then
-                            if (textX < wIndex) or (textX >= w + wIndex) then
-                                wIndex = textX
-                            end
-                        end
-                        textX = math.max(textX, 1)
-                        wIndex = math.max(wIndex, 1)
-                    end
-                local obx, oby = self:getPosition()
-                local val = tostring(base.getValue())
-
-                self:updateDraw()
-                internalValueChange = false
-                return true
-            end
-        end,
-
-        charHandler = function(self, char)
-            if (base.charHandler(self, char)) then
-                internalValueChange = true
-                local w,h = self:getSize()
-                local text = base.getValue()
-                if (text:len() < inputLimit or inputLimit <= 0) then
-                    if (inputType == "number") then
-                        local cache = text
-                        if (textX==1 and char == "-") or (char == ".") or (tonumber(char) ~= nil) then
-                            self:setValue(text:sub(1, textX - 1) .. char .. text:sub(textX, text:len()))
-                            textX = textX + 1
-                            if(char==".")or(char=="-")and(#text>0)then
-                                if (tonumber(base.getValue()) == nil) then
-                                    self:setValue(cache)
-                                    textX = textX - 1
-                                end
-                            end
-                        end
-                    else
-                        self:setValue(text:sub(1, textX - 1) .. char .. text:sub(textX, text:len()))
-                        textX = textX + 1
-                    end
-                    if (textX >= w + wIndex) then
-                        wIndex = wIndex + 1
-                    end
-                end
-                local obx, oby = self:getPosition()
-                local val = tostring(base.getValue())
-
-                internalValueChange = false
-                self:updateDraw()
-                return true
-            end
-        end,
-
-        mouseHandler = function(self, button, x, y)
-            if(base.mouseHandler(self, button, x, y))then
-                local parent = self:getParent()
-                local ax, ay = self:getPosition()
-                local obx, oby = self:getAbsolutePosition(ax, ay)
-                local w, h = self:getSize()
-                textX = x - obx + wIndex
-                local text = base.getValue()
-                if (textX > text:len()) then
-                    textX = text:len() + 1
-                end
-                if (textX < wIndex) then
-                    wIndex = textX - 1
-                    if (wIndex < 1) then
-                        wIndex = 1
-                    end
-                end
-                parent:setCursor(true, ax + textX - wIndex, ay+math.max(math.ceil(h/2-1, 1)), self:getForeground())
-                return true
-            end
-        end,
-
-        dragHandler = function(self, btn, x, y, xOffset, yOffset)
-            if(self:isFocused())then
-                if(self:isCoordsInObject(x, y))then
-                    if(base.dragHandler(self, btn, x, y, xOffset, yOffset))then
-                        return true
-                    end
-                end
-                local parent = self:getParent()
-                parent:removeFocusedObject()
-            end
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("input", function()
-                local parent = self:getParent()
-                local obx, oby = self:getPosition()
-                local w,h = self:getSize()
-                local verticalAlign = utils.getTextVerticalAlign(h, textVerticalAlign)
-     
-                local val = tostring(base.getValue())
-                local bCol = self:getBackground()
-                local fCol = self:getForeground()
-                local text
-                if (val:len() <= 0) then
-                    text = showingText
-                    bCol = defaultBGCol or bCol
-                    fCol = defaultFGCol or fCol
-                end
-
-                text = showingText
-                if (val ~= "") then
-                    text = val
-                end
-                text = text:sub(wIndex, w + wIndex - 1)
-                local space = w - text:len()
-                if (space < 0) then
-                    space = 0
-                end
-                if (inputType == "password") and (val ~= "") then
-                    text = string.rep("*", text:len())
-                end
-                text = text .. string.rep(" ", space)
-                self:addBlit(1, verticalAlign, text, tHex[fCol]:rep(text:len()), tHex[bCol]:rep(text:len()))
-
-                if(self:isFocused())then
-                    parent:setCursor(true, obx + textX - wIndex, oby+math.floor(self:getHeight()/2), self:getForeground())
-                end
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["ChangeableObject"] = function(...)
-return function(name, basalt)
-    local base = basalt.getObject("VisualObject")(name, basalt)
-    -- Base object
-    local objectType = "ChangeableObject"
-
-    local value
-    
-    local object = {
-        setValue = function(self, _value, valueChangedHandler)
-            if (value ~= _value) then
-                value = _value
-                self:updateDraw()
-                if(valueChangedHandler~=false)then
-                    self:valueChangedHandler()
-                end
-            end
-            return self
-        end,
-
-        getValue = function(self)
-            return value
-        end,
-
-        onChange = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("value_changed", v)
-                end
-            end
-            return self
-        end,
-
-        valueChangedHandler = function(self)
-            self:sendEvent("value_changed", value)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Flexbox"] = function(...)
-return function(name, basalt)
-    local base = basalt.getObject("Frame")(name, basalt)
-    local objectType = "Flexbox"
-
-    local flexDirection = "row" -- "row" or "column"
-    local justifyContent = "flex-start" -- "flex-start", "flex-end", "center", "space-between", "space-around"
-    local alignItems = "flex-start" -- "flex-start", "flex-end", "center", "space-between", "space-around"
-    local spacing = 1
-
-    local function getObjectOffAxisOffset(self, obj)
-        local width, height = self:getSize()
-        local objWidth, objHeight = obj.element:getSize()
-        local availableSpace = flexDirection == "row" and height - objHeight or width - objWidth
-        local offset = 1
-        if alignItems == "center" then
-            offset = 1 + availableSpace / 2
-        elseif alignItems == "flex-end" then
-            offset = 1 + availableSpace
-        end
-        return offset
-    end
-
-    local function applyLayout(self)
-        local objects = self:getObjects()
-        local totalElements = #objects
-        local width, height = self:getSize()
-    
-        local mainAxisTotalChildSize = 0
-        for _, obj in ipairs(objects) do
-            local objWidth, objHeight = obj.element:getSize()
-            if flexDirection == "row" then
-                mainAxisTotalChildSize = mainAxisTotalChildSize + objWidth
-            else
-                mainAxisTotalChildSize = mainAxisTotalChildSize + objHeight
-            end
-        end
-        local mainAxisAvailableSpace = (flexDirection == "row" and width or height) - mainAxisTotalChildSize - (spacing * (totalElements - 1))
-        local justifyContentOffset = 1
-        if justifyContent == "center" then
-            justifyContentOffset = 1 + mainAxisAvailableSpace / 2
-        elseif justifyContent == "flex-end" then
-            justifyContentOffset = 1 + mainAxisvailableSpace
-        end
-    
-        for _, obj in ipairs(objects) do
-            local alignItemsOffset = getObjectOffAxisOffset(self, obj)
-            if flexDirection == "row" then
-                obj.element:setPosition(justifyContentOffset, alignItemsOffset)
-                local objWidth, _ = obj.element:getSize()
-                justifyContentOffset = justifyContentOffset + objWidth + spacing
-            else
-                obj.element:setPosition(alignItemsOffset, math.floor(justifyContentOffset+0.5))
-                local _, objHeight = obj.element:getSize()
-                justifyContentOffset = justifyContentOffset + objHeight + spacing
-            end
-        end
-    end
-    
-
-    local object = {
-        getType = function()
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType == t or base.getBase(self).isType(t) or false
-        end,
-
-        setSpacing = function(self, newSpacing)
-            spacing = newSpacing
-            applyLayout(self)
-            return self
-        end,
-    
-        getSpacing = function(self)
-            return spacing
-        end,
-
-        setFlexDirection = function(self, direction)
-            if direction == "row" or direction == "column" then
-                flexDirection = direction
-                applyLayout(self)
-            end
-            return self
-        end,
-
-        setJustifyContent = function(self, alignment)
-            if alignment == "flex-start" or alignment == "flex-end" or alignment == "center" or alignment == "space-between" or alignment == "space-around" then
-                justifyContent = alignment
-                applyLayout(self)
-            end
-            return self
-        end,
-
-        setAlignItems = function(self, alignment)
-            if alignment == "flex-start" or alignment == "flex-end" or alignment == "center" or alignment == "space-between" or alignment == "space-around" then
-                alignItems = alignment
-                applyLayout(self)
-            end
-            return self
-        end,
-    }
-
-    for k,v in pairs(basalt.getObjects())do
-        object["add"..k] = function(self, name)
-            local obj = base["add"..k](self, name)
-            applyLayout(base)
-            return obj
-        end
-    end
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Graph"] = function(...)
-return function(name, basalt)
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Graph"
-
-    base:setZIndex(5)
-    base:setSize(30, 10)
-
-    local graphData = {}
-    local graphColor = colors.gray
-    local graphSymbol = "\7"
-    local graphSymbolCol = colors.black
-    local maxValue = 100
-    local minValue = 0
-    local graphType = "line"
-    local maxEntries = 10
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        setGraphColor = function(self, color)
-            graphColor = color or graphColor
-            self:updateDraw()
-            return self
-        end,
-
-        setGraphSymbol = function(self, symbol, symbolcolor)
-            graphSymbol = symbol or graphSymbol
-            graphSymbolCol = symbolcolor or graphSymbolCol
-            self:updateDraw()
-            return self
-        end,
-
-        getGraphSymbol = function(self)
-            return graphSymbol, graphSymbolCol
-        end,
-
-        addDataPoint = function(self, value)
-            if value >= minValue and value <= maxValue then
-                table.insert(graphData, value)
-                self:updateDraw()
-            end
-            if(#graphData>100)then -- 100 is hard capped to prevent memory leaks
-                table.remove(graphData,1)
-            end
-            return self
-        end,
-
-        setMaxValue = function(self, value)
-            maxValue = value
-            self:updateDraw()
-            return self
-        end,
-
-        getMaxValue = function(self)
-            return maxValue
-        end,
-
-        setMinValue = function(self, value)
-            minValue = value
-            self:updateDraw()
-            return self
-        end,
-
-        getMinValue = function(self)
-            return minValue
-        end,
-
-        setGraphType = function(self, graph_type)
-            if graph_type == "scatter" or graph_type == "line" or graph_type == "bar" then
-                graphType = graph_type
-                self:updateDraw()
-            end
-            return self
-        end,
-
-        setMaxEntries = function(self, value)
-            maxEntries = value
-            self:updateDraw()
-            return self
-        end,
-    
-        getMaxEntries = function(self)
-            return maxEntries
-        end,
-
-        clear = function(self)
-            graphData = {}
-            self:updateDraw()
-            return self
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("graph", function()
-                local obx, oby = self:getPosition()
-                local w, h = self:getSize()
-                local bgCol, fgCol = self:getBackground(), self:getForeground()
-
-                local range = maxValue - minValue
-                local prev_x, prev_y
-
-                local startIndex = #graphData - maxEntries + 1
-                if startIndex < 1 then startIndex = 1 end
-
-                for i = startIndex, #graphData do
-                    local data = graphData[i]
-                    local x = math.floor(((w - 1) / (maxEntries - 1)) * (i - startIndex) + 1.5)
-                    local y = math.floor((h - 1) - ((h - 1) / range) * (data - minValue) + 1.5)
-
-
-                    if graphType == "scatter" then
-                        self:addBackgroundBox(x, y, 1, 1, graphColor)
-                        self:addForegroundBox(x, y, 1, 1, graphSymbolCol)
-                        self:addTextBox(x, y, 1, 1, graphSymbol)
-                    elseif graphType == "line" then
-                        if prev_x and prev_y then
-                            local dx = math.abs(x - prev_x)
-                            local dy = math.abs(y - prev_y)
-                            local sx = prev_x < x and 1 or -1
-                            local sy = prev_y < y and 1 or -1
-                            local err = dx - dy
-                        
-                            while true do
-                                self:addBackgroundBox(prev_x, prev_y, 1, 1, graphColor)
-                                self:addForegroundBox(prev_x, prev_y, 1, 1, graphSymbolCol)
-                                self:addTextBox(prev_x, prev_y, 1, 1, graphSymbol)
-                        
-                                if prev_x == x and prev_y == y then
-                                    break
-                                end
-                        
-                                local e2 = 2 * err
-                        
-                                if e2 > -dy then
-                                    err = err - dy
-                                    prev_x = prev_x + sx
-                                end
-                        
-                                if e2 < dx then
-                                    err = err + dx
-                                    prev_y = prev_y + sy
-                                end
-                            end
-                        end
-                        prev_x, prev_y = x, y
-                    elseif graphType == "bar" then
-                        self:addBackgroundBox(x - 1, y, 1, h - y, graphColor)
-                    end
-                end
-            end)
-        end,
-
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Label"] = function(...)
-local utils = require("utils")
-local wrapText = utils.wrapText
-local writeWrappedText = utils.writeWrappedText
-local tHex = require("tHex")
-
-return function(name, basalt)
-    -- Label
-    local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Label"
-
-    base:setZIndex(3)
-    base:setSize(5, 1)
-    base:setBackground(false)
-
-    local autoSize = true
-    local text, textAlign = "Label", "left"
-
-    local object = {
-        --- Returns the object type.
-        --- @return string
-        getType = function(self)
-            return objectType
-        end,
-
-        --- Returns the label's base object.
-        --- @return object
-        getBase = function(self)
-            return base
-        end,
-        
-        --- Changes the label's text.
-        --- @param newText string  The new text of the label.
-        --- @return object
-        setText = function(self, newText)
-            text = tostring(newText)
-            if(autoSize)then
-                local t = wrapText(text, #text)
-                local newW, newH = 1,1
-                for k,v in pairs(t)do
-                    newH = newH+1
-                    newW = math.max(newW, v:len())
-                end
-                self:setSize(newW, newH)
-                autoSize = true
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        --- Returns the label's autoSize property.
-        --- @return boolean
-        getAutoSize = function(self)
-            return autoSize
-        end,
-
-        --- Sets the label's autoSize property.
-        --- @param bool boolean  The new value of the autoSize property.
-        --- @return object
-        setAutoSize = function(self, bool)
-            autoSize = bool
-            return self
-        end,
-
-        --- Returns the label's text.
-        --- @return string
-        getText = function(self)
-            return text
-        end,
-
-        --- Sets the size of the label.
-        --- @param width number  The width of the label.
-        --- @param height number  The height of the label.
-        --- @return object
-        setSize = function(self, width, height)
-            base.setSize(self, width, height)
-            autoSize = false
-            return self
-        end,
-
-        --- Sets the text alignment of the label.
-        --- @param align string  The alignment of the text. Can be "left", "center", or "right".
-        --- @return object
-        setTextAlign = function(self, align)
-            textAlign = align or textAlign
-            return self;
-        end,
-
-        --- Queues a new draw function to be called when the object is drawn.
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("label", function()
-                local w, h = self:getSize()
-                local align = textAlign=="center" and math.floor(w/2-text:len()/2+0.5) or textAlign=="right" and w-(text:len()-1) or 1
-                writeWrappedText(self, align, 1, text, w+1, h)
-            end)
-        end,
-        
-        --- Initializes the label.
-        init = function(self)
-            base.init(self)
-            local parent = self:getParent()
-            self:setForeground(parent:getForeground())
-        end
-
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Image"] = function(...)
-local images = require("images")
-local bimg = require("bimg")
-local unpack,sub,max,min = table.unpack,string.sub,math.max,math.min
-return function(name, basalt)
-    -- Image
-    local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Image"
-
-    local bimgLibrary = bimg()
-    local bimgFrame = bimgLibrary.getFrameObject(1)
-    local originalImage
-    local image
-    local activeFrame = 1
-
-    local infinitePlay = false
-    local animTimer
-    local usePalette = false
-    local autoSize = true
-
-    local xOffset, yOffset = 0, 0
-
-    base:setSize(24, 8)
-    base:setZIndex(2)
-
-    local function getPalette(id)
-        local p = {}
-        for k,v in pairs(colors)do
-            if(type(v)=="number")then
-                p[k] = {term.nativePaletteColor(v)}
-            end
-        end
-        local globalPalette = bimgLibrary.getMetadata("palette")
-        if(globalPalette~=nil)then
-            for k,v in pairs(globalPalette)do
-                p[k] = tonumber(v)
-            end
-        end
-        local localPalette = bimgLibrary.getFrameData("palette")
-        basalt.log(localPalette)
-        if(localPalette~=nil)then
-            for k,v in pairs(localPalette)do
-                p[k] = tonumber(v)
-            end
-        end
-        return p
-    end
-
-    local function checkAutoSize()
-        if(autoSize)then
-            if(bimgLibrary~=nil)then
-                base:setSize(bimgLibrary.getSize())
-            end
-        end
-    end
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        setOffset = function(self, _x, _y, rel)
-            if(rel)then
-                xOffset = xOffset + _x or 0
-                yOffset = yOffset + _y or 0
-            else
-                xOffset = _x or xOffset
-                yOffset = _y or yOffset
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        setSize = function(self, _x, _y)
-            base:setSize(_x, _y)
-            autoSize = false
-            return self
-        end,
-
-        getOffset = function(self)
-            return xOffset, yOffset
-        end,
-
-        selectFrame = function(self, id)
-            if(bimgLibrary.getFrameObject(id)==nil)then
-                bimgLibrary.addFrame(id)
-            end
-            bimgFrame = bimgLibrary.getFrameObject(id)
-            image = bimgFrame.getImage(id)
-            activeFrame = id
-            self:updateDraw()
-        end,
-
-        addFrame = function(self, id)
-            bimgLibrary.addFrame(id)
-            return self
-        end,
-
-        getFrame = function(self, id)
-            return bimgLibrary.getFrame(id)
-        end,
-
-        getFrameObject = function(self, id)
-            return bimgLibrary.getFrameObject(id)
-        end,
-
-        removeFrame = function(self, id)
-            bimgLibrary.removeFrame(id)
-            return self
-        end,
-
-        moveFrame = function(self, id, dir)
-            bimgLibrary.moveFrame(id, dir)
-            return self
-        end,
-
-        getFrames = function(self)
-            return bimgLibrary.getFrames()
-        end,
-
-        getFrameCount = function(self)
-            return #bimgLibrary.getFrames()
-        end,
-
-        getActiveFrame = function(self)
-            return activeFrame
-        end,
-
-        loadImage = function(self, path)
-            if(fs.exists(path))then
-                local newBimg = images.loadBIMG(path)
-                bimgLibrary = bimg(newBimg)
-                activeFrame = 1
-                bimgFrame = bimgLibrary.getFrameObject(1)
-                originalImage = bimgLibrary.createBimg()
-                image = bimgFrame.getImage()
-                checkAutoSize()
-                self:updateDraw()
-            end     
-            return self
-        end,
-
-        setImage = function(self, t)
-            if(type(t)=="table")then
-                bimgLibrary = bimg(t)
-                activeFrame = 1
-                bimgFrame = bimgLibrary.getFrameObject(1)
-                originalImage = bimgLibrary.createBimg()
-                image = bimgFrame.getImage()
-                checkAutoSize()
-                self:updateDraw()
-            end
-            return self
-        end,
-
-        clear = function(self)
-            bimgLibrary = bimg()
-            bimgFrame = bimgLibrary.getFrameObject(1)
-            image = nil
-            self:updateDraw()
-            return self
-        end,
-
-        getImage = function(self)
-            return bimgLibrary.createBimg()
-        end,
-
-        getImageFrame = function(self, id)
-            return bimgFrame.getImage(id)
-        end,
-
-        usePalette = function(self, use)
-            usePalette = use~=nil and use or true
-            return self
-        end,
-
-        play = function(self, inf)
-            if(bimgLibrary.getMetadata("animated"))then
-                local t = bimgLibrary.getMetadata("duration") or bimgLibrary.getMetadata("secondsPerFrame") or 0.2
-                self:listenEvent("other_event")
-                animTimer = os.startTimer(t)
-                infinitePlay = inf or false
-            end
-            return self
-        end,
-
-        stop = function(self)
-            os.cancelTimer(animTimer)
-            animTimer = nil
-            infinitePlay = false
-            return self
-        end,
-
-        eventHandler = function(self, event, timerId, ...)
-            base.eventHandler(self, event, timerId, ...)
-            if(event=="timer")then
-                if(timerId==animTimer)then
-                    if(bimgLibrary.getFrame(activeFrame+1)~=nil)then
-                        activeFrame = activeFrame + 1
-                        self:selectFrame(activeFrame)
-                        local t = bimgLibrary.getFrameData(activeFrame, "duration") or bimgLibrary.getMetadata("secondsPerFrame") or 0.2
-                        animTimer = os.startTimer(t)
-                    else
-                        if(infinitePlay)then
-                            activeFrame = 1
-                            self:selectFrame(activeFrame)
-                            local t = bimgLibrary.getFrameData(activeFrame, "duration") or bimgLibrary.getMetadata("secondsPerFrame") or 0.2
-                            animTimer = os.startTimer(t)
-                        end
-                    end
-                    self:updateDraw()
-                end
-            end
-        end,
-
-        setMetadata = function(self, key, value)
-            bimgLibrary.setMetadata(key, value)
-            return self
-        end,
-
-        getMetadata = function(self, key)
-            return bimgLibrary.getMetadata(key)
-        end,
-
-        getFrameMetadata = function(self, id, key)
-            return bimgLibrary.getFrameData(id, key)
-        end,
-
-        setFrameMetadata = function(self, id, key, value)
-            bimgLibrary.setFrameData(id, key, value)
-            return self
-        end,
-
-        blit = function(self, text, fg, bg, _x, _y)
-            x = _x or x
-            y = _y or y
-            bimgFrame.blit(text, fg, bg, x, y)
-            image = bimgFrame.getImage()
-            self:updateDraw()
-            return self
-        end,
-
-        setText = function(self, text, _x, _y)
-            x = _x or x
-            y = _y or y
-            bimgFrame.text(text, x, y)
-            image = bimgFrame.getImage()
-            self:updateDraw()
-            return self
-        end,
-
-        setBg = function(self, bg, _x, _y)
-            x = _x or x
-            y = _y or y
-            bimgFrame.bg(bg, x, y)
-            image = bimgFrame.getImage()
-            self:updateDraw()
-            return self
-        end,
-
-        setFg = function(self, fg, _x, _y)
-            x = _x or x
-            y = _y or y
-            bimgFrame.fg(fg, x, y)
-            image = bimgFrame.getImage()
-            self:updateDraw()
-            return self
-        end,
-
-        getImageSize = function(self)
-            return bimgLibrary.getSize()
-        end,
-
-        setImageSize = function(self, w, h)
-            bimgLibrary.setSize(w, h)
-            image = bimgFrame.getImage()
-            self:updateDraw()
-            return self
-        end,
-
-        resizeImage = function(self, w, h)
-            local newBimg = images.resizeBIMG(originalImage, w, h)
-            bimgLibrary = bimg(newBimg)
-            activeFrame = 1
-            bimgFrame = bimgLibrary.getFrameObject(1)
-            image = bimgFrame.getImage()
-            self:updateDraw()
-            return self
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("image", function()
-                local w,h = self:getSize()
-                local x, y = self:getPosition()
-                local wParent, hParent = self:getParent():getSize()
-                local parentXOffset, parentYOffset = self:getParent():getOffset()
-                
-                if(x - parentXOffset > wParent)or(y - parentYOffset > hParent)or(x - parentXOffset + w < 1)or(y - parentYOffset + h < 1)then
-                    return
-                end
-
-                if(usePalette)then
-                    self:getParent():setPalette(getPalette(activeFrame))
-                end
-
-                if(image~=nil)then
-                    for k,v in pairs(image)do
-                        if(k+yOffset<=h)and(k+yOffset>=1)then
-                            local t,f,b = v[1],v[2],v[3]
-
-                            local startIdx = max(1 - xOffset, 1)
-                            local endIdx = min(w - xOffset, #t)
-                            
-                            t = sub(t, startIdx, endIdx)
-                            f = sub(f, startIdx, endIdx)
-                            b = sub(b, startIdx, endIdx)
-
-                            self:addBlit(max(1 + xOffset, 1), k + yOffset, t, f, b)
-                        end
-                    end
-                end
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Menubar"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-return function(name, basalt)
-    local base = basalt.getObject("List")(name, basalt)
-    local objectType = "Menubar"
-    local object = {}
-
-    base:setSize(30, 1)
-    base:setZIndex(5)
-
-    local itemOffset = 0
-    local space, outerSpace = 1, 1
-    local scrollable = true
-
-    local function maxScroll()
-        local mScroll = 0
-        local w = base:getWidth()
-        local list = base:getAll()
-        for n = 1, #list do
-            mScroll = mScroll + list[n].text:len() + space * 2
-        end
-        return math.max(mScroll - w, 0)
-    end
-
-    object = {
-        init = function(self)
-            local parent = self:getParent()
-            self:listenEvent("mouse_click")
-            self:listenEvent("mouse_drag")
-            self:listenEvent("mouse_scroll")
-            return base.init(self)
-        end,
-
-        getType = function(self)
-            return objectType
-        end,
-
-        getBase = function(self)
-            return base
-        end,
-
-        setSpace = function(self, _space)
-            space = _space or space
-            self:updateDraw()
-            return self
-        end,
-
-        setScrollable = function(self, scroll)
-            scrollable = scroll
-            if(scroll==nil)then scrollable = true end
-            return self
-        end,
-
-
-        mouseHandler = function(self, button, x, y)
-            if(base:getBase().mouseHandler(self, button, x, y))then
-                local objX, objY = self:getAbsolutePosition()
-                local w,h = self:getSize()
-                    local xPos = 0
-                    local list = self:getAll()
-                    for n = 1, #list do
-                        if (list[n] ~= nil) then
-                            if (objX + xPos <= x + itemOffset) and (objX + xPos + list[n].text:len() + (space*2) > x + itemOffset) and (objY == y) then
-                                self:setValue(list[n])
-                                self:sendEvent(event, self, event, 0, x, y, list[n])
-                            end
-                            xPos = xPos + list[n].text:len() + space * 2
-                        end
-                    end
-                self:updateDraw()
-                return true
-            end
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if(base:getBase().scrollHandler(self, dir, x, y))then
-                if(scrollable)then
-                    itemOffset = itemOffset + dir
-                    if (itemOffset < 0) then
-                        itemOffset = 0
-                    end
-
-                    local mScroll = maxScroll()
-
-                    if (itemOffset > mScroll) then
-                        itemOffset = mScroll
-                    end
-                    self:updateDraw()
-                end
-                return true
-            end
-            return false
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("list", function()
-                local parent = self:getParent()
-                local w,h = self:getSize()
-                local text = ""
-                local textBGCol = ""
-                local textFGCol = ""
-                local itemSelectedBG, itemSelectedFG = self:getSelectionColor()
-                for _, v in pairs(self:getAll()) do
-                    local newItem = (" "):rep(space) .. v.text .. (" "):rep(space)
-                    text = text .. newItem
-                    if(v == self:getValue())then
-                        textBGCol = textBGCol .. tHex[itemSelectedBG or v.bgCol or self:getBackground()]:rep(newItem:len())
-                        textFGCol = textFGCol .. tHex[itemSelectedFG or v.FgCol or self:getForeground()]:rep(newItem:len())
-                    else
-                        textBGCol = textBGCol .. tHex[v.bgCol or self:getBackground()]:rep(newItem:len())
-                        textFGCol = textFGCol .. tHex[v.FgCol or self:getForeground()]:rep(newItem:len())
-                    end
-                end
-
-                self:addBlit(1, 1, text:sub(itemOffset+1, w+itemOffset), textFGCol:sub(itemOffset+1, w+itemOffset), textBGCol:sub(itemOffset+1, w+itemOffset))
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Object"] = function(...)
-local basaltEvent = require("basaltEvent")
-local utils = require("utils")
-local uuid = utils.uuid
-
-local unpack,sub = table.unpack,string.sub
-
-return function(name, basalt)
-    name = name or uuid()
-    assert(basalt~=nil, "Unable to find basalt instance! ID: "..name)
-
-    -- Base object
-    local objectType = "Object" -- not changeable
-    local isEnabled,initialized = true,false
-
-    local eventSystem = basaltEvent()
-    local activeEvents = {}
-
-    local parent
-    
-    local object = {
-        init = function(self)
-            if(initialized)then return false end
-            initialized = true
-            return true
-        end,
-
-        load = function(self)
-        end,
-
-        getType = function(self)
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t
-        end,
-        
-        getName = function(self)
-            return name
-        end,
-
-        getParent = function(self)
-            return parent
-        end,
-
-        setParent = function(self, newParent, noRemove)
-            if(noRemove)then parent = newParent return self end
-            if (newParent.getType ~= nil and newParent:isType("Container")) then
-                self:remove()
-                newParent:addObject(self)
-                if (self.show) then
-                    self:show()
-                end
-                parent = newParent
-            end
-            return self
-        end,
-
-        updateEvents = function(self)
-            for k,v in pairs(activeEvents)do
-                parent:removeEvent(k, self)
-                if(v)then
-                    parent:addEvent(k, self)
-                end
-            end
-            return self
-        end,
-
-        listenEvent = function(self, event, active)
-            if(parent~=nil)then
-                if(active)or(active==nil)then
-                    activeEvents[event] = true
-                    parent:addEvent(event, self)
-                elseif(active==false)then
-                    activeEvents[event] = false
-                    parent:removeEvent(event, self)
-                end
-            end
-            return self
-        end,
-
-        getZIndex = function(self)
-            return 1
-        end,
-
-        enable = function(self)
-            isEnabled = true
-            return self
-        end,
-
-        disable = function(self)
-            isEnabled = false
-            return self
-        end,
-
-        isEnabled = function(self)
-            return isEnabled
-        end,
-
-        remove = function(self)
-            if (parent ~= nil) then
-                parent:removeObject(self)
-                parent:removeEvents(self)
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        getBaseFrame = function(self)
-            if(parent~=nil)then
-                return parent:getBaseFrame()
-            end
-            return self
-        end,
-
-        onEvent = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("other_event", v)
-                end
-            end
-            return self
-        end,
-
-        getEventSystem = function(self)
-            return eventSystem
-        end,
-
-        registerEvent = function(self, event, func)
-            if(parent~=nil)then
-                parent:addEvent(event, self)
-            end
-            return eventSystem:registerEvent(event, func)
-        end,
-
-        removeEvent = function(self, event, index)
-            if(eventSystem:getEventCount(event)<1)then
-                if(parent~=nil)then
-                    parent:removeEvent(event, self)
-                end
-            end
-            return eventSystem:removeEvent(event, index)
-        end,
-
-        eventHandler = function(self, event, ...)
-            local val = self:sendEvent("other_event", event, ...)
-            if(val~=nil)then return val end
-        end,
-
-        customEventHandler = function(self, event, ...)
-            local val = self:sendEvent("custom_event", event, ...)
-            if(val~=nil)then return val end
-            return true
-        end,
-
-        sendEvent = function(self, event, ...)
-            if(event=="other_event")or(event=="custom_event")then
-                return eventSystem:sendEvent(event, self, ...)
-            end
-            return eventSystem:sendEvent(event, self, event, ...)
-        end,
-
-        onClick = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("mouse_click", v)
-                end
-            end
-            return self
-        end,
-
-        onClickUp = function(self, ...)
-                for _,v in pairs(table.pack(...))do
-                    if(type(v)=="function")then
-                        self:registerEvent("mouse_up", v)
-                    end
-                end
-            return self
-        end,
-
-        onRelease = function(self, ...)
-                for _,v in pairs(table.pack(...))do
-                    if(type(v)=="function")then
-                        self:registerEvent("mouse_release", v)
-                    end
-                end
-            return self
-        end,
-
-        onScroll = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("mouse_scroll", v)
-                end
-            end
-            return self
-        end,
-
-        onHover = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("mouse_hover", v)
-                end
-            end
-            return self
-        end,
-
-        onLeave = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("mouse_leave", v)
-                end
-            end
-            return self
-        end,
-
-        onDrag = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("mouse_drag", v)
-                end
-            end
-            return self
-        end,
-
-        onKey = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("key", v)
-                end
-            end
-            return self
-        end,
-
-        onChar = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("char", v)
-                end
-            end
-            return self
-        end,
-
-        onKeyUp = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("key_up", v)
-                end
-            end
-            return self
-        end,
-        }
-
-    object.__index = object
-    return object
-end
-end
-project["objects"]["MonitorFrame"] = function(...)
-local basaltMon = require("basaltMon")
-local max,min,sub,rep = math.max,math.min,string.sub,string.rep
-
-
-return function(name, basalt)
-    local base = basalt.getObject("BaseFrame")(name, basalt)
-    local objectType = "MonitorFrame"
-
-    base:setTerm(nil)
-    local isMonitorGroup = false
-    local monGroup
-    
-    local object = {    
-
-        getType = function()
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        getBase = function(self)
-            return base
-        end,
-
-        setMonitor = function(self, newMon)
-            if(type(newMon)=="string")then
-                local mon = peripheral.wrap(newMon)
-                if(mon~=nil)then
-                    self:setTerm(mon)
-                end
-            elseif(type(newMon)=="table")then
-                self:setTerm(newMon)
-            end
-            return self
-        end,
-
-        setMonitorGroup = function(self, monGrp)
-            monGroup = basaltMon(monGrp)
-            self:setTerm(monGroup)
-            isMonitorGroup = true
-            return self
-        end,
-
-        render = function(self)
-            if(self:getTerm()~=nil)then
-                base.render(self)
-            end
-        end,
-        
-        show = function(self)
-            base:getBase().show(self)
-            basalt.setActiveFrame(self)
-            for k,v in pairs(colors)do
-                if(type(v)=="number")then
-                    termObject.setPaletteColor(v, colors.packRGB(term.nativePaletteColor((v))))
-                end
-            end
-            for k,v in pairs(colorTheme)do
-                if(type(v)=="number")then
-                    termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
-                else
-                    local r,g,b = table.unpack(v)
-                    termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
-                end
-            end
-            return self
-        end,
-    }
-
-    object.mouseHandler = function(self, btn, x, y, isMon, monitor, ...)
-        if(isMonitorGroup)then
-            x, y = monGroup.calculateClick(monitor, x, y)
-        end
-        base.mouseHandler(self, btn, x, y, isMon, monitor, ...)
-    end
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Pane"] = function(...)
-return function(name, basalt)
-    -- Pane
-    local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Pane"
-
-    base:setSize(25, 10)
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Program"] = function(...)
-local tHex = require("tHex")
-local process = require("process")
-
-local sub = string.sub
-
-return function(name, basalt)
-    local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Program"
-    local object
-    local cachedPath
-    local enviroment = {}
-
-    local function createBasaltWindow(x, y, width, height)
-        local xCursor, yCursor = 1, 1
-        local bgColor, fgColor = colors.black, colors.white
-        local cursorBlink = false
-        local visible = false
-
-        local cacheT = {}
-        local cacheBG = {}
-        local cacheFG = {}
-
-        local tPalette = {}
-
-        local emptySpaceLine
-        local emptyColorLines = {}
-
-        for i = 0, 15 do
-            local c = 2 ^ i
-            tPalette[c] = { basalt.getTerm().getPaletteColour(c) }
-        end
-
-        local function createEmptyLines()
-            emptySpaceLine = (" "):rep(width)
-            for n = 0, 15 do
-                local nColor = 2 ^ n
-                local sHex = tHex[nColor]
-                emptyColorLines[nColor] = sHex:rep(width)
-            end
-        end
-
-        local function recreateWindowArray()
-            createEmptyLines()
-            local emptyText = emptySpaceLine
-            local emptyFG = emptyColorLines[colors.white]
-            local emptyBG = emptyColorLines[colors.black]
-            for n = 1, height do
-                cacheT[n] = sub(cacheT[n] == nil and emptyText or cacheT[n] .. emptyText:sub(1, width - cacheT[n]:len()), 1, width)
-                cacheFG[n] = sub(cacheFG[n] == nil and emptyFG or cacheFG[n] .. emptyFG:sub(1, width - cacheFG[n]:len()), 1, width)
-                cacheBG[n] = sub(cacheBG[n] == nil and emptyBG or cacheBG[n] .. emptyBG:sub(1, width - cacheBG[n]:len()), 1, width)
-            end
-            base.updateDraw(base)
-        end
-        recreateWindowArray()
-
-        local function updateCursor()
-            if xCursor >= 1 and yCursor >= 1 and xCursor <= width and yCursor <= height then
-                --parentTerminal.setCursorPos(xCursor + x - 1, yCursor + y - 1)
-            else
-                --parentTerminal.setCursorPos(0, 0)
-            end
-            --parentTerminal.setTextColor(fgColor)
-        end
-
-        local function internalBlit(sText, sTextColor, sBackgroundColor)
-            if yCursor < 1 or yCursor > height or xCursor < 1 or xCursor + #sText - 1 > width then
-                return
-            end
-            cacheT[yCursor] = sub(cacheT[yCursor], 1, xCursor - 1) .. sText .. sub(cacheT[yCursor], xCursor + #sText, width)
-            cacheFG[yCursor] = sub(cacheFG[yCursor], 1, xCursor - 1) .. sTextColor .. sub(cacheFG[yCursor], xCursor + #sText, width)
-            cacheBG[yCursor] = sub(cacheBG[yCursor], 1, xCursor - 1) .. sBackgroundColor .. sub(cacheBG[yCursor], xCursor + #sText, width)
-            xCursor = xCursor + #sText
-            if visible then
-                updateCursor()
-            end
-            object:updateDraw()
-        end
-
-        local function setText(_x, _y, text)
-            if (text ~= nil) then
-                local gText = cacheT[_y]
-                if (gText ~= nil) then
-                    cacheT[_y] = sub(gText:sub(1, _x - 1) .. text .. gText:sub(_x + (text:len()), width), 1, width)
-                end
-            end
-            object:updateDraw()
-        end
-
-        local function setBG(_x, _y, colorStr)
-            if (colorStr ~= nil) then
-                local gBG = cacheBG[_y]
-                if (gBG ~= nil) then
-                    cacheBG[_y] = sub(gBG:sub(1, _x - 1) .. colorStr .. gBG:sub(_x + (colorStr:len()), width), 1, width)
-                end
-            end
-            object:updateDraw()
-        end
-
-        local function setFG(_x, _y, colorStr)
-            if (colorStr ~= nil) then
-                local gFG = cacheFG[_y]
-                if (gFG ~= nil) then
-                    cacheFG[_y] = sub(gFG:sub(1, _x - 1) .. colorStr .. gFG:sub(_x + (colorStr:len()), width), 1, width)
-                end
-            end
-            object:updateDraw()
-        end
-
-        local setTextColor = function(color)
-            if type(color) ~= "number" then
-                error("bad argument #1 (expected number, got " .. type(color) .. ")", 2)
-            elseif tHex[color] == nil then
-                error("Invalid color (got " .. color .. ")", 2)
-            end
-            fgColor = color
-        end
-
-        local setBackgroundColor = function(color)
-            if type(color) ~= "number" then
-                error("bad argument #1 (expected number, got " .. type(color) .. ")", 2)
-            elseif tHex[color] == nil then
-                error("Invalid color (got " .. color .. ")", 2)
-            end
-            bgColor = color
-        end
-
-        local setPaletteColor = function(colour, r, g, b)
-            -- have to work on
-            if type(colour) ~= "number" then
-                error("bad argument #1 (expected number, got " .. type(colour) .. ")", 2)
-            end
-
-            if tHex[colour] == nil then
-                error("Invalid color (got " .. colour .. ")", 2)
-            end
-
-            local tCol
-            if type(r) == "number" and g == nil and b == nil then
-                tCol = { colours.rgb8(r) }
-                tPalette[colour] = tCol
-            else
-                if type(r) ~= "number" then
-                    error("bad argument #2 (expected number, got " .. type(r) .. ")", 2)
-                end
-                if type(g) ~= "number" then
-                    error("bad argument #3 (expected number, got " .. type(g) .. ")", 2)
-                end
-                if type(b) ~= "number" then
-                    error("bad argument #4 (expected number, got " .. type(b) .. ")", 2)
-                end
-
-                tCol = tPalette[colour]
-                tCol[1] = r
-                tCol[2] = g
-                tCol[3] = b
-            end
-        end
-
-        local getPaletteColor = function(colour)
-            if type(colour) ~= "number" then
-                error("bad argument #1 (expected number, got " .. type(colour) .. ")", 2)
-            end
-            if tHex[colour] == nil then
-                error("Invalid color (got " .. colour .. ")", 2)
-            end
-            local tCol = tPalette[colour]
-            return tCol[1], tCol[2], tCol[3]
-        end
-
-        local basaltwindow = {
-            setCursorPos = function(_x, _y)
-                if type(_x) ~= "number" then
-                    error("bad argument #1 (expected number, got " .. type(_x) .. ")", 2)
-                end
-                if type(_y) ~= "number" then
-                    error("bad argument #2 (expected number, got " .. type(_y) .. ")", 2)
-                end
-                xCursor = math.floor(_x)
-                yCursor = math.floor(_y)
-                if (visible) then
-                    updateCursor()
-                end
-            end,
-
-            getCursorPos = function()
-                return xCursor, yCursor
-            end;
-
-            setCursorBlink = function(blink)
-                if type(blink) ~= "boolean" then
-                    error("bad argument #1 (expected boolean, got " .. type(blink) .. ")", 2)
-                end
-                cursorBlink = blink
-            end;
-
-            getCursorBlink = function()
-                return cursorBlink
-            end;
-
-
-            getPaletteColor = getPaletteColor,
-            getPaletteColour = getPaletteColor,
-
-            setBackgroundColor = setBackgroundColor,
-            setBackgroundColour = setBackgroundColor,
-
-            setTextColor = setTextColor,
-            setTextColour = setTextColor,
-
-            setPaletteColor = setPaletteColor,
-            setPaletteColour = setPaletteColor,
-
-            getBackgroundColor = function()
-                return bgColor
-            end;
-            getBackgroundColour = function()
-                return bgColor
-            end;
-
-            getSize = function()
-                return width, height
-            end;
-
-            getTextColor = function()
-                return fgColor
-            end;
-            getTextColour = function()
-                return fgColor
-            end;
-
-            basalt_resize = function(_width, _height)
-                width, height = _width, _height
-                recreateWindowArray()
-            end;
-
-            basalt_reposition = function(_x, _y)
-                x, y = _x, _y
-            end;
-
-            basalt_setVisible = function(vis)
-                visible = vis
-            end;
-
-            drawBackgroundBox = function(_x, _y, _width, _height, bgCol)
-                for n = 1, _height do
-                    setBG(_x, _y + (n - 1), tHex[bgCol]:rep(_width))
-                end
-            end;
-            drawForegroundBox = function(_x, _y, _width, _height, fgCol)
-                for n = 1, _height do
-                    setFG(_x, _y + (n - 1), tHex[fgCol]:rep(_width))
-                end
-            end;
-            drawTextBox = function(_x, _y, _width, _height, symbol)
-                for n = 1, _height do
-                    setText(_x, _y + (n - 1), symbol:rep(_width))
-                end
-            end;
-
-            basalt_update = function()
-                for n = 1, height do
-                    object:addBlit(1, n, cacheT[n], cacheFG[n], cacheBG[n])
-                end
-            end,
-
-            scroll = function(offset)
-                assert(type(offset) == "number", "bad argument #1 (expected number, got " .. type(offset) .. ")")
-                if offset ~= 0 then
-                  for newY = 1, height do
-                    local y = newY + offset
-                    if y < 1 or y > height then
-                      cacheT[newY] = emptySpaceLine
-                      cacheFG[newY] = emptyColorLines[fgColor]
-                      cacheBG[newY] = emptyColorLines[bgColor]
-                    else
-                      cacheT[newY] = cacheT[y]
-                      cacheBG[newY] = cacheBG[y]
-                      cacheFG[newY] = cacheFG[y]
-                    end
-                  end
-                end
-                if (visible) then
-                    updateCursor()
-                end
-            end,
-
-
-            isColor = function()
-                return basalt.getTerm().isColor()
-            end;
-
-            isColour = function()
-                return basalt.getTerm().isColor()
-            end;
-
-            write = function(text)
-                text = tostring(text)
-                if (visible) then
-                    internalBlit(text, tHex[fgColor]:rep(text:len()), tHex[bgColor]:rep(text:len()))
-                end
-            end;
-
-            clearLine = function()
-                if (visible) then
-                    setText(1, yCursor, (" "):rep(width))
-                    setBG(1, yCursor, tHex[bgColor]:rep(width))
-                    setFG(1, yCursor, tHex[fgColor]:rep(width))
-                end
-                if (visible) then
-                    updateCursor()
-                end
-            end;
-
-            clear = function()
-                for n = 1, height do
-                    setText(1, n, (" "):rep(width))
-                    setBG(1, n, tHex[bgColor]:rep(width))
-                    setFG(1, n, tHex[fgColor]:rep(width))
-                end
-                if (visible) then
-                    updateCursor()
-                end
-            end;
-
-            blit = function(text, fgcol, bgcol)
-                if type(text) ~= "string" then
-                    error("bad argument #1 (expected string, got " .. type(text) .. ")", 2)
-                end
-                if type(fgcol) ~= "string" then
-                    error("bad argument #2 (expected string, got " .. type(fgcol) .. ")", 2)
-                end
-                if type(bgcol) ~= "string" then
-                    error("bad argument #3 (expected string, got " .. type(bgcol) .. ")", 2)
-                end
-                if #fgcol ~= #text or #bgcol ~= #text then
-                    error("Arguments must be the same length", 2)
-                end
-                if (visible) then
-                    internalBlit(text, fgcol, bgcol)
-                end
-            end
-
-
-        }
-
-        return basaltwindow
-    end
-
-    base:setZIndex(5)
-    base:setSize(30, 12)
-    local pWindow = createBasaltWindow(1, 1, 30, 12)
-    local curProcess
-    local paused = false
-    local queuedEvent = {}
-
-    local function updateCursor(self)
-        local parent = self:getParent()
-        local xCur, yCur = pWindow.getCursorPos()
-        local obx, oby = self:getPosition()
-        local w,h = self:getSize()
-        if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-            parent:setCursor(self:isFocused() and pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
-        end
-    end
-
-    local function resumeProcess(self, event, ...)
-        local ok, result = curProcess:resume(event, ...)
-        if (ok==false)and(result~=nil)and(result~="Terminated")then
-            local val = self:sendEvent("program_error", result)
-            if(val~=false)then
-                error("Basalt Program - "..result)
-            end
-        end
-        
-        if(curProcess:getStatus()=="dead")then
-            self:sendEvent("program_done")
-        end
-    end
-
-    local function mouseEvent(self, event, p1, x, y)
-        if (curProcess == nil) then
-            return false
-        end
-        if not (curProcess:isDead()) then
-            if not (paused) then
-                local absX, absY = self:getAbsolutePosition()
-                resumeProcess(self, event, p1, x-absX+1, y-absY+1)
-                updateCursor(self)
-            end
-        end
-    end
-
-    local function keyEvent(self, event, key, isHolding)
-        if (curProcess == nil) then
-            return false
-        end
-        if not (curProcess:isDead()) then
-            if not (paused) then
-                if (self.draw) then
-                    resumeProcess(self, event, key, isHolding)
-                    updateCursor(self)
-                end
-            end
-        end
-    end
-
-    object = {
-        getType = function(self)
-            return objectType
-        end;
-
-        show = function(self)
-            base.show(self)
-            pWindow.setBackgroundColor(self:getBackground())
-            pWindow.setTextColor(self:getForeground())
-            pWindow.basalt_setVisible(true)
-            return self
-        end;
-
-        hide = function(self)
-            base.hide(self)
-            pWindow.basalt_setVisible(false)
-            return self
-        end;
-
-        setPosition = function(self, x, y, rel)
-            base.setPosition(self, x, y, rel)
-            pWindow.basalt_reposition(self:getPosition())
-            return self
-        end,
-
-        getBasaltWindow = function()
-            return pWindow
-        end;
-
-        getBasaltProcess = function()
-            return curProcess
-        end;
-
-        setSize = function(self, width, height, rel)
-            base.setSize(self, width, height, rel)
-            pWindow.basalt_resize(self:getWidth(), self:getHeight())
-            return self
-        end;
-
-        getStatus = function(self)
-            if (curProcess ~= nil) then
-                return curProcess:getStatus()
-            end
-            return "inactive"
-        end;
-
-        setEnviroment = function(self, env)
-            enviroment = env or {}
-            return self
-        end,
-
-        execute = function(self, path, ...)
-            cachedPath = path or cachedPath
-            curProcess = process:new(cachedPath, pWindow, enviroment, ...)
-            pWindow.setBackgroundColor(colors.black)
-            pWindow.setTextColor(colors.white)
-            pWindow.clear()
-            pWindow.setCursorPos(1, 1)
-            pWindow.setBackgroundColor(self:getBackground())
-            pWindow.setTextColor(self:getForeground() or colors.white)
-            pWindow.basalt_setVisible(true)
-
-            resumeProcess(self)
-            paused = false
-            self:listenEvent("mouse_click", self)
-            self:listenEvent("mouse_up", self)
-            self:listenEvent("mouse_drag", self)
-            self:listenEvent("mouse_scroll", self)
-            self:listenEvent("key", self)
-            self:listenEvent("key_up", self)
-            self:listenEvent("char", self)
-            self:listenEvent("other_event", self)
-            return self
-        end;
-
-        stop = function(self)            
-            local parent = self:getParent()
-            if (curProcess ~= nil) then
-                if not (curProcess:isDead()) then
-                    resumeProcess(self, "terminate")
-                    if (curProcess:isDead()) then
-                        parent:setCursor(false)
-                    end
-                end
-            end
-            parent:removeEvents(self)
-            return self
-        end;
-
-        pause = function(self, p)
-            paused = p or (not paused)
-            if (curProcess ~= nil) then
-                if not (curProcess:isDead()) then
-                    if not (paused) then
-                        self:injectEvents(table.unpack(queuedEvent))
-                        queuedEvent = {}
-                    end
-                end
-            end
-            return self
-        end;
-
-        isPaused = function(self)
-            return paused
-        end;
-
-        injectEvent = function(self, event, ign, ...)
-            if (curProcess ~= nil) then
-                if not (curProcess:isDead()) then
-                    if (paused == false) or (ign) then
-                        resumeProcess(self, event, ...)
-                    else
-                        table.insert(queuedEvent, { event = event, args = {...} })
-                    end
-                end
-            end
-            return self
-        end;
-
-        getQueuedEvents = function(self)
-            return queuedEvent
-        end;
-
-        updateQueuedEvents = function(self, events)
-            queuedEvent = events or queuedEvent
-            return self
-        end;
-
-        injectEvents = function(self, ...)
-            if (curProcess ~= nil) then
-                if not (curProcess:isDead()) then
-                    for _, value in pairs({...}) do
-                        resumeProcess(self, value.event, table.unpack(value.args))
-                    end
-                end
-            end
-            return self
-        end;
-
-        mouseHandler = function(self, button, x, y)
-            if (base.mouseHandler(self, button, x, y)) then
-                mouseEvent(self, "mouse_click", button, x, y)
-                return true
-            end
-            return false
-        end,
-
-        mouseUpHandler = function(self, button, x, y)
-            if (base.mouseUpHandler(self, button, x, y)) then
-                mouseEvent(self, "mouse_up", button, x, y)
-                return true
-            end
-            return false
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if (base.scrollHandler(self, dir, x, y)) then
-                mouseEvent(self, "mouse_scroll", dir, x, y)
-                return true
-            end
-            return false
-        end,
-
-        dragHandler = function(self, button, x, y)
-            if (base.dragHandler(self, button, x, y)) then
-                mouseEvent(self, "mouse_drag", button, x, y)
-                return true
-            end
-            return false
-        end,
-
-        keyHandler = function(self, key, isHolding)
-            if(base.keyHandler(self, key, isHolding))then
-                keyEvent(self, "key", key, isHolding)
-                return true
-            end
-            return false
-        end,
-
-        keyUpHandler = function(self, key)
-            if(base.keyUpHandler(self, key))then
-                keyEvent(self, "key_up", key)
-                return true
-            end
-            return false
-        end,
-
-        charHandler = function(self, char)
-            if(base.charHandler(self, char))then
-                keyEvent(self, "char", char)
-                return true
-            end
-            return false
-        end,
-
-        getFocusHandler = function(self)
-            base.getFocusHandler(self)
-            if (curProcess ~= nil) then
-                if not (curProcess:isDead()) then
-                    if not (paused) then
-                        local parent = self:getParent()
-                        if (parent ~= nil) then
-                            local xCur, yCur = pWindow.getCursorPos()
-                            local obx, oby = self:getPosition()
-                            local w,h = self:getSize()
-                            if (obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1) then
-                                parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
-                            end
-                        end
-                    end
-                end
-            end
-        end,
-
-        loseFocusHandler = function(self)
-            base.loseFocusHandler(self)
-            if (curProcess ~= nil) then
-                if not (curProcess:isDead()) then
-                    local parent = self:getParent()
-                    if (parent ~= nil) then
-                        parent:setCursor(false)
-                    end
-                end
-            end
-        end,
-
-        eventHandler = function(self, event, ...)
-            base.eventHandler(self, event, ...)
-            if curProcess == nil then
-                return
-            end
-            if not curProcess:isDead() then
-                if not paused then
-                    resumeProcess(self, event, ...)
-                    if self:isFocused() then
-                        local parent = self:getParent()
-                        local obx, oby = self:getPosition()
-                        local xCur, yCur = pWindow.getCursorPos()
-                        local w,h = self:getSize()
-                        if obx + xCur - 1 >= 1 and obx + xCur - 1 <= obx + w - 1 and yCur + oby - 1 >= 1 and yCur + oby - 1 <= oby + h - 1 then
-                            parent:setCursor(pWindow.getCursorBlink(), obx + xCur - 1, yCur + oby - 1, pWindow.getTextColor())
-                        end
-                    end
-                else
-                    table.insert(queuedEvent, { event = event, args = { ... } })
-                end
-            end
-        end,
-
-        resizeHandler = function(self, ...)
-            base.resizeHandler(self, ...)
-            if (curProcess ~= nil) then
-                if not (curProcess:isDead()) then
-                    if not (paused) then
-                        pWindow.basalt_resize(self:getSize())
-                        resumeProcess(self, "term_resize", self:getSize())
-                    else
-                        pWindow.basalt_resize(self:getSize())
-                        table.insert(queuedEvent, { event = "term_resize", args = { self:getSize() } })
-                    end
-                end
-            end
-        end,
-
-        repositionHandler = function(self, ...)
-            base.repositionHandler(self, ...)
-            if (curProcess ~= nil) then
-                if not (curProcess:isDead()) then
-                    pWindow.basalt_reposition(self:getPosition())
-                end
-            end
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("program", function()
-                local parent = self:getParent()
-                local obx, oby = self:getPosition()
-                local xCur, yCur = pWindow.getCursorPos()
-                local w,h = self:getSize()
-                pWindow.basalt_update()
-            end)
-        end,
-
-        onError = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("program_error", v)
-                end
-            end
-            local parent = self:getParent()
-            self:listenEvent("other_event")
-            return self
-        end,
-
-        onDone = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("program_done", v)
-                end
-            end
-            local parent = self:getParent()
-            self:listenEvent("other_event")
-            return self
-        end,
-
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Switch"] = function(...)
-return function(name, basalt)
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Switch"
-
-    base:setSize(4, 1)
-    base:setValue(false)
-    base:setZIndex(5)
-
-    local bgSymbol = colors.black
-    local inactiveBG = colors.red
-    local activeBG = colors.green
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        setSymbol = function(self, col)
-            bgSymbol = col
-            return self
-        end,
-
-        setActiveBackground = function(self, col)
-            activeBG = col
-            return self
-        end,
-
-        setInactiveBackground = function(self, col)
-            inactiveBG = col
-            return self
-        end,
-
-
-        load = function(self)
-            self:listenEvent("mouse_click")
-        end,
-
-        mouseHandler = function(self, ...)
-            if (base.mouseHandler(self, ...)) then
-                self:setValue(not self:getValue())
-                self:updateDraw()
-                return true
-            end
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("switch", function()
-                local parent = self:getParent()
-                local bgCol,fgCol = self:getBackground(), self:getForeground()
-                local w,h = self:getSize()
-                if(self:getValue())then
-                    self:addBackgroundBox(1, 1, w, h, activeBG)
-                    self:addBackgroundBox(w, 1, 1, h, bgSymbol)
-                else
-                    self:addBackgroundBox(1, 1, w, h, inactiveBG)
-                    self:addBackgroundBox(1, 1, 1, h, bgSymbol)
-                end
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Slider"] = function(...)
-local tHex = require("tHex")
-
-return function(name, basalt)
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Slider"
-
-    base:setSize(12, 1)
-    base:setValue(1)
-    base:setBackground(false, "\140", colors.black)
-
-    local barType = "horizontal"
-    local symbol = " "
-    local symbolFG = colors.black
-    local symbolBG = colors.gray
-    local maxValue = 12
-    local index = 1
-    local symbolSize = 1
-
-    local function mouseEvent(self, button, x, y)
-    local obx, oby = self:getPosition()
-    local w,h = self:getSize()
-        local size = barType == "vertical" and h or w
-        for i = 0, size do
-            if ((barType == "vertical" and oby + i == y) or (barType == "horizontal" and obx + i == x)) and (obx <= x) and (obx + w > x) and (oby <= y) and (oby + h > y) then
-                index = math.min(i + 1, size - (#symbol + symbolSize - 2))
-                self:setValue(maxValue / size * index)
-                self:updateDraw()
-            end
-        end
-    end
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        load = function(self)
-            self:listenEvent("mouse_click")
-            self:listenEvent("mouse_drag")
-            self:listenEvent("mouse_scroll")
-        end,
-
-        setSymbol = function(self, _symbol)
-            symbol = _symbol:sub(1, 1)
-            self:updateDraw()
-            return self
-        end,
-
-        setIndex = function(self, _index)
-            index = _index
-            if (index < 1) then
-                index = 1
-            end
-            local w,h = self:getSize()
-            index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
-            self:setValue(maxValue / (barType == "vertical" and h or w) * index)
-            self:updateDraw()
-            return self
-        end,
-
-        getIndex = function(self)
-            return index
-        end,
-
-        setMaxValue = function(self, val)
-            maxValue = val
-            return self
-        end,
-
-        setSymbolColor = function(self, col)
-            symbolColor = col
-            self:updateDraw()
-            return self
-        end,
-
-        setBarType = function(self, _typ)
-            barType = _typ:lower()
-            self:updateDraw()
-            return self
-        end,
-
-        mouseHandler = function(self, button, x, y)
-            if (base.mouseHandler(self, button, x, y)) then
-                mouseEvent(self, button, x, y)
-                return true
-            end
-            return false
-        end,
-
-        dragHandler = function(self, button, x, y)
-            if (base.dragHandler(self, button, x, y)) then
-                mouseEvent(self, button, x, y)
-                return true
-            end
-            return false
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if(base.scrollHandler(self, dir, x, y))then
-                local w,h = self:getSize()
-                index = index + dir
-                if (index < 1) then
-                    index = 1
-                end
-                index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
-                self:setValue(maxValue / (barType == "vertical" and h or w) * index)
-                self:updateDraw()
-                return true
-            end
-            return false
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("slider", function()
-                local w,h = self:getSize()
-                local bgCol,fgCol = self:getBackground(), self:getForeground()
-                if (barType == "horizontal") then
-                    self:addText(index, oby, symbol:rep(symbolSize))
-                    if(symbolBG~=false)then self:addBG(index, 1, tHex[symbolBG]:rep(#symbol*symbolSize)) end
-                    if(symbolFG~=false)then self:addFG(index, 1, tHex[symbolFG]:rep(#symbol*symbolSize)) end
-                end
-
-                if (barType == "vertical") then
-                    for n = 0, h - 1 do
-                        if (index == n + 1) then
-                            for curIndexOffset = 0, math.min(symbolSize - 1, h) do
-                                self:addBlit(1, 1+n+curIndexOffset, symbol, tHex[symbolColor], tHex[symbolColor])
-                            end
-                        else
-                            if (n + 1 < index) or (n + 1 > index - 1 + symbolSize) then
-                                self:addBlit(1, 1+n, bgSymbol, tHex[fgCol], tHex[bgCol])
-                            end
-                        end
-                    end
-                end
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["MovableFrame"] = function(...)
-local max,min,sub,rep = math.max,math.min,string.sub,string.rep
-
-return function(name, basalt)
-    local base = basalt.getObject("Frame")(name, basalt)
-    local objectType = "MovableFrame"
-    local parent
-
-    local dragXOffset, dragYOffset, isDragging = 0, 0, false
-
-    local dragMap = {
-        {x1 = 1, x2 = "width", y1 = 1, y2 = 1}
-    }
-
-    local object = {    
-        getType = function()
-            return objectType
-        end,
-
-        setDraggingMap = function(self, t)
-            dragMap = t
-            return self
-        end,
-
-        getDraggingMap = function(self)
-            return dragMap
-        end,
-
-        isType = function(self, t)
-            return objectType==t or (base.isType~=nil and base.isType(t)) or false
-        end,
-
-        getBase = function(self)
-            return base
-        end, 
-        
-        load = function(self)
-            base.load(self)
-            self:listenEvent("mouse_click")
-            self:listenEvent("mouse_up")
-            self:listenEvent("mouse_drag")
-        end,
-
-        dragHandler = function(self, btn, x, y)
-            if(base.dragHandler(self, btn, x, y))then
-                if (isDragging) then
-                    local xO, yO = parent:getOffset()
-                    xO = xO < 0 and math.abs(xO) or -xO
-                    yO = yO < 0 and math.abs(yO) or -yO
-                    local parentX = 1
-                    local parentY = 1
-                    parentX, parentY = parent:getAbsolutePosition()
-                    self:setPosition(x + dragXOffset - (parentX - 1) + xO, y + dragYOffset - (parentY - 1) + yO)
-                    self:updateDraw()
-                end
-                return true
-            end
-        end,
-
-        mouseHandler = function(self, btn, x, y, ...)
-            if(base.mouseHandler(self, btn, x, y, ...))then
-                parent:setImportant(self)
-                local fx, fy = self:getAbsolutePosition()
-                local w, h = self:getSize()
-                for k,v in pairs(dragMap)do
-                    local x1, x2 = v.x1=="width" and w or v.x1, v.x2=="width" and w or v.x2
-                    local y1, y2= v.y1=="height" and h or v.y1, v.y2=="height" and h or v.y2
-                    if(x>=fx+x1-1)and(x<=fx+x2-1)and(y>=fy+y1-1)and(y<=fy+y2-1)then
-                        isDragging = true
-                        dragXOffset = fx - x
-                        dragYOffset = fy - y
-                        return true
-                    end
-                end
-                return true
-            end
-        end,
-
-        mouseUpHandler = function(self, ...)
-            isDragging = false
-            return base.mouseUpHandler(self, ...)
-        end,
-
-        setParent = function(self, p, ...)
-            base.setParent(self, p, ...)
-            parent = p
-            return self
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Progressbar"] = function(...)
-return function(name, basalt)
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Progressbar"
-
-    local progress = 0
-
-    base:setZIndex(5)
-    base:setValue(false)
-    base:setSize(25, 3)
-
-    local activeBarColor = colors.black
-    local activeBarSymbol = ""
-    local activeBarSymbolCol = colors.white
-    local bgBarSymbol = ""
-    local direction = 0
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        setDirection = function(self, dir)
-            direction = dir
-            self:updateDraw()
-            return self
-        end,
-
-        setProgressBar = function(self, color, symbol, symbolcolor)
-            activeBarColor = color or activeBarColor
-            activeBarSymbol = symbol or activeBarSymbol
-            activeBarSymbolCol = symbolcolor or activeBarSymbolCol
-            self:updateDraw()
-            return self
-        end,
-
-        getProgressBar = function(self)
-            return activeBarColor, activeBarSymbol, activeBarSymbolCol
-        end,
-
-        setBackgroundSymbol = function(self, symbol)
-            bgBarSymbol = symbol:sub(1, 1)
-            self:updateDraw()
-            return self
-        end,
-
-        setProgress = function(self, value)
-            if (value >= 0) and (value <= 100) and (progress ~= value) then
-                progress = value
-                self:setValue(progress)
-                if (progress == 100) then
-                    self:progressDoneHandler()
-                end
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        getProgress = function(self)
-            return progress
-        end,
-
-        onProgressDone = function(self, f)
-            self:registerEvent("progress_done", f)
-            return self
-        end,
-
-        progressDoneHandler = function(self)
-            self:sendEvent("progress_done")
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("progressbar", function()
-                local obx, oby = self:getPosition()
-                local w,h = self:getSize()
-                local bgCol,fgCol = self:getBackground(), self:getForeground()
-                if(bgCol~=false)then self:addBackgroundBox(1, 1, w, h, bgCol) end
-                if(bgBarSymbol~="")then self:addTextBox(1, 1, w, h, bgBarSymbol) end
-                if(fgCol~=false)then self:addForegroundBox(1, 1, w, h, fgCol) end
-                if (direction == 1) then
-                    self:addBackgroundBox(1, 1, w, h / 100 * progress, activeBarColor)
-                    self:addForegroundBox(1, 1, w, h / 100 * progress, activeBarSymbolCol)
-                    self:addTextBox(1, 1, w, h / 100 * progress, activeBarSymbol)
-                elseif (direction == 3) then
-                    self:addBackgroundBox(1, 1 + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarColor)
-                    self:addForegroundBox(1, 1 + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarSymbolCol)
-                    self:addTextBox(1, 1 + math.ceil(h - h / 100 * progress), w, h / 100 * progress, activeBarSymbol)
-                elseif (direction == 2) then
-                    self:addBackgroundBox(1 + math.ceil(w - w / 100 * progress), 1, w / 100 * progress, h, activeBarColor)
-                    self:addForegroundBox(1 + math.ceil(w - w / 100 * progress), 1, w / 100 * progress, h, activeBarSymbolCol)
-                    self:addTextBox(1 + math.ceil(w - w / 100 * progress), 1, w / 100 * progress, h, activeBarSymbol)
-                else
-                    self:addBackgroundBox(1, 1, math.ceil( w / 100 * progress), h, activeBarColor)
-                    self:addForegroundBox(1, 1, math.ceil(w / 100 * progress), h, activeBarSymbolCol)
-                    self:addTextBox(1, 1, math.ceil(w / 100 * progress), h, activeBarSymbol)
-                end
-            end)
-        end,
-
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Thread"] = function(...)
-return function(name, basalt)
-    local base = basalt.getObject("Object")(name, basalt)
-
-    local objectType = "Thread"
-
-    local func
-    local cRoutine
-    local isActive = false
-    local filter
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        start = function(self, f)
-            if (f == nil) then
-                error("Function provided to thread is nil")
-            end
-            func = f
-            cRoutine = coroutine.create(func)
-            isActive = true
-            filter=nil
-            local ok, result = coroutine.resume(cRoutine)
-            filter = result
-            if not (ok) then
-                if (result ~= "Terminated") then
-                    error("Thread Error Occurred - " .. result)
-                end
-            end
-            self:listenEvent("mouse_click")
-            self:listenEvent("mouse_up")
-            self:listenEvent("mouse_scroll")
-            self:listenEvent("mouse_drag")
-            self:listenEvent("key")
-            self:listenEvent("key_up")
-            self:listenEvent("char")
-            self:listenEvent("other_event")
-            return self
-        end,
-
-        getStatus = function(self, f)
-            if (cRoutine ~= nil) then
-                return coroutine.status(cRoutine)
-            end
-            return nil
-        end,
-
-        stop = function(self, f)
-            isActive = false
-            self:listenEvent("mouse_click", false)
-            self:listenEvent("mouse_up", false)
-            self:listenEvent("mouse_scroll", false)
-            self:listenEvent("mouse_drag", false)
-            self:listenEvent("key", false)
-            self:listenEvent("key_up", false)
-            self:listenEvent("char", false)
-            self:listenEvent("other_event", false)
-            return self
-        end,
-
-        mouseHandler = function(self, ...)
-            self:eventHandler("mouse_click", ...)
-        end,
-        mouseUpHandler = function(self, ...)
-            self:eventHandler("mouse_up", ...)
-        end,
-        mouseScrollHandler = function(self, ...)
-            self:eventHandler("mouse_scroll", ...)
-        end,
-        mouseDragHandler = function(self, ...)
-            self:eventHandler("mouse_drag", ...)
-        end,
-        mouseMoveHandler = function(self, ...)
-            self:eventHandler("mouse_move", ...)
-        end,
-        keyHandler = function(self, ...)
-            self:eventHandler("key", ...)
-        end,
-        keyUpHandler = function(self, ...)
-            self:eventHandler("key_up", ...)
-        end,
-        charHandler = function(self, ...)
-            self:eventHandler("char", ...)
-        end,
-
-        eventHandler = function(self, event, ...)
-            base.eventHandler(self, event, ...)
-            if (isActive) then
-                if (coroutine.status(cRoutine) == "suspended") then
-                    if(filter~=nil)then
-                        if(event~=filter)then return end
-                        filter=nil
-                    end
-                    local ok, result = coroutine.resume(cRoutine, event, ...)
-                    filter = result
-                    if not (ok) then
-                        if (result ~= "Terminated") then
-                            error("Thread Error Occurred - " .. result)
-                        end
-                    end
-                else
-                    self:stop()
-                end
-            end
-        end,
-
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Radio"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-return function(name, basalt)
-    local base = basalt.getObject("List")(name, basalt)
-    local objectType = "Radio"
-
-    base:setSize(1, 1)
-    base:setZIndex(5)
-
-    local list = {}
-    local boxSelectedBG = colors.black
-    local boxSelectedFG = colors.green
-    local boxNotSelectedBG = colors.black
-    local boxNotSelectedFG = colors.red
-    local selectionColorActive = true
-    local symbol = "\7"
-    local align = "left"
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        addItem = function(self, text, x, y, bgCol, fgCol, ...)
-            base.addItem(self, text, bgCol, fgCol, ...)
-            table.insert(list, { x = x or 1, y = y or #list * 2 })
-            return self
-        end,
-
-        removeItem = function(self, index)
-            base.removeItem(self, index)
-            table.remove(list, index)
-            return self
-        end,
-
-        clear = function(self)
-            base.clear(self)
-            list = {}
-            return self
-        end,
-
-        editItem = function(self, index, text, x, y, bgCol, fgCol, ...)
-            base.editItem(self, index, text, bgCol, fgCol, ...)
-            table.remove(list, index)
-            table.insert(list, index, { x = x or 1, y = y or 1 })
-            return self
-        end,
-
-        setBoxSelectionColor = function(self, bg, fg)
-            boxSelectedBG = bg
-            boxSelectedFG = fg
-            return self
-        end,
-
-        getBoxSelectionColor = function(self)
-            return boxSelectedBG, boxSelectedFG
-        end,
-
-        setBoxDefaultColor = function(self, bg, fg)
-            boxNotSelectedBG = bg
-            boxNotSelectedFG = fg
-            return self
-        end,
-
-        getBoxDefaultColor = function(self)
-            return boxNotSelectedBG, boxNotSelectedFG
-        end,
-
-        mouseHandler = function(self, button, x, y, ...)
-            if (#list > 0) then
-                local obx, oby = self:getAbsolutePosition()
-                local baseList = self:getAll()
-                for k, value in pairs(baseList) do
-                    if (obx + list[k].x - 1 <= x) and (obx + list[k].x - 1 + value.text:len() + 1 >= x) and (oby + list[k].y - 1 == y) then
-                        self:setValue(value)
-                        local val = self:sendEvent("mouse_click", self, "mouse_click", button, x, y, ...)
-                        self:updateDraw()
-                        if(val==false)then return val end
-                        return true
-                    end
-                end
-            end
-        end,
-
-        draw = function(self)
-            self:addDraw("radio", function()
-                local itemSelectedBG, itemSelectedFG = self:getSelectionColor()
-                local baseList = self:getAll()
-                for k, value in pairs(baseList) do
-                    if (value == self:getValue()) then
-                        self:addBlit(list[k].x, list[k].y, symbol, tHex[boxSelectedFG], tHex[boxSelectedBG])
-                        self:addBlit(list[k].x + 2, list[k].y, value.text, tHex[itemSelectedFG]:rep(#value.text), tHex[itemSelectedBG]:rep(#value.text))
-                    else
-                        self:addBackgroundBox(list[k].x, list[k].y, 1, 1, boxNotSelectedBG or colors.black)
-                        self:addBlit(list[k].x + 2, list[k].y, value.text, tHex[value.fgCol]:rep(#value.text), tHex[value.bgCol]:rep(#value.text))
-                    end
-                end
-                return true
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Scrollbar"] = function(...)
-local tHex = require("tHex")
-
-return function(name, basalt)
-    local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Scrollbar"
-
-    base:setZIndex(2)
-    base:setSize(1, 8)
-    base:setBackground(colors.lightGray, "\127", colors.gray)
-
-    local barType = "vertical"
-    local symbol = " "
-    local symbolBG = colors.black
-    local symbolFG = colors.black
-    local scrollAmount = 3
-    local index = 1
-    local symbolSize = 1
-    local symbolAutoSize = true
-
-    local function updateSymbolSize()
-        local w,h = base:getSize()
-        if(symbolAutoSize)then
-            symbolSize = math.max((barType == "vertical" and h or w-(#symbol)) - (scrollAmount-1), 1)
-        end
-    end
-    updateSymbolSize()
-
-    local function mouseEvent(self, button, x, y)
-    local obx, oby = self:getAbsolutePosition()
-    local w,h = self:getSize()
-        updateSymbolSize()
-        local size = barType == "vertical" and h or w
-        for i = 0, size do
-            if ((barType == "vertical" and oby + i == y) or (barType == "horizontal" and obx + i == x)) and (obx <= x) and (obx + w > x) and (oby <= y) and (oby + h > y) then
-                index = math.min(i + 1, size - (#symbol + symbolSize - 2))
-                self:scrollbarMoveHandler()
-                self:updateDraw()
-            end
-        end
-    end
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        load = function(self)
-            base.load(self)
-            local parent = self:getParent()
-            self:listenEvent("mouse_click")
-            self:listenEvent("mouse_up")
-            self:listenEvent("mouse_scroll")
-            self:listenEvent("mouse_drag")
-        end,
-
-        setSymbol = function(self, _symbol, bg, fg)
-            symbol = _symbol:sub(1,1)
-            symbolBG = bg or symbolBG
-            symbolFG = fg or symbolFG
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        setIndex = function(self, _index)
-            index = _index
-            if (index < 1) then
-                index = 1
-            end
-            local w,h = self:getSize()
-            --index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        setScrollAmount = function(self, amount)
-            scrollAmount = amount
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        getIndex = function(self)
-            local w,h = self:getSize()
-            return scrollAmount > (barType=="vertical" and h or w) and math.floor(scrollAmount/(barType=="vertical" and h or w) * index) or index
-        end,
-
-        setSymbolSize = function(self, size)
-            symbolSize = tonumber(size) or 1
-            symbolAutoSize = size~=false and false or true
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        setBarType = function(self, _typ)
-            barType = _typ:lower()
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        mouseHandler = function(self, button, x, y, ...)
-            if (base.mouseHandler(self, button, x, y, ...)) then
-                mouseEvent(self, button, x, y)
-                return true
-            end
-            return false
-        end,
-
-        dragHandler = function(self, button, x, y)
-            if (base.dragHandler(self, button, x, y)) then
-                mouseEvent(self, button, x, y)
-                return true
-            end
-            return false
-        end,
-
-        setSize = function(self, ...)
-            base.setSize(self, ...)
-            updateSymbolSize()
-            return self
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if(base.scrollHandler(self, dir, x, y))then
-                local w,h = self:getSize()
-                updateSymbolSize()
-                index = index + dir
-                if (index < 1) then
-                    index = 1
-                end
-                index = math.min(index, (barType == "vertical" and h or w) - (barType == "vertical" and symbolSize - 1 or #symbol+symbolSize-2))
-                self:scrollbarMoveHandler()
-                self:updateDraw()
-            end
-        end,
-
-        onChange = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("scrollbar_moved", v)
-                end
-            end
-            return self
-        end,
-
-
-        scrollbarMoveHandler = function(self)
-            self:sendEvent("scrollbar_moved", self:getIndex())
-        end,
-
-        customEventHandler = function(self, event, ...)
-            base.customEventHandler(self, event, ...)
-            if(event=="basalt_FrameResize")then
-                updateSymbolSize()
-            end 
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("scrollbar", function()
-                local parent = self:getParent()
-                local w,h = self:getSize()
-                local bgCol,fgCol = self:getBackground(), self:getForeground()
-                if (barType == "horizontal") then
-                    for n = 0, h - 1 do
-                        self:addBlit(index, 1 + n, symbol:rep(symbolSize), tHex[symbolFG]:rep(#symbol*symbolSize), tHex[symbolBG]:rep(#symbol*symbolSize))
-                    end
-                elseif (barType == "vertical") then
-                    for n = 0, h - 1 do
-                        if (index == n + 1) then
-                            for curIndexOffset = 0, math.min(symbolSize - 1, h) do
-                                self:addBlit(1, index + curIndexOffset, symbol:rep(math.max(#symbol, w)), tHex[symbolFG]:rep(math.max(#symbol, w)), tHex[symbolBG]:rep(math.max(#symbol, w)))
-                            end
-                        end
-                    end
-                end
-            end)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Timer"] = function(...)
-return function(name, basalt)
-    local base = basalt.getObject("Object")(name, basalt)
-    local objectType = "Timer"
-
-    local timer = 0
-    local savedRepeats = 0
-    local repeats = 0
-    local timerObj
-    local timerIsActive = false
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        setTime = function(self, _timer, _repeats)
-            timer = _timer or 0
-            savedRepeats = _repeats or 1
-            return self
-        end,
-
-        start = function(self)
-            if(timerIsActive)then
-                os.cancelTimer(timerObj)
-            end
-            repeats = savedRepeats
-            timerObj = os.startTimer(timer)
-            timerIsActive = true
-            self:listenEvent("other_event")
-            return self
-        end,
-
-        isActive = function(self)
-            return timerIsActive
-        end,
-
-        cancel = function(self)
-            if (timerObj ~= nil) then
-                os.cancelTimer(timerObj)
-            end
-            timerIsActive = false
-            self:removeEvent("other_event")
-            return self
-        end,
-
-        onCall = function(self, func)
-            self:registerEvent("timed_event", func)
-            return self
-        end,
-
-        eventHandler = function(self, event, ...)
-            base.eventHandler(self, event, ...)
-            if event == "timer" and tObj == timerObj and timerIsActive then
-                self:sendEvent("timed_event")
-                if (repeats >= 1) then
-                    repeats = repeats - 1
-                    if (repeats >= 1) then
-                        timerObj = os.startTimer(timer)
-                    end
-                elseif (repeats == -1) then
-                    timerObj = os.startTimer(timer)
-                end
-            end
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Textfield"] = function(...)
-local tHex = require("tHex")
-
-local rep,find,gmatch,sub,len = string.rep,string.find,string.gmatch,string.sub,string.len
-
-return function(name, basalt)
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Textfield"
-    local hIndex, wIndex, textX, textY = 1, 1, 1, 1
-
-    local lines = { "" }
-    local bgLines = { "" }
-    local fgLines = { "" }
-    local keyWords = { }
-    local rules = { }
-
-    local startSelX,endSelX,startSelY,endSelY
-
-    local selectionBG,selectionFG = colors.lightBlue,colors.black
-
-    base:setSize(30, 12)
-    base:setZIndex(5)
-
-    local function isSelected()
-        if(startSelX~=nil)and(endSelX~=nil)and(startSelY~=nil)and(endSelY~=nil)then
-            return true
-        end
-        return false
-    end
-
-    local function getSelectionCoordinates()
-        local sx, ex, sy, ey = startSelX, endSelX, startSelY, endSelY
-        if isSelected() then
-            if startSelX < endSelX and startSelY <= endSelY then
-                sx = startSelX
-                ex = endSelX
-                if startSelY < endSelY then
-                    sy = startSelY
-                    ey = endSelY
-                else
-                    sy = endSelY
-                    ey = startSelY
-                end
-            elseif startSelX > endSelX and startSelY >= endSelY then
-                sx = endSelX
-                ex = startSelX
-                if startSelY > endSelY then
-                    sy = endSelY
-                    ey = startSelY
-                else
-                    sy = startSelY
-                    ey = endSelY
-                end
-            elseif startSelY > endSelY then
-                sx = endSelX
-                ex = startSelX
-                sy = endSelY
-                ey = startSelY
-            end
-            return sx, ex, sy, ey
-        end
-    end
-
-    local function removeSelection(self)
-        local sx, ex, sy, ey = getSelectionCoordinates(self)
-        local startLine = lines[sy]
-        local endLine = lines[ey]
-        lines[sy] = startLine:sub(1, sx - 1) .. endLine:sub(ex + 1, endLine:len())
-        bgLines[sy] = bgLines[sy]:sub(1, sx - 1) .. bgLines[ey]:sub(ex + 1, bgLines[ey]:len())
-        fgLines[sy] = fgLines[sy]:sub(1, sx - 1) .. fgLines[ey]:sub(ex + 1, fgLines[ey]:len())
-    
-        for i = ey, sy + 1, -1 do
-            if i ~= sy then
-                table.remove(lines, i)
-                table.remove(bgLines, i)
-                table.remove(fgLines, i)
-            end
-        end
-    
-        textX, textY = sx, sy
-        startSelX, endSelX, startSelY, endSelY = nil, nil, nil, nil
-        return self
-    end
-
-    local function stringGetPositions(str, word)
-        local pos = {}
-        if(str:len()>0)then
-            for w in gmatch(str, word)do
-                local s, e = find(str, w)
-                if(s~=nil)and(e~=nil)then
-                    table.insert(pos,s)
-                    table.insert(pos,e)
-                    local startL = sub(str, 1, (s-1))
-                    local endL = sub(str, e+1, str:len())
-                    str = startL..(":"):rep(w:len())..endL
-                end
-            end
-        end
-        return pos
-    end
-
-    local function updateColors(self, l)
-        l = l or textY
-        local fgLine = tHex[self:getForeground()]:rep(fgLines[l]:len())
-        local bgLine = tHex[self:getBackground()]:rep(bgLines[l]:len())
-        for k,v in pairs(rules)do
-            local pos = stringGetPositions(lines[l], v[1])
-            if(#pos>0)then
-                for x=1,#pos/2 do
-                    local xP = x*2 - 1
-                    if(v[2]~=nil)then
-                        fgLine = fgLine:sub(1, pos[xP]-1)..tHex[v[2]]:rep(pos[xP+1]-(pos[xP]-1))..fgLine:sub(pos[xP+1]+1, fgLine:len())
-                    end
-                    if(v[3]~=nil)then
-                        bgLine = bgLine:sub(1, pos[xP]-1)..tHex[v[3]]:rep(pos[xP+1]-(pos[xP]-1))..bgLine:sub(pos[xP+1]+1, bgLine:len())
-                    end
-                end
-            end
-        end
-        for k,v in pairs(keyWords)do
-            for _,b in pairs(v)do
-                local pos = stringGetPositions(lines[l], b)
-                if(#pos>0)then
-                    for x=1,#pos/2 do
-                        local xP = x*2 - 1
-                        fgLine = fgLine:sub(1, pos[xP]-1)..tHex[k]:rep(pos[xP+1]-(pos[xP]-1))..fgLine:sub(pos[xP+1]+1, fgLine:len())
-                    end
-                end
-            end
-        end
-        fgLines[l] = fgLine
-        bgLines[l] = bgLine
-        self:updateDraw()
-    end
-
-    local function updateAllColors(self)
-        for n=1,#lines do
-            updateColors(self, n)
-        end
-    end
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end;
-
-        setBackground = function(self, bg)
-            base.setBackground(self, bg)
-            updateAllColors(self)
-            return self
-        end,
-
-        setForeground = function(self, fg)
-            base.setForeground(self, fg)
-            updateAllColors(self)
-            return self
-        end,
-
-        setSelection = function(self, fg, bg)
-            selectionFG = fg or selectionFG
-            selectionBG = bg or selectionBG
-            return self
-        end,
-
-        getSelection = function(self)
-            return selectionFG, selectionBG
-        end,
-
-        getLines = function(self)
-            return lines
-        end,
-
-        getLine = function(self, index)
-            return lines[index]
-        end,
-
-        editLine = function(self, index, text)
-            lines[index] = text or lines[index]
-            updateColors(self, index)
-            self:updateDraw()
-            return self
-        end,
-
-        clear = function(self)
-            lines = {""}
-            bgLines = {""}
-            fgLines = {""}
-            startSelX,endSelX,startSelY,endSelY = nil,nil,nil,nil
-            hIndex, wIndex, textX, textY = 1, 1, 1, 1
-            self:updateDraw()
-            return self
-        end,
-
-        addLine = function(self, text, index)
-            if(text~=nil)then
-                local bgColor = self:getBackground()
-                local fgColor = self:getForeground()
-                if(#lines==1)and(lines[1]=="")then
-                    lines[1] = text
-                    bgLines[1] = tHex[bgColor]:rep(text:len())
-                    fgLines[1] = tHex[fgColor]:rep(text:len())
-                    updateColors(self, 1)
-                    return self
-                end
-                if (index ~= nil) then
-                    table.insert(lines, index, text)
-                    table.insert(bgLines, index, tHex[bgColor]:rep(text:len()))
-                    table.insert(fgLines, index, tHex[fgColor]:rep(text:len()))
-                else
-                    table.insert(lines, text)
-                    table.insert(bgLines, tHex[bgColor]:rep(text:len()))
-                    table.insert(fgLines, tHex[fgColor]:rep(text:len()))
-                end
-            end
-            updateColors(self, index or #lines)
-            self:updateDraw()
-            return self
-        end;
-
-        addKeywords = function(self, color, tab)
-            if(keyWords[color]==nil)then
-                keyWords[color] = {}
-            end
-            for k,v in pairs(tab)do
-                table.insert(keyWords[color], v)
-            end
-            self:updateDraw()
-            return self
-        end;
-
-        addRule = function(self, rule, fg, bg)
-            table.insert(rules, {rule, fg, bg})
-            self:updateDraw()
-            return self
-        end;
-
-        editRule = function(self, rule, fg, bg)
-            for k,v in pairs(rules)do
-                if(v[1]==rule)then
-                    rules[k][2] = fg
-                    rules[k][3] = bg
-                end
-            end
-            self:updateDraw()
-            return self
-        end;
-
-        removeRule = function(self, rule)
-            for k,v in pairs(rules)do
-                if(v[1]==rule)then
-                    table.remove(rules, k)
-                end
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        setKeywords = function(self, color, tab)
-            keyWords[color] = tab
-            self:updateDraw()
-            return self
-        end,
-
-        removeLine = function(self, index)
-            if(#lines>1)then
-                table.remove(lines, index or #lines)
-                table.remove(bgLines, index or #bgLines)
-                table.remove(fgLines, index or #fgLines)
-            else
-                lines = {""}
-                bgLines = {""}
-                fgLines = {""}
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        getTextCursor = function(self)
-            return textX, textY
-        end,
-
-        getOffset = function(self)
-            return wIndex, hIndex
-        end,
-
-        setOffset = function(self, xOff, yOff)
-            wIndex = xOff or wIndex
-            hIndex = yOff or hIndex
-            self:updateDraw()
-            return self
-        end,
-
-        getFocusHandler = function(self)
-            base.getFocusHandler(self)
-            local obx, oby = self:getPosition()
-            self:getParent():setCursor(true, obx + textX - wIndex, oby + textY - hIndex, self:getForeground())
-        end,
-
-        loseFocusHandler = function(self)
-            base.loseFocusHandler(self)
-            self:getParent():setCursor(false)
-        end,
-
-        keyHandler = function(self, key)
-            if (base.keyHandler(self, event, key)) then
-                local parent = self:getParent()
-                local obx, oby = self:getPosition()
-                local w,h = self:getSize()
-                    if (key == keys.backspace) then
-                        -- on backspace
-                        if(isSelected())then
-                            removeSelection(self)
-                        else
-                            if (lines[textY] == "") then
-                                if (textY > 1) then
-                                    table.remove(lines, textY)
-                                    table.remove(fgLines, textY)
-                                    table.remove(bgLines, textY)
-                                    textX = lines[textY - 1]:len() + 1
-                                    wIndex = textX - w + 1
-                                    if (wIndex < 1) then
-                                        wIndex = 1
-                                    end
-                                    textY = textY - 1
-                                end
-                            elseif (textX <= 1) then
-                                if (textY > 1) then
-                                    textX = lines[textY - 1]:len() + 1
-                                    wIndex = textX - w + 1
-                                    if (wIndex < 1) then
-                                        wIndex = 1
-                                    end
-                                    lines[textY - 1] = lines[textY - 1] .. lines[textY]
-                                    fgLines[textY - 1] = fgLines[textY - 1] .. fgLines[textY]
-                                    bgLines[textY - 1] = bgLines[textY - 1] .. bgLines[textY]
-                                    table.remove(lines, textY)
-                                    table.remove(fgLines, textY)
-                                    table.remove(bgLines, textY)
-                                    textY = textY - 1
-                                end
-                            else
-                                lines[textY] = lines[textY]:sub(1, textX - 2) .. lines[textY]:sub(textX, lines[textY]:len())
-                                fgLines[textY] = fgLines[textY]:sub(1, textX - 2) .. fgLines[textY]:sub(textX, fgLines[textY]:len())
-                                bgLines[textY] = bgLines[textY]:sub(1, textX - 2) .. bgLines[textY]:sub(textX, bgLines[textY]:len())
-                                if (textX > 1) then
-                                    textX = textX - 1
-                                end
-                                if (wIndex > 1) then
-                                    if (textX < wIndex) then
-                                        wIndex = wIndex - 1
-                                    end
-                                end
-                            end
-                            if (textY < hIndex) then
-                                hIndex = hIndex - 1
-                            end
-                        end
-                        updateColors(self)
-                        self:setValue("")
-                    elseif (key == keys.delete) then
-                        -- on delete
-                        if(isSelected())then
-                            removeSelection(self)
-                        else
-                            if (textX > lines[textY]:len()) then
-                                if (lines[textY + 1] ~= nil) then
-                                    lines[textY] = lines[textY] .. lines[textY + 1]
-                                    table.remove(lines, textY + 1)
-                                    table.remove(bgLines, textY + 1)
-                                    table.remove(fgLines, textY + 1)
-                                end
-                            else
-                                lines[textY] = lines[textY]:sub(1, textX - 1) .. lines[textY]:sub(textX + 1, lines[textY]:len())
-                                fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. fgLines[textY]:sub(textX + 1, fgLines[textY]:len())
-                                bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. bgLines[textY]:sub(textX + 1, bgLines[textY]:len())
-                            end
-                        end
-                        updateColors(self)
-                    elseif (key == keys.enter) then
-                        if(isSelected())then
-                            removeSelection(self)
-                        end
-                        -- on enter
-                        table.insert(lines, textY + 1, lines[textY]:sub(textX, lines[textY]:len()))
-                        table.insert(fgLines, textY + 1, fgLines[textY]:sub(textX, fgLines[textY]:len()))
-                        table.insert(bgLines, textY + 1, bgLines[textY]:sub(textX, bgLines[textY]:len()))
-                        lines[textY] = lines[textY]:sub(1, textX - 1)
-                        fgLines[textY] = fgLines[textY]:sub(1, textX - 1)
-                        bgLines[textY] = bgLines[textY]:sub(1, textX - 1)
-                        textY = textY + 1
-                        textX = 1
-                        wIndex = 1
-                        if (textY - hIndex >= h) then
-                            hIndex = hIndex + 1
-                        end
-                        self:setValue("")
-                    elseif (key == keys.up) then
-                        startSelX, startSelY, endSelX, endSelY = nil, nil, nil, nil
-                        -- arrow up
-                        if (textY > 1) then
-                            textY = textY - 1
-                            if (textX > lines[textY]:len() + 1) then
-                                textX = lines[textY]:len() + 1
-                            end
-                            if (wIndex > 1) then
-                                if (textX < wIndex) then
-                                    wIndex = textX - w + 1
-                                    if (wIndex < 1) then
-                                        wIndex = 1
-                                    end
-                                end
-                            end
-                            if (hIndex > 1) then
-                                if (textY < hIndex) then
-                                    hIndex = hIndex - 1
-                                end
-                            end
-                        end
-                    elseif (key == keys.down) then
-                        startSelX, startSelY, endSelX, endSelY = nil, nil, nil, nil
-                        -- arrow down
-                        if (textY < #lines) then
-                            textY = textY + 1
-                            if (textX > lines[textY]:len() + 1) then
-                                textX = lines[textY]:len() + 1
-                            end
-                            if (wIndex > 1) then
-                                if (textX < wIndex) then
-                                    wIndex = textX - w + 1
-                                    if (wIndex < 1) then
-                                        wIndex = 1
-                                    end
-                                end
-                            end
-                            if (textY >= hIndex + h) then
-                                hIndex = hIndex + 1
-                            end
-                        end
-                    elseif (key == keys.right) then
-                        startSelX, startSelY, endSelX, endSelY = nil, nil, nil, nil
-                        -- arrow right
-                        textX = textX + 1
-                        if (textY < #lines) then
-                            if (textX > lines[textY]:len() + 1) then
-                                textX = 1
-                                textY = textY + 1
-                            end
-                        elseif (textX > lines[textY]:len()) then
-                            textX = lines[textY]:len() + 1
-                        end
-                        if (textX < 1) then
-                            textX = 1
-                        end
-                        if (textX < wIndex) or (textX >= w + wIndex) then
-                            wIndex = textX - w + 1
-                        end
-                        if (wIndex < 1) then
-                            wIndex = 1
-                        end
-
-                    elseif (key == keys.left) then
-                        startSelX, startSelY, endSelX, endSelY = nil, nil, nil, nil
-                        -- arrow left
-                        textX = textX - 1
-                        if (textX >= 1) then
-                            if (textX < wIndex) or (textX >= w + wIndex) then
-                                wIndex = textX
-                            end
-                        end
-                        if (textY > 1) then
-                            if (textX < 1) then
-                                textY = textY - 1
-                                textX = lines[textY]:len() + 1
-                                wIndex = textX - w + 1
-                            end
-                        end
-                        if (textX < 1) then
-                            textX = 1
-                        end
-                        if (wIndex < 1) then
-                            wIndex = 1
-                        end
-                    elseif(key == keys.tab)then
-                        if(textX % 3 == 0 )then
-                            lines[textY] = lines[textY]:sub(1, textX - 1) .. " " .. lines[textY]:sub(textX, lines[textY]:len())
-                            fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self:getForeground()] .. fgLines[textY]:sub(textX, fgLines[textY]:len())
-                            bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self:getBackground()] .. bgLines[textY]:sub(textX, bgLines[textY]:len())
-                            textX = textX + 1
-                        end
-                        while textX % 3 ~= 0 do
-                            lines[textY] = lines[textY]:sub(1, textX - 1) .. " " .. lines[textY]:sub(textX, lines[textY]:len())
-                            fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self:getForeground()] .. fgLines[textY]:sub(textX, fgLines[textY]:len())
-                            bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self:getBackground()] .. bgLines[textY]:sub(textX, bgLines[textY]:len())
-                            textX = textX + 1
-                        end
-                    end
-
-                if not((obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (oby + textY - hIndex >= oby and oby + textY - hIndex < oby + h)) then
-                    wIndex = math.max(1, lines[textY]:len()-w+1)
-                    hIndex = math.max(1, textY - h + 1)
-                end
-
-                local cursorX = (textX <= lines[textY]:len() and textX - 1 or lines[textY]:len()) - (wIndex - 1)
-                if (cursorX > self:getX() + w - 1) then
-                    cursorX = self:getX() + w - 1
-                end
-                local cursorY = (textY - hIndex < h and textY - hIndex or textY - hIndex - 1)
-                if (cursorX < 1) then
-                    cursorX = 0
-                end
-                parent:setCursor(true, obx + cursorX, oby + cursorY, self:getForeground())
-                self:updateDraw()
-                return true
-            end
-        end,
-
-        charHandler = function(self, char)
-            if(base.charHandler(self, char))then
-                local parent = self:getParent()
-                local obx, oby = self:getPosition()
-                local w,h = self:getSize()
-                if(isSelected())then
-                    removeSelection(self)
-                end
-                lines[textY] = lines[textY]:sub(1, textX - 1) .. char .. lines[textY]:sub(textX, lines[textY]:len())
-                fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[self:getForeground()] .. fgLines[textY]:sub(textX, fgLines[textY]:len())
-                bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[self:getBackground()] .. bgLines[textY]:sub(textX, bgLines[textY]:len())
-                textX = textX + 1
-                if (textX >= w + wIndex) then
-                    wIndex = wIndex + 1
-                end
-                updateColors(self)
-                self:setValue("")
-
-                if not((obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (oby + textY - hIndex >= oby and oby + textY - hIndex < oby + h)) then
-                    wIndex = math.max(1, lines[textY]:len()-w+1)
-                    hIndex = math.max(1, textY - h + 1)
-                end
-
-                local cursorX = (textX <= lines[textY]:len() and textX - 1 or lines[textY]:len()) - (wIndex - 1)
-                if (cursorX > self:getX() + w - 1) then
-                    cursorX = self:getX() + w - 1
-                end
-                local cursorY = (textY - hIndex < h and textY - hIndex or textY - hIndex - 1)
-                if (cursorX < 1) then
-                    cursorX = 0
-                end
-                parent:setCursor(true, obx + cursorX, oby + cursorY, self:getForeground())
-                self:updateDraw()
-                return true
-            end
-        end,
-
-        dragHandler = function(self, button, x, y)
-            if (base.dragHandler(self, button, x, y)) then
-                local parent = self:getParent()
-                local obx, oby = self:getAbsolutePosition()
-                local anchx, anchy = self:getPosition()
-                local w,h = self:getSize()
-                if (lines[y - oby + hIndex] ~= nil) then
-                    if anchx <= x - obx + wIndex and anchx + w > x - obx + wIndex then
-                        textX = x - obx + wIndex
-                        textY = y - oby + hIndex
-                
-                        if textX > lines[textY]:len() then
-                            textX = lines[textY]:len() + 1
-                        end
-
-                        endSelX = textX
-                        endSelY = textY
-                        
-                        if textX < wIndex then
-                            wIndex = textX - 1
-                            if wIndex < 1 then
-                                wIndex = 1
-                            end
-                        end
-                        parent:setCursor(not isSelected(), anchx + textX - wIndex, anchy + textY - hIndex, self:getForeground())
-                        self:updateDraw()
-                    end 
-                end
-                return true
-            end
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if (base.scrollHandler(self, dir, x, y)) then
-                local parent = self:getParent()
-                local obx, oby = self:getAbsolutePosition()
-                local anchx, anchy = self:getPosition()
-                local w,h = self:getSize()
-                hIndex = hIndex + dir
-                if (hIndex > #lines - (h - 1)) then
-                    hIndex = #lines - (h - 1)
-                end
-
-                if (hIndex < 1) then
-                    hIndex = 1
-                end
-
-                if (obx + textX - wIndex >= obx and obx + textX - wIndex < obx + w) and (anchy + textY - hIndex >= anchy and anchy + textY - hIndex < anchy + h) then
-                    parent:setCursor(not isSelected(), anchx + textX - wIndex, anchy + textY - hIndex, self:getForeground())
-                else
-                    parent:setCursor(false)
-                end
-                self:updateDraw()
-                return true
-            end
-        end,
-
-        mouseHandler = function(self, button, x, y)
-            if (base.mouseHandler(self, button, x, y)) then
-                local parent = self:getParent()
-                local obx, oby = self:getAbsolutePosition()
-                local anchx, anchy = self:getPosition()
-                    if (lines[y - oby + hIndex] ~= nil) then
-                        textX = x - obx + wIndex
-                        textY = y - oby + hIndex
-                        endSelX = nil
-                        endSelY = nil
-                        startSelX = textX
-                        startSelY = textY
-                        if (textX > lines[textY]:len()) then
-                            textX = lines[textY]:len() + 1
-                            startSelX = textX
-                        end
-                        if (textX < wIndex) then
-                            wIndex = textX - 1
-                            if (wIndex < 1) then
-                                wIndex = 1
-                            end
-                        end
-                        self:updateDraw()
-                    end
-                parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, self:getForeground())
-                return true
-            end
-        end,
-
-        mouseUpHandler = function(self, button, x, y)
-            if (base.mouseUpHandler(self, button, x, y)) then
-                local obx, oby = self:getAbsolutePosition()
-                local anchx, anchy = self:getPosition()
-                    if (lines[y - oby + hIndex] ~= nil) then
-                        endSelX = x - obx + wIndex
-                        endSelY = y - oby + hIndex
-                        if (endSelX > lines[endSelY]:len()) then
-                            endSelX = lines[endSelY]:len() + 1
-                        end
-                        if(startSelX==endSelX)and(startSelY==endSelY)then
-                            startSelX, endSelX, startSelY, endSelY = nil, nil, nil, nil
-                        end                            
-                        self:updateDraw()
-                    end
-                return true
-            end
-        end,
-
-        eventHandler = function(self, event, paste, p2, p3, p4)
-            if(base.eventHandler(self, event, paste, p2, p3, p4))then
-                if(event=="paste")then
-                    if(self:isFocused())then
-                        local parent = self:getParent()
-                        local fgColor, bgColor = self:getForeground(), self:getBackground()
-                        local w, h = self:getSize()
-                        lines[textY] = lines[textY]:sub(1, textX - 1) .. paste .. lines[textY]:sub(textX, lines[textY]:len())
-                        fgLines[textY] = fgLines[textY]:sub(1, textX - 1) .. tHex[fgColor]:rep(paste:len()) .. fgLines[textY]:sub(textX, fgLines[textY]:len())
-                        bgLines[textY] = bgLines[textY]:sub(1, textX - 1) .. tHex[bgColor]:rep(paste:len()) .. bgLines[textY]:sub(textX, bgLines[textY]:len())
-                        textX = textX + paste:len()
-                        if (textX >= w + wIndex) then
-                            wIndex = (textX+1)-w
-                        end
-                        local anchx, anchy = self:getPosition()
-                        parent:setCursor(true, anchx + textX - wIndex, anchy + textY - hIndex, fgColor)
-                        updateColors(self)
-                        self:updateDraw()
-                    end
-                end
-            end
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("textfield", function()
-                local parent = self:getParent()
-                local obx, oby = self:getPosition()
-                local w, h = self:getSize()
-                local bgColor = tHex[self:getBackground()]
-                local fgColor = tHex[self:getForeground()]
-        
-                for n = 1, h do
-                    local text = ""
-                    local bg = ""
-                    local fg = ""
-                    if lines[n + hIndex - 1] then
-                        text = lines[n + hIndex - 1]
-                        fg = fgLines[n + hIndex - 1]
-                        bg = bgLines[n + hIndex - 1]
-                    end
-        
-                    text = sub(text, wIndex, w + wIndex - 1)
-                    bg = rep(bgColor, w)
-                    fg = rep(fgColor, w)
-        
-                    self:addText(1, n, text)
-                    self:addBG(1, n, bg)
-                    self:addFG(1, n, fg)
-                    self:addBlit(1, n, text, fg, bg)
-                end
-        
-                if startSelX and endSelX and startSelY and endSelY then
-                    local sx, ex, sy, ey = getSelectionCoordinates(self)
-                    for n = sy, ey do
-                        local line = #lines[n]
-                        local xOffset = 0
-                        if n == sy and n == ey then
-                            xOffset = sx - 1
-                            line = line - (sx - 1) - (line - ex)
-                        elseif n == ey then
-                            line = line - (line - ex)
-                        elseif n == sy then
-                            line = line - (sx - 1)
-                            xOffset = sx - 1
-                        end
-                        self:addBG(1 + xOffset, n, rep(tHex[selectionBG], line))
-                        self:addFG(1 + xOffset, n, rep(tHex[selectionFG], line))
-                    end
-                end
-            end)
-        end,
-
-        load = function(self)
-            self:listenEvent("mouse_click")
-            self:listenEvent("mouse_up")
-            self:listenEvent("mouse_scroll")
-            self:listenEvent("mouse_drag")
-            self:listenEvent("key")
-            self:listenEvent("char")
-            self:listenEvent("other_event")
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["Treeview"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-return function(name, basalt)
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Treeview"
-
-    local nodes = {}
-    local itemSelectedBG = colors.black
-    local itemSelectedFG = colors.lightGray
-    local selectionColorActive = true
-    local textAlign = "left"
-    local xOffset, yOffset = 0, 0
-    local scrollable = true
-
-    base:setSize(16, 8)
-    base:setZIndex(5)
-
-    local function newNode(text, expandable)
-        text = text or ""
-        expandable = expandable or false
-        local expanded = false
-        local parent = nil
-        local children = {}
-
-        local node = {}
-
-        local onSelect
-
-        node = {
-            getChildren = function()
-                return children
-            end,
-
-            setParent = function(p)
-                if(parent~=nil)then
-                    parent.removeChild(parent.findChildrenByText(node.getText()))
-                end
-                parent = p
-                base:updateDraw()
-                return node
-            end,
-
-            getParent = function()
-                return parent
-            end,
-
-            addChild = function(text, expandable)
-                local childNode = newNode(text, expandable)
-                childNode.setParent(node)
-                table.insert(children, childNode)
-                base:updateDraw()
-                return childNode
-            end,
-
-            setExpanded = function(exp)
-                if(expandable)then
-                    expanded = exp
-                end
-                base:updateDraw()
-                return node
-            end,
-
-            isExpanded = function()
-                return expanded
-            end,
-
-            onSelect = function(...)
-                for _,v in pairs(table.pack(...))do
-                    if(type(v)=="function")then
-                        onSelect = v
-                    end
-                end
-                return node
-            end,
-
-            callOnSelect = function()
-                if(onSelect~=nil)then
-                    onSelect(node)
-                end
-            end,
-
-            setExpandable = function(expandable)
-                expandable = expandable
-                base:updateDraw()
-                return node
-            end,
-
-            isExpandable = function()
-                return expandable
-            end,
-
-            removeChild = function(index)
-                if(type(index)=="table")then
-                    for k,v in pairs(index)do
-                        if(v==index)then
-                            index = k
-                            break
-                        end
-                    end
-                end
-                table.remove(children, index)
-                base:updateDraw()
-                return node
-            end,
-
-            findChildrenByText = function(searchText)
-                local foundNodes = {}
-                for _, child in ipairs(children) do
-                    if string.find(child.getText(), searchText) then
-                        table.insert(foundNodes, child)
-                    end
-                end
-                return foundNodes
-            end,
-
-            getText = function()
-                return text
-            end,
-
-            setText = function(t)
-                text = t
-                base:updateDraw()
-                return node
-            end
-        }
-
-        return node
-    end
-
-    local root = newNode("Root", true)
-    root.setExpanded(true)
-
-    local object = {
-        init = function(self)
-            local parent = self:getParent()
-            self:listenEvent("mouse_click")
-            self:listenEvent("mouse_scroll")
-            return base.init(self)
-        end,
-
-        getBase = function(self)
-            return base
-        end,
-
-        getType = function(self)
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType == t or base.isType ~= nil and base.isType(t) or false
-        end,
-
-        setOffset = function(self, x, y)
-            xOffset = x
-            yOffset = y
-            return self
-        end,
-
-        getOffset = function(self)
-            return xOffset, yOffset
-        end,
-
-        setScrollable = function(self, scroll)
-            scrollable = scroll
-            return self
-        end,
-
-        setSelectionColor = function(self, bgCol, fgCol, active)
-            itemSelectedBG = bgCol or self:getBackground()
-            itemSelectedFG = fgCol or self:getForeground()
-            selectionColorActive = active~=nil and active or true
-            self:updateDraw()
-            return self
-        end,
-
-        getSelectionColor = function(self)
-            return itemSelectedBG, itemSelectedFG
-        end,
-
-        isSelectionColorActive = function(self)
-            return selectionColorActive
-        end,
-
-        getRoot = function(self)
-            return root
-        end,
-
-        setRoot = function(self, node)
-            root = node
-            node.setParent(nil)
-            return self
-        end,
-
-        onSelect = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("treeview_select", v)
-                end
-            end
-            return self
-        end,
-
-        selectionHandler = function(self, node)
-            node.callOnSelect(node)
-            self:sendEvent("treeview_select", node)
-            return self
-        end,
-
-        mouseHandler = function(self, button, x, y)
-            if base.mouseHandler(self, button, x, y) then
-                local currentLine = 1 - yOffset
-                local obx, oby = self:getAbsolutePosition()
-                local w, h = self:getSize()
-                local function checkNodeClick(node, level)
-                    if y == oby+currentLine-1 then
-                        if x >= obx and x < obx + w then
-                            node.setExpanded(not node.isExpanded())
-                            self:selectionHandler(node)
-                            self:setValue(node)
-                            self:updateDraw()
-                            return true
-                        end
-                    end
-                    currentLine = currentLine + 1
-                    if node.isExpanded() then
-                        for _, child in ipairs(node.getChildren()) do
-                            if checkNodeClick(child, level + 1) then
-                                return true
-                            end
-                        end
-                    end
-                    return false
-                end
-        
-                for _, item in ipairs(root.getChildren()) do
-                    if checkNodeClick(item, 1) then
-                        return true
-                    end
-                end
-            end
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if base.scrollHandler(self, dir, x, y) then
-                if scrollable then
-                    local _, h = self:getSize()
-                    yOffset = yOffset + dir
-        
-                    if yOffset < 0 then
-                        yOffset = 0
-                    end
-        
-                    if dir >= 1 then
-                        local visibleLines = 0
-                        local function countVisibleLines(node, level)
-                            visibleLines = visibleLines + 1
-                            if node.isExpanded() then
-                                for _, child in ipairs(node.getChildren()) do
-                                    countVisibleLines(child, level + 1)
-                                end
-                            end
-                        end
-        
-                        for _, item in ipairs(root.getChildren()) do
-                            countVisibleLines(item, 1)
-                        end
-        
-                        if visibleLines > h then
-                            if yOffset > visibleLines - h then
-                                yOffset = visibleLines - h
-                            end
-                        else
-                            yOffset = yOffset - 1
-                        end
-                    end
-                    self:updateDraw()
-                end
-                return true
-            end
-            return false
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("treeview", function()
-                local currentLine = 1 - yOffset
-                local lastClickedNode = self:getValue()
-                local function drawNode(node, level)
-                    local w, h = self:getSize()
-                
-                    if currentLine >= 1 and currentLine <= h then
-                        local bg = (node == lastClickedNode) and itemSelectedBG or self:getBackground()
-                        local fg = (node == lastClickedNode) and itemSelectedFG or self:getForeground()
-                
-                        local text = node.getText()
-                        self:addBlit(1 + level + xOffset, currentLine, text, tHex[fg]:rep(#text), tHex[bg]:rep(#text))
-                    end
-                
-                    currentLine = currentLine + 1     
-                               
-                    if node.isExpanded() then
-                        for _, child in ipairs(node.getChildren()) do
-                            drawNode(child, level + 1)
-                        end
-                    end
-                end
-        
-                for _, item in ipairs(root.getChildren()) do
-                    drawNode(item, 1)
-                end
-            end)
-        end,
-
-
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["ScrollableFrame"] = function(...)
-local max,min,sub,rep = math.max,math.min,string.sub,string.rep
-
-return function(name, basalt)
-    local base = basalt.getObject("Frame")(name, basalt)
-    local objectType = "ScrollableFrame"
-    local parent
-
-    local direction = 0
-    local manualScrollAmount = 0
-    local calculateScrollAmount = true
-
-    local function getHorizontalScrollAmount(self)
-        local amount = 0
-        local objects = self:getObjects()
-        for _, b in pairs(objects) do
-            if(b.element.getWidth~=nil)and(b.element.getX~=nil)then
-                local w, x = b.element:getWidth(), b.element:getX()
-                local width = self:getWidth()
-                if(b.element:getType()=="Dropdown")then
-                    if(b.element:isOpened())then
-                        local dropdownW = b.element:getDropdownSize()
-                        if (dropdownW + x - width >= amount) then
-                            amount = max(dropdownW + x - width, 0)
-                        end
-                    end
-                end
-
-                if (h + x - width >= amount) then
-                    amount = max(w + x - width, 0)
-                end
-            end
-        end
-        return amount
-    end
-
-    local function getVerticalScrollAmount(self)
-        local amount = 0
-        local objects = self:getObjects()
-        for _, b in pairs(objects) do
-            if(b.element.getHeight~=nil)and(b.element.getY~=nil)then
-                local h, y = b.element:getHeight(), b.element:getY()
-                local height = self:getHeight()
-                if(b.element:getType()=="Dropdown")then
-                    if(b.element:isOpened())then
-                        local _,dropdownH = b.element:getDropdownSize()
-                        if (dropdownH + y - height >= amount) then
-                            amount = max(dropdownH + y - height, 0)
-                        end
-                    end
-                end
-                if (h + y - height >= amount) then
-                    amount = max(h + y - height, 0)
-                end
-            end
-        end
-        return amount
-    end
-
-    local function scrollHandler(self, dir)
-        local xO, yO = self:getOffset()
-        local scrollAmn
-        if(direction==1)then
-            scrollAmn = calculateScrollAmount and getHorizontalScrollAmount(self) or manualScrollAmount
-            self:setOffset(min(scrollAmn, max(0, xO + dir)), yO)
-        elseif(direction==0)then
-            scrollAmn = calculateScrollAmount and getVerticalScrollAmount(self) or manualScrollAmount
-            self:setOffset(xO, min(scrollAmn, max(0, yO + dir)))
-        end
-        self:updateDraw()
-    end
-    
-    local object = {    
-        getType = function()
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        setDirection = function(self, dir)
-            direction = dir=="horizontal" and 1 or dir=="vertical" and 0 or direction
-            return self
-        end,
-
-        setScrollAmount = function(self, amount)
-            manualScrollAmount = amount
-            calculateScrollAmount = false
-            return self
-        end,
-
-        getBase = function(self)
-            return base
-        end, 
-        
-        load = function(self)
-            base.load(self)
-            self:listenEvent("mouse_scroll")
-        end,
-
-        setParent = function(self, p, ...)
-            base.setParent(self, p, ...)
-            parent = p
-            return self
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if(base:getBase().scrollHandler(self, dir, x, y))then
-                self:sortElementOrder()
-                for _, obj in ipairs(self:getEvents("mouse_scroll")) do
-                    if (obj.element.scrollHandler ~= nil) then
-                        local xO, yO = 0, 0
-                        if(self.getOffset~=nil)then
-                            xO, yO = self:getOffset()
-                        end
-                        if(obj.element.getIgnoreOffset())then
-                            xO, yO = 0, 0
-                        end
-                        if (obj.element.scrollHandler(obj.element, dir, x+xO, y+yO)) then      
-                            return true
-                        end
-                    end
-                end
-                scrollHandler(self, dir, x, y)
-                self:removeFocusedObject()
-                return true
-            end
-        end,
-
-        draw = function(self)
-            base.draw(self)
-            self:addDraw("scrollableFrame", function()
-                if(calculateScrollAmount)then
-                    scrollHandler(self, 0)
-                end
-            end, 0)
-        end,
-    }
-
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
-project["objects"]["VisualObject"] = function(...)
-local utils = require("utils")
-local tHex = require("tHex")
-
-local sub, find, insert = string.sub, string.find, table.insert
-
-return function(name, basalt)   
-    local base = basalt.getObject("Object")(name, basalt)
-    -- Base object
-    local objectType = "VisualObject" -- not changeable
-
-    local isVisible,ignOffset,isHovered,isClicked,isDragging = true,false,false,false,false
-    local zIndex = 1
-
-    local x, y, width, height = 1,1,1,1
-    local dragStartX, dragStartY, dragXOffset, dragYOffset = 0, 0, 0, 0
-
-    local bgColor,fgColor, transparency = colors.black, colors.white, false
-    local parent
-
-    local preDrawQueue = {}
-    local drawQueue = {}
-    local postDrawQueue = {}
-
-    local renderObject = {}
-
-    local function split(str, d)
-        local result = {}
-        if str == "" then
-            return result
-        end
-        d = d or " "
-        local start = 1
-        local delim_start, delim_end = find(str, d, start)
-            while delim_start do
-                insert(result, {x=start, value=sub(str, start, delim_start - 1)})
-                start = delim_end + 1
-                delim_start, delim_end = find(str, d, start)
-            end
-        insert(result, {x=start, value=sub(str, start)})
-        return result
-    end
-
-
-    local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        getBase = function(self)
-            return base
-        end,  
-      
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        getBasalt = function(self)
-            return basalt
-        end,
-
-        show = function(self)
-            isVisible = true
-            self:updateDraw()
-            return self
-        end,
-
-        hide = function(self)
-            isVisible = false
-            self:updateDraw()
-            return self
-        end,
-
-        isVisible = function(self)
-            return isVisible
-        end,
-
-        setVisible = function(self, _isVisible)
-            isVisible = _isVisible or not isVisible
-            self:updateDraw()
-            return self
-        end,
-
-        setTransparency = function(self, _transparency)
-            transparency = _transparency~= nil and _transparency or true
-            self:updateDraw()
-            return self
-        end,
-
-        setParent = function(self, newParent, noRemove)
-            base.setParent(self, newParent, noRemove)
-            parent = newParent
-            return self
-        end,
-
-        setFocus = function(self)
-            if (parent ~= nil) then
-                parent:setFocusedObject(self)
-            end
-            return self
-        end,
-
-        setZIndex = function(self, index)
-            zIndex = index
-            if (parent ~= nil) then
-                parent:updateZIndex(self, zIndex)
-                self:updateDraw()
-            end            
-            return self
-        end,
-
-        getZIndex = function(self)
-            return zIndex
-        end,
-
-        updateDraw = function(self)
-            if (parent ~= nil) then
-                parent:updateDraw()
-            end
-            return self
-        end,
-
-        setPosition = function(self, xPos, yPos, rel)
-            local curX, curY = x, y
-            if(type(xPos)=="number")then
-                x = rel and x+xPos or xPos
-            end
-            if(type(yPos)=="number")then
-                y = rel and y+yPos or yPos
-            end
-            if(parent~=nil)then parent:customEventHandler("basalt_FrameReposition", self) end
-            if(self:getType()=="Container")then parent:customEventHandler("basalt_FrameReposition", self) end
-            self:updateDraw()
-            self:repositionHandler(curX, curY)
-            return self
-        end,
-
-        getX = function(self)
-            return x
-        end,
-
-        getY = function(self)
-            return y
-        end,
-
-        getPosition = function(self)
-            return x, y
-        end,
-
-        setSize = function(self, newWidth, newHeight, rel)
-            local oldW, oldH = width, height
-            if(type(newWidth)=="number")then
-                width = rel and width+newWidth or newWidth
-            end
-            if(type(newHeight)=="number")then
-                height = rel and height+newHeight or newHeight
-            end
-            if(parent~=nil)then 
-                parent:customEventHandler("basalt_FrameResize", self)
-                if(self:getType()=="Container")then parent:customEventHandler("basalt_FrameResize", self) end
-            end
-            self:resizeHandler(oldW, oldH)
-            self:updateDraw()
-            return self
-        end,
-
-        getHeight = function(self)
-            return height
-        end,
-
-        getWidth = function(self)
-            return width
-        end,
-
-        getSize = function(self)
-            return width, height
-        end,
-
-        setBackground = function(self, color)
-            bgColor = color
-            self:updateDraw()
-            return self
-        end,
-
-        getBackground = function(self)
-            return bgColor
-        end,
-
-        setForeground = function(self, color)
-            fgColor = color or false
-            self:updateDraw()
-            return self
-        end,
-
-        getForeground = function(self)
-            return fgColor
-        end,
-
-        getAbsolutePosition = function(self, x, y)
-            -- relative position to absolute position
-            if (x == nil) or (y == nil) then
-                x, y = self:getPosition()
-            end
-
-            if (parent ~= nil) then
-                local fx, fy = parent:getAbsolutePosition()
-                x = fx + x - 1
-                y = fy + y - 1
-            end
-            return x, y
-        end,
-
-        ignoreOffset = function(self, ignore)
-            ignOffset = ignore
-            if(ignore==nil)then ignOffset = true end
-            return self
-        end,
-
-        getIgnoreOffset = function(self)
-            return ignOffset
-        end,
-
-        isCoordsInObject = function(self, x, y)
-            if(isVisible)and(self:isEnabled())then
-                if(x==nil)or(y==nil)then return false end
-                local objX, objY = self:getAbsolutePosition()
-                local w, h = self:getSize()            
-                if (objX <= x) and (objX + w > x) and (objY <= y) and (objY + h > y) then
-                    return true
-                end
-            end
-            return false
-        end,
-
-        onGetFocus = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("get_focus", v)
-                end
-            end
-            return self
-        end,
-
-        onLoseFocus = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("lose_focus", v)
-                end
-            end
-            return self
-        end,
-
-        isFocused = function(self)
-            if (parent ~= nil) then
-                return parent:getFocusedObject() == self
-            end
-            return true
-        end,
-
-        resizeHandler = function(self, ...)
-            if(self:isEnabled())then
-                local val = self:sendEvent("basalt_resize", ...)
-                if(val==false)then return false end
-            end
-            return true
-        end,
-
-        repositionHandler = function(self, ...)
-            if(self:isEnabled())then
-                local val = self:sendEvent("basalt_reposition", ...)
-                if(val==false)then return false end
-            end
-            return true
-        end,
-
-        onResize = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("basalt_resize", v)
-                end
-            end
-            return self
-        end,
-
-        onReposition = function(self, ...)
-            for _,v in pairs(table.pack(...))do
-                if(type(v)=="function")then
-                    self:registerEvent("basalt_reposition", v)
-                end
-            end
-            return self
-        end,
-
-        mouseHandler = function(self, button, x, y, isMon)
-            if(self:isCoordsInObject(x, y))then
-                local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_click", button, x - (objX-1), y - (objY-1), x, y, isMon)
-                if(val==false)then return false end
-                if(parent~=nil)then
-                    parent:setFocusedObject(self)
-                end
-                isClicked = true
-                isDragging = true
-                dragStartX, dragStartY = x, y 
-                return true
-            end
-        end,
-
-        mouseUpHandler = function(self, button, x, y)
-            isDragging = false
-            if(isClicked)then
-                local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_release", button, x - (objX-1), y - (objY-1), x, y)
-                isClicked = false
-            end
-            if(self:isCoordsInObject(x, y))then
-                local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_up", button, x - (objX-1), y - (objY-1), x, y)
-                if(val==false)then return false end
-                return true
-            end
-        end,
-
-        dragHandler = function(self, button, x, y)
-            if(isDragging)then 
-                local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_drag", button, x - (objX-1), y - (objY-1), dragStartX-x, dragStartY-y, x, y)
-                dragStartX, dragStartY = x, y 
-                if(val~=nil)then return val end
-                if(parent~=nil)then
-                    parent:setFocusedObject(self)
-                end
-                return true
-            end
-
-            if(self:isCoordsInObject(x, y))then
-                local objX, objY = self:getAbsolutePosition()
-                dragStartX, dragStartY = x, y 
-                dragXOffset, dragYOffset = objX - x, objY - y
-            end
-        end,
-
-        scrollHandler = function(self, dir, x, y)
-            if(self:isCoordsInObject(x, y))then
-                local objX, objY = self:getAbsolutePosition()
-                local val = self:sendEvent("mouse_scroll", dir, x - (objX-1), y - (objY-1))
-                if(val==false)then return false end
-                if(parent~=nil)then
-                    parent:setFocusedObject(self)
-                end
-                return true
-            end
-        end,
-
-        hoverHandler = function(self, x, y, stopped)
-            if(self:isCoordsInObject(x, y))then
-                local val = self:sendEvent("mouse_hover", x, y, stopped)
-                if(val==false)then return false end
-                isHovered = true
-                return true
-            end
-            if(isHovered)then
-                local val = self:sendEvent("mouse_leave", x, y, stopped)
-                if(val==false)then return false end
-                isHovered = false
-            end
-        end,
-
-        keyHandler = function(self, key, isHolding)
-            if(self:isEnabled())and(isVisible)then
-                if (self:isFocused()) then
-                local val = self:sendEvent("key", key, isHolding)
-                if(val==false)then return false end
-                return true
-                end
-            end
-        end,
-
-        keyUpHandler = function(self, key)
-            if(self:isEnabled())and(isVisible)then
-                if (self:isFocused()) then
-                    local val = self:sendEvent("key_up", key)
-                if(val==false)then return false end
-                return true
-                end
-            end
-        end,
-
-        charHandler = function(self, char)
-            if(self:isEnabled())and(isVisible)then
-                if(self:isFocused())then
-                local val = self:sendEvent("char", char)
-                if(val==false)then return false end
-                return true
-                end
-            end
-        end,
-
-        getFocusHandler = function(self)
-            local val = self:sendEvent("get_focus")
-            if(val~=nil)then return val end
-            return true
-        end,
-
-        loseFocusHandler = function(self)
-            isDragging = false
-            local val = self:sendEvent("lose_focus")
-            if(val~=nil)then return val end
-            return true
-        end,
-
-        addDraw = function(self, name, f, pos, typ, active)
-            local queue = (typ==nil or typ==1) and drawQueue or typ==2 and preDrawQueue or typ==3 and postDrawQueue
-            pos = pos or #queue+1
-            if(name~=nil)then
-                for k,v in pairs(queue)do
-                    if(v.name==name)then 
-                        table.remove(queue, k)
-                        break
-                    end
-                end
-                local t = {name=name, f=f, pos=pos, active=active~=nil and active or true}
-                table.insert(queue, pos, t)
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        addPreDraw = function(self, name, f, pos, typ)
-            self:addDraw(name, f, pos, 2)
-            return self
-        end,
-
-        addPostDraw = function(self, name, f, pos, typ)
-            self:addDraw(name, f, pos, 3)
-            return self
-        end,
-
-        setDrawState = function(self, name, state, typ)
-            local queue = (typ==nil or typ==1) and drawQueue or typ==2 and preDrawQueue or typ==3 and postDrawQueue
-            for k,v in pairs(queue)do
-                if(v.name==name)then 
-                    v.active = state
-                    break
-                end
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        getDrawId = function(self, name, typ)
-            local queue = typ==1 and drawQueue or typ==2 and preDrawQueue or typ==3 and postDrawQueue or drawQueue
-            for k,v in pairs(queue)do
-                if(v.name==name)then 
-                    return k
-                end
-            end
-        end,
-
-        addText = function(self, x, y, text)
-            local obj = self:getParent() or self
-            local xPos,yPos = self:getPosition()
-            if(parent~=nil)then
-                local xO, yO = parent:getOffset()
-                xPos = ignOffset and xPos or xPos - xO
-                yPos = ignOffset and yPos or yPos - yO
-            end
-            if not(transparency)then
-                obj:setText(x+xPos-1, y+yPos-1, text)
-                return
-            end
-            local t = split(text, "\0")
-            for k,v in pairs(t)do
-                if(v.value~="")and(v.value~="\0")then
-                    obj:setText(x+v.x+xPos-2, y+yPos-1, v.value)
-                end
-            end
-        end,
-
-        addBG = function(self, x, y, bg, noText)
-            local obj = parent or self
-            local xPos,yPos = self:getPosition()
-            if(parent~=nil)then
-                local xO, yO = parent:getOffset()
-                xPos = ignOffset and xPos or xPos - xO
-                yPos = ignOffset and yPos or yPos - yO
-            end
-            if not(transparency)then
-                obj:setBG(x+xPos-1, y+yPos-1, bg)
-                return
-            end
-            local t = split(bg)
-            for k,v in pairs(t)do
-                if(v.value~="")and(v.value~=" ")then
-                    if(noText~=true)then
-                        obj:setText(x+v.x+xPos-2, y+yPos-1, (" "):rep(#v.value))
-                        obj:setBG(x+v.x+xPos-2, y+yPos-1, v.value)
-                    else
-                        table.insert(renderObject, {x=x+v.x-1,y=y,bg=v.value})
-                        obj:setBG(x+xPos-1, y+yPos-1, fg)
-                    end
-                end
-            end
-        end,
-
-        addFG = function(self, x, y, fg)
-            local obj = parent or self
-            local xPos,yPos = self:getPosition()
-            if(parent~=nil)then
-                local xO, yO = parent:getOffset()
-                xPos = ignOffset and xPos or xPos - xO
-                yPos = ignOffset and yPos or yPos - yO
-            end
-            if not(transparency)then
-                obj:setFG(x+xPos-1, y+yPos-1, fg)
-                return
-            end
-            local t = split(fg)
-            for k,v in pairs(t)do
-                if(v.value~="")and(v.value~=" ")then
-                    obj:setFG(x+v.x+xPos-2, y+yPos-1, v.value)
-                end
-            end
-        end,
-
-        addBlit = function(self, x, y, t, fg, bg)
-            local obj = parent or self
-            local xPos,yPos = self:getPosition()
-            if(parent~=nil)then
-                local xO, yO = parent:getOffset()
-                xPos = ignOffset and xPos or xPos - xO
-                yPos = ignOffset and yPos or yPos - yO
-            end
-            if not(transparency)then
-                obj:blit(x+xPos-1, y+yPos-1, t, fg, bg)
-                return
-            end
-            local _text = split(t, "\0")
-            local _fg = split(fg)
-            local _bg = split(bg)
-            for k,v in pairs(_text)do
-                if(v.value~="")or(v.value~="\0")then
-                    obj:setText(x+v.x+xPos-2, y+yPos-1, v.value)
-                end
-            end
-            for k,v in pairs(_bg)do
-                if(v.value~="")or(v.value~=" ")then
-                    obj:setBG(x+v.x+xPos-2, y+yPos-1, v.value)
-                end
-            end
-            for k,v in pairs(_fg)do
-                if(v.value~="")or(v.value~=" ")then
-                    obj:setFG(x+v.x+xPos-2, y+yPos-1, v.value)
-                end
-            end
-        end,
-
-        addTextBox = function(self, x, y, w, h, text)
-            local obj = parent or self
-            local xPos,yPos = self:getPosition()
-            if(parent~=nil)then
-                local xO, yO = parent:getOffset()
-                xPos = ignOffset and xPos or xPos - xO
-                yPos = ignOffset and yPos or yPos - yO
-            end
-            obj:drawTextBox(x+xPos-1, y+yPos-1, w, h, text)
-        end,
-
-        addForegroundBox = function(self, x, y, w, h, col)
-            local obj = parent or self
-            local xPos,yPos = self:getPosition()
-            if(parent~=nil)then
-                local xO, yO = parent:getOffset()
-                xPos = ignOffset and xPos or xPos - xO
-                yPos = ignOffset and yPos or yPos - yO
-            end
-            obj:drawForegroundBox(x+xPos-1, y+yPos-1, w, h, col)
-        end,
-
-        addBackgroundBox = function(self, x, y, w, h, col)
-            local obj = parent or self
-            local xPos,yPos = self:getPosition()
-            if(parent~=nil)then
-                local xO, yO = parent:getOffset()
-                xPos = ignOffset and xPos or xPos - xO
-                yPos = ignOffset and yPos or yPos - yO
-            end
-            obj:drawBackgroundBox(x+xPos-1, y+yPos-1, w, h, col)
-        end,
-
-        render = function(self)
-            if (isVisible)then
-                self:redraw()
-            end
-        end,
-
-        redraw = function(self)
-            for k,v in pairs(preDrawQueue)do
-                if (v.active)then
-                    v.f(self)
-                end
-            end
-            for k,v in pairs(drawQueue)do
-                if (v.active)then
-                    v.f(self)
-                end
-            end
-            for k,v in pairs(postDrawQueue)do
-                if (v.active)then
-                    v.f(self)
-                end
-            end
-            return true
-        end,
-
-        draw = function(self)
-            self:addDraw("base", function()
-                local w,h = self:getSize()
-                if(bgColor~=false)then
-                    self:addTextBox(1, 1, w, h, " ")
-                    self:addBackgroundBox(1, 1, w, h, bgColor)
-                end
-                if(fgColor~=false)then
-                    self:addForegroundBox(1, 1, w, h, fgColor)
-                end
-            end, 1)
-        end,
-    }
-    object.__index = object
-    return setmetatable(object, base)
-end
-end
- return project["main"]()
+local ba={}local ca=true;local da=require
+local _b=function(bb)
+for cb,db in pairs(ba)do
+if(type(db)=="table")then for _c,ac in pairs(db)do if(_c==bb)then
+return ac()end end else if(cb==bb)then return db()end end end;return da(bb)end
+local ab=function(bb)if(bb~=nil)then return ba[bb]end;return ba end
+ba["plugin"]=function(...)local bb={...}local cb={}local db={}
+local _c=fs.getDir(bb[2]or"Basalt")local ac=fs.combine(_c,"plugins")
+if(ca)then
+for cc,dc in pairs(ab("plugins"))do
+table.insert(db,cc)local _d=dc()
+if(type(_d)=="table")then for ad,bd in pairs(_d)do
+if(type(ad)=="string")then if(cb[ad]==nil)then
+cb[ad]={}end;table.insert(cb[ad],bd)end end end end else
+if(fs.exists(ac))then
+for cc,dc in pairs(fs.list(ac))do table.insert(db,dc)
+local _d=_b(dc:gsub(".lua",""))
+if(type(_d)=="table")then for ad,bd in pairs(_d)do
+if(type(ad)=="string")then
+if(cb[ad]==nil)then cb[ad]={}end;table.insert(cb[ad],bd)end end end end end end;local function bc(cc)return cb[cc]end
+return
+{get=bc,getAvailablePlugins=function()return db end,addPlugin=function(cc)
+if(fs.exists(cc))then
+if(fs.isDir(cc))then
+for dc,_d in
+pairs(fs.list(cc))do table.insert(db,_d)
+if
+not(fs.isDir(fs.combine(cc,_d)))then local ad=_d:gsub(".lua","")local bd=_b(fs.combine(cc,ad))
+if(
+type(bd)=="table")then for cd,dd in pairs(bd)do
+if(type(cd)=="string")then
+if(cb[cd]==nil)then cb[cd]={}end;table.insert(cb[cd],dd)end end end end end else local dc=_b(cc:gsub(".lua",""))
+table.insert(db,cc:match("[\\/]?([^\\/]-([^%.]+))$"))
+if(type(dc)=="table")then for _d,ad in pairs(dc)do
+if(type(_d)=="string")then
+if(cb[_d]==nil)then cb[_d]={}end;table.insert(cb[_d],ad)end end end end end end,loadPlugins=function(cc,dc)
+for _d,ad in
+pairs(cc)do local bd=cb[_d]
+if(bd~=nil)then
+cc[_d]=function(...)local cd=ad(...)
+for dd,__a in pairs(bd)do local a_a=__a(cd,dc,...)
+a_a.__index=a_a;cd=setmetatable(a_a,cd)end;return cd end end end;return cc end}end
+ba["main"]=function(...)local bb=_b("basaltEvent")()
+local cb=_b("loadObjects")local db;local _c=_b("plugin")local ac=_b("utils")local bc=_b("basaltLogs")
+local cc=ac.uuid;local dc=ac.wrapText;local _d=ac.tableCount;local ad=300;local bd=0;local cd=0;local dd={}
+local __a=term.current()local a_a="1.7.0"
+local b_a=fs.getDir(table.pack(...)[2]or"")local c_a,d_a,_aa,aaa,baa={},{},{},{},{}local caa,daa,_ba,aba;local bba={}if not term.isColor or
+not term.isColor()then
+error('Basalt requires an advanced (golden) computer to run.',0)end;local cba={}
+for dcb,_db in
+pairs(colors)do if(type(_db)=="number")then
+cba[dcb]={__a.getPaletteColor(_db)}end end
+local function dba()aba=false;__a.clear()__a.setCursorPos(1,1)
+for dcb,_db in pairs(colors)do if(
+type(_db)=="number")then
+__a.setPaletteColor(_db,colors.packRGB(table.unpack(cba[dcb])))end end end
+local function _ca(dcb)
+assert(dcb~="function","Schedule needs a function in order to work!")
+return function(...)local _db=coroutine.create(dcb)
+local adb,bdb=coroutine.resume(_db,...)
+if(adb)then table.insert(baa,_db)else bba.basaltError(bdb)end end end;bba.log=function(...)bc(...)end
+local aca=function(dcb,_db)aaa[dcb]=_db end;local bca=function(dcb)return aaa[dcb]end
+local cca={getDynamicValueEventSetting=function()
+return bba.dynamicValueEvents end,getMainFrame=function()return caa end,setVariable=aca,getVariable=bca,setMainFrame=function(dcb)caa=dcb end,getActiveFrame=function()return daa end,setActiveFrame=function(dcb)
+daa=dcb end,getFocusedObject=function()return _ba end,setFocusedObject=function(dcb)_ba=dcb end,getMonitorFrame=function(dcb)return _aa[dcb]or
+monGroups[dcb][1]end,setMonitorFrame=function(dcb,_db,adb)
+if(caa==_db)then caa=nil end
+if(adb)then monGroups[dcb]={_db,sides}else _aa[dcb]=_db end;if(_db==nil)then monGroups[dcb]=nil end end,getTerm=function()return
+__a end,schedule=_ca,stop=dba,debug=bba.debug,log=bba.log,getObjects=function()return db end,getObject=function(dcb)return db[dcb]end,getDirectory=function()return
+b_a end}
+local function dca(dcb)__a.clear()__a.setBackgroundColor(colors.black)
+__a.setTextColor(colors.red)local _db,adb=__a.getSize()if(bba.logging)then bc(dcb,"Error")end;local bdb=dc(
+"Basalt error: "..dcb,_db)local cdb=1;for ddb,__c in pairs(bdb)do
+__a.setCursorPos(1,cdb)__a.write(__c)cdb=cdb+1 end;__a.setCursorPos(1,
+cdb+1)aba=false end
+local function _da(dcb,_db,adb,bdb,cdb)
+if(#baa>0)then local ddb={}
+for n=1,#baa do
+if(baa[n]~=nil)then
+if
+(coroutine.status(baa[n])=="suspended")then
+local __c,a_c=coroutine.resume(baa[n],dcb,_db,adb,bdb,cdb)if not(__c)then bba.basaltError(a_c)end else
+table.insert(ddb,n)end end end
+for n=1,#ddb do table.remove(baa,ddb[n]- (n-1))end end end
+local function ada()if(aba==false)then return end;if(caa~=nil)then caa:render()
+caa:updateTerm()end;for dcb,_db in pairs(_aa)do _db:render()
+_db:updateTerm()end end;local bda,cda,dda=nil,nil,nil;local __b=nil
+local function a_b(dcb,_db,adb,bdb)bda,cda,dda=_db,adb,bdb;if(__b==nil)then
+__b=os.startTimer(ad/1000)end end
+local function b_b()__b=nil;caa:hoverHandler(cda,dda,bda)daa=caa end;local c_b,d_b,_ab=nil,nil,nil;local aab=nil;local function bab()aab=nil;caa:dragHandler(c_b,d_b,_ab)
+daa=caa end;local function cab(dcb,_db,adb,bdb)c_b,d_b,_ab=_db,adb,bdb
+if(bd<50)then bab()else if(aab==nil)then aab=os.startTimer(
+bd/1000)end end end
+local dab=nil;local function _bb()dab=nil;ada()end
+local function abb(dcb)if(cd<50)then ada()else if(dab==nil)then
+dab=os.startTimer(cd/1000)end end end
+local function bbb(dcb,...)local _db={...}if
+(bb:sendEvent("basaltEventCycle",dcb,...)==false)then return end
+if(dcb=="terminate")then bba.stop()end
+if(caa~=nil)then
+local adb={mouse_click=caa.mouseHandler,mouse_up=caa.mouseUpHandler,mouse_scroll=caa.scrollHandler,mouse_drag=cab,mouse_move=a_b}local bdb=adb[dcb]
+if(bdb~=nil)then bdb(caa,...)_da(dcb,...)abb()return end end
+if(dcb=="monitor_touch")then
+for adb,bdb in pairs(_aa)do if
+(bdb:mouseHandler(1,_db[2],_db[3],true,_db[1]))then daa=bdb end end;_da(dcb,...)abb()return end
+if(daa~=nil)then
+local adb={char=daa.charHandler,key=daa.keyHandler,key_up=daa.keyUpHandler}local bdb=adb[dcb]if(bdb~=nil)then if(dcb=="key")then c_a[_db[1]]=true elseif(dcb=="key_up")then
+c_a[_db[1]]=false end;bdb(daa,...)_da(dcb,...)
+abb()return end end
+if(dcb=="timer")and(_db[1]==__b)then b_b()elseif
+(dcb=="timer")and(_db[1]==aab)then bab()elseif(dcb=="timer")and(_db[1]==dab)then _bb()else for adb,bdb in pairs(d_a)do
+bdb:eventHandler(dcb,...)end
+for adb,bdb in pairs(_aa)do bdb:eventHandler(dcb,...)end;_da(dcb,...)abb()end end;local cbb=false;local dbb=false
+local function _cb()
+if not(cbb)then
+for dcb,_db in pairs(dd)do
+if(fs.exists(_db))then
+if(fs.isDir(_db))then
+local adb=fs.list(_db)
+for bdb,cdb in pairs(adb)do
+if not(fs.isDir(_db.."/"..cdb))then
+local ddb=cdb:gsub(".lua","")
+if
+(ddb~="example.lua")and not(ddb:find(".disabled"))then
+if(cb[ddb]==nil)then
+cb[ddb]=_b(_db.."."..cdb:gsub(".lua",""))else error("Duplicate object name: "..ddb)end end end end else local adb=_db:gsub(".lua","")
+if(cb[adb]==nil)then cb[adb]=_b(adb)else error(
+"Duplicate object name: "..adb)end end end end;cbb=true end
+if not(dbb)then db=_c.loadPlugins(cb,cca)local dcb=_c.get("basalt")
+if
+(dcb~=nil)then for adb,bdb in pairs(dcb)do
+for cdb,ddb in pairs(bdb(bba))do bba[cdb]=ddb;cca[cdb]=ddb end end end;local _db=_c.get("basaltInternal")
+if(_db~=nil)then for adb,bdb in pairs(_db)do for cdb,ddb in pairs(bdb(bba))do
+cca[cdb]=ddb end end end;dbb=true end end
+local function acb(dcb)_cb()
+for adb,bdb in pairs(d_a)do if(bdb:getName()==dcb)then return nil end end;local _db=db["BaseFrame"](dcb,cca)_db:init()
+_db:load()_db:draw()table.insert(d_a,_db)
+if(caa==nil)and(_db:getName()~=
+"basaltDebuggingFrame")then _db:show()end;return _db end
+bba={basaltError=dca,logging=false,dynamicValueEvents=false,drawFrames=ada,log=bc,getVersion=function()return a_a end,memory=function()return
+math.floor(collectgarbage("count")+0.5).."KB"end,addObject=function(dcb)if
+(fs.exists(dcb))then table.insert(dd,dcb)end end,addPlugin=function(dcb)
+_c.addPlugin(dcb)end,getAvailablePlugins=function()return _c.getAvailablePlugins()end,getAvailableObjects=function()
+local dcb={}for _db,adb in pairs(cb)do table.insert(dcb,_db)end;return dcb end,setVariable=aca,getVariable=bca,setBaseTerm=function(dcb)
+__a=dcb end,resetPalette=function()
+for dcb,_db in pairs(colors)do if(type(_db)=="number")then end end end,setMouseMoveThrottle=function(dcb)
+if(_HOST:find("CraftOS%-PC"))then if(
+config.get("mouse_move_throttle")~=10)then
+config.set("mouse_move_throttle",10)end
+if(dcb<100)then ad=100 else ad=dcb end;return true end;return false end,setRenderingThrottle=function(dcb)if(
+dcb<=0)then cd=0 else dab=nil;cd=dcb end end,setMouseDragThrottle=function(dcb)if
+(dcb<=0)then bd=0 else aab=nil;bd=dcb end end,autoUpdate=function(dcb)aba=dcb;if(
+dcb==nil)then aba=true end;local function _db()ada()while aba do
+bbb(os.pullEventRaw())end end
+while aba do
+local adb,bdb=xpcall(_db,debug.traceback)if not(adb)then bba.basaltError(bdb)end end end,update=function(dcb,...)
+if(
+dcb~=nil)then local _db={...}
+local adb,bdb=xpcall(function()bbb(dcb,table.unpack(_db))end,debug.traceback)if not(adb)then bba.basaltError(bdb)return end end end,stop=dba,stopUpdate=dba,isKeyDown=function(dcb)if(
+c_a[dcb]==nil)then return false end;return c_a[dcb]end,getFrame=function(dcb)for _db,adb in
+pairs(d_a)do if(adb.name==dcb)then return adb end end end,getActiveFrame=function()return
+daa end,setActiveFrame=function(dcb)
+if(dcb:getType()=="Container")then daa=dcb;return true end;return false end,getMainFrame=function()return caa end,onEvent=function(...)
+for dcb,_db in
+pairs(table.pack(...))do if(type(_db)=="function")then
+bb:registerEvent("basaltEventCycle",_db)end end end,schedule=_ca,addFrame=acb,createFrame=acb,addMonitor=function(dcb)
+_cb()
+for adb,bdb in pairs(d_a)do if(bdb:getName()==dcb)then return nil end end;local _db=db["MonitorFrame"](dcb,cca)_db:init()
+_db:load()_db:draw()table.insert(_aa,_db)return _db end,removeFrame=function(dcb)d_a[dcb]=
+nil end,setProjectDir=function(dcb)b_a=dcb end}local bcb=_c.get("basalt")if(bcb~=nil)then
+for dcb,_db in pairs(bcb)do for adb,bdb in pairs(_db(bba))do
+bba[adb]=bdb;cca[adb]=bdb end end end
+local ccb=_c.get("basaltInternal")if(ccb~=nil)then
+for dcb,_db in pairs(ccb)do for adb,bdb in pairs(_db(bba))do cca[adb]=bdb end end end;return bba end;ba["objects"]={}
+ba["objects"]["Frame"]=function(...)local bb=_b("utils")
+local cb,db,_c,ac,bc=math.max,math.min,string.sub,string.rep,string.len
+return
+function(cc,dc)local _d=dc.getObject("Container")(cc,dc)local ad="Frame"
+local bd;local cd=true;local dd,__a=0,0;_d:setSize(30,10)_d:setZIndex(10)
+local a_a={getType=function()return ad end,isType=function(b_a,c_a)return
+
+ad==c_a or _d.isType~=nil and _d.isType(c_a)or false end,getBase=function(b_a)
+return _d end,getOffset=function(b_a)return dd,__a end,setOffset=function(b_a,c_a,d_a)dd=c_a or dd;__a=d_a or __a
+b_a:updateDraw()return b_a end,setParent=function(b_a,c_a,...)
+_d.setParent(b_a,c_a,...)bd=c_a;return b_a end,render=function(b_a)
+if(_d.render~=nil)then
+if
+(b_a:isVisible())then _d.render(b_a)local c_a=b_a:getObjects()for d_a,_aa in ipairs(c_a)do
+if(
+_aa.element.render~=nil)then _aa.element:render()end end end end end,updateDraw=function(b_a)if(
+bd~=nil)then bd:updateDraw()end;return b_a end,blit=function(b_a,c_a,d_a,_aa,aaa,baa)
+local caa,daa=b_a:getPosition()local _ba,aba=bd:getOffset()caa=caa-_ba;daa=daa-aba
+local bba,cba=b_a:getSize()
+if d_a>=1 and d_a<=cba then
+local dba=_c(_aa,cb(1 -c_a+1,1),cb(bba-c_a+1,1))
+local _ca=_c(aaa,cb(1 -c_a+1,1),cb(bba-c_a+1,1))
+local aca=_c(baa,cb(1 -c_a+1,1),cb(bba-c_a+1,1))
+bd:blit(cb(c_a+ (caa-1),caa),daa+d_a-1,dba,_ca,aca)end end,setCursor=function(b_a,c_a,d_a,_aa,aaa)
+local baa,caa=b_a:getPosition()local daa,_ba=b_a:getOffset()
+bd:setCursor(c_a or false,(d_a or 0)+baa-1 -daa,(
+_aa or 0)+caa-1 -_ba,aaa or colors.white)return b_a end}
+for b_a,c_a in
+pairs({"drawBackgroundBox","drawForegroundBox","drawTextBox"})do
+a_a[c_a]=function(d_a,_aa,aaa,baa,caa,daa)local _ba,aba=d_a:getPosition()local bba,cba=bd:getOffset()
+_ba=_ba-bba;aba=aba-cba
+caa=(aaa<1 and(
+caa+aaa>d_a:getHeight()and d_a:getHeight()or caa+aaa-1)or(
+caa+
+aaa>d_a:getHeight()and d_a:getHeight()-aaa+1 or caa))
+baa=(_aa<1 and(baa+_aa>d_a:getWidth()and d_a:getWidth()or baa+
+_aa-1)or(
+
+baa+_aa>d_a:getWidth()and d_a:getWidth()-_aa+1 or baa))
+bd[c_a](bd,cb(_aa+ (_ba-1),_ba),cb(aaa+ (aba-1),aba),baa,caa,daa)end end
+for b_a,c_a in pairs({"setBG","setFG","setText"})do
+a_a[c_a]=function(d_a,_aa,aaa,baa)
+local caa,daa=d_a:getPosition()local _ba,aba=bd:getOffset()caa=caa-_ba;daa=daa-aba
+local bba,cba=d_a:getSize()if(aaa>=1)and(aaa<=cba)then
+bd[c_a](bd,cb(_aa+ (caa-1),caa),daa+aaa-1,_c(baa,cb(
+1 -_aa+1,1),cb(bba-_aa+1,1)))end end end;a_a.__index=a_a;return setmetatable(a_a,_d)end end
+ba["objects"]["MovableFrame"]=function(...)
+local bb,cb,db,_c=math.max,math.min,string.sub,string.rep
+return
+function(ac,bc)local cc=bc.getObject("Frame")(ac,bc)local dc="MovableFrame"
+local _d;local ad,bd,cd=0,0,false;local dd={{x1=1,x2="width",y1=1,y2=1}}
+local __a={getType=function()return dc end,setDraggingMap=function(a_a,b_a)
+dd=b_a;return a_a end,getDraggingMap=function(a_a)return dd end,isType=function(a_a,b_a)
+return dc==b_a or(cc.isType~=nil and
+cc.isType(b_a))or false end,getBase=function(a_a)return cc end,load=function(a_a)
+cc.load(a_a)a_a:listenEvent("mouse_click")
+a_a:listenEvent("mouse_up")a_a:listenEvent("mouse_drag")end,dragHandler=function(a_a,b_a,c_a,d_a)
+if
+(cc.dragHandler(a_a,b_a,c_a,d_a))then
+if(cd)then local _aa,aaa=_d:getOffset()
+_aa=_aa<0 and math.abs(_aa)or-_aa;aaa=aaa<0 and math.abs(aaa)or-aaa;local baa=1
+local caa=1;baa,caa=_d:getAbsolutePosition()
+a_a:setPosition(c_a+ad- (baa-1)+_aa,
+d_a+bd- (caa-1)+aaa)a_a:updateDraw()end;return true end end,mouseHandler=function(a_a,b_a,c_a,d_a,...)
+if
+(cc.mouseHandler(a_a,b_a,c_a,d_a,...))then _d:setImportant(a_a)local _aa,aaa=a_a:getAbsolutePosition()
+local baa,caa=a_a:getSize()
+for daa,_ba in pairs(dd)do local aba,bba=_ba.x1 =="width"and baa or _ba.x1,_ba.x2 =="width"and
+baa or _ba.x2;local cba,dba=
+_ba.y1 =="height"and caa or _ba.y1,
+_ba.y2 =="height"and caa or _ba.y2
+if
+(c_a>=
+_aa+aba-1)and(c_a<=_aa+bba-1)and(d_a>=aaa+cba-1)and(d_a<=aaa+dba-1)then cd=true
+ad=_aa-c_a;bd=aaa-d_a;return true end end;return true end end,mouseUpHandler=function(a_a,...)
+cd=false;return cc.mouseUpHandler(a_a,...)end,setParent=function(a_a,b_a,...)
+cc.setParent(a_a,b_a,...)_d=b_a;return a_a end}__a.__index=__a;return setmetatable(__a,cc)end end
+ba["objects"]["Graph"]=function(...)
+return
+function(bb,cb)
+local db=cb.getObject("ChangeableObject")(bb,cb)local _c="Graph"db:setZIndex(5)db:setSize(30,10)local ac={}
+local bc=colors.gray;local cc="\7"local dc=colors.black;local _d=100;local ad=0;local bd="line"local cd=10
+local dd={getType=function(__a)return _c end,setGraphColor=function(__a,a_a)bc=
+a_a or bc;__a:updateDraw()return __a end,setGraphSymbol=function(__a,a_a,b_a)cc=
+a_a or cc;dc=b_a or dc;__a:updateDraw()return __a end,getGraphSymbol=function(__a)return
+cc,dc end,addDataPoint=function(__a,a_a)if a_a>=ad and a_a<=_d then table.insert(ac,a_a)
+__a:updateDraw()end
+if(#ac>100)then table.remove(ac,1)end;return __a end,setMaxValue=function(__a,a_a)
+_d=a_a;__a:updateDraw()return __a end,getMaxValue=function(__a)return _d end,setMinValue=function(__a,a_a)
+ad=a_a;__a:updateDraw()return __a end,getMinValue=function(__a)return ad end,setGraphType=function(__a,a_a)if
+a_a=="scatter"or a_a=="line"or a_a=="bar"then bd=a_a
+__a:updateDraw()end;return __a end,setMaxEntries=function(__a,a_a)
+cd=a_a;__a:updateDraw()return __a end,getMaxEntries=function(__a)return cd end,clear=function(__a)
+ac={}__a:updateDraw()return __a end,draw=function(__a)db.draw(__a)
+__a:addDraw("graph",function()
+local a_a,b_a=__a:getPosition()local c_a,d_a=__a:getSize()
+local _aa,aaa=__a:getBackground(),__a:getForeground()local baa=_d-ad;local caa,daa;local _ba=#ac-cd+1;if _ba<1 then _ba=1 end
+for i=_ba,#ac do local aba=ac[i]
+local bba=math.floor(( (
+c_a-1)/ (cd-1))* (i-_ba)+1.5)
+local cba=math.floor((d_a-1)- ( (d_a-1)/baa)* (aba-ad)+1.5)
+if bd=="scatter"then __a:addBackgroundBox(bba,cba,1,1,bc)
+__a:addForegroundBox(bba,cba,1,1,dc)__a:addTextBox(bba,cba,1,1,cc)elseif bd=="line"then
+if caa and daa then
+local dba=math.abs(bba-caa)local _ca=math.abs(cba-daa)local aca=caa<bba and 1 or-1;local bca=daa<
+cba and 1 or-1;local cca=dba-_ca
+while true do
+__a:addBackgroundBox(caa,daa,1,1,bc)__a:addForegroundBox(caa,daa,1,1,dc)
+__a:addTextBox(caa,daa,1,1,cc)if caa==bba and daa==cba then break end;local dca=2 *cca;if dca>-_ca then
+cca=cca-_ca;caa=caa+aca end
+if dca<dba then cca=cca+dba;daa=daa+bca end end end;caa,daa=bba,cba elseif bd=="bar"then
+__a:addBackgroundBox(bba-1,cba,1,d_a-cba,bc)end end end)end}dd.__index=dd;return setmetatable(dd,db)end end
+ba["objects"]["Flexbox"]=function(...)
+return
+function(bb,cb)
+local db=cb.getObject("Frame")(bb,cb)local _c="Flexbox"local ac="row"local bc="flex-start"local cc="flex-start"local dc=1
+local function _d(cd,dd)
+local __a,a_a=cd:getSize()local b_a,c_a=dd.element:getSize()
+local d_a=ac=="row"and a_a-c_a or __a-b_a;local _aa=1
+if cc=="center"then _aa=1 +d_a/2 elseif cc=="flex-end"then _aa=1 +d_a end;return _aa end
+local function ad(cd)local dd=cd:getObjects()local __a=#dd;local a_a,b_a=cd:getSize()local c_a=0
+for aaa,baa in
+ipairs(dd)do local caa,daa=baa.element:getSize()if ac=="row"then c_a=c_a+caa else
+c_a=c_a+daa end end
+local d_a=(ac=="row"and a_a or b_a)-c_a- (dc* (__a-1))local _aa=1;if bc=="center"then _aa=1 +d_a/2 elseif bc=="flex-end"then
+_aa=1 +mainAxisvailableSpace end
+for aaa,baa in ipairs(dd)do local caa=_d(cd,baa)
+if ac==
+"row"then baa.element:setPosition(_aa,caa)
+local daa,_ba=baa.element:getSize()_aa=_aa+daa+dc else
+baa.element:setPosition(caa,math.floor(_aa+0.5))local daa,_ba=baa.element:getSize()_aa=_aa+_ba+dc end end end
+local bd={getType=function()return _c end,isType=function(cd,dd)return
+_c==dd or db.getBase(cd).isType(dd)or false end,setSpacing=function(cd,dd)
+dc=dd;ad(cd)return cd end,getSpacing=function(cd)return dc end,setFlexDirection=function(cd,dd)if
+dd=="row"or dd=="column"then ac=dd;ad(cd)end;return cd end,setJustifyContent=function(cd,dd)if
+
+
+dd=="flex-start"or dd=="flex-end"or dd=="center"or dd=="space-between"or dd=="space-around"then bc=dd;ad(cd)end
+return cd end,setAlignItems=function(cd,dd)if
+dd==
+"flex-start"or dd=="flex-end"or dd=="center"or dd==
+"space-between"or dd=="space-around"then cc=dd;ad(cd)end
+return cd end}for cd,dd in pairs(cb.getObjects())do
+bd["add"..cd]=function(__a,a_a)
+local b_a=db["add"..cd](__a,a_a)ad(db)return b_a end end
+bd.__index=bd;return setmetatable(bd,db)end end
+ba["objects"]["Button"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+return
+function(db,_c)
+local ac=_c.getObject("VisualObject")(db,_c)local bc="Button"local cc="center"local dc="center"local _d="Button"ac:setSize(12,3)
+ac:setZIndex(5)
+local ad={getType=function(bd)return bc end,isType=function(bd,cd)return
+bc==cd or ac.isType~=nil and ac.isType(cd)or false end,getBase=function(bd)return
+ac end,setHorizontalAlign=function(bd,cd)cc=cd;bd:updateDraw()return bd end,setVerticalAlign=function(bd,cd)
+dc=cd;bd:updateDraw()return bd end,setText=function(bd,cd)_d=cd
+bd:updateDraw()return bd end,draw=function(bd)ac.draw(bd)
+bd:addDraw("button",function()
+local cd,dd=bd:getSize()local __a=bb.getTextVerticalAlign(dd,dc)local a_a;if(cc=="center")then a_a=math.floor((
+cd-_d:len())/2)elseif(cc=="right")then
+a_a=cd-_d:len()end
+bd:addText(a_a+1,__a,_d)
+bd:addFG(a_a+1,__a,cb[bd:getForeground()or colors.white]:rep(_d:len()))end)end}ad.__index=ad;return setmetatable(ad,ac)end end
+ba["objects"]["Object"]=function(...)local bb=_b("basaltEvent")
+local cb=_b("utils")local db=cb.uuid;local _c,ac=table.unpack,string.sub
+return
+function(bc,cc)bc=bc or db()
+assert(cc~=nil,
+"Unable to find basalt instance! ID: "..bc)local dc="Object"local _d,ad=true,false;local bd=bb()local cd={}local dd
+local __a={init=function(a_a)if(ad)then return false end
+ad=true;return true end,load=function(a_a)end,getType=function(a_a)return dc end,isType=function(a_a,b_a)
+return dc==b_a end,getName=function(a_a)return bc end,getParent=function(a_a)return dd end,setParent=function(a_a,b_a,c_a)
+if(c_a)then dd=b_a;return a_a end
+if(b_a.getType~=nil and b_a:isType("Container"))then
+a_a:remove()b_a:addObject(a_a)if(a_a.show)then a_a:show()end;dd=b_a end;return a_a end,updateEvents=function(a_a)for b_a,c_a in
+pairs(cd)do dd:removeEvent(b_a,a_a)
+if(c_a)then dd:addEvent(b_a,a_a)end end;return a_a end,listenEvent=function(a_a,b_a,c_a)if(
+dd~=nil)then
+if(c_a)or(c_a==nil)then cd[b_a]=true;dd:addEvent(b_a,a_a)elseif
+(c_a==false)then cd[b_a]=false;dd:removeEvent(b_a,a_a)end end
+return a_a end,getZIndex=function(a_a)return
+1 end,enable=function(a_a)_d=true;return a_a end,disable=function(a_a)_d=false;return a_a end,isEnabled=function(a_a)return
+_d end,remove=function(a_a)if(dd~=nil)then dd:removeObject(a_a)
+dd:removeEvents(a_a)end;a_a:updateDraw()return a_a end,getBaseFrame=function(a_a)if(
+dd~=nil)then return dd:getBaseFrame()end;return a_a end,onEvent=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("other_event",c_a)end end;return a_a end,getEventSystem=function(a_a)return
+bd end,registerEvent=function(a_a,b_a,c_a)if(dd~=nil)then dd:addEvent(b_a,a_a)end;return
+bd:registerEvent(b_a,c_a)end,removeEvent=function(a_a,b_a,c_a)if(
+bd:getEventCount(b_a)<1)then
+if(dd~=nil)then dd:removeEvent(b_a,a_a)end end
+return bd:removeEvent(b_a,c_a)end,eventHandler=function(a_a,b_a,...)
+local c_a=a_a:sendEvent("other_event",b_a,...)if(c_a~=nil)then return c_a end end,customEventHandler=function(a_a,b_a,...)
+local c_a=a_a:sendEvent("custom_event",b_a,...)if(c_a~=nil)then return c_a end;return true end,sendEvent=function(a_a,b_a,...)if(
+b_a=="other_event")or(b_a=="custom_event")then return
+bd:sendEvent(b_a,a_a,...)end;return
+bd:sendEvent(b_a,a_a,b_a,...)end,onClick=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_click",c_a)end end;return a_a end,onClickUp=function(a_a,...)for b_a,c_a in
+pairs(table.pack(...))do
+if(type(c_a)=="function")then a_a:registerEvent("mouse_up",c_a)end end;return a_a end,onRelease=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_release",c_a)end end;return a_a end,onScroll=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_scroll",c_a)end end;return a_a end,onHover=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_hover",c_a)end end;return a_a end,onLeave=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_leave",c_a)end end;return a_a end,onDrag=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_drag",c_a)end end;return a_a end,onKey=function(a_a,...)for b_a,c_a in
+pairs(table.pack(...))do
+if(type(c_a)=="function")then a_a:registerEvent("key",c_a)end end;return a_a end,onChar=function(a_a,...)for b_a,c_a in
+pairs(table.pack(...))do
+if(type(c_a)=="function")then a_a:registerEvent("char",c_a)end end;return a_a end,onKeyUp=function(a_a,...)for b_a,c_a in
+pairs(table.pack(...))do
+if(type(c_a)=="function")then a_a:registerEvent("key_up",c_a)end end;return a_a end}__a.__index=__a;return __a end end
+ba["objects"]["BaseFrame"]=function(...)local bb=_b("basaltDraw")
+local cb=_b("utils")local db,_c,ac,bc=math.max,math.min,string.sub,string.rep
+return
+function(cc,dc)
+local _d=dc.getObject("Container")(cc,dc)local ad="BaseFrame"local bd,cd=0,0;local dd={}local __a=true;local a_a=dc.getTerm()
+local b_a=bb(a_a)local c_a,d_a,_aa,aaa=1,1,false,colors.white
+local baa={getType=function()return ad end,isType=function(caa,daa)
+return ad==daa or _d.isType~=nil and
+_d.isType(daa)or false end,getBase=function(caa)return _d end,getOffset=function(caa)return bd,cd end,setOffset=function(caa,daa,_ba)bd=
+daa or bd;cd=_ba or cd;caa:updateDraw()return caa end,setPalette=function(caa,daa,...)
+if(
+caa==dc.getActiveFrame())then
+if(type(daa)=="string")then dd[daa]=...
+a_a.setPaletteColor(
+type(daa)=="number"and daa or colors[daa],...)elseif(type(daa)=="table")then
+for _ba,aba in pairs(daa)do dd[_ba]=aba
+if(type(aba)=="number")then
+a_a.setPaletteColor(
+type(_ba)=="number"and _ba or colors[_ba],aba)else local bba,cba,dba=table.unpack(aba)
+a_a.setPaletteColor(
+type(_ba)=="number"and _ba or colors[_ba],bba,cba,dba)end end end end;return caa end,setSize=function(caa,...)
+_d.setSize(caa,...)b_a=bb(a_a)return caa end,getSize=function()return a_a.getSize()end,getWidth=function(caa)return
+({a_a.getSize()})[1]end,getHeight=function(caa)
+return({a_a.getSize()})[2]end,show=function(caa)_d.show(caa)dc.setActiveFrame(caa)
+for daa,_ba in
+pairs(colors)do if(type(_ba)=="number")then
+a_a.setPaletteColor(_ba,colors.packRGB(term.nativePaletteColor((_ba))))end end
+for daa,_ba in pairs(dd)do
+if(type(_ba)=="number")then
+a_a.setPaletteColor(
+type(daa)=="number"and daa or colors[daa],_ba)else local aba,bba,cba=table.unpack(_ba)
+a_a.setPaletteColor(
+type(daa)=="number"and daa or colors[daa],aba,bba,cba)end end;dc.setMainFrame(caa)return caa end,render=function(caa)
+if(
+_d.render~=nil)then
+if(caa:isVisible())then
+if(__a)then _d.render(caa)
+local daa=caa:getObjects()for _ba,aba in ipairs(daa)do if(aba.element.render~=nil)then
+aba.element:render()end end
+__a=false end end end end,updateDraw=function(caa)
+__a=true;return caa end,eventHandler=function(caa,daa,...)_d.eventHandler(caa,daa,...)if
+(daa=="term_resize")then caa:setSize(a_a.getSize())end end,updateTerm=function(caa)if(
+b_a~=nil)then b_a.update()end end,setTerm=function(caa,daa)a_a=daa;if(daa==
+nil)then b_a=nil else b_a=bb(a_a)end;return caa end,getTerm=function()return
+a_a end,blit=function(caa,daa,_ba,aba,bba,cba)local dba,_ca=caa:getPosition()
+local aca,bca=caa:getSize()
+if _ba>=1 and _ba<=bca then
+local cca=ac(aba,db(1 -daa+1,1),db(aca-daa+1,1))
+local dca=ac(bba,db(1 -daa+1,1),db(aca-daa+1,1))
+local _da=ac(cba,db(1 -daa+1,1),db(aca-daa+1,1))
+b_a.blit(db(daa+ (dba-1),dba),_ca+_ba-1,cca,dca,_da)end end,setCursor=function(caa,daa,_ba,aba,bba)
+local cba,dba=caa:getAbsolutePosition()local _ca,aca=caa:getOffset()_aa=daa or false;if(_ba~=nil)then
+c_a=cba+_ba-1 -_ca end
+if(aba~=nil)then d_a=dba+aba-1 -aca end;aaa=bba or aaa
+if(_aa)then a_a.setTextColor(aaa)
+a_a.setCursorPos(c_a,d_a)a_a.setCursorBlink(_aa)else a_a.setCursorBlink(false)end;return caa end}
+for caa,daa in
+pairs({mouse_click={"mouseHandler",true},mouse_up={"mouseUpHandler",false},mouse_drag={"dragHandler",false},mouse_scroll={"scrollHandler",true},mouse_hover={"hoverHandler",false}})do
+baa[daa[1]]=function(_ba,aba,bba,cba,...)if(_d[daa[1]](_ba,aba,bba,cba,...))then
+dc.setActiveFrame(_ba)end end end
+for caa,daa in
+pairs({"drawBackgroundBox","drawForegroundBox","drawTextBox"})do
+baa[daa]=function(_ba,aba,bba,cba,dba,_ca)local aca,bca=_ba:getPosition()local cca,dca=_ba:getSize()
+dba=(bba<1 and(dba+
+bba>_ba:getHeight()and _ba:getHeight()or dba+bba-
+1)or(dba+bba>
+_ba:getHeight()and _ba:getHeight()-bba+1 or
+dba))
+cba=(aba<1 and(cba+aba>_ba:getWidth()and _ba:getWidth()or cba+
+aba-1)or(
+
+cba+aba>_ba:getWidth()and _ba:getWidth()-aba+1 or cba))
+b_a[daa](db(aba+ (aca-1),aca),db(bba+ (bca-1),bca),cba,dba,_ca)end end
+for caa,daa in pairs({"setBG","setFG","setText"})do
+baa[daa]=function(_ba,aba,bba,cba)
+local dba,_ca=_ba:getPosition()local aca,bca=_ba:getSize()if(bba>=1)and(bba<=bca)then
+b_a[daa](db(aba+ (dba-1),dba),
+_ca+bba-1,ac(cba,db(1 -aba+1,1),db(aca-aba+1,1)))end end end;baa.__index=baa;return setmetatable(baa,_d)end end
+ba["objects"]["Progressbar"]=function(...)
+return
+function(bb,cb)
+local db=cb.getObject("ChangeableObject")(bb,cb)local _c="Progressbar"local ac=0;db:setZIndex(5)db:setValue(false)
+db:setSize(25,3)local bc=colors.black;local cc=""local dc=colors.white;local _d=""local ad=0
+local bd={getType=function(cd)return _c end,setDirection=function(cd,dd)
+ad=dd;cd:updateDraw()return cd end,setProgressBar=function(cd,dd,__a,a_a)bc=dd or bc
+cc=__a or cc;dc=a_a or dc;cd:updateDraw()return cd end,getProgressBar=function(cd)return
+bc,cc,dc end,setBackgroundSymbol=function(cd,dd)_d=dd:sub(1,1)cd:updateDraw()return cd end,setProgress=function(cd,dd)
+if(
+dd>=0)and(dd<=100)and(ac~=dd)then ac=dd;cd:setValue(ac)if
+(ac==100)then cd:progressDoneHandler()end end;cd:updateDraw()return cd end,getProgress=function(cd)return
+ac end,onProgressDone=function(cd,dd)cd:registerEvent("progress_done",dd)
+return cd end,progressDoneHandler=function(cd)
+cd:sendEvent("progress_done")end,draw=function(cd)db.draw(cd)
+cd:addDraw("progressbar",function()
+local dd,__a=cd:getPosition()local a_a,b_a=cd:getSize()
+local c_a,d_a=cd:getBackground(),cd:getForeground()
+if(c_a~=false)then cd:addBackgroundBox(1,1,a_a,b_a,c_a)end;if(_d~="")then cd:addTextBox(1,1,a_a,b_a,_d)end
+if
+(d_a~=false)then cd:addForegroundBox(1,1,a_a,b_a,d_a)end
+if(ad==1)then cd:addBackgroundBox(1,1,a_a,b_a/100 *ac,bc)cd:addForegroundBox(1,1,a_a,
+b_a/100 *ac,dc)
+cd:addTextBox(1,1,a_a,b_a/100 *ac,cc)elseif(ad==3)then
+cd:addBackgroundBox(1,1 +math.ceil(b_a-b_a/100 *ac),a_a,
+b_a/100 *ac,bc)
+cd:addForegroundBox(1,1 +math.ceil(b_a-b_a/100 *ac),a_a,
+b_a/100 *ac,dc)
+cd:addTextBox(1,1 +math.ceil(b_a-b_a/100 *ac),a_a,b_a/100 *ac,cc)elseif(ad==2)then
+cd:addBackgroundBox(1 +math.ceil(a_a-a_a/100 *ac),1,a_a/
+100 *ac,b_a,bc)
+cd:addForegroundBox(1 +math.ceil(a_a-a_a/100 *ac),1,a_a/100 *ac,b_a,dc)
+cd:addTextBox(1 +math.ceil(a_a-a_a/100 *ac),1,a_a/100 *ac,b_a,cc)else
+cd:addBackgroundBox(1,1,math.ceil(a_a/100 *ac),b_a,bc)
+cd:addForegroundBox(1,1,math.ceil(a_a/100 *ac),b_a,dc)
+cd:addTextBox(1,1,math.ceil(a_a/100 *ac),b_a,cc)end end)end}bd.__index=bd;return setmetatable(bd,db)end end
+ba["objects"]["ChangeableObject"]=function(...)
+return
+function(bb,cb)
+local db=cb.getObject("VisualObject")(bb,cb)local _c="ChangeableObject"local ac
+local bc={setValue=function(cc,dc,_d)if(ac~=dc)then ac=dc;cc:updateDraw()if(_d~=false)then
+cc:valueChangedHandler()end end;return cc end,getValue=function(cc)return
+ac end,onChange=function(cc,...)
+for dc,_d in pairs(table.pack(...))do if(type(_d)=="function")then
+cc:registerEvent("value_changed",_d)end end;return cc end,valueChangedHandler=function(cc)
+cc:sendEvent("value_changed",ac)end}bc.__index=bc;return setmetatable(bc,db)end end
+ba["objects"]["Label"]=function(...)local bb=_b("utils")local cb=bb.wrapText
+local db=bb.writeWrappedText;local _c=_b("tHex")
+return
+function(ac,bc)
+local cc=bc.getObject("VisualObject")(ac,bc)local dc="Label"cc:setZIndex(3)cc:setSize(5,1)
+cc:setBackground(false)local _d=true;local ad,bd="Label","left"
+local cd={getType=function(dd)return dc end,getBase=function(dd)return cc end,setText=function(dd,__a)
+ad=tostring(__a)
+if(_d)then local a_a=cb(ad,#ad)local b_a,c_a=1,1;for d_a,_aa in pairs(a_a)do c_a=c_a+1
+b_a=math.max(b_a,_aa:len())end;dd:setSize(b_a,c_a)_d=true end;dd:updateDraw()return dd end,getAutoSize=function(dd)return
+_d end,setAutoSize=function(dd,__a)_d=__a;return dd end,getText=function(dd)return ad end,setSize=function(dd,__a,a_a)
+cc.setSize(dd,__a,a_a)_d=false;return dd end,setTextAlign=function(dd,__a)bd=__a or bd;return dd end,draw=function(dd)
+cc.draw(dd)
+dd:addDraw("label",function()local __a,a_a=dd:getSize()
+local b_a=
+bd=="center"and math.floor(
+__a/2 -ad:len()/2 +0.5)or bd=="right"and __a- (
+ad:len()-1)or 1;db(dd,b_a,1,ad,__a+1,a_a)end)end,init=function(dd)
+cc.init(dd)local __a=dd:getParent()
+dd:setForeground(__a:getForeground())end}cd.__index=cd;return setmetatable(cd,cc)end end
+ba["objects"]["Checkbox"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+return
+function(db,_c)
+local ac=_c.getObject("ChangeableObject")(db,_c)local bc="Checkbox"ac:setZIndex(5)ac:setValue(false)
+ac:setSize(1,1)local cc,dc,_d,ad="\42"," ","","right"
+local bd={load=function(cd)cd:listenEvent("mouse_click",cd)
+cd:listenEvent("mouse_up",cd)end,getType=function(cd)return bc end,isType=function(cd,dd)return
+bc==dd or
+ac.isType~=nil and ac.isType(dd)or false end,setSymbol=function(cd,dd,__a)
+cc=dd or cc;dc=__a or dc;cd:updateDraw()return cd end,getSymbol=function(cd)return
+cc,dc end,setText=function(cd,dd)_d=dd;return cd end,setTextPosition=function(cd,dd)ad=dd or ad;return cd end,setChecked=ac.setValue,mouseHandler=function(cd,dd,__a,a_a)
+if
+(ac.mouseHandler(cd,dd,__a,a_a))then
+if(dd==1)then if
+(cd:getValue()~=true)and(cd:getValue()~=false)then cd:setValue(false)else
+cd:setValue(not cd:getValue())end
+cd:updateDraw()return true end end;return false end,draw=function(cd)
+ac.draw(cd)
+cd:addDraw("checkbox",function()local dd,__a=cd:getPosition()local a_a,b_a=cd:getSize()
+local c_a=bb.getTextVerticalAlign(b_a,"center")local d_a,_aa=cd:getBackground(),cd:getForeground()
+if
+(cd:getValue())then
+cd:addBlit(1,c_a,bb.getTextHorizontalAlign(cc,a_a,"center"),cb[_aa],cb[d_a])else
+cd:addBlit(1,c_a,bb.getTextHorizontalAlign(dc,a_a,"center"),cb[_aa],cb[d_a])end;if(_d~="")then local aaa=ad=="left"and-_d:len()or 3
+cd:addText(aaa,c_a,_d)end end)end}bd.__index=bd;return setmetatable(bd,ac)end end
+ba["objects"]["List"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+return
+function(db,_c)
+local ac=_c.getObject("ChangeableObject")(db,_c)local bc="List"local cc={}local dc=colors.black;local _d=colors.lightGray;local ad=true
+local bd="left"local cd=0;local dd=true;ac:setSize(16,8)ac:setZIndex(5)
+local __a={init=function(a_a)
+local b_a=a_a:getParent()a_a:listenEvent("mouse_click")
+a_a:listenEvent("mouse_drag")a_a:listenEvent("mouse_scroll")return ac.init(a_a)end,getBase=function(a_a)return
+ac end,setTextAlign=function(a_a,b_a)bd=b_a;return a_a end,getTextAlign=function(a_a)return bd end,getBase=function(a_a)return ac end,getType=function(a_a)return
+bc end,isType=function(a_a,b_a)return
+bc==b_a or ac.isType~=nil and ac.isType(b_a)or false end,addItem=function(a_a,b_a,c_a,d_a,...)
+table.insert(cc,{text=b_a,bgCol=
+c_a or a_a:getBackground(),fgCol=d_a or a_a:getForeground(),args={...}})if(#cc<=1)then a_a:setValue(cc[1],false)end
+a_a:updateDraw()return a_a end,setOptions=function(a_a,...)
+cc={}
+for b_a,c_a in pairs(...)do
+if(type(c_a)=="string")then
+table.insert(cc,{text=c_a,bgCol=a_a:getBackground(),fgCol=a_a:getForeground(),args={}})else
+table.insert(cc,{text=c_a[1],bgCol=c_a[2]or a_a:getBackground(),fgCol=c_a[3]or
+a_a:getForeground(),args=c_a[4]or{}})end end;a_a:setValue(cc[1],false)a_a:updateDraw()return a_a end,setOffset=function(a_a,b_a)
+cd=b_a;a_a:updateDraw()return a_a end,getOffset=function(a_a)return cd end,removeItem=function(a_a,b_a)
+if(
+type(b_a)=="number")then table.remove(cc,b_a)elseif(type(b_a)=="table")then
+for c_a,d_a in
+pairs(cc)do if(d_a==b_a)then table.remove(cc,c_a)break end end end;a_a:updateDraw()return a_a end,getItem=function(a_a,b_a)return
+cc[b_a]end,getAll=function(a_a)return cc end,getOptions=function(a_a)return cc end,getItemIndex=function(a_a)
+local b_a=a_a:getValue()for c_a,d_a in pairs(cc)do if(d_a==b_a)then return c_a end end end,clear=function(a_a)
+cc={}a_a:setValue({},false)a_a:updateDraw()return a_a end,getItemCount=function(a_a)return
+#cc end,editItem=function(a_a,b_a,c_a,d_a,_aa,...)table.remove(cc,b_a)
+table.insert(cc,b_a,{text=c_a,bgCol=d_a or
+a_a:getBackground(),fgCol=_aa or a_a:getForeground(),args={...}})a_a:updateDraw()return a_a end,selectItem=function(a_a,b_a)a_a:setValue(
+cc[b_a]or{},false)a_a:updateDraw()return a_a end,setSelectionColor=function(a_a,b_a,c_a,d_a)dc=
+b_a or a_a:getBackground()
+_d=c_a or a_a:getForeground()ad=d_a~=nil and d_a or true;a_a:updateDraw()
+return a_a end,getSelectionColor=function(a_a)
+return dc,_d end,isSelectionColorActive=function(a_a)return ad end,setScrollable=function(a_a,b_a)dd=b_a;if(b_a==nil)then dd=true end
+a_a:updateDraw()return a_a end,scrollHandler=function(a_a,b_a,c_a,d_a)
+if
+(ac.scrollHandler(a_a,b_a,c_a,d_a))then
+if(dd)then local _aa,aaa=a_a:getSize()cd=cd+b_a;if(cd<0)then cd=0 end
+if(b_a>=1)then if(#cc>aaa)then if(cd>
+#cc-aaa)then cd=#cc-aaa end;if(cd>=#cc)then cd=#cc-1 end else cd=
+cd-1 end end;a_a:updateDraw()end;return true end;return false end,mouseHandler=function(a_a,b_a,c_a,d_a)
+if
+(ac.mouseHandler(a_a,b_a,c_a,d_a))then local _aa,aaa=a_a:getAbsolutePosition()local baa,caa=a_a:getSize()
+if
+(#cc>0)then
+for n=1,caa do
+if(cc[n+cd]~=nil)then if
+(_aa<=c_a)and(_aa+baa>c_a)and(aaa+n-1 ==d_a)then a_a:setValue(cc[n+cd])a_a:selectHandler()
+a_a:updateDraw()end end end end;return true end;return false end,dragHandler=function(a_a,b_a,c_a,d_a)return
+a_a:mouseHandler(b_a,c_a,d_a)end,touchHandler=function(a_a,b_a,c_a)return
+a_a:mouseHandler(1,b_a,c_a)end,onSelect=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("select_item",c_a)end end;return a_a end,selectHandler=function(a_a)
+a_a:sendEvent("select_item",a_a:getValue())end,draw=function(a_a)ac.draw(a_a)
+a_a:addDraw("list",function()
+local b_a,c_a=a_a:getSize()
+for n=1,c_a do
+if cc[n+cd]then local d_a=cc[n+cd].text
+local _aa,aaa=cc[n+cd].fgCol,cc[n+cd].bgCol
+if cc[n+cd]==a_a:getValue()and ad then _aa,aaa=_d,dc end;a_a:addText(1,n,d_a:sub(1,b_a))
+a_a:addBG(1,n,cb[aaa]:rep(b_a))a_a:addFG(1,n,cb[_aa]:rep(b_a))end end end)end}__a.__index=__a;return setmetatable(__a,ac)end end
+ba["objects"]["Input"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+return
+function(db,_c)
+local ac=_c.getObject("ChangeableObject")(db,_c)local bc="Input"local cc="text"local dc=0;ac:setZIndex(5)ac:setValue("")
+ac:setSize(12,1)local _d=1;local ad=1;local bd=""local cd=colors.black;local dd=colors.lightGray;local __a=bd
+local a_a=false
+local b_a={load=function(c_a)c_a:listenEvent("mouse_click")
+c_a:listenEvent("key")c_a:listenEvent("char")
+c_a:listenEvent("other_event")c_a:listenEvent("mouse_drag")end,getType=function(c_a)return
+bc end,isType=function(c_a,d_a)return
+bc==d_a or ac.isType~=nil and ac.isType(d_a)or false end,setDefaultText=function(c_a,d_a,_aa,aaa)
+bd=d_a;dd=_aa or dd;cd=aaa or cd
+if(c_a:isFocused())then __a=""else __a=bd end;c_a:updateDraw()return c_a end,getDefaultText=function(c_a)return
+bd,dd,cd end,setOffset=function(c_a,d_a)ad=d_a;c_a:updateDraw()return c_a end,getOffset=function(c_a)return
+ad end,setTextOffset=function(c_a,d_a)_d=d_a;c_a:updateDraw()return c_a end,getTextOffset=function(c_a)return
+_d end,setInputType=function(c_a,d_a)cc=d_a;c_a:updateDraw()return c_a end,getInputType=function(c_a)return
+cc end,setValue=function(c_a,d_a)ac.setValue(c_a,tostring(d_a))
+if not(a_a)then _d=
+tostring(d_a):len()+1
+ad=math.max(1,_d-c_a:getWidth()+1)
+if(c_a:isFocused())then local _aa=c_a:getParent()
+local aaa,baa=c_a:getPosition()
+_aa:setCursor(true,aaa+_d-ad,baa+math.floor(c_a:getHeight()/2),c_a:getForeground())end end;c_a:updateDraw()return c_a end,getValue=function(c_a)
+local d_a=ac.getValue(c_a)
+return cc=="number"and tonumber(d_a)or d_a end,setInputLimit=function(c_a,d_a)
+dc=tonumber(d_a)or dc;c_a:updateDraw()return c_a end,getInputLimit=function(c_a)return dc end,getFocusHandler=function(c_a)
+ac.getFocusHandler(c_a)local d_a=c_a:getParent()
+if(d_a~=nil)then local _aa,aaa=c_a:getPosition()__a=""if(
+bd~="")then c_a:updateDraw()end
+d_a:setCursor(true,_aa+_d-ad,aaa+math.max(math.ceil(
+c_a:getHeight()/2 -1,1)),c_a:getForeground())end end,loseFocusHandler=function(c_a)
+ac.loseFocusHandler(c_a)local d_a=c_a:getParent()__a=bd
+if(bd~="")then c_a:updateDraw()end;d_a:setCursor(false)end,keyHandler=function(c_a,d_a)
+if
+(ac.keyHandler(c_a,d_a))then local _aa,aaa=c_a:getSize()local baa=c_a:getParent()a_a=true
+if
+(d_a==keys.backspace)then local aba=tostring(ac.getValue())
+if(_d>1)then c_a:setValue(aba:sub(1,_d-2)..
+aba:sub(_d,aba:len()))_d=math.max(
+_d-1,1)if(_d<ad)then ad=math.max(ad-1,1)end end end
+if(d_a==keys.enter)then baa:removeFocusedObject(c_a)end
+if(d_a==keys.right)then
+local aba=tostring(ac.getValue()):len()_d=_d+1;if(_d>aba)then _d=aba+1 end;_d=math.max(_d,1)if(_d<ad)or
+(_d>=_aa+ad)then ad=_d-_aa+1 end;ad=math.max(ad,1)end;if(d_a==keys.left)then _d=_d-1;if(_d>=1)then
+if(_d<ad)or(_d>=_aa+ad)then ad=_d end end;_d=math.max(_d,1)
+ad=math.max(ad,1)end
+local caa,daa=c_a:getPosition()local _ba=tostring(ac.getValue())c_a:updateDraw()
+a_a=false;return true end end,charHandler=function(c_a,d_a)
+if
+(ac.charHandler(c_a,d_a))then a_a=true;local _aa,aaa=c_a:getSize()local baa=ac.getValue()
+if(
+baa:len()<dc or dc<=0)then
+if(cc=="number")then local aba=baa
+if
+(_d==1 and d_a=="-")or(d_a==".")or(tonumber(d_a)~=nil)then
+c_a:setValue(baa:sub(1,_d-1)..
+d_a..baa:sub(_d,baa:len()))_d=_d+1;if(d_a==".")or(d_a=="-")and(#baa>0)then
+if(
+tonumber(ac.getValue())==nil)then c_a:setValue(aba)_d=_d-1 end end end else
+c_a:setValue(baa:sub(1,_d-1)..d_a..baa:sub(_d,baa:len()))_d=_d+1 end;if(_d>=_aa+ad)then ad=ad+1 end end;local caa,daa=c_a:getPosition()
+local _ba=tostring(ac.getValue())a_a=false;c_a:updateDraw()return true end end,mouseHandler=function(c_a,d_a,_aa,aaa)
+if
+(ac.mouseHandler(c_a,d_a,_aa,aaa))then local baa=c_a:getParent()local caa,daa=c_a:getPosition()
+local _ba,aba=c_a:getAbsolutePosition(caa,daa)local bba,cba=c_a:getSize()_d=_aa-_ba+ad;local dba=ac.getValue()if(_d>
+dba:len())then _d=dba:len()+1 end;if(_d<ad)then ad=_d-1
+if(ad<1)then ad=1 end end
+baa:setCursor(true,caa+_d-ad,daa+
+math.max(math.ceil(cba/2 -1,1)),c_a:getForeground())return true end end,dragHandler=function(c_a,d_a,_aa,aaa,baa,caa)
+if
+(c_a:isFocused())then if(c_a:isCoordsInObject(_aa,aaa))then
+if(ac.dragHandler(c_a,d_a,_aa,aaa,baa,caa))then return true end end
+local daa=c_a:getParent()daa:removeFocusedObject()end end,draw=function(c_a)
+ac.draw(c_a)
+c_a:addDraw("input",function()local d_a=c_a:getParent()local _aa,aaa=c_a:getPosition()
+local baa,caa=c_a:getSize()local daa=bb.getTextVerticalAlign(caa,textVerticalAlign)
+local _ba=tostring(ac.getValue())local aba=c_a:getBackground()local bba=c_a:getForeground()local cba;if(
+_ba:len()<=0)then cba=__a;aba=cd or aba;bba=dd or bba end
+cba=__a;if(_ba~="")then cba=_ba end;cba=cba:sub(ad,baa+ad-1)local dba=baa-
+cba:len()if(dba<0)then dba=0 end
+if
+(cc=="password")and(_ba~="")then cba=string.rep("*",cba:len())end;cba=cba..string.rep(" ",dba)
+c_a:addBlit(1,daa,cba,cb[bba]:rep(cba:len()),cb[aba]:rep(cba:len()))if(c_a:isFocused())then
+d_a:setCursor(true,_aa+_d-ad,aaa+
+math.floor(c_a:getHeight()/2),c_a:getForeground())end end)end}b_a.__index=b_a;return setmetatable(b_a,ac)end end
+ba["objects"]["Container"]=function(...)local bb=_b("utils")local cb=bb.tableCount
+return
+function(db,_c)
+local ac=_c.getObject("VisualObject")(db,_c)local bc="Container"local cc={}local dc={}local _d={}local ad;local bd=true;local cd,dd=0,0
+local __a=function(cba,dba)
+if
+cba.zIndex==dba.zIndex then return cba.objId<dba.objId else return cba.zIndex<dba.zIndex end end
+local a_a=function(cba,dba)if cba.zIndex==dba.zIndex then return cba.evId>dba.evId else return
+cba.zIndex>dba.zIndex end end
+local function b_a(cba,dba)if(type(dba)=="table")then dba=dba:getName()end;for _ca,aca in
+ipairs(cc)do
+if aca.element:getName()==dba then return aca.element end end end
+local function c_a(cba,dba)local _ca=b_a(dba)if(_ca~=nil)then return _ca end;for aca,bca in pairs(objects)do
+if
+(b:getType()=="Container")then local cca=b:getDeepObject(dba)if(cca~=nil)then return cca end end end end
+local function d_a(cba,dba,_ca)if(b_a(dba:getName())~=nil)then return end;cd=cd+1
+local aca=dba:getZIndex()
+table.insert(cc,{element=dba,zIndex=aca,objId=cd})bd=false;dba:setParent(cba,true)
+if(dba.init~=nil)then dba:init()end;if(dba.load~=nil)then dba:load()end;if(dba.draw~=nil)then
+dba:draw()end;return dba end
+local function _aa(cba,dba,_ca)cd=cd+1;dd=dd+1;for aca,bca in pairs(cc)do
+if(bca.element==dba)then bca.zIndex=_ca;bca.objId=cd;break end end;for aca,bca in pairs(dc)do
+for cca,dca in pairs(bca)do if
+(dca.element==dba)then dca.zIndex=_ca;dca.evId=dd end end end;bd=false
+cba:updateDraw()end
+local function aaa(cba,dba)
+if(type(dba)=="string")then dba=b_a(dba:getName())end;if(dba==nil)then return end
+for _ca,aca in ipairs(cc)do if aca.element==dba then
+table.remove(cc,_ca)return true end end;bd=false end
+local function baa(cba,dba)local _ca=cba:getParent()
+for aca,bca in pairs(dc)do for cca,dca in pairs(bca)do if(dca.element==dba)then
+table.remove(dc[aca],cca)end end
+if(
+cb(dc[aca])<=0)then if(_ca~=nil)then _ca:removeEvent(aca,cba)end end end;bd=false end
+local function caa(cba,dba,_ca)if(type(_ca)=="table")then _ca=_ca:getName()end
+if(dc[dba]~=
+nil)then for aca,bca in pairs(dc[dba])do
+if(bca.element:getName()==_ca)then return bca end end end end
+local function daa(cba,dba,_ca)
+if(caa(cba,dba,_ca:getName())~=nil)then return end;local aca=_ca:getZIndex()dd=dd+1
+if(dc[dba]==nil)then dc[dba]={}end
+table.insert(dc[dba],{element=_ca,zIndex=aca,evId=dd})bd=false;cba:listenEvent(dba)return _ca end
+local function _ba(cba,dba,_ca)
+if(dc[dba]~=nil)then for aca,bca in pairs(dc[dba])do if(bca.element==_ca)then
+table.remove(dc[dba],aca)end end;if(
+cb(dc[dba])<=0)then cba:listenEvent(dba,false)end end;bd=false end;local function aba(cba)cba:sortElementOrder()return cc end;local function bba(cba,dba)return dba~=nil and
+dc[dba]or dc end
+_d={getType=function()
+return bc end,getBase=function(cba)return ac end,isType=function(cba,dba)
+return bc==dba or
+ac.isType~=nil and ac.isType(dba)or false end,setSize=function(cba,...)ac.setSize(cba,...)
+cba:customEventHandler("basalt_FrameResize")return cba end,setPosition=function(cba,...)
+ac.setPosition(cba,...)cba:customEventHandler("basalt_FrameReposition")
+return cba end,searchObjects=function(cba,dba)local _ca={}
+for aca,bca in pairs(cc)do if
+(string.find(aca:getName(),dba))then table.insert(_ca,bca)end end;return _ca end,getObjectsByType=function(cba,dba)
+local _ca={}for aca,bca in pairs(cc)do
+if(bca:isType(_ca))then table.insert(_ca,bca)end end;return _ca end,setImportant=function(cba,dba)cd=
+cd+1;dd=dd+1
+for _ca,aca in pairs(dc)do for bca,cca in pairs(aca)do
+if(cca.element==dba)then cca.evId=dd
+table.remove(dc[_ca],bca)table.insert(dc[_ca],cca)break end end end
+for _ca,aca in ipairs(cc)do if aca.element==dba then aca.objId=cd;table.remove(cc,_ca)
+table.insert(cc,aca)break end end;if(cba.updateDraw~=nil)then cba:updateDraw()end
+bd=false end,sortElementOrder=function(cba)if
+(bd)then return end;table.sort(cc,__a)for dba,_ca in pairs(dc)do
+table.sort(dc[dba],a_a)end;bd=true end,removeFocusedObject=function(cba)if(
+ad~=nil)then
+if(b_a(cba,ad)~=nil)then ad:loseFocusHandler()end end;ad=nil;return cba end,setFocusedObject=function(cba,dba)
+if(
+ad~=dba)then if(ad~=nil)then
+if(b_a(cba,ad)~=nil)then ad:loseFocusHandler()end end;if(dba~=nil)then if(b_a(cba,dba)~=nil)then
+dba:getFocusHandler()end end;ad=dba;return true end;return false end,getFocusedObject=function(cba)return
+ad end,getObject=b_a,getObjects=aba,getDeepObject=c_a,addObject=d_a,removeObject=aaa,getEvents=bba,getEvent=caa,addEvent=daa,removeEvent=_ba,removeEvents=baa,updateZIndex=_aa,listenEvent=function(cba,dba,_ca)ac.listenEvent(cba,dba,_ca)if(
+dc[dba]==nil)then dc[dba]={}end;return cba end,customEventHandler=function(cba,...)
+ac.customEventHandler(cba,...)
+for dba,_ca in pairs(cc)do if(_ca.element.customEventHandler~=nil)then
+_ca.element:customEventHandler(...)end end end,loseFocusHandler=function(cba)
+ac.loseFocusHandler(cba)if(ad~=nil)then ad:loseFocusHandler()ad=nil end end,getBasalt=function(cba)return
+_c end,setPalette=function(cba,dba,...)local _ca=cba:getParent()
+_ca:setPalette(dba,...)return cba end,eventHandler=function(cba,...)
+if(ac.eventHandler~=nil)then
+ac.eventHandler(cba,...)
+if(dc["other_event"]~=nil)then cba:sortElementOrder()
+for dba,_ca in
+ipairs(dc["other_event"])do if(_ca.element.eventHandler~=nil)then
+_ca.element.eventHandler(_ca.element,...)end end end end end}
+for cba,dba in
+pairs({mouse_click={"mouseHandler",true},mouse_up={"mouseUpHandler",false},mouse_drag={"dragHandler",false},mouse_scroll={"scrollHandler",true},mouse_hover={"hoverHandler",false}})do
+_d[dba[1]]=function(_ca,aca,bca,cca,...)
+if(ac[dba[1]]~=nil)then
+if(ac[dba[1]](_ca,aca,bca,cca,...))then
+if
+(dc[cba]~=nil)then _ca:sortElementOrder()
+for dca,_da in ipairs(dc[cba])do
+if
+(_da.element[dba[1]]~=nil)then local ada,bda=0,0
+if(_ca.getOffset~=nil)then ada,bda=_ca:getOffset()end
+if(_da.element.getIgnoreOffset~=nil)then if(_da.element.getIgnoreOffset())then
+ada,bda=0,0 end end;if(_da.element[dba[1]](_da.element,aca,bca+ada,cca+bda,...))then return
+true end end end;if(dba[2])then _ca:removeFocusedObject()end end;return true end end end end
+for cba,dba in
+pairs({key="keyHandler",key_up="keyUpHandler",char="charHandler"})do
+_d[dba]=function(_ca,...)
+if(ac[dba]~=nil)then
+if(ac[dba](_ca,...))then
+if(dc[cba]~=nil)then
+_ca:sortElementOrder()for aca,bca in ipairs(dc[cba])do
+if(bca.element[dba]~=nil)then if
+(bca.element[dba](bca.element,...))then return true end end end end end end end end
+for cba,dba in pairs(_c.getObjects())do _d["add"..cba]=function(_ca,aca)
+return d_a(_ca,dba(aca,_c))end end;_d.__index=_d;return setmetatable(_d,ac)end end
+ba["objects"]["Dropdown"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+return
+function(db,_c)
+local ac=_c.getObject("List")(db,_c)local bc="Dropdown"ac:setSize(12,1)ac:setZIndex(6)local cc=true
+local dc="left"local _d=0;local ad=0;local bd=0;local cd=true;local dd="\16"local __a="\31"local a_a=false
+local b_a={getType=function(c_a)return bc end,isType=function(c_a,d_a)return
+bc==
+d_a or ac.isType~=nil and ac.isType(d_a)or false end,load=function(c_a)
+c_a:listenEvent("mouse_click",c_a)c_a:listenEvent("mouse_up",c_a)
+c_a:listenEvent("mouse_scroll",c_a)c_a:listenEvent("mouse_drag",c_a)end,setOffset=function(c_a,d_a)
+_d=d_a;c_a:updateDraw()return c_a end,getOffset=function(c_a)return _d end,addItem=function(c_a,d_a,...)
+ac.addItem(c_a,d_a,...)if(cd)then ad=math.max(ad,#d_a)bd=bd+1 end;return c_a end,removeItem=function(c_a,d_a)
+ac.removeItem(c_a,d_a)if(cd)then ad=0;bd=0
+for n=1,#list do ad=math.max(ad,#list[n].text)end;bd=#list end end,isOpened=function(c_a)return
+a_a end,setOpened=function(c_a,d_a)a_a=d_a;c_a:updateDraw()return c_a end,setDropdownSize=function(c_a,d_a,_aa)
+ad,bd=d_a,_aa;cd=false;c_a:updateDraw()return c_a end,getDropdownSize=function(c_a)return
+ad,bd end,mouseHandler=function(c_a,d_a,_aa,aaa,baa)
+if(a_a)then local daa,_ba=c_a:getAbsolutePosition()
+if(d_a==1)then
+local aba=c_a:getAll()
+if(#aba>0)then
+for n=1,bd do
+if(aba[n+_d]~=nil)then
+if
+(daa<=_aa)and(daa+ad>_aa)and(_ba+n==aaa)then c_a:setValue(aba[n+_d])c_a:updateDraw()
+local bba=c_a:sendEvent("mouse_click",c_a,"mouse_click",d_a,_aa,aaa)if(bba==false)then return bba end;if(baa)then
+_c.schedule(function()sleep(0.1)
+c_a:mouseUpHandler(d_a,_aa,aaa)end)()end;return true end end end end end end;local caa=ac:getBase()
+if(caa.mouseHandler(c_a,d_a,_aa,aaa))then a_a=not a_a
+c_a:getParent():setImportant(c_a)c_a:updateDraw()return true else
+if(a_a)then c_a:updateDraw()a_a=false end;return false end end,mouseUpHandler=function(c_a,d_a,_aa,aaa)
+if
+(a_a)then local baa,caa=c_a:getAbsolutePosition()
+if(d_a==1)then local daa=c_a:getAll()
+if(#
+daa>0)then
+for n=1,bd do
+if(daa[n+_d]~=nil)then
+if
+(baa<=_aa)and(baa+ad>_aa)and(caa+n==aaa)then a_a=false;c_a:updateDraw()
+local _ba=c_a:sendEvent("mouse_up",c_a,"mouse_up",d_a,_aa,aaa)if(_ba==false)then return _ba end;return true end end end end end end end,dragHandler=function(c_a,d_a,_aa,aaa)if
+(ac.dragHandler(c_a,d_a,_aa,aaa))then a_a=true end end,scrollHandler=function(c_a,d_a,_aa,aaa)
+if
+(a_a)then local baa,caa=c_a:getAbsolutePosition()if
+(_aa>=baa)and(_aa<=baa+ad)and(aaa>=caa)and(aaa<=caa+bd)then
+c_a:setFocus()end end
+if(a_a)and(c_a:isFocused())then
+local baa,caa=c_a:getAbsolutePosition()if
+(_aa<baa)or(_aa>baa+ad)or(aaa<caa)or(aaa>caa+bd)then return false end;if(#c_a:getAll()<=bd)then return
+false end;local daa=c_a:getAll()_d=_d+d_a
+if(_d<0)then _d=0 end
+if(d_a==1)then if(#daa>bd)then if(_d>#daa-bd)then _d=#daa-bd end else
+_d=math.min(#daa-1,0)end end
+local _ba=c_a:sendEvent("mouse_scroll",c_a,"mouse_scroll",d_a,_aa,aaa)if(_ba==false)then return _ba end;c_a:updateDraw()return true end end,draw=function(c_a)
+ac.draw(c_a)c_a:setDrawState("list",false)
+c_a:addDraw("dropdown",function()
+local d_a,_aa=c_a:getPosition()local aaa,baa=c_a:getSize()local caa=c_a:getValue()
+local daa=c_a:getAll()local _ba,aba=c_a:getBackground(),c_a:getForeground()
+local bba=bb.getTextHorizontalAlign((
+caa~=nil and caa.text or""),aaa,dc):sub(1,
+aaa-1).. (a_a and __a or dd)
+c_a:addBlit(1,1,bba,cb[aba]:rep(#bba),cb[_ba]:rep(#bba))
+if(a_a)then c_a:addTextBox(1,2,ad,bd," ")
+c_a:addBackgroundBox(1,2,ad,bd,_ba)c_a:addForegroundBox(1,2,ad,bd,aba)
+for n=1,bd do
+if(daa[n+_d]~=nil)then local cba=bb.getTextHorizontalAlign(daa[
+n+_d].text,ad,dc)
+if(
+daa[n+_d]==caa)then
+if(cc)then local dba,_ca=c_a:getSelectionColor()
+c_a:addBlit(1,n+1,cba,cb[_ca]:rep(
+#cba),cb[dba]:rep(#cba))else
+c_a:addBlit(1,n+1,cba,cb[daa[n+_d].fgCol]:rep(#cba),cb[daa[n+_d].bgCol]:rep(
+#cba))end else
+c_a:addBlit(1,n+1,cba,cb[daa[n+_d].fgCol]:rep(#cba),cb[daa[n+_d].bgCol]:rep(
+#cba))end end end end end)end}b_a.__index=b_a;return setmetatable(b_a,ac)end end
+ba["objects"]["Menubar"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+return
+function(db,_c)
+local ac=_c.getObject("List")(db,_c)local bc="Menubar"local cc={}ac:setSize(30,1)ac:setZIndex(5)local dc=0
+local _d,ad=1,1;local bd=true
+local function cd()local dd=0;local __a=ac:getWidth()local a_a=ac:getAll()for n=1,#a_a do dd=dd+
+a_a[n].text:len()+_d*2 end;return
+math.max(dd-__a,0)end
+cc={init=function(dd)local __a=dd:getParent()dd:listenEvent("mouse_click")
+dd:listenEvent("mouse_drag")dd:listenEvent("mouse_scroll")return ac.init(dd)end,getType=function(dd)return
+bc end,getBase=function(dd)return ac end,setSpace=function(dd,__a)_d=__a or _d;dd:updateDraw()
+return dd end,setScrollable=function(dd,__a)bd=__a;if(__a==nil)then bd=true end;return dd end,mouseHandler=function(dd,__a,a_a,b_a)
+if
+(ac:getBase().mouseHandler(dd,__a,a_a,b_a))then local c_a,d_a=dd:getAbsolutePosition()local _aa,aaa=dd:getSize()local baa=0
+local caa=dd:getAll()
+for n=1,#caa do
+if(caa[n]~=nil)then
+if
+(c_a+baa<=a_a+dc)and(
+c_a+baa+caa[n].text:len()+ (_d*2)>a_a+dc)and(d_a==b_a)then
+dd:setValue(caa[n])dd:sendEvent(event,dd,event,0,a_a,b_a,caa[n])end;baa=baa+caa[n].text:len()+_d*2 end end;dd:updateDraw()return true end end,scrollHandler=function(dd,__a,a_a,b_a)
+if
+(ac:getBase().scrollHandler(dd,__a,a_a,b_a))then if(bd)then dc=dc+__a;if(dc<0)then dc=0 end;local c_a=cd()if(dc>c_a)then dc=c_a end
+dd:updateDraw()end;return true end;return false end,draw=function(dd)
+ac.draw(dd)
+dd:addDraw("list",function()local __a=dd:getParent()local a_a,b_a=dd:getSize()local c_a=""local d_a=""
+local _aa=""local aaa,baa=dd:getSelectionColor()
+for caa,daa in pairs(dd:getAll())do
+local _ba=
+(" "):rep(_d)..daa.text.. (" "):rep(_d)c_a=c_a.._ba
+if(daa==dd:getValue())then d_a=d_a..
+cb[aaa or daa.bgCol or
+dd:getBackground()]:rep(_ba:len())_aa=_aa..
+cb[baa or
+daa.FgCol or dd:getForeground()]:rep(_ba:len())else d_a=d_a..
+cb[daa.bgCol or
+dd:getBackground()]:rep(_ba:len())_aa=_aa..
+cb[daa.FgCol or
+dd:getForeground()]:rep(_ba:len())end end
+dd:addBlit(1,1,c_a:sub(dc+1,a_a+dc),_aa:sub(dc+1,a_a+dc),d_a:sub(dc+1,a_a+dc))end)end}cc.__index=cc;return setmetatable(cc,ac)end end
+ba["objects"]["Pane"]=function(...)
+return
+function(bb,cb)
+local db=cb.getObject("VisualObject")(bb,cb)local _c="Pane"db:setSize(25,10)
+local ac={getType=function(bc)return _c end}ac.__index=ac;return setmetatable(ac,db)end end
+ba["objects"]["Scrollbar"]=function(...)local bb=_b("tHex")
+return
+function(cb,db)
+local _c=db.getObject("VisualObject")(cb,db)local ac="Scrollbar"_c:setZIndex(2)_c:setSize(1,8)
+_c:setBackground(colors.lightGray,"\127",colors.gray)local bc="vertical"local cc=" "local dc=colors.black;local _d=colors.black;local ad=3;local bd=1
+local cd=1;local dd=true
+local function __a()local c_a,d_a=_c:getSize()if(dd)then
+cd=math.max((bc=="vertical"and d_a or
+c_a- (#cc))- (ad-1),1)end end;__a()
+local function a_a(c_a,d_a,_aa,aaa)local baa,caa=c_a:getAbsolutePosition()
+local daa,_ba=c_a:getSize()__a()local aba=bc=="vertical"and _ba or daa
+for i=0,aba do
+if
+
+( (
+bc=="vertical"and caa+i==aaa)or(bc=="horizontal"and baa+i==_aa))and(baa<=_aa)and(baa+daa>_aa)and(caa<=aaa)and
+(caa+_ba>aaa)then bd=math.min(i+1,
+aba- (#cc+cd-2))
+c_a:scrollbarMoveHandler()c_a:updateDraw()end end end
+local b_a={getType=function(c_a)return ac end,load=function(c_a)_c.load(c_a)local d_a=c_a:getParent()
+c_a:listenEvent("mouse_click")c_a:listenEvent("mouse_up")
+c_a:listenEvent("mouse_scroll")c_a:listenEvent("mouse_drag")end,setSymbol=function(c_a,d_a,_aa,aaa)
+cc=d_a:sub(1,1)dc=_aa or dc;_d=aaa or _d;__a()c_a:updateDraw()return c_a end,setIndex=function(c_a,d_a)
+bd=d_a;if(bd<1)then bd=1 end;local _aa,aaa=c_a:getSize()__a()
+c_a:updateDraw()return c_a end,setScrollAmount=function(c_a,d_a)ad=d_a;__a()
+c_a:updateDraw()return c_a end,getIndex=function(c_a)local d_a,_aa=c_a:getSize()return
+ad> (
+bc=="vertical"and _aa or d_a)and
+math.floor(ad/ (
+bc=="vertical"and _aa or d_a)*bd)or bd end,setSymbolSize=function(c_a,d_a)cd=
+tonumber(d_a)or 1;dd=d_a~=false and false or true
+__a()c_a:updateDraw()return c_a end,setBarType=function(c_a,d_a)
+bc=d_a:lower()__a()c_a:updateDraw()return c_a end,mouseHandler=function(c_a,d_a,_aa,aaa,...)
+if
+(_c.mouseHandler(c_a,d_a,_aa,aaa,...))then a_a(c_a,d_a,_aa,aaa)return true end;return false end,dragHandler=function(c_a,d_a,_aa,aaa)if
+(_c.dragHandler(c_a,d_a,_aa,aaa))then a_a(c_a,d_a,_aa,aaa)return true end;return
+false end,setSize=function(c_a,...)
+_c.setSize(c_a,...)__a()return c_a end,scrollHandler=function(c_a,d_a,_aa,aaa)
+if(_c.scrollHandler(c_a,d_a,_aa,aaa))then
+local baa,caa=c_a:getSize()__a()bd=bd+d_a;if(bd<1)then bd=1 end
+bd=math.min(bd,
+(bc=="vertical"and caa or baa)- (bc=="vertical"and cd-1 or#cc+cd-2))c_a:scrollbarMoveHandler()c_a:updateDraw()end end,onChange=function(c_a,...)
+for d_a,_aa in
+pairs(table.pack(...))do if(type(_aa)=="function")then
+c_a:registerEvent("scrollbar_moved",_aa)end end;return c_a end,scrollbarMoveHandler=function(c_a)
+c_a:sendEvent("scrollbar_moved",c_a:getIndex())end,customEventHandler=function(c_a,d_a,...)
+_c.customEventHandler(c_a,d_a,...)if(d_a=="basalt_FrameResize")then __a()end end,draw=function(c_a)
+_c.draw(c_a)
+c_a:addDraw("scrollbar",function()local d_a=c_a:getParent()local _aa,aaa=c_a:getSize()
+local baa,caa=c_a:getBackground(),c_a:getForeground()
+if(bc=="horizontal")then for n=0,aaa-1 do
+c_a:addBlit(bd,1 +n,cc:rep(cd),bb[_d]:rep(#cc*cd),bb[dc]:rep(
+#cc*cd))end elseif(bc=="vertical")then
+for n=0,aaa-1 do
+if(bd==n+1)then
+for curIndexOffset=0,math.min(
+cd-1,aaa)do
+c_a:addBlit(1,bd+curIndexOffset,cc:rep(math.max(#cc,_aa)),bb[_d]:rep(math.max(
+#cc,_aa)),bb[dc]:rep(math.max(#cc,_aa)))end end end end end)end}b_a.__index=b_a;return setmetatable(b_a,_c)end end
+ba["objects"]["Image"]=function(...)local bb=_b("images")local cb=_b("bimg")
+local db,_c,ac,bc=table.unpack,string.sub,math.max,math.min
+return
+function(cc,dc)local _d=dc.getObject("VisualObject")(cc,dc)
+local ad="Image"local bd=cb()local cd=bd.getFrameObject(1)local dd;local __a;local a_a=1;local b_a=false;local c_a
+local d_a=false;local _aa=true;local aaa,baa=0,0;_d:setSize(24,8)_d:setZIndex(2)
+local function caa(aba)local bba={}
+for _ca,aca in
+pairs(colors)do if(type(aca)=="number")then
+bba[_ca]={term.nativePaletteColor(aca)}end end;local cba=bd.getMetadata("palette")if(cba~=nil)then for _ca,aca in pairs(cba)do
+bba[_ca]=tonumber(aca)end end
+local dba=bd.getFrameData("palette")dc.log(dba)if(dba~=nil)then
+for _ca,aca in pairs(dba)do bba[_ca]=tonumber(aca)end end;return bba end;local function daa()
+if(_aa)then if(bd~=nil)then _d:setSize(bd.getSize())end end end
+local _ba={getType=function(aba)return ad end,isType=function(aba,bba)return
+ad==bba or
+_d.isType~=nil and _d.isType(bba)or false end,setOffset=function(aba,bba,cba,dba)
+if(dba)then aaa=aaa+
+bba or 0;baa=baa+cba or 0 else aaa=bba or aaa;baa=cba or baa end;aba:updateDraw()return aba end,setSize=function(aba,bba,cba)
+_d:setSize(bba,cba)_aa=false;return aba end,getOffset=function(aba)return aaa,baa end,selectFrame=function(aba,bba)if(
+bd.getFrameObject(bba)==nil)then bd.addFrame(bba)end
+cd=bd.getFrameObject(bba)__a=cd.getImage(bba)a_a=bba;aba:updateDraw()end,addFrame=function(aba,bba)
+bd.addFrame(bba)return aba end,getFrame=function(aba,bba)return bd.getFrame(bba)end,getFrameObject=function(aba,bba)return
+bd.getFrameObject(bba)end,removeFrame=function(aba,bba)bd.removeFrame(bba)return aba end,moveFrame=function(aba,bba,cba)
+bd.moveFrame(bba,cba)return aba end,getFrames=function(aba)return bd.getFrames()end,getFrameCount=function(aba)return
+#bd.getFrames()end,getActiveFrame=function(aba)return a_a end,loadImage=function(aba,bba)if
+(fs.exists(bba))then local cba=bb.loadBIMG(bba)bd=cb(cba)a_a=1
+cd=bd.getFrameObject(1)dd=bd.createBimg()__a=cd.getImage()daa()
+aba:updateDraw()end;return
+aba end,setImage=function(aba,bba)
+if(
+type(bba)=="table")then bd=cb(bba)a_a=1;cd=bd.getFrameObject(1)
+dd=bd.createBimg()__a=cd.getImage()daa()aba:updateDraw()end;return aba end,clear=function(aba)
+bd=cb()cd=bd.getFrameObject(1)__a=nil;aba:updateDraw()return aba end,getImage=function(aba)return
+bd.createBimg()end,getImageFrame=function(aba,bba)return cd.getImage(bba)end,usePalette=function(aba,bba)d_a=
+bba~=nil and bba or true;return aba end,play=function(aba,bba)
+if
+(bd.getMetadata("animated"))then
+local cba=
+bd.getMetadata("duration")or bd.getMetadata("secondsPerFrame")or 0.2;aba:listenEvent("other_event")
+c_a=os.startTimer(cba)b_a=bba or false end;return aba end,stop=function(aba)
+os.cancelTimer(c_a)c_a=nil;b_a=false;return aba end,eventHandler=function(aba,bba,cba,...)
+_d.eventHandler(aba,bba,cba,...)
+if(bba=="timer")then
+if(cba==c_a)then
+if(bd.getFrame(a_a+1)~=nil)then a_a=a_a+1
+aba:selectFrame(a_a)
+local dba=
+bd.getFrameData(a_a,"duration")or bd.getMetadata("secondsPerFrame")or 0.2;c_a=os.startTimer(dba)else
+if(b_a)then a_a=1;aba:selectFrame(a_a)
+local dba=
+bd.getFrameData(a_a,"duration")or bd.getMetadata("secondsPerFrame")or 0.2;c_a=os.startTimer(dba)end end;aba:updateDraw()end end end,setMetadata=function(aba,bba,cba)
+bd.setMetadata(bba,cba)return aba end,getMetadata=function(aba,bba)return bd.getMetadata(bba)end,getFrameMetadata=function(aba,bba,cba)return
+bd.getFrameData(bba,cba)end,setFrameMetadata=function(aba,bba,cba,dba)
+bd.setFrameData(bba,cba,dba)return aba end,blit=function(aba,bba,cba,dba,_ca,aca)x=_ca or x;y=aca or y
+cd.blit(bba,cba,dba,x,y)__a=cd.getImage()aba:updateDraw()return aba end,setText=function(aba,bba,cba,dba)x=
+cba or x;y=dba or y;cd.text(bba,x,y)__a=cd.getImage()
+aba:updateDraw()return aba end,setBg=function(aba,bba,cba,dba)x=cba or x;y=
+dba or y;cd.bg(bba,x,y)__a=cd.getImage()
+aba:updateDraw()return aba end,setFg=function(aba,bba,cba,dba)x=cba or x;y=dba or
+y;cd.fg(bba,x,y)__a=cd.getImage()
+aba:updateDraw()return aba end,getImageSize=function(aba)
+return bd.getSize()end,setImageSize=function(aba,bba,cba)bd.setSize(bba,cba)__a=cd.getImage()
+aba:updateDraw()return aba end,resizeImage=function(aba,bba,cba)
+local dba=bb.resizeBIMG(dd,bba,cba)bd=cb(dba)a_a=1;cd=bd.getFrameObject(1)__a=cd.getImage()
+aba:updateDraw()return aba end,draw=function(aba)
+_d.draw(aba)
+aba:addDraw("image",function()local bba,cba=aba:getSize()local dba,_ca=aba:getPosition()
+local aca,bca=aba:getParent():getSize()local cca,dca=aba:getParent():getOffset()
+if
+(dba-cca>aca)or(_ca-dca>bca)or(dba-cca+bba<1)or(_ca-
+dca+cba<1)then return end
+if(d_a)then aba:getParent():setPalette(caa(a_a))end
+if(__a~=nil)then
+for _da,ada in pairs(__a)do
+if(_da+baa<=cba)and(_da+baa>=1)then
+local bda,cda,dda=ada[1],ada[2],ada[3]local __b=ac(1 -aaa,1)local a_b=bc(bba-aaa,#bda)
+bda=_c(bda,__b,a_b)cda=_c(cda,__b,a_b)dda=_c(dda,__b,a_b)
+aba:addBlit(ac(1 +aaa,1),_da+baa,bda,cda,dda)end end end end)end}_ba.__index=_ba;return setmetatable(_ba,_d)end end
+ba["objects"]["MonitorFrame"]=function(...)local bb=_b("basaltMon")
+local cb,db,_c,ac=math.max,math.min,string.sub,string.rep
+return
+function(bc,cc)local dc=cc.getObject("BaseFrame")(bc,cc)
+local _d="MonitorFrame"dc:setTerm(nil)local ad=false;local bd
+local cd={getType=function()return _d end,isType=function(dd,__a)
+return _d==__a or dc.isType~=nil and
+dc.isType(__a)or false end,getBase=function(dd)return dc end,setMonitor=function(dd,__a)
+if
+(type(__a)=="string")then local a_a=peripheral.wrap(__a)
+if(a_a~=nil)then dd:setTerm(a_a)end elseif(type(__a)=="table")then dd:setTerm(__a)end;return dd end,setMonitorGroup=function(dd,__a)
+bd=bb(__a)dd:setTerm(bd)ad=true;return dd end,render=function(dd)if(
+dd:getTerm()~=nil)then dc.render(dd)end end,show=function(dd)
+dc:getBase().show(dd)cc.setActiveFrame(dd)
+for __a,a_a in pairs(colors)do if(type(a_a)=="number")then
+termObject.setPaletteColor(a_a,colors.packRGB(term.nativePaletteColor((a_a))))end end
+for __a,a_a in pairs(colorTheme)do
+if(type(a_a)=="number")then
+termObject.setPaletteColor(
+type(__a)=="number"and __a or colors[__a],a_a)else local b_a,c_a,d_a=table.unpack(a_a)
+termObject.setPaletteColor(
+type(__a)=="number"and __a or colors[__a],b_a,c_a,d_a)end end;return dd end}
+cd.mouseHandler=function(dd,__a,a_a,b_a,c_a,d_a,...)
+if(ad)then a_a,b_a=bd.calculateClick(d_a,a_a,b_a)end;dc.mouseHandler(dd,__a,a_a,b_a,c_a,d_a,...)end;cd.__index=cd;return setmetatable(cd,dc)end end
+ba["objects"]["Radio"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+return
+function(db,_c)
+local ac=_c.getObject("List")(db,_c)local bc="Radio"ac:setSize(1,1)ac:setZIndex(5)local cc={}
+local dc=colors.black;local _d=colors.green;local ad=colors.black;local bd=colors.red;local cd=true;local dd="\7"
+local __a="left"
+local a_a={getType=function(b_a)return bc end,addItem=function(b_a,c_a,d_a,_aa,aaa,baa,...)ac.addItem(b_a,c_a,aaa,baa,...)table.insert(cc,{x=d_a or 1,y=
+_aa or#cc*2})
+return b_a end,removeItem=function(b_a,c_a)
+ac.removeItem(b_a,c_a)table.remove(cc,c_a)return b_a end,clear=function(b_a)
+ac.clear(b_a)cc={}return b_a end,editItem=function(b_a,c_a,d_a,_aa,aaa,baa,caa,...)
+ac.editItem(b_a,c_a,d_a,baa,caa,...)table.remove(cc,c_a)
+table.insert(cc,c_a,{x=_aa or 1,y=aaa or 1})return b_a end,setBoxSelectionColor=function(b_a,c_a,d_a)
+dc=c_a;_d=d_a;return b_a end,getBoxSelectionColor=function(b_a)return dc,_d end,setBoxDefaultColor=function(b_a,c_a,d_a)ad=c_a;bd=d_a
+return b_a end,getBoxDefaultColor=function(b_a)return ad,bd end,mouseHandler=function(b_a,c_a,d_a,_aa,...)
+if(#cc>0)then
+local aaa,baa=b_a:getAbsolutePosition()local caa=b_a:getAll()
+for daa,_ba in pairs(caa)do
+if
+(aaa+cc[daa].x-1 <=d_a)and
+(aaa+
+cc[daa].x-1 +_ba.text:len()+1 >=d_a)and(baa+cc[daa].y-1 ==_aa)then b_a:setValue(_ba)
+local aba=b_a:sendEvent("mouse_click",b_a,"mouse_click",c_a,d_a,_aa,...)b_a:updateDraw()if(aba==false)then return aba end;return true end end end end,draw=function(b_a)
+b_a:addDraw("radio",function()
+local c_a,d_a=b_a:getSelectionColor()local _aa=b_a:getAll()
+for aaa,baa in pairs(_aa)do
+if(baa==b_a:getValue())then
+b_a:addBlit(cc[aaa].x,cc[aaa].y,dd,cb[_d],cb[dc])
+b_a:addBlit(cc[aaa].x+2,cc[aaa].y,baa.text,cb[d_a]:rep(#baa.text),cb[c_a]:rep(
+#baa.text))else
+b_a:addBackgroundBox(cc[aaa].x,cc[aaa].y,1,1,ad or colors.black)
+b_a:addBlit(cc[aaa].x+2,cc[aaa].y,baa.text,cb[baa.fgCol]:rep(#baa.text),cb[baa.bgCol]:rep(
+#baa.text))end end;return true end)end}a_a.__index=a_a;return setmetatable(a_a,ac)end end
+ba["objects"]["Slider"]=function(...)local bb=_b("tHex")
+return
+function(cb,db)
+local _c=db.getObject("ChangeableObject")(cb,db)local ac="Slider"_c:setSize(12,1)_c:setValue(1)
+_c:setBackground(false,"\140",colors.black)local bc="horizontal"local cc=" "local dc=colors.black;local _d=colors.gray;local ad=12;local bd=1
+local cd=1
+local function dd(a_a,b_a,c_a,d_a)local _aa,aaa=a_a:getPosition()local baa,caa=a_a:getSize()local daa=
+bc=="vertical"and caa or baa
+for i=0,daa do
+if
+
+(
+(bc=="vertical"and aaa+i==d_a)or(bc=="horizontal"and _aa+i==c_a))and(_aa<=c_a)and(_aa+baa>c_a)and(aaa<=d_a)and
+(aaa+caa>d_a)then bd=math.min(i+1,daa- (#
+cc+cd-2))
+a_a:setValue(ad/daa*bd)a_a:updateDraw()end end end
+local __a={getType=function(a_a)return ac end,load=function(a_a)a_a:listenEvent("mouse_click")
+a_a:listenEvent("mouse_drag")a_a:listenEvent("mouse_scroll")end,setSymbol=function(a_a,b_a)
+cc=b_a:sub(1,1)a_a:updateDraw()return a_a end,setIndex=function(a_a,b_a)bd=b_a;if(bd<1)then
+bd=1 end;local c_a,d_a=a_a:getSize()
+bd=math.min(bd,
+(bc=="vertical"and d_a or c_a)- (cd-1))
+a_a:setValue(ad/ (bc=="vertical"and d_a or c_a)*bd)a_a:updateDraw()return a_a end,getIndex=function(a_a)return
+bd end,setMaxValue=function(a_a,b_a)ad=b_a;return a_a end,setSymbolColor=function(a_a,b_a)symbolColor=b_a
+a_a:updateDraw()return a_a end,setBarType=function(a_a,b_a)bc=b_a:lower()
+a_a:updateDraw()return a_a end,mouseHandler=function(a_a,b_a,c_a,d_a)if(_c.mouseHandler(a_a,b_a,c_a,d_a))then
+dd(a_a,b_a,c_a,d_a)return true end;return false end,dragHandler=function(a_a,b_a,c_a,d_a)if
+(_c.dragHandler(a_a,b_a,c_a,d_a))then dd(a_a,b_a,c_a,d_a)return true end
+return false end,scrollHandler=function(a_a,b_a,c_a,d_a)
+if
+(_c.scrollHandler(a_a,b_a,c_a,d_a))then local _aa,aaa=a_a:getSize()bd=bd+b_a;if(bd<1)then bd=1 end
+bd=math.min(bd,(
+bc=="vertical"and aaa or _aa)- (cd-1))
+a_a:setValue(ad/ (bc=="vertical"and aaa or _aa)*bd)a_a:updateDraw()return true end;return false end,draw=function(a_a)
+_c.draw(a_a)
+a_a:addDraw("slider",function()local b_a,c_a=a_a:getSize()
+local d_a,_aa=a_a:getBackground(),a_a:getForeground()
+if(bc=="horizontal")then a_a:addText(bd,oby,cc:rep(cd))
+if(_d~=false)then a_a:addBG(bd,1,bb[_d]:rep(
+#cc*cd))end;if(dc~=false)then
+a_a:addFG(bd,1,bb[dc]:rep(#cc*cd))end end
+if(bc=="vertical")then
+for n=0,c_a-1 do
+if(bd==n+1)then for curIndexOffset=0,math.min(cd-1,c_a)do
+a_a:addBlit(1,1 +n+curIndexOffset,cc,bb[symbolColor],bb[symbolColor])end else if(n+1 <bd)or(n+1 >
+bd-1 +cd)then
+a_a:addBlit(1,1 +n,bgSymbol,bb[_aa],bb[d_a])end end end end end)end}__a.__index=__a;return setmetatable(__a,_c)end end
+ba["objects"]["ScrollableFrame"]=function(...)
+local bb,cb,db,_c=math.max,math.min,string.sub,string.rep
+return
+function(ac,bc)local cc=bc.getObject("Frame")(ac,bc)
+local dc="ScrollableFrame"local _d;local ad=0;local bd=0;local cd=true
+local function dd(c_a)local d_a=0;local _aa=c_a:getObjects()
+for aaa,baa in pairs(_aa)do
+if(
+baa.element.getWidth~=nil)and(baa.element.getX~=nil)then
+local caa,daa=baa.element:getWidth(),baa.element:getX()local _ba=c_a:getWidth()
+if
+(baa.element:getType()=="Dropdown")then if(baa.element:isOpened())then
+local aba=baa.element:getDropdownSize()
+if(aba+daa-_ba>=d_a)then d_a=bb(aba+daa-_ba,0)end end end
+if(h+daa-_ba>=d_a)then d_a=bb(caa+daa-_ba,0)end end end;return d_a end
+local function __a(c_a)local d_a=0;local _aa=c_a:getObjects()
+for aaa,baa in pairs(_aa)do
+if
+(baa.element.getHeight~=nil)and(baa.element.getY~=nil)then
+local caa,daa=baa.element:getHeight(),baa.element:getY()local _ba=c_a:getHeight()
+if
+(baa.element:getType()=="Dropdown")then if(baa.element:isOpened())then
+local aba,bba=baa.element:getDropdownSize()
+if(bba+daa-_ba>=d_a)then d_a=bb(bba+daa-_ba,0)end end end
+if(caa+daa-_ba>=d_a)then d_a=bb(caa+daa-_ba,0)end end end;return d_a end
+local function a_a(c_a,d_a)local _aa,aaa=c_a:getOffset()local baa
+if(ad==1)then
+baa=cd and dd(c_a)or bd
+c_a:setOffset(cb(baa,bb(0,_aa+d_a)),aaa)elseif(ad==0)then baa=cd and __a(c_a)or bd
+c_a:setOffset(_aa,cb(baa,bb(0,aaa+d_a)))end;c_a:updateDraw()end
+local b_a={getType=function()return dc end,isType=function(c_a,d_a)return
+dc==d_a or cc.isType~=nil and cc.isType(d_a)or false end,setDirection=function(c_a,d_a)ad=
+d_a=="horizontal"and 1 or d_a=="vertical"and 0 or
+ad;return c_a end,setScrollAmount=function(c_a,d_a)
+bd=d_a;cd=false;return c_a end,getBase=function(c_a)return cc end,load=function(c_a)cc.load(c_a)
+c_a:listenEvent("mouse_scroll")end,setParent=function(c_a,d_a,...)cc.setParent(c_a,d_a,...)_d=d_a
+return c_a end,scrollHandler=function(c_a,d_a,_aa,aaa)
+if
+(cc:getBase().scrollHandler(c_a,d_a,_aa,aaa))then c_a:sortElementOrder()
+for baa,caa in
+ipairs(c_a:getEvents("mouse_scroll"))do
+if(caa.element.scrollHandler~=nil)then local daa,_ba=0,0;if(c_a.getOffset~=nil)then
+daa,_ba=c_a:getOffset()end
+if(caa.element.getIgnoreOffset())then daa,_ba=0,0 end;if(caa.element.scrollHandler(caa.element,d_a,_aa+daa,aaa+_ba))then
+return true end end end;a_a(c_a,d_a,_aa,aaa)c_a:removeFocusedObject()return true end end,draw=function(c_a)
+cc.draw(c_a)
+c_a:addDraw("scrollableFrame",function()if(cd)then a_a(c_a,0)end end,0)end}b_a.__index=b_a;return setmetatable(b_a,cc)end end
+ba["objects"]["Program"]=function(...)local bb=_b("tHex")local cb=_b("process")
+local db=string.sub
+return
+function(_c,ac)local bc=ac.getObject("VisualObject")(_c,ac)
+local cc="Program"local dc;local _d;local ad={}
+local function bd(aaa,baa,caa,daa)local _ba,aba=1,1;local bba,cba=colors.black,colors.white;local dba=false
+local _ca=false;local aca={}local bca={}local cca={}local dca={}local _da;local ada={}for i=0,15 do local dab=2 ^i
+dca[dab]={ac.getTerm().getPaletteColour(dab)}end;local function bda()_da=(" "):rep(caa)
+for n=0,15 do
+local dab=2 ^n;local _bb=bb[dab]ada[dab]=_bb:rep(caa)end end
+local function cda()bda()local dab=_da
+local _bb=ada[colors.white]local abb=ada[colors.black]
+for n=1,daa do
+aca[n]=db(aca[n]==nil and dab or aca[n]..dab:sub(1,
+caa-aca[n]:len()),1,caa)
+cca[n]=db(cca[n]==nil and _bb or cca[n]..
+_bb:sub(1,caa-cca[n]:len()),1,caa)
+bca[n]=db(bca[n]==nil and abb or bca[n]..
+abb:sub(1,caa-bca[n]:len()),1,caa)end;bc.updateDraw(bc)end;cda()local function dda()if
+_ba>=1 and aba>=1 and _ba<=caa and aba<=daa then else end end
+local function __b(dab,_bb,abb)if
+
+aba<1 or aba>daa or _ba<1 or _ba+#dab-1 >caa then return end
+aca[aba]=db(aca[aba],1,_ba-1)..dab..db(aca[aba],
+_ba+#dab,caa)cca[aba]=db(cca[aba],1,_ba-1)..
+_bb..db(cca[aba],_ba+#dab,caa)
+bca[aba]=
+db(bca[aba],1,_ba-1)..abb..db(bca[aba],_ba+#dab,caa)_ba=_ba+#dab;if _ca then dda()end;dc:updateDraw()end
+local function a_b(dab,_bb,abb)
+if(abb~=nil)then local bbb=aca[_bb]if(bbb~=nil)then
+aca[_bb]=db(bbb:sub(1,dab-1)..abb..bbb:sub(dab+
+(abb:len()),caa),1,caa)end end;dc:updateDraw()end
+local function b_b(dab,_bb,abb)
+if(abb~=nil)then local bbb=bca[_bb]if(bbb~=nil)then
+bca[_bb]=db(bbb:sub(1,dab-1)..abb..bbb:sub(dab+
+(abb:len()),caa),1,caa)end end;dc:updateDraw()end
+local function c_b(dab,_bb,abb)
+if(abb~=nil)then local bbb=cca[_bb]if(bbb~=nil)then
+cca[_bb]=db(bbb:sub(1,dab-1)..abb..bbb:sub(dab+
+(abb:len()),caa),1,caa)end end;dc:updateDraw()end
+local d_b=function(dab)
+if type(dab)~="number"then
+error("bad argument #1 (expected number, got "..type(dab)..")",2)elseif bb[dab]==nil then
+error("Invalid color (got "..dab..")",2)end;cba=dab end
+local _ab=function(dab)
+if type(dab)~="number"then
+error("bad argument #1 (expected number, got "..type(dab)..")",2)elseif bb[dab]==nil then
+error("Invalid color (got "..dab..")",2)end;bba=dab end
+local aab=function(dab,_bb,abb,bbb)if type(dab)~="number"then
+error("bad argument #1 (expected number, got "..type(dab)..")",2)end
+if bb[dab]==nil then error("Invalid color (got "..
+dab..")",2)end;local cbb
+if
+type(_bb)=="number"and abb==nil and bbb==nil then cbb={colours.rgb8(_bb)}dca[dab]=cbb else if
+type(_bb)~="number"then
+error("bad argument #2 (expected number, got "..type(_bb)..")",2)end;if type(abb)~="number"then
+error(
+"bad argument #3 (expected number, got "..type(abb)..")",2)end;if type(bbb)~="number"then
+error(
+"bad argument #4 (expected number, got "..type(bbb)..")",2)end;cbb=dca[dab]cbb[1]=_bb
+cbb[2]=abb;cbb[3]=bbb end end
+local bab=function(dab)if type(dab)~="number"then
+error("bad argument #1 (expected number, got "..type(dab)..")",2)end
+if bb[dab]==nil then error("Invalid color (got "..
+dab..")",2)end;local _bb=dca[dab]return _bb[1],_bb[2],_bb[3]end
+local cab={setCursorPos=function(dab,_bb)if type(dab)~="number"then
+error("bad argument #1 (expected number, got "..type(dab)..")",2)end;if type(_bb)~="number"then
+error(
+"bad argument #2 (expected number, got "..type(_bb)..")",2)end;_ba=math.floor(dab)
+aba=math.floor(_bb)if(_ca)then dda()end end,getCursorPos=function()return
+_ba,aba end,setCursorBlink=function(dab)if type(dab)~="boolean"then
+error("bad argument #1 (expected boolean, got "..
+type(dab)..")",2)end;dba=dab end,getCursorBlink=function()return
+dba end,getPaletteColor=bab,getPaletteColour=bab,setBackgroundColor=_ab,setBackgroundColour=_ab,setTextColor=d_b,setTextColour=d_b,setPaletteColor=aab,setPaletteColour=aab,getBackgroundColor=function()return bba end,getBackgroundColour=function()return bba end,getSize=function()
+return caa,daa end,getTextColor=function()return cba end,getTextColour=function()return cba end,basalt_resize=function(dab,_bb)caa,daa=dab,_bb;cda()end,basalt_reposition=function(dab,_bb)
+aaa,baa=dab,_bb end,basalt_setVisible=function(dab)_ca=dab end,drawBackgroundBox=function(dab,_bb,abb,bbb,cbb)for n=1,bbb do
+b_b(dab,_bb+ (n-1),bb[cbb]:rep(abb))end end,drawForegroundBox=function(dab,_bb,abb,bbb,cbb)
+for n=1,bbb do c_b(dab,
+_bb+ (n-1),bb[cbb]:rep(abb))end end,drawTextBox=function(dab,_bb,abb,bbb,cbb)for n=1,bbb do
+a_b(dab,_bb+ (n-1),cbb:rep(abb))end end,basalt_update=function()for n=1,daa do
+dc:addBlit(1,n,aca[n],cca[n],bca[n])end end,scroll=function(dab)
+assert(type(dab)==
+"number","bad argument #1 (expected number, got "..type(dab)..")")
+if dab~=0 then
+for newY=1,daa do local _bb=newY+dab;if _bb<1 or _bb>daa then aca[newY]=_da
+cca[newY]=ada[cba]bca[newY]=ada[bba]else aca[newY]=aca[_bb]bca[newY]=bca[_bb]
+cca[newY]=cca[_bb]end end end;if(_ca)then dda()end end,isColor=function()return
+ac.getTerm().isColor()end,isColour=function()
+return ac.getTerm().isColor()end,write=function(dab)dab=tostring(dab)if(_ca)then
+__b(dab,bb[cba]:rep(dab:len()),bb[bba]:rep(dab:len()))end end,clearLine=function()
+if
+(_ca)then a_b(1,aba,(" "):rep(caa))
+b_b(1,aba,bb[bba]:rep(caa))c_b(1,aba,bb[cba]:rep(caa))end;if(_ca)then dda()end end,clear=function()
+for n=1,daa
+do a_b(1,n,(" "):rep(caa))
+b_b(1,n,bb[bba]:rep(caa))c_b(1,n,bb[cba]:rep(caa))end;if(_ca)then dda()end end,blit=function(dab,_bb,abb)if
+type(dab)~="string"then
+error("bad argument #1 (expected string, got "..type(dab)..")",2)end;if type(_bb)~="string"then
+error(
+"bad argument #2 (expected string, got "..type(_bb)..")",2)end;if type(abb)~="string"then
+error(
+"bad argument #3 (expected string, got "..type(abb)..")",2)end
+if
+#_bb~=#dab or#abb~=#dab then error("Arguments must be the same length",2)end;if(_ca)then __b(dab,_bb,abb)end end}return cab end;bc:setZIndex(5)bc:setSize(30,12)local cd=bd(1,1,30,12)local dd
+local __a=false;local a_a={}
+local function b_a(aaa)local baa=aaa:getParent()local caa,daa=cd.getCursorPos()
+local _ba,aba=aaa:getPosition()local bba,cba=aaa:getSize()
+if(_ba+caa-1 >=1 and
+_ba+caa-1 <=_ba+bba-1 and daa+aba-1 >=1 and
+daa+aba-1 <=aba+cba-1)then
+baa:setCursor(
+aaa:isFocused()and cd.getCursorBlink(),_ba+caa-1,daa+aba-1,cd.getTextColor())end end
+local function c_a(aaa,baa,...)local caa,daa=dd:resume(baa,...)
+if(caa==false)and(daa~=nil)and
+(daa~="Terminated")then
+local _ba=aaa:sendEvent("program_error",daa)
+if(_ba~=false)then error("Basalt Program - "..daa)end end
+if(dd:getStatus()=="dead")then aaa:sendEvent("program_done")end end
+local function d_a(aaa,baa,caa,daa,_ba)if(dd==nil)then return false end
+if not(dd:isDead())then if not(__a)then
+local aba,bba=aaa:getAbsolutePosition()c_a(aaa,baa,caa,daa-aba+1,_ba-bba+1)
+b_a(aaa)end end end
+local function _aa(aaa,baa,caa,daa)if(dd==nil)then return false end
+if not(dd:isDead())then if not(__a)then if(aaa.draw)then
+c_a(aaa,baa,caa,daa)b_a(aaa)end end end end
+dc={getType=function(aaa)return cc end,show=function(aaa)bc.show(aaa)
+cd.setBackgroundColor(aaa:getBackground())cd.setTextColor(aaa:getForeground())
+cd.basalt_setVisible(true)return aaa end,hide=function(aaa)
+bc.hide(aaa)cd.basalt_setVisible(false)return aaa end,setPosition=function(aaa,baa,caa,daa)
+bc.setPosition(aaa,baa,caa,daa)cd.basalt_reposition(aaa:getPosition())return aaa end,getBasaltWindow=function()return
+cd end,getBasaltProcess=function()return dd end,setSize=function(aaa,baa,caa,daa)bc.setSize(aaa,baa,caa,daa)
+cd.basalt_resize(aaa:getWidth(),aaa:getHeight())return aaa end,getStatus=function(aaa)if(dd~=nil)then return
+dd:getStatus()end;return"inactive"end,setEnviroment=function(aaa,baa)ad=
+baa or{}return aaa end,execute=function(aaa,baa,...)_d=baa or _d
+dd=cb:new(_d,cd,ad,...)cd.setBackgroundColor(colors.black)
+cd.setTextColor(colors.white)cd.clear()cd.setCursorPos(1,1)
+cd.setBackgroundColor(aaa:getBackground())
+cd.setTextColor(aaa:getForeground()or colors.white)cd.basalt_setVisible(true)c_a(aaa)__a=false
+aaa:listenEvent("mouse_click",aaa)aaa:listenEvent("mouse_up",aaa)
+aaa:listenEvent("mouse_drag",aaa)aaa:listenEvent("mouse_scroll",aaa)
+aaa:listenEvent("key",aaa)aaa:listenEvent("key_up",aaa)
+aaa:listenEvent("char",aaa)aaa:listenEvent("other_event",aaa)return aaa end,stop=function(aaa)
+local baa=aaa:getParent()
+if(dd~=nil)then if not(dd:isDead())then c_a(aaa,"terminate")if(dd:isDead())then
+baa:setCursor(false)end end end;baa:removeEvents(aaa)return aaa end,pause=function(aaa,baa)__a=
+baa or(not __a)if(dd~=nil)then
+if not(dd:isDead())then if not(__a)then
+aaa:injectEvents(table.unpack(a_a))a_a={}end end end;return aaa end,isPaused=function(aaa)return
+__a end,injectEvent=function(aaa,baa,caa,...)
+if(dd~=nil)then if not(dd:isDead())then
+if(__a==false)or(caa)then
+c_a(aaa,baa,...)else table.insert(a_a,{event=baa,args={...}})end end end;return aaa end,getQueuedEvents=function(aaa)return
+a_a end,updateQueuedEvents=function(aaa,baa)a_a=baa or a_a;return aaa end,injectEvents=function(aaa,...)if(dd~=nil)then
+if not
+(dd:isDead())then for baa,caa in pairs({...})do
+c_a(aaa,caa.event,table.unpack(caa.args))end end end;return aaa end,mouseHandler=function(aaa,baa,caa,daa)
+if
+(bc.mouseHandler(aaa,baa,caa,daa))then d_a(aaa,"mouse_click",baa,caa,daa)return true end;return false end,mouseUpHandler=function(aaa,baa,caa,daa)
+if
+(bc.mouseUpHandler(aaa,baa,caa,daa))then d_a(aaa,"mouse_up",baa,caa,daa)return true end;return false end,scrollHandler=function(aaa,baa,caa,daa)
+if
+(bc.scrollHandler(aaa,baa,caa,daa))then d_a(aaa,"mouse_scroll",baa,caa,daa)return true end;return false end,dragHandler=function(aaa,baa,caa,daa)
+if
+(bc.dragHandler(aaa,baa,caa,daa))then d_a(aaa,"mouse_drag",baa,caa,daa)return true end;return false end,keyHandler=function(aaa,baa,caa)if
+(bc.keyHandler(aaa,baa,caa))then _aa(aaa,"key",baa,caa)return true end;return
+false end,keyUpHandler=function(aaa,baa)if
+(bc.keyUpHandler(aaa,baa))then _aa(aaa,"key_up",baa)return true end
+return false end,charHandler=function(aaa,baa)if
+(bc.charHandler(aaa,baa))then _aa(aaa,"char",baa)return true end
+return false end,getFocusHandler=function(aaa)
+bc.getFocusHandler(aaa)
+if(dd~=nil)then
+if not(dd:isDead())then
+if not(__a)then local baa=aaa:getParent()
+if(baa~=nil)then
+local caa,daa=cd.getCursorPos()local _ba,aba=aaa:getPosition()local bba,cba=aaa:getSize()
+if
+(
+
+_ba+caa-1 >=1 and _ba+caa-1 <=_ba+bba-1 and daa+aba-1 >=1 and daa+aba-1 <=aba+cba-1)then
+baa:setCursor(cd.getCursorBlink(),_ba+caa-1,daa+aba-1,cd.getTextColor())end end end end end end,loseFocusHandler=function(aaa)
+bc.loseFocusHandler(aaa)
+if(dd~=nil)then if not(dd:isDead())then local baa=aaa:getParent()if(baa~=nil)then
+baa:setCursor(false)end end end end,eventHandler=function(aaa,baa,...)
+bc.eventHandler(aaa,baa,...)if dd==nil then return end
+if not dd:isDead()then
+if not __a then c_a(aaa,baa,...)
+if
+aaa:isFocused()then local caa=aaa:getParent()local daa,_ba=aaa:getPosition()
+local aba,bba=cd.getCursorPos()local cba,dba=aaa:getSize()
+if daa+aba-1 >=1 and
+daa+aba-1 <=daa+cba-1 and bba+_ba-1 >=1 and
+bba+_ba-1 <=_ba+dba-1 then
+caa:setCursor(cd.getCursorBlink(),
+daa+aba-1,bba+_ba-1,cd.getTextColor())end end else table.insert(a_a,{event=baa,args={...}})end end end,resizeHandler=function(aaa,...)
+bc.resizeHandler(aaa,...)
+if(dd~=nil)then
+if not(dd:isDead())then
+if not(__a)then
+cd.basalt_resize(aaa:getSize())c_a(aaa,"term_resize",aaa:getSize())else
+cd.basalt_resize(aaa:getSize())
+table.insert(a_a,{event="term_resize",args={aaa:getSize()}})end end end end,repositionHandler=function(aaa,...)
+bc.repositionHandler(aaa,...)
+if(dd~=nil)then if not(dd:isDead())then
+cd.basalt_reposition(aaa:getPosition())end end end,draw=function(aaa)
+bc.draw(aaa)
+aaa:addDraw("program",function()local baa=aaa:getParent()local caa,daa=aaa:getPosition()
+local _ba,aba=cd.getCursorPos()local bba,cba=aaa:getSize()cd.basalt_update()end)end,onError=function(aaa,...)
+for caa,daa in
+pairs(table.pack(...))do if(type(daa)=="function")then
+aaa:registerEvent("program_error",daa)end end;local baa=aaa:getParent()aaa:listenEvent("other_event")
+return aaa end,onDone=function(aaa,...)
+for caa,daa in
+pairs(table.pack(...))do if(type(daa)=="function")then
+aaa:registerEvent("program_done",daa)end end;local baa=aaa:getParent()aaa:listenEvent("other_event")
+return aaa end}dc.__index=dc;return setmetatable(dc,bc)end end
+ba["objects"]["VisualObject"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+local db,_c,ac=string.sub,string.find,table.insert
+return
+function(bc,cc)local dc=cc.getObject("Object")(bc,cc)
+local _d="VisualObject"local ad,bd,cd,dd,__a=true,false,false,false,false;local a_a=1;local b_a,c_a,d_a,_aa=1,1,1,1
+local aaa,baa,caa,daa=0,0,0,0;local _ba,aba,bba=colors.black,colors.white,false;local cba;local dba={}local _ca={}local aca={}
+local bca={}
+local function cca(_da,ada)local bda={}if _da==""then return bda end;ada=ada or" "local cda=1
+local dda,__b=_c(_da,ada,cda)
+while dda do
+ac(bda,{x=cda,value=db(_da,cda,dda-1)})cda=__b+1;dda,__b=_c(_da,ada,cda)end;ac(bda,{x=cda,value=db(_da,cda)})return bda end
+local dca={getType=function(_da)return _d end,getBase=function(_da)return dc end,isType=function(_da,ada)
+return _d==ada or
+dc.isType~=nil and dc.isType(ada)or false end,getBasalt=function(_da)return cc end,show=function(_da)ad=true
+_da:updateDraw()return _da end,hide=function(_da)ad=false;_da:updateDraw()return _da end,isVisible=function(_da)return
+ad end,setVisible=function(_da,ada)ad=ada or not ad;_da:updateDraw()return _da end,setTransparency=function(_da,ada)bba=
+ada~=nil and ada or true;_da:updateDraw()
+return _da end,setParent=function(_da,ada,bda)
+dc.setParent(_da,ada,bda)cba=ada;return _da end,setFocus=function(_da)if(cba~=nil)then
+cba:setFocusedObject(_da)end;return _da end,setZIndex=function(_da,ada)a_a=ada
+if
+(cba~=nil)then cba:updateZIndex(_da,a_a)_da:updateDraw()end;return _da end,getZIndex=function(_da)return a_a end,updateDraw=function(_da)if(
+cba~=nil)then cba:updateDraw()end;return _da end,setPosition=function(_da,ada,bda,cda)
+local dda,__b=b_a,c_a
+if(type(ada)=="number")then b_a=cda and b_a+ada or ada end
+if(type(bda)=="number")then c_a=cda and c_a+bda or bda end;if(cba~=nil)then
+cba:customEventHandler("basalt_FrameReposition",_da)end;if(_da:getType()=="Container")then
+cba:customEventHandler("basalt_FrameReposition",_da)end;_da:updateDraw()
+_da:repositionHandler(dda,__b)return _da end,getX=function(_da)return
+b_a end,getY=function(_da)return c_a end,getPosition=function(_da)return b_a,c_a end,setSize=function(_da,ada,bda,cda)
+local dda,__b=d_a,_aa
+if(type(ada)=="number")then d_a=cda and d_a+ada or ada end
+if(type(bda)=="number")then _aa=cda and _aa+bda or bda end
+if(cba~=nil)then
+cba:customEventHandler("basalt_FrameResize",_da)if(_da:getType()=="Container")then
+cba:customEventHandler("basalt_FrameResize",_da)end end;_da:resizeHandler(dda,__b)_da:updateDraw()return _da end,getHeight=function(_da)return
+_aa end,getWidth=function(_da)return d_a end,getSize=function(_da)return d_a,_aa end,setBackground=function(_da,ada)_ba=ada
+_da:updateDraw()return _da end,getBackground=function(_da)return _ba end,setForeground=function(_da,ada)aba=ada or false
+_da:updateDraw()return _da end,getForeground=function(_da)return aba end,getAbsolutePosition=function(_da,ada,bda)if
+(ada==nil)or(bda==nil)then ada,bda=_da:getPosition()end
+if(cba~=nil)then
+local cda,dda=cba:getAbsolutePosition()ada=cda+ada-1;bda=dda+bda-1 end;return ada,bda end,ignoreOffset=function(_da,ada)
+bd=ada;if(ada==nil)then bd=true end;return _da end,getIgnoreOffset=function(_da)return bd end,isCoordsInObject=function(_da,ada,bda)
+if
+(ad)and(_da:isEnabled())then
+if(ada==nil)or(bda==nil)then return false end;local cda,dda=_da:getAbsolutePosition()local __b,a_b=_da:getSize()if
+
+(cda<=ada)and(cda+__b>ada)and(dda<=bda)and(dda+a_b>bda)then return true end end;return false end,onGetFocus=function(_da,...)
+for ada,bda in
+pairs(table.pack(...))do if(type(bda)=="function")then
+_da:registerEvent("get_focus",bda)end end;return _da end,onLoseFocus=function(_da,...)
+for ada,bda in
+pairs(table.pack(...))do if(type(bda)=="function")then
+_da:registerEvent("lose_focus",bda)end end;return _da end,isFocused=function(_da)
+if(
+cba~=nil)then return cba:getFocusedObject()==_da end;return true end,resizeHandler=function(_da,...)
+if(_da:isEnabled())then
+local ada=_da:sendEvent("basalt_resize",...)if(ada==false)then return false end end;return true end,repositionHandler=function(_da,...)if
+(_da:isEnabled())then local ada=_da:sendEvent("basalt_reposition",...)if(ada==false)then
+return false end end;return
+true end,onResize=function(_da,...)
+for ada,bda in
+pairs(table.pack(...))do if(type(bda)=="function")then
+_da:registerEvent("basalt_resize",bda)end end;return _da end,onReposition=function(_da,...)
+for ada,bda in
+pairs(table.pack(...))do if(type(bda)=="function")then
+_da:registerEvent("basalt_reposition",bda)end end;return _da end,mouseHandler=function(_da,ada,bda,cda,dda)
+if
+(_da:isCoordsInObject(bda,cda))then local __b,a_b=_da:getAbsolutePosition()
+local b_b=_da:sendEvent("mouse_click",ada,bda- (__b-1),
+cda- (a_b-1),bda,cda,dda)if(b_b==false)then return false end;if(cba~=nil)then
+cba:setFocusedObject(_da)end;dd=true;__a=true;aaa,baa=bda,cda;return true end end,mouseUpHandler=function(_da,ada,bda,cda)
+__a=false
+if(dd)then local dda,__b=_da:getAbsolutePosition()
+local a_b=_da:sendEvent("mouse_release",ada,bda- (dda-1),
+cda- (__b-1),bda,cda)dd=false end
+if(_da:isCoordsInObject(bda,cda))then local dda,__b=_da:getAbsolutePosition()
+local a_b=_da:sendEvent("mouse_up",ada,
+bda- (dda-1),cda- (__b-1),bda,cda)if(a_b==false)then return false end;return true end end,dragHandler=function(_da,ada,bda,cda)
+if
+(__a)then local dda,__b=_da:getAbsolutePosition()
+local a_b=_da:sendEvent("mouse_drag",ada,bda- (dda-1),cda- (
+__b-1),aaa-bda,baa-cda,bda,cda)aaa,baa=bda,cda;if(a_b~=nil)then return a_b end;if(cba~=nil)then
+cba:setFocusedObject(_da)end;return true end
+if(_da:isCoordsInObject(bda,cda))then local dda,__b=_da:getAbsolutePosition()
+aaa,baa=bda,cda;caa,daa=dda-bda,__b-cda end end,scrollHandler=function(_da,ada,bda,cda)
+if
+(_da:isCoordsInObject(bda,cda))then local dda,__b=_da:getAbsolutePosition()
+local a_b=_da:sendEvent("mouse_scroll",ada,bda- (dda-1),
+cda- (__b-1))if(a_b==false)then return false end;if(cba~=nil)then
+cba:setFocusedObject(_da)end;return true end end,hoverHandler=function(_da,ada,bda,cda)
+if
+(_da:isCoordsInObject(ada,bda))then local dda=_da:sendEvent("mouse_hover",ada,bda,cda)if(dda==false)then return
+false end;cd=true;return true end
+if(cd)then local dda=_da:sendEvent("mouse_leave",ada,bda,cda)if
+(dda==false)then return false end;cd=false end end,keyHandler=function(_da,ada,bda)if
+(_da:isEnabled())and(ad)then
+if(_da:isFocused())then
+local cda=_da:sendEvent("key",ada,bda)if(cda==false)then return false end;return true end end end,keyUpHandler=function(_da,ada)if
+(_da:isEnabled())and(ad)then
+if(_da:isFocused())then
+local bda=_da:sendEvent("key_up",ada)if(bda==false)then return false end;return true end end end,charHandler=function(_da,ada)if
+(_da:isEnabled())and(ad)then
+if(_da:isFocused())then local bda=_da:sendEvent("char",ada)if(bda==
+false)then return false end;return true end end end,getFocusHandler=function(_da)
+local ada=_da:sendEvent("get_focus")if(ada~=nil)then return ada end;return true end,loseFocusHandler=function(_da)
+__a=false;local ada=_da:sendEvent("lose_focus")
+if(ada~=nil)then return ada end;return true end,addDraw=function(_da,ada,bda,cda,dda,__b)
+local a_b=
+(dda==nil or dda==1)and _ca or dda==2 and dba or dda==3 and aca;cda=cda or#a_b+1
+if(ada~=nil)then for c_b,d_b in pairs(a_b)do if(d_b.name==ada)then
+table.remove(a_b,c_b)break end end
+local b_b={name=ada,f=bda,pos=cda,active=
+__b~=nil and __b or true}table.insert(a_b,cda,b_b)end;_da:updateDraw()return _da end,addPreDraw=function(_da,ada,bda,cda,dda)
+_da:addDraw(ada,bda,cda,2)return _da end,addPostDraw=function(_da,ada,bda,cda,dda)
+_da:addDraw(ada,bda,cda,3)return _da end,setDrawState=function(_da,ada,bda,cda)
+local dda=
+(cda==nil or cda==1)and _ca or cda==2 and dba or cda==3 and aca
+for __b,a_b in pairs(dda)do if(a_b.name==ada)then a_b.active=bda;break end end;_da:updateDraw()return _da end,getDrawId=function(_da,ada,bda)local cda=
+
+bda==1 and _ca or bda==2 and dba or bda==3 and aca or _ca;for dda,__b in pairs(cda)do if(
+__b.name==ada)then return dda end end end,addText=function(_da,ada,bda,cda)local dda=
+_da:getParent()or _da;local __b,a_b=_da:getPosition()if(cba~=nil)then
+local c_b,d_b=cba:getOffset()__b=bd and __b or __b-c_b
+a_b=bd and a_b or a_b-d_b end
+if not(bba)then dda:setText(ada+__b-1,
+bda+a_b-1,cda)return end;local b_b=cca(cda,"\0")
+for c_b,d_b in pairs(b_b)do if
+(d_b.value~="")and(d_b.value~="\0")then
+dda:setText(ada+d_b.x+__b-2,bda+a_b-1,d_b.value)end end end,addBG=function(_da,ada,bda,cda,dda)local __b=
+cba or _da;local a_b,b_b=_da:getPosition()if(cba~=nil)then
+local d_b,_ab=cba:getOffset()a_b=bd and a_b or a_b-d_b
+b_b=bd and b_b or b_b-_ab end
+if not(bba)then __b:setBG(ada+a_b-1,
+bda+b_b-1,cda)return end;local c_b=cca(cda)
+for d_b,_ab in pairs(c_b)do
+if(_ab.value~="")and(_ab.value~=" ")then
+if(dda~=
+true)then
+__b:setText(ada+_ab.x+a_b-2,bda+b_b-1,(" "):rep(#_ab.value))
+__b:setBG(ada+_ab.x+a_b-2,bda+b_b-1,_ab.value)else
+table.insert(bca,{x=ada+_ab.x-1,y=bda,bg=_ab.value})__b:setBG(ada+a_b-1,bda+b_b-1,fg)end end end end,addFG=function(_da,ada,bda,cda)local dda=
+cba or _da;local __b,a_b=_da:getPosition()if(cba~=nil)then
+local c_b,d_b=cba:getOffset()__b=bd and __b or __b-c_b
+a_b=bd and a_b or a_b-d_b end
+if not(bba)then dda:setFG(ada+__b-1,
+bda+a_b-1,cda)return end;local b_b=cca(cda)
+for c_b,d_b in pairs(b_b)do if(d_b.value~="")and(d_b.value~=" ")then
+dda:setFG(
+ada+d_b.x+__b-2,bda+a_b-1,d_b.value)end end end,addBlit=function(_da,ada,bda,cda,dda,__b)local a_b=
+cba or _da;local b_b,c_b=_da:getPosition()if(cba~=nil)then
+local bab,cab=cba:getOffset()b_b=bd and b_b or b_b-bab
+c_b=bd and c_b or c_b-cab end
+if not(bba)then a_b:blit(ada+b_b-1,
+bda+c_b-1,cda,dda,__b)return end;local d_b=cca(cda,"\0")local _ab=cca(dda)local aab=cca(__b)
+for bab,cab in pairs(d_b)do if
+(cab.value~="")or(cab.value~="\0")then
+a_b:setText(ada+cab.x+b_b-2,bda+c_b-1,cab.value)end end;for bab,cab in pairs(aab)do
+if(cab.value~="")or(cab.value~=" ")then a_b:setBG(
+ada+cab.x+b_b-2,bda+c_b-1,cab.value)end end;for bab,cab in pairs(_ab)do
+if(
+cab.value~="")or(cab.value~=" ")then a_b:setFG(ada+cab.x+b_b-2,bda+
+c_b-1,cab.value)end end end,addTextBox=function(_da,ada,bda,cda,dda,__b)local a_b=
+cba or _da;local b_b,c_b=_da:getPosition()if(cba~=nil)then
+local d_b,_ab=cba:getOffset()b_b=bd and b_b or b_b-d_b
+c_b=bd and c_b or c_b-_ab end;a_b:drawTextBox(ada+b_b-1,
+bda+c_b-1,cda,dda,__b)end,addForegroundBox=function(_da,ada,bda,cda,dda,__b)local a_b=
+cba or _da;local b_b,c_b=_da:getPosition()if(cba~=nil)then
+local d_b,_ab=cba:getOffset()b_b=bd and b_b or b_b-d_b
+c_b=bd and c_b or c_b-_ab end;a_b:drawForegroundBox(ada+b_b-1,
+bda+c_b-1,cda,dda,__b)end,addBackgroundBox=function(_da,ada,bda,cda,dda,__b)local a_b=
+cba or _da;local b_b,c_b=_da:getPosition()if(cba~=nil)then
+local d_b,_ab=cba:getOffset()b_b=bd and b_b or b_b-d_b
+c_b=bd and c_b or c_b-_ab end;a_b:drawBackgroundBox(ada+b_b-1,
+bda+c_b-1,cda,dda,__b)end,render=function(_da)if
+(ad)then _da:redraw()end end,redraw=function(_da)for ada,bda in pairs(dba)do if(bda.active)then
+bda.f(_da)end end;for ada,bda in pairs(_ca)do if(bda.active)then
+bda.f(_da)end end;for ada,bda in pairs(aca)do if(bda.active)then
+bda.f(_da)end end;return true end,draw=function(_da)
+_da:addDraw("base",function()
+local ada,bda=_da:getSize()if(_ba~=false)then _da:addTextBox(1,1,ada,bda," ")
+_da:addBackgroundBox(1,1,ada,bda,_ba)end;if(aba~=false)then
+_da:addForegroundBox(1,1,ada,bda,aba)end end,1)end}dca.__index=dca;return setmetatable(dca,dc)end end
+ba["objects"]["Switch"]=function(...)
+return
+function(bb,cb)
+local db=cb.getObject("ChangeableObject")(bb,cb)local _c="Switch"db:setSize(4,1)db:setValue(false)
+db:setZIndex(5)local ac=colors.black;local bc=colors.red;local cc=colors.green
+local dc={getType=function(_d)return _c end,setSymbol=function(_d,ad)
+ac=ad;return _d end,setActiveBackground=function(_d,ad)cc=ad;return _d end,setInactiveBackground=function(_d,ad)bc=ad;return _d end,load=function(_d)
+_d:listenEvent("mouse_click")end,mouseHandler=function(_d,...)
+if(db.mouseHandler(_d,...))then
+_d:setValue(not _d:getValue())_d:updateDraw()return true end end,draw=function(_d)db.draw(_d)
+_d:addDraw("switch",function()
+local ad=_d:getParent()local bd,cd=_d:getBackground(),_d:getForeground()
+local dd,__a=_d:getSize()
+if(_d:getValue())then _d:addBackgroundBox(1,1,dd,__a,cc)
+_d:addBackgroundBox(dd,1,1,__a,ac)else _d:addBackgroundBox(1,1,dd,__a,bc)
+_d:addBackgroundBox(1,1,1,__a,ac)end end)end}dc.__index=dc;return setmetatable(dc,db)end end
+ba["objects"]["Thread"]=function(...)
+return
+function(bb,cb)
+local db=cb.getObject("Object")(bb,cb)local _c="Thread"local ac;local bc;local cc=false;local dc
+local _d={getType=function(ad)return _c end,start=function(ad,bd)if(bd==nil)then
+error("Function provided to thread is nil")end;ac=bd;bc=coroutine.create(ac)
+cc=true;dc=nil;local cd,dd=coroutine.resume(bc)dc=dd;if not(cd)then
+if(dd~="Terminated")then error(
+"Thread Error Occurred - "..dd)end end
+ad:listenEvent("mouse_click")ad:listenEvent("mouse_up")
+ad:listenEvent("mouse_scroll")ad:listenEvent("mouse_drag")ad:listenEvent("key")
+ad:listenEvent("key_up")ad:listenEvent("char")
+ad:listenEvent("other_event")return ad end,getStatus=function(ad,bd)if(
+bc~=nil)then return coroutine.status(bc)end;return nil end,stop=function(ad,bd)
+cc=false;ad:listenEvent("mouse_click",false)
+ad:listenEvent("mouse_up",false)ad:listenEvent("mouse_scroll",false)
+ad:listenEvent("mouse_drag",false)ad:listenEvent("key",false)
+ad:listenEvent("key_up",false)ad:listenEvent("char",false)
+ad:listenEvent("other_event",false)return ad end,mouseHandler=function(ad,...)
+ad:eventHandler("mouse_click",...)end,mouseUpHandler=function(ad,...)ad:eventHandler("mouse_up",...)end,mouseScrollHandler=function(ad,...)
+ad:eventHandler("mouse_scroll",...)end,mouseDragHandler=function(ad,...)
+ad:eventHandler("mouse_drag",...)end,mouseMoveHandler=function(ad,...)
+ad:eventHandler("mouse_move",...)end,keyHandler=function(ad,...)ad:eventHandler("key",...)end,keyUpHandler=function(ad,...)
+ad:eventHandler("key_up",...)end,charHandler=function(ad,...)ad:eventHandler("char",...)end,eventHandler=function(ad,bd,...)
+db.eventHandler(ad,bd,...)
+if(cc)then
+if(coroutine.status(bc)=="suspended")then if(dc~=nil)then
+if(bd~=dc)then return end;dc=nil end
+local cd,dd=coroutine.resume(bc,bd,...)dc=dd;if not(cd)then if(dd~="Terminated")then
+error("Thread Error Occurred - "..dd)end end else
+ad:stop()end end end}_d.__index=_d;return setmetatable(_d,db)end end
+ba["objects"]["Treeview"]=function(...)local bb=_b("utils")local cb=_b("tHex")
+return
+function(db,_c)
+local ac=_c.getObject("ChangeableObject")(db,_c)local bc="Treeview"local cc={}local dc=colors.black;local _d=colors.lightGray;local ad=true
+local bd="left"local cd,dd=0,0;local __a=true;ac:setSize(16,8)ac:setZIndex(5)
+local function a_a(d_a,_aa)
+d_a=d_a or""_aa=_aa or false;local aaa=false;local baa=nil;local caa={}local daa={}local _ba
+daa={getChildren=function()return caa end,setParent=function(aba)if(
+baa~=nil)then
+baa.removeChild(baa.findChildrenByText(daa.getText()))end;baa=aba;ac:updateDraw()return daa end,getParent=function()return
+baa end,addChild=function(aba,bba)local cba=a_a(aba,bba)cba.setParent(daa)
+table.insert(caa,cba)ac:updateDraw()return cba end,setExpanded=function(aba)if
+(_aa)then aaa=aba end;ac:updateDraw()return daa end,isExpanded=function()return
+aaa end,onSelect=function(...)for aba,bba in pairs(table.pack(...))do if(type(bba)=="function")then
+_ba=bba end end;return daa end,callOnSelect=function()if(
+_ba~=nil)then _ba(daa)end end,setExpandable=function(aba)aba=aba
+ac:updateDraw()return daa end,isExpandable=function()return _aa end,removeChild=function(aba)
+if(type(aba)=="table")then for bba,cba in
+pairs(aba)do if(cba==aba)then aba=bba;break end end end;table.remove(caa,aba)ac:updateDraw()return daa end,findChildrenByText=function(aba)
+local bba={}
+for cba,dba in ipairs(caa)do if string.find(dba.getText(),aba)then
+table.insert(bba,dba)end end;return bba end,getText=function()return
+d_a end,setText=function(aba)d_a=aba;ac:updateDraw()return daa end}return daa end;local b_a=a_a("Root",true)b_a.setExpanded(true)
+local c_a={init=function(d_a)
+local _aa=d_a:getParent()d_a:listenEvent("mouse_click")
+d_a:listenEvent("mouse_scroll")return ac.init(d_a)end,getBase=function(d_a)return
+ac end,getType=function(d_a)return bc end,isType=function(d_a,_aa)
+return bc==_aa or
+ac.isType~=nil and ac.isType(_aa)or false end,setOffset=function(d_a,_aa,aaa)cd=_aa;dd=aaa;return d_a end,getOffset=function(d_a)return
+cd,dd end,setScrollable=function(d_a,_aa)__a=_aa;return d_a end,setSelectionColor=function(d_a,_aa,aaa,baa)dc=_aa or
+d_a:getBackground()
+_d=aaa or d_a:getForeground()ad=baa~=nil and baa or true;d_a:updateDraw()
+return d_a end,getSelectionColor=function(d_a)
+return dc,_d end,isSelectionColorActive=function(d_a)return ad end,getRoot=function(d_a)return b_a end,setRoot=function(d_a,_aa)b_a=_aa
+_aa.setParent(nil)return d_a end,onSelect=function(d_a,...)for _aa,aaa in pairs(table.pack(...))do
+if(type(aaa)==
+"function")then d_a:registerEvent("treeview_select",aaa)end end;return d_a end,selectionHandler=function(d_a,_aa)
+_aa.callOnSelect(_aa)d_a:sendEvent("treeview_select",_aa)return d_a end,mouseHandler=function(d_a,_aa,aaa,baa)
+if
+ac.mouseHandler(d_a,_aa,aaa,baa)then local caa=1 -dd;local daa,_ba=d_a:getAbsolutePosition()
+local aba,bba=d_a:getSize()
+local function cba(dba,_ca)
+if baa==_ba+caa-1 then
+if aaa>=daa and aaa<daa+aba then dba.setExpanded(not
+dba.isExpanded())
+d_a:selectionHandler(dba)d_a:setValue(dba)d_a:updateDraw()return true end end;caa=caa+1
+if dba.isExpanded()then for aca,bca in ipairs(dba.getChildren())do if cba(bca,_ca+1)then return
+true end end end;return false end
+for dba,_ca in ipairs(b_a.getChildren())do if cba(_ca,1)then return true end end end end,scrollHandler=function(d_a,_aa,aaa,baa)
+if
+ac.scrollHandler(d_a,_aa,aaa,baa)then
+if __a then local caa,daa=d_a:getSize()dd=dd+_aa;if dd<0 then dd=0 end
+if _aa>=1 then local _ba=0
+local function aba(bba,cba)
+_ba=_ba+1;if bba.isExpanded()then
+for dba,_ca in ipairs(bba.getChildren())do aba(_ca,cba+1)end end end;for bba,cba in ipairs(b_a.getChildren())do aba(cba,1)end
+if
+_ba>daa then if dd>_ba-daa then dd=_ba-daa end else dd=dd-1 end end;d_a:updateDraw()end;return true end;return false end,draw=function(d_a)
+ac.draw(d_a)
+d_a:addDraw("treeview",function()local _aa=1 -dd;local aaa=d_a:getValue()
+local function baa(caa,daa)
+local _ba,aba=d_a:getSize()
+if _aa>=1 and _aa<=aba then
+local bba=(caa==aaa)and dc or d_a:getBackground()
+local cba=(caa==aaa)and _d or d_a:getForeground()local dba=caa.getText()
+d_a:addBlit(1 +daa+cd,_aa,dba,cb[cba]:rep(#dba),cb[bba]:rep(
+#dba))end;_aa=_aa+1;if caa.isExpanded()then for bba,cba in ipairs(caa.getChildren())do
+baa(cba,daa+1)end end end;for caa,daa in ipairs(b_a.getChildren())do baa(daa,1)end end)end}c_a.__index=c_a;return setmetatable(c_a,ac)end end
+ba["objects"]["Timer"]=function(...)
+return
+function(bb,cb)
+local db=cb.getObject("Object")(bb,cb)local _c="Timer"local ac=0;local bc=0;local cc=0;local dc;local _d=false
+local ad={getType=function(bd)return _c end,setTime=function(bd,cd,dd)ac=cd or 0
+bc=dd or 1;return bd end,start=function(bd)
+if(_d)then os.cancelTimer(dc)end;cc=bc;dc=os.startTimer(ac)_d=true
+bd:listenEvent("other_event")return bd end,isActive=function(bd)return _d end,cancel=function(bd)if(
+dc~=nil)then os.cancelTimer(dc)end;_d=false
+bd:removeEvent("other_event")return bd end,onCall=function(bd,cd)
+bd:registerEvent("timed_event",cd)return bd end,eventHandler=function(bd,cd,...)db.eventHandler(bd,cd,...)
+if
+cd=="timer"and tObj==dc and _d then
+bd:sendEvent("timed_event")if(cc>=1)then cc=cc-1;if(cc>=1)then dc=os.startTimer(ac)end elseif(cc==-1)then
+dc=os.startTimer(ac)end end end}ad.__index=ad;return setmetatable(ad,db)end end
+ba["objects"]["Textfield"]=function(...)local bb=_b("tHex")
+local cb,db,_c,ac,bc=string.rep,string.find,string.gmatch,string.sub,string.len
+return
+function(cc,dc)
+local _d=dc.getObject("ChangeableObject")(cc,dc)local ad="Textfield"local bd,cd,dd,__a=1,1,1,1;local a_a={""}local b_a={""}local c_a={""}local d_a={}local _aa={}
+local aaa,baa,caa,daa;local _ba,aba=colors.lightBlue,colors.black;_d:setSize(30,12)
+_d:setZIndex(5)
+local function bba()if
+(aaa~=nil)and(baa~=nil)and(caa~=nil)and(daa~=nil)then return true end;return false end
+local function cba()local dca,_da,ada,bda=aaa,baa,caa,daa
+if bba()then
+if aaa<baa and caa<=daa then dca=aaa;_da=baa;if caa<daa then
+ada=caa;bda=daa else ada=daa;bda=caa end elseif aaa>baa and caa>=daa then
+dca=baa;_da=aaa;if caa>daa then ada=daa;bda=caa else ada=caa;bda=daa end elseif caa>daa then
+dca=baa;_da=aaa;ada=daa;bda=caa end;return dca,_da,ada,bda end end
+local function dba(dca)local _da,ada,bda,cda=cba(dca)local dda=a_a[bda]local __b=a_a[cda]
+a_a[bda]=
+dda:sub(1,_da-1)..__b:sub(ada+1,__b:len())b_a[bda]=b_a[bda]:sub(1,_da-1)..
+b_a[cda]:sub(ada+1,b_a[cda]:len())
+c_a[bda]=c_a[bda]:sub(1,
+_da-1)..c_a[cda]:sub(ada+1,c_a[cda]:len())
+for i=cda,bda+1,-1 do if i~=bda then table.remove(a_a,i)table.remove(b_a,i)
+table.remove(c_a,i)end end;dd,__a=_da,bda;aaa,baa,caa,daa=nil,nil,nil,nil;return dca end
+local function _ca(dca,_da)local ada={}
+if(dca:len()>0)then
+for bda in _c(dca,_da)do local cda,dda=db(dca,bda)
+if
+(cda~=nil)and(dda~=nil)then table.insert(ada,cda)table.insert(ada,dda)
+local __b=ac(dca,1,(cda-1))local a_b=ac(dca,dda+1,dca:len())dca=__b.. (":"):rep(bda:len())..
+a_b end end end;return ada end
+local function aca(dca,_da)_da=_da or __a
+local ada=bb[dca:getForeground()]:rep(c_a[_da]:len())
+local bda=bb[dca:getBackground()]:rep(b_a[_da]:len())
+for cda,dda in pairs(_aa)do local __b=_ca(a_a[_da],dda[1])
+if(#__b>0)then
+for x=1,#__b/2 do
+local a_b=x*2 -1;if(dda[2]~=nil)then
+ada=ada:sub(1,__b[a_b]-1)..bb[dda[2]]:rep(__b[a_b+1]- (
+__b[a_b]-1))..
+ada:sub(__b[a_b+1]+1,ada:len())end;if
+(dda[3]~=nil)then
+bda=bda:sub(1,__b[a_b]-1)..
+
+bb[dda[3]]:rep(__b[a_b+1]- (__b[a_b]-1))..bda:sub(__b[a_b+1]+1,bda:len())end end end end
+for cda,dda in pairs(d_a)do
+for __b,a_b in pairs(dda)do local b_b=_ca(a_a[_da],a_b)
+if(#b_b>0)then for x=1,#b_b/2 do
+local c_b=x*2 -1
+ada=ada:sub(1,b_b[c_b]-1)..
+
+bb[cda]:rep(b_b[c_b+1]- (b_b[c_b]-1))..ada:sub(b_b[c_b+1]+1,ada:len())end end end end;c_a[_da]=ada;b_a[_da]=bda;dca:updateDraw()end;local function bca(dca)for n=1,#a_a do aca(dca,n)end end
+local cca={getType=function(dca)return ad end,setBackground=function(dca,_da)
+_d.setBackground(dca,_da)bca(dca)return dca end,setForeground=function(dca,_da)
+_d.setForeground(dca,_da)bca(dca)return dca end,setSelection=function(dca,_da,ada)aba=_da or aba
+_ba=ada or _ba;return dca end,getSelection=function(dca)return aba,_ba end,getLines=function(dca)return a_a end,getLine=function(dca,_da)return
+a_a[_da]end,editLine=function(dca,_da,ada)a_a[_da]=ada or a_a[_da]
+aca(dca,_da)dca:updateDraw()return dca end,clear=function(dca)
+a_a={""}b_a={""}c_a={""}aaa,baa,caa,daa=nil,nil,nil,nil;bd,cd,dd,__a=1,1,1,1
+dca:updateDraw()return dca end,addLine=function(dca,_da,ada)
+if(_da~=nil)then
+local bda=dca:getBackground()local cda=dca:getForeground()
+if(#a_a==1)and(a_a[1]=="")then
+a_a[1]=_da;b_a[1]=bb[bda]:rep(_da:len())
+c_a[1]=bb[cda]:rep(_da:len())aca(dca,1)return dca end
+if(ada~=nil)then table.insert(a_a,ada,_da)
+table.insert(b_a,ada,bb[bda]:rep(_da:len()))
+table.insert(c_a,ada,bb[cda]:rep(_da:len()))else table.insert(a_a,_da)
+table.insert(b_a,bb[bda]:rep(_da:len()))
+table.insert(c_a,bb[cda]:rep(_da:len()))end end;aca(dca,ada or#a_a)dca:updateDraw()return dca end,addKeywords=function(dca,_da,ada)if(
+d_a[_da]==nil)then d_a[_da]={}end;for bda,cda in pairs(ada)do
+table.insert(d_a[_da],cda)end;dca:updateDraw()return dca end,addRule=function(dca,_da,ada,bda)
+table.insert(_aa,{_da,ada,bda})dca:updateDraw()return dca end,editRule=function(dca,_da,ada,bda)for cda,dda in
+pairs(_aa)do
+if(dda[1]==_da)then _aa[cda][2]=ada;_aa[cda][3]=bda end end;dca:updateDraw()return dca end,removeRule=function(dca,_da)
+for ada,bda in
+pairs(_aa)do if(bda[1]==_da)then table.remove(_aa,ada)end end;dca:updateDraw()return dca end,setKeywords=function(dca,_da,ada)
+d_a[_da]=ada;dca:updateDraw()return dca end,removeLine=function(dca,_da)
+if(#a_a>1)then table.remove(a_a,
+_da or#a_a)
+table.remove(b_a,_da or#b_a)table.remove(c_a,_da or#c_a)else a_a={""}b_a={""}c_a={""}end;dca:updateDraw()return dca end,getTextCursor=function(dca)return
+dd,__a end,getOffset=function(dca)return cd,bd end,setOffset=function(dca,_da,ada)cd=_da or cd;bd=ada or bd
+dca:updateDraw()return dca end,getFocusHandler=function(dca)
+_d.getFocusHandler(dca)local _da,ada=dca:getPosition()
+dca:getParent():setCursor(true,_da+dd-cd,
+ada+__a-bd,dca:getForeground())end,loseFocusHandler=function(dca)
+_d.loseFocusHandler(dca)dca:getParent():setCursor(false)end,keyHandler=function(dca,_da)
+if
+(_d.keyHandler(dca,event,_da))then local ada=dca:getParent()local bda,cda=dca:getPosition()
+local dda,__b=dca:getSize()
+if(_da==keys.backspace)then
+if(bba())then dba(dca)else
+if(a_a[__a]=="")then
+if(__a>1)then
+table.remove(a_a,__a)table.remove(c_a,__a)table.remove(b_a,__a)dd=
+a_a[__a-1]:len()+1;cd=dd-dda+1;if(cd<1)then cd=1 end;__a=__a-1 end elseif(dd<=1)then
+if(__a>1)then dd=a_a[__a-1]:len()+1;cd=dd-dda+1;if(cd<
+1)then cd=1 end;a_a[__a-1]=a_a[__a-1]..a_a[__a]c_a[
+__a-1]=c_a[__a-1]..c_a[__a]b_a[__a-1]=b_a[__a-1]..
+b_a[__a]table.remove(a_a,__a)
+table.remove(c_a,__a)table.remove(b_a,__a)__a=__a-1 end else a_a[__a]=a_a[__a]:sub(1,dd-2)..
+a_a[__a]:sub(dd,a_a[__a]:len())
+c_a[__a]=c_a[__a]:sub(1,
+dd-2)..c_a[__a]:sub(dd,c_a[__a]:len())b_a[__a]=b_a[__a]:sub(1,dd-2)..
+b_a[__a]:sub(dd,b_a[__a]:len())
+if(dd>1)then dd=dd-1 end;if(cd>1)then if(dd<cd)then cd=cd-1 end end end;if(__a<bd)then bd=bd-1 end end;aca(dca)dca:setValue("")elseif(_da==keys.delete)then
+if(bba())then dba(dca)else
+if(dd>
+a_a[__a]:len())then
+if(a_a[__a+1]~=nil)then
+a_a[__a]=a_a[__a]..a_a[__a+1]table.remove(a_a,__a+1)table.remove(b_a,__a+1)table.remove(c_a,
+__a+1)end else a_a[__a]=a_a[__a]:sub(1,dd-1)..
+a_a[__a]:sub(dd+1,a_a[__a]:len())
+c_a[__a]=c_a[__a]:sub(1,
+dd-1)..c_a[__a]:sub(dd+1,c_a[__a]:len())b_a[__a]=b_a[__a]:sub(1,dd-1)..
+b_a[__a]:sub(dd+1,b_a[__a]:len())end end;aca(dca)elseif(_da==keys.enter)then if(bba())then dba(dca)end
+table.insert(a_a,__a+1,a_a[__a]:sub(dd,a_a[__a]:len()))
+table.insert(c_a,__a+1,c_a[__a]:sub(dd,c_a[__a]:len()))
+table.insert(b_a,__a+1,b_a[__a]:sub(dd,b_a[__a]:len()))a_a[__a]=a_a[__a]:sub(1,dd-1)
+c_a[__a]=c_a[__a]:sub(1,dd-1)b_a[__a]=b_a[__a]:sub(1,dd-1)__a=__a+1;dd=1;cd=1;if
+(__a-bd>=__b)then bd=bd+1 end;dca:setValue("")elseif(_da==keys.up)then
+aaa,caa,baa,daa=nil,nil,nil,nil
+if(__a>1)then __a=__a-1;if(dd>a_a[__a]:len()+1)then dd=
+a_a[__a]:len()+1 end;if(cd>1)then if(dd<cd)then cd=dd-dda+1;if
+(cd<1)then cd=1 end end end;if(
+bd>1)then if(__a<bd)then bd=bd-1 end end end elseif(_da==keys.down)then aaa,caa,baa,daa=nil,nil,nil,nil
+if(__a<#a_a)then __a=__a+1
+if(dd>
+a_a[__a]:len()+1)then dd=a_a[__a]:len()+1 end
+if(cd>1)then if(dd<cd)then cd=dd-dda+1;if(cd<1)then cd=1 end end end;if(__a>=bd+__b)then bd=bd+1 end end elseif(_da==keys.right)then aaa,caa,baa,daa=nil,nil,nil,nil;dd=dd+1
+if(__a<#a_a)then if(dd>
+a_a[__a]:len()+1)then dd=1;__a=__a+1 end elseif(dd>
+a_a[__a]:len())then dd=a_a[__a]:len()+1 end;if(dd<1)then dd=1 end
+if(dd<cd)or(dd>=dda+cd)then cd=dd-dda+1 end;if(cd<1)then cd=1 end elseif(_da==keys.left)then aaa,caa,baa,daa=nil,nil,nil,nil;dd=dd-1
+if(dd>=1)then if(
+dd<cd)or(dd>=dda+cd)then cd=dd end end;if(__a>1)then if(dd<1)then __a=__a-1;dd=a_a[__a]:len()+1
+cd=dd-dda+1 end end
+if(dd<1)then dd=1 end;if(cd<1)then cd=1 end elseif(_da==keys.tab)then
+if(dd%3 ==0)then
+a_a[__a]=
+a_a[__a]:sub(1,dd-1).." "..a_a[__a]:sub(dd,a_a[__a]:len())
+c_a[__a]=c_a[__a]:sub(1,dd-1)..bb[dca:getForeground()]..
+c_a[__a]:sub(dd,c_a[__a]:len())
+b_a[__a]=b_a[__a]:sub(1,dd-1)..bb[dca:getBackground()]..
+b_a[__a]:sub(dd,b_a[__a]:len())dd=dd+1 end
+while dd%3 ~=0 do
+a_a[__a]=a_a[__a]:sub(1,dd-1).." "..
+a_a[__a]:sub(dd,a_a[__a]:len())
+c_a[__a]=c_a[__a]:sub(1,dd-1)..bb[dca:getForeground()]..
+c_a[__a]:sub(dd,c_a[__a]:len())
+b_a[__a]=b_a[__a]:sub(1,dd-1)..bb[dca:getBackground()]..
+b_a[__a]:sub(dd,b_a[__a]:len())dd=dd+1 end end
+if not
+( (bda+dd-cd>=bda and bda+dd-cd<bda+dda)and(
+cda+__a-bd>=cda and cda+__a-bd<cda+__b))then cd=math.max(1,
+a_a[__a]:len()-dda+1)
+bd=math.max(1,__a-__b+1)end;local a_b=
+(dd<=a_a[__a]:len()and dd-1 or a_a[__a]:len())- (cd-1)
+if(a_b>
+dca:getX()+dda-1)then a_b=dca:getX()+dda-1 end
+local b_b=(__a-bd<__b and __a-bd or __a-bd-1)if(a_b<1)then a_b=0 end
+ada:setCursor(true,bda+a_b,cda+b_b,dca:getForeground())dca:updateDraw()return true end end,charHandler=function(dca,_da)
+if
+(_d.charHandler(dca,_da))then local ada=dca:getParent()local bda,cda=dca:getPosition()
+local dda,__b=dca:getSize()if(bba())then dba(dca)end
+a_a[__a]=a_a[__a]:sub(1,dd-1).._da..
+a_a[__a]:sub(dd,a_a[__a]:len())
+c_a[__a]=c_a[__a]:sub(1,dd-1)..bb[dca:getForeground()]..
+c_a[__a]:sub(dd,c_a[__a]:len())
+b_a[__a]=b_a[__a]:sub(1,dd-1)..bb[dca:getBackground()]..
+b_a[__a]:sub(dd,b_a[__a]:len())dd=dd+1;if(dd>=dda+cd)then cd=cd+1 end;aca(dca)
+dca:setValue("")
+if not
+( (bda+dd-cd>=bda and bda+dd-cd<bda+dda)and(
+cda+__a-bd>=cda and cda+__a-bd<cda+__b))then cd=math.max(1,
+a_a[__a]:len()-dda+1)
+bd=math.max(1,__a-__b+1)end;local a_b=
+(dd<=a_a[__a]:len()and dd-1 or a_a[__a]:len())- (cd-1)
+if(a_b>
+dca:getX()+dda-1)then a_b=dca:getX()+dda-1 end
+local b_b=(__a-bd<__b and __a-bd or __a-bd-1)if(a_b<1)then a_b=0 end
+ada:setCursor(true,bda+a_b,cda+b_b,dca:getForeground())dca:updateDraw()return true end end,dragHandler=function(dca,_da,ada,bda)
+if
+(_d.dragHandler(dca,_da,ada,bda))then local cda=dca:getParent()local dda,__b=dca:getAbsolutePosition()
+local a_b,b_b=dca:getPosition()local c_b,d_b=dca:getSize()
+if(a_a[bda-__b+bd]~=nil)then
+if
+a_b<=ada-dda+cd and a_b+c_b>ada-dda+cd then dd=ada-dda+cd;__a=
+bda-__b+bd;if dd>a_a[__a]:len()then
+dd=a_a[__a]:len()+1 end;baa=dd;daa=__a
+if dd<cd then cd=dd-1;if cd<1 then cd=1 end end
+cda:setCursor(not bba(),a_b+dd-cd,b_b+__a-bd,dca:getForeground())dca:updateDraw()end end;return true end end,scrollHandler=function(dca,_da,ada,bda)
+if
+(_d.scrollHandler(dca,_da,ada,bda))then local cda=dca:getParent()local dda,__b=dca:getAbsolutePosition()
+local a_b,b_b=dca:getPosition()local c_b,d_b=dca:getSize()bd=bd+_da;if(bd>#a_a- (d_b-1))then
+bd=#a_a- (d_b-1)end;if(bd<1)then bd=1 end
+if(dda+dd-cd>=dda and dda+dd-cd<
+dda+c_b)and(b_b+__a-bd>=b_b and
+b_b+__a-bd<b_b+d_b)then
+cda:setCursor(not bba(),
+a_b+dd-cd,b_b+__a-bd,dca:getForeground())else cda:setCursor(false)end;dca:updateDraw()return true end end,mouseHandler=function(dca,_da,ada,bda)
+if
+(_d.mouseHandler(dca,_da,ada,bda))then local cda=dca:getParent()local dda,__b=dca:getAbsolutePosition()
+local a_b,b_b=dca:getPosition()
+if(a_a[bda-__b+bd]~=nil)then dd=ada-dda+cd;__a=bda-__b+bd;baa=
+nil;daa=nil;aaa=dd;caa=__a;if(dd>a_a[__a]:len())then dd=
+a_a[__a]:len()+1;aaa=dd end;if(dd<cd)then cd=dd-1
+if(cd<1)then cd=1 end end;dca:updateDraw()end
+cda:setCursor(true,a_b+dd-cd,b_b+__a-bd,dca:getForeground())return true end end,mouseUpHandler=function(dca,_da,ada,bda)
+if
+(_d.mouseUpHandler(dca,_da,ada,bda))then local cda,dda=dca:getAbsolutePosition()
+local __b,a_b=dca:getPosition()
+if(a_a[bda-dda+bd]~=nil)then baa=ada-cda+cd
+daa=bda-dda+bd
+if(baa>a_a[daa]:len())then baa=a_a[daa]:len()+1 end
+if(aaa==baa)and(caa==daa)then aaa,baa,caa,daa=nil,nil,nil,nil end;dca:updateDraw()end;return true end end,eventHandler=function(dca,_da,ada,bda,cda,dda)
+if
+(_d.eventHandler(dca,_da,ada,bda,cda,dda))then
+if(_da=="paste")then
+if(dca:isFocused())then local __b=dca:getParent()
+local a_b,b_b=dca:getForeground(),dca:getBackground()local c_b,d_b=dca:getSize()
+a_a[__a]=a_a[__a]:sub(1,dd-1)..ada..
+a_a[__a]:sub(dd,a_a[__a]:len())
+c_a[__a]=c_a[__a]:sub(1,dd-1)..bb[a_b]:rep(ada:len())..
+c_a[__a]:sub(dd,c_a[__a]:len())
+b_a[__a]=b_a[__a]:sub(1,dd-1)..bb[b_b]:rep(ada:len())..
+b_a[__a]:sub(dd,b_a[__a]:len())dd=dd+ada:len()if(dd>=c_b+cd)then cd=(dd+1)-c_b end
+local _ab,aab=dca:getPosition()
+__b:setCursor(true,_ab+dd-cd,aab+__a-bd,a_b)aca(dca)dca:updateDraw()end end end end,draw=function(dca)
+_d.draw(dca)
+dca:addDraw("textfield",function()local _da=dca:getParent()local ada,bda=dca:getPosition()
+local cda,dda=dca:getSize()local __b=bb[dca:getBackground()]
+local a_b=bb[dca:getForeground()]
+for n=1,dda do local b_b=""local c_b=""local d_b=""if a_a[n+bd-1]then b_b=a_a[n+bd-1]
+d_b=c_a[n+bd-1]c_b=b_a[n+bd-1]end
+b_b=ac(b_b,cd,cda+cd-1)c_b=cb(__b,cda)d_b=cb(a_b,cda)dca:addText(1,n,b_b)
+dca:addBG(1,n,c_b)dca:addFG(1,n,d_b)dca:addBlit(1,n,b_b,d_b,c_b)end
+if aaa and baa and caa and daa then local b_b,c_b,d_b,_ab=cba(dca)
+for n=d_b,_ab do
+local aab=#a_a[n]local bab=0
+if n==d_b and n==_ab then bab=b_b-1
+aab=aab- (b_b-1)- (aab-c_b)elseif n==_ab then aab=aab- (aab-c_b)elseif n==d_b then aab=aab- (b_b-1)bab=b_b-1 end;dca:addBG(1 +bab,n,cb(bb[_ba],aab))
+dca:addFG(1 +bab,n,cb(bb[aba],aab))end end end)end,load=function(dca)
+dca:listenEvent("mouse_click")dca:listenEvent("mouse_up")
+dca:listenEvent("mouse_scroll")dca:listenEvent("mouse_drag")
+dca:listenEvent("key")dca:listenEvent("char")
+dca:listenEvent("other_event")end}cca.__index=cca;return setmetatable(cca,_d)end end;ba["libraries"]={}
+ba["libraries"]["basaltLogs"]=function(...)local bb=""
+local cb="basaltLog.txt"local db="Debug"
+fs.delete(bb~=""and bb.."/"..cb or cb)
+local _c={__call=function(ac,bc,cc)if(bc==nil)then return end
+local dc=bb~=""and bb.."/"..cb or cb
+local _d=fs.open(dc,fs.exists(dc)and"a"or"w")
+_d.writeLine("[Basalt]["..
+os.date("%Y-%m-%d %H:%M:%S").."][".. (cc and cc or db)..
+"]: "..tostring(bc))_d.close()end}return setmetatable({},_c)end
+ba["libraries"]["process"]=function(...)local bb={}local cb={}local db=0
+local _c=dofile("rom/modules/main/cc/require.lua").make
+function cb:new(ac,bc,cc,...)local dc={...}
+local _d=setmetatable({path=ac},{__index=self})_d.window=bc;bc.current=term.current;bc.redirect=term.redirect
+_d.processId=db
+if(type(ac)=="string")then
+_d.coroutine=coroutine.create(function()
+local ad=shell.resolveProgram(ac)local bd=setmetatable(cc,{__index=_ENV})bd.shell=shell
+bd.basaltProgram=true;bd.arg={[0]=ac,table.unpack(dc)}
+if(ad==nil)then error("The path "..ac..
+" does not exist!")end;bd.require,bd.package=_c(bd,fs.getDir(ad))
+if(fs.exists(ad))then
+local cd=fs.open(ad,"r")local dd=cd.readAll()cd.close()local __a=load(dd,ac,"bt",bd)if
+(__a~=nil)then return __a()end end end)elseif(type(ac)=="function")then
+_d.coroutine=coroutine.create(function()
+ac(table.unpack(dc))end)else return end;bb[db]=_d;db=db+1;return _d end
+function cb:resume(ac,...)local bc=term.current()term.redirect(self.window)
+if(
+self.filter~=nil)then if(ac~=self.filter)then return end;self.filter=nil end;local cc,dc=coroutine.resume(self.coroutine,ac,...)if cc then
+self.filter=dc else printError(dc)end;term.redirect(bc)
+return cc,dc end
+function cb:isDead()
+if(self.coroutine~=nil)then
+if
+(coroutine.status(self.coroutine)=="dead")then table.remove(bb,self.processId)return true end else return true end;return false end
+function cb:getStatus()if(self.coroutine~=nil)then
+return coroutine.status(self.coroutine)end;return nil end
+function cb:start()coroutine.resume(self.coroutine)end;return cb end
+ba["libraries"]["tHex"]=function(...)local bb={}
+for i=0,15 do bb[2 ^i]=("%x"):format(i)end;return bb end
+ba["libraries"]["images"]=function(...)local bb,cb=string.sub,math.floor;local function db(bd)return
+{[1]={{},{},paintutils.loadImage(bd)}},"bimg"end;local function _c(bd)return
+paintutils.loadImage(bd),"nfp"end
+local function ac(bd,cd)
+local dd=fs.open(bd,cd and"rb"or"r")if(dd==nil)then
+error("Path - "..bd.." doesn't exist!")end
+local __a=textutils.unserialize(dd.readAll())dd.close()if(__a~=nil)then return __a,"bimg"end end;local function bc(bd)end;local function cc(bd)end;local function dc(bd,cd,dd)
+if(bb(bd,-4)==".bimg")then return ac(bd,dd)elseif
+(bb(bd,-3)==".bbf")then return bc(bd,dd)else return _c(bd,dd)end end;local function _d(bd)
+if
+(bd:find(".bimg"))then return ac(bd)elseif(bd:find(".bbf"))then return cc(bd)else return db(bd)end end
+local function ad(bd,cd,dd)local __a,a_a=bd.width or#
+bd[1][1][1],bd.height or#bd[1]
+local b_a={}
+for c_a,d_a in pairs(bd)do
+if(type(c_a)=="number")then local _aa={}
+for y=1,dd do local aaa,baa,caa="","",""
+local daa=cb(y/dd*a_a+0.5)
+if(d_a[daa]~=nil)then
+for x=1,cd do local _ba=cb(x/cd*__a+0.5)aaa=aaa..
+bb(d_a[daa][1],_ba,_ba)
+baa=baa..bb(d_a[daa][2],_ba,_ba)caa=caa..bb(d_a[daa][3],_ba,_ba)end;table.insert(_aa,{aaa,baa,caa})end end;table.insert(b_a,c_a,_aa)else b_a[c_a]=d_a end end;b_a.width=cd;b_a.height=dd;return b_a end
+return{loadNFP=_c,loadBIMG=ac,loadImage=dc,resizeBIMG=ad,loadImageAsBimg=_d}end
+ba["libraries"]["utils"]=function(...)local bb=_b("tHex")
+local cb,db,_c,ac,bc,cc=string.sub,string.find,string.reverse,string.rep,table.insert,string.len
+local function dc(dd,__a)local a_a={}if dd==""or __a==""then return a_a end;local b_a=1
+local c_a,d_a=db(dd,__a,b_a)while c_a do bc(a_a,cb(dd,b_a,c_a-1))b_a=d_a+1
+c_a,d_a=db(dd,__a,b_a)end;bc(a_a,cb(dd,b_a))return a_a end;local function _d(dd)return dd:gsub("{[^}]+}","")end
+local function ad(dd,__a)dd=_d(dd)if
+(dd=="")or(__a==0)then return{""}end;local a_a=dc(dd,"\n")local b_a={}
+for c_a,d_a in
+pairs(a_a)do
+if#d_a==0 then table.insert(b_a,"")else
+while#d_a>__a do local _aa=__a;for i=__a,1,-1 do if
+cb(d_a,i,i)==" "then _aa=i;break end end
+if _aa==__a then local aaa=
+cb(d_a,1,_aa-1).."-"table.insert(b_a,aaa)
+d_a=cb(d_a,_aa)else local aaa=cb(d_a,1,_aa-1)table.insert(b_a,aaa)
+d_a=cb(d_a,_aa+1)end;if#d_a<=__a then break end end;if#d_a>0 then table.insert(b_a,d_a)end end end;return b_a end
+local function bd(dd)local __a={}local a_a=1;local b_a=1
+while a_a<=#dd do local c_a,d_a;local _aa,aaa;local baa,caa
+for aba,bba in pairs(colors)do
+local cba="{fg:"..aba.."}"local dba="{bg:"..aba.."}"local _ca,aca=dd:find(cba,a_a)
+local bca,cca=dd:find(dba,a_a)
+if _ca and(not c_a or _ca<c_a)then c_a=_ca;_aa=aba;baa=aca end
+if bca and(not d_a or bca<d_a)then d_a=bca;aaa=aba;caa=cca end end;local daa
+if c_a and(not d_a or c_a<d_a)then daa=c_a elseif d_a then daa=d_a else daa=#dd+1 end;local _ba=dd:sub(a_a,daa-1)
+if#_ba>0 then
+table.insert(__a,{color=nil,bgColor=nil,text=_ba,position=b_a})b_a=b_a+#_ba;a_a=a_a+#_ba end
+if c_a and(not d_a or c_a<d_a)then
+table.insert(__a,{color=_aa,bgColor=nil,text="",position=b_a})a_a=baa+1 elseif d_a then
+table.insert(__a,{color=nil,bgColor=aaa,text="",position=b_a})a_a=caa+1 else break end end;return __a end
+local function cd(dd,__a)local a_a=bd(dd)local b_a={}local c_a,d_a=1,1;local _aa,aaa;local function baa(caa)
+table.insert(b_a,{x=c_a,y=d_a,text=caa.text,color=caa.color or _aa,bgColor=
+caa.bgColor or aaa})end
+for caa,daa in ipairs(a_a)do
+if
+daa.color then _aa=daa.color elseif daa.bgColor then aaa=daa.bgColor else local _ba=dc(daa.text," ")
+for aba,bba in
+ipairs(_ba)do local cba=#bba
+if aba>1 then if c_a+1 +cba<=__a then baa({text=" "})c_a=c_a+1 else c_a=1;d_a=
+d_a+1 end end;while cba>0 do local dba=bba:sub(1,__a-c_a+1)
+bba=bba:sub(__a-c_a+2)cba=#bba;baa({text=dba})
+if cba>0 then c_a=1;d_a=d_a+1 else c_a=c_a+#dba end end end end;if c_a>__a then c_a=1;d_a=d_a+1 end end;return b_a end
+return
+{getTextHorizontalAlign=function(dd,__a,a_a,b_a)dd=cb(dd,1,__a)local c_a=__a-cc(dd)
+if(a_a=="right")then
+dd=ac(b_a or" ",c_a)..dd elseif(a_a=="center")then
+dd=ac(b_a or" ",math.floor(c_a/2))..dd..ac(b_a or" ",math.floor(
+c_a/2))
+dd=dd.. (cc(dd)<__a and(b_a or" ")or"")else dd=dd..ac(b_a or" ",c_a)end;return dd end,getTextVerticalAlign=function(dd,__a)
+local a_a=0
+if(__a=="center")then a_a=math.ceil(dd/2)if(a_a<1)then a_a=1 end end;if(__a=="bottom")then a_a=dd end;if(a_a<1)then a_a=1 end;return a_a end,orderedTable=function(dd)
+local __a={}for a_a,b_a in pairs(dd)do __a[#__a+1]=b_a end;return __a end,rpairs=function(dd)return
+function(__a,a_a)a_a=
+a_a-1;if a_a~=0 then return a_a,__a[a_a]end end,dd,#dd+1 end,tableCount=function(dd)
+local __a=0
+if(dd~=nil)then for a_a,b_a in pairs(dd)do __a=__a+1 end end;return __a end,splitString=dc,removeTags=_d,wrapText=ad,xmlValue=function(dd,__a)local a_a;if(type(__a)~=
+"table")then return end
+if(__a[dd]~=nil)then if
+(type(__a[dd])=="table")then
+if(__a[dd].value~=nil)then a_a=__a[dd]:value()end end end;if(a_a==nil)then a_a=__a["@"..dd]end
+if(a_a=="true")then a_a=true elseif
+(a_a=="false")then a_a=false elseif(tonumber(a_a)~=nil)then a_a=tonumber(a_a)end;return a_a end,convertRichText=bd,writeRichText=function(dd,__a,a_a,b_a)
+local c_a=bd(b_a)if(#c_a==0)then dd:addText(__a,a_a,b_a)return end
+local d_a,_aa=dd:getForeground(),dd:getBackground()
+for aaa,baa in pairs(c_a)do
+dd:addText(__a+baa.position-1,a_a,baa.text)
+if(baa.color~=nil)then
+dd:addFG(__a+baa.position-1,a_a,bb[colors[baa.color]]:rep(
+#baa.text))d_a=colors[baa.color]else dd:addFG(__a+baa.position-1,a_a,bb[d_a]:rep(#
+baa.text))end
+if(baa.bgColor~=nil)then
+dd:addBG(__a+baa.position-1,a_a,bb[colors[baa.bgColor]]:rep(
+#baa.text))_aa=colors[baa.bgColor]else if(_aa~=false)then
+dd:addBG(__a+baa.position-1,a_a,bb[_aa]:rep(
+#baa.text))end end end end,wrapRichText=cd,writeWrappedText=function(dd,__a,a_a,b_a,c_a,d_a)
+local _aa=cd(b_a,c_a)
+for aaa,baa in pairs(_aa)do if(baa.y>d_a)then break end
+if(baa.text~=nil)then dd:addText(__a+baa.x-1,a_a+
+baa.y-1,baa.text)end;if(baa.color~=nil)then
+dd:addFG(__a+baa.x-1,a_a+baa.y-1,bb[colors[baa.color]]:rep(
+#baa.text))end;if(baa.bgColor~=nil)then
+dd:addBG(__a+
+baa.x-1,a_a+baa.y-1,bb[colors[baa.bgColor]]:rep(#
+baa.text))end end end,uuid=function()
+return
+string.gsub(string.format('%x-%x-%x-%x-%x',math.random(0,0xffff),math.random(0,0xffff),math.random(0,0xffff),
+math.random(0,0x0fff)+0x4000,math.random(0,0x3fff)+0x8000),' ','0')end}end
+ba["libraries"]["basaltDraw"]=function(...)local bb=_b("tHex")local cb=_b("utils")
+local db=cb.splitString;local _c,ac=string.sub,string.rep
+return
+function(bc)local cc=bc or term.current()
+local dc;local _d,ad=cc.getSize()local bd={}local cd={}local dd={}local __a;local a_a={}
+local function b_a()__a=ac(" ",_d)for n=0,15 do
+local daa=2 ^n;local _ba=bb[daa]a_a[daa]=ac(_ba,_d)end end;b_a()
+local function c_a()b_a()local daa=__a;local _ba=a_a[colors.white]
+local aba=a_a[colors.black]
+for currentY=1,ad do
+bd[currentY]=_c(bd[currentY]==nil and daa or bd[currentY]..daa:sub(1,_d-
+bd[currentY]:len()),1,_d)
+dd[currentY]=_c(dd[currentY]==nil and _ba or dd[currentY].._ba:sub(1,_d-
+dd[currentY]:len()),1,_d)
+cd[currentY]=_c(cd[currentY]==nil and aba or cd[currentY]..aba:sub(1,_d-
+cd[currentY]:len()),1,_d)end end;c_a()
+local function d_a(daa,_ba,aba,bba,cba)
+if#aba==#bba and#aba==#cba then
+if _ba>=1 and _ba<=ad then
+if
+daa+#aba>0 and daa<=_d then local dba,_ca,aca;local bca,cca,dca=bd[_ba],dd[_ba],cd[_ba]
+local _da,ada=1,#aba
+if daa<1 then _da=1 -daa+1;ada=_d-daa+1 elseif daa+#aba>_d then ada=_d-daa+1 end;dba=_c(bca,1,daa-1).._c(aba,_da,ada)_ca=
+_c(cca,1,daa-1).._c(bba,_da,ada)aca=_c(dca,1,daa-1)..
+_c(cba,_da,ada)
+if daa+#aba<=_d then dba=dba..
+_c(bca,daa+#aba,_d)
+_ca=_ca.._c(cca,daa+#aba,_d)aca=aca.._c(dca,daa+#aba,_d)end;bd[_ba],dd[_ba],cd[_ba]=dba,_ca,aca end end end end
+local function _aa(daa,_ba,aba)
+if _ba>=1 and _ba<=ad then
+if daa+#aba>0 and daa<=_d then local bba;local cba=bd[_ba]
+local dba,_ca=1,#aba
+if daa<1 then dba=1 -daa+1;_ca=_d-daa+1 elseif daa+#aba>_d then _ca=_d-daa+1 end;bba=_c(cba,1,daa-1).._c(aba,dba,_ca)
+if
+daa+#aba<=_d then bba=bba.._c(cba,daa+#aba,_d)end;bd[_ba]=bba end end end
+local function aaa(daa,_ba,aba)
+if _ba>=1 and _ba<=ad then
+if daa+#aba>0 and daa<=_d then local bba;local cba=cd[_ba]
+local dba,_ca=1,#aba
+if daa<1 then dba=1 -daa+1;_ca=_d-daa+1 elseif daa+#aba>_d then _ca=_d-daa+1 end;bba=_c(cba,1,daa-1).._c(aba,dba,_ca)
+if
+daa+#aba<=_d then bba=bba.._c(cba,daa+#aba,_d)end;cd[_ba]=bba end end end
+local function baa(daa,_ba,aba)
+if _ba>=1 and _ba<=ad then
+if daa+#aba>0 and daa<=_d then local bba;local cba=dd[_ba]
+local dba,_ca=1,#aba
+if daa<1 then dba=1 -daa+1;_ca=_d-daa+1 elseif daa+#aba>_d then _ca=_d-daa+1 end;bba=_c(cba,1,daa-1).._c(aba,dba,_ca)
+if
+daa+#aba<=_d then bba=bba.._c(cba,daa+#aba,_d)end;dd[_ba]=bba end end end
+local caa={setSize=function(daa,_ba)_d,ad=daa,_ba;c_a()end,setMirror=function(daa)dc=daa end,setBG=function(daa,_ba,aba)
+aaa(daa,_ba,aba)end,setText=function(daa,_ba,aba)_aa(daa,_ba,aba)end,setFG=function(daa,_ba,aba)
+baa(daa,_ba,aba)end,blit=function(daa,_ba,aba,bba,cba)d_a(daa,_ba,aba,bba,cba)end,drawBackgroundBox=function(daa,_ba,aba,bba,cba)
+local dba=ac(bb[cba],aba)for n=1,bba do aaa(daa,_ba+ (n-1),dba)end end,drawForegroundBox=function(daa,_ba,aba,bba,cba)
+local dba=ac(bb[cba],aba)for n=1,bba do baa(daa,_ba+ (n-1),dba)end end,drawTextBox=function(daa,_ba,aba,bba,cba)
+local dba=ac(cba,aba)for n=1,bba do _aa(daa,_ba+ (n-1),dba)end end,update=function()
+local daa,_ba=cc.getCursorPos()local aba=false
+if(cc.getCursorBlink~=nil)then aba=cc.getCursorBlink()end;cc.setCursorBlink(false)if(dc~=nil)then
+dc.setCursorBlink(false)end
+for n=1,ad do cc.setCursorPos(1,n)
+cc.blit(bd[n],dd[n],cd[n])if(dc~=nil)then dc.setCursorPos(1,n)
+dc.blit(bd[n],dd[n],cd[n])end end;cc.setBackgroundColor(colors.black)
+cc.setCursorBlink(aba)cc.setCursorPos(daa,_ba)
+if(dc~=nil)then
+dc.setBackgroundColor(colors.black)dc.setCursorBlink(aba)dc.setCursorPos(daa,_ba)end end,setTerm=function(daa)
+cc=daa end}return caa end end
+ba["libraries"]["bimg"]=function(...)local bb,cb=string.sub,string.rep
+local function db(_c,ac)local bc,cc=0,0
+local dc,_d,ad={},{},{}local bd,cd=1,1;local dd={}
+local function __a()
+for y=1,cc do if(dc[y]==nil)then dc[y]=cb(" ",bc)else dc[y]=dc[y]..
+cb(" ",bc-#dc[y])end;if
+(_d[y]==nil)then _d[y]=cb("0",bc)else
+_d[y]=_d[y]..cb("0",bc-#_d[y])end
+if(ad[y]==nil)then ad[y]=cb("f",bc)else ad[y]=
+ad[y]..cb("f",bc-#ad[y])end end end
+local a_a=function(_aa,aaa,baa)bd=aaa or bd;cd=baa or cd
+if(dc[cd]==nil)then dc[cd]=cb(" ",bd-1).._aa..
+cb(" ",bc- (#_aa+bd))else dc[cd]=
+bb(dc[cd],1,bd-1)..
+cb(" ",bd-#dc[cd]).._aa..bb(dc[cd],bd+#_aa,bc)end;if(#dc[cd]>bc)then bc=#dc[cd]end;if(cd>cc)then cc=cd end
+ac.updateSize(bc,cc)end
+local b_a=function(_aa,aaa,baa)bd=aaa or bd;cd=baa or cd
+if(ad[cd]==nil)then ad[cd]=cb("f",bd-1).._aa..
+cb("f",bc- (#_aa+bd))else ad[cd]=
+bb(ad[cd],1,bd-1)..
+cb("f",bd-#ad[cd]).._aa..bb(ad[cd],bd+#_aa,bc)end;if(#ad[cd]>bc)then bc=#ad[cd]end;if(cd>cc)then cc=cd end
+ac.updateSize(bc,cc)end
+local c_a=function(_aa,aaa,baa)bd=aaa or bd;cd=baa or cd
+if(_d[cd]==nil)then _d[cd]=cb("0",bd-1).._aa..
+cb("0",bc- (#_aa+bd))else _d[cd]=
+bb(_d[cd],1,bd-1)..
+cb("0",bd-#_d[cd]).._aa..bb(_d[cd],bd+#_aa,bc)end;if(#_d[cd]>bc)then bc=#_d[cd]end;if(cd>cc)then cc=cd end
+ac.updateSize(bc,cc)end
+local function d_a(_aa)dd={}dc,_d,ad={},{},{}
+for aaa,baa in pairs(_c)do if(type(aaa)=="string")then dd[aaa]=baa else
+dc[aaa],_d[aaa],ad[aaa]=baa[1],baa[2],baa[3]end end;ac.updateSize(bc,cc)end
+if(_c~=nil)then if(#_c>0)then bc=#_c[1][1]cc=#_c;d_a(_c)end end
+return
+{recalculateSize=__a,setFrame=d_a,getFrame=function()local _aa={}for aaa,baa in pairs(dc)do
+table.insert(_aa,{baa,_d[aaa],ad[aaa]})end
+for aaa,baa in pairs(dd)do _aa[aaa]=baa end;return _aa,bc,cc end,getImage=function()
+local _aa={}for aaa,baa in pairs(dc)do
+table.insert(_aa,{baa,_d[aaa],ad[aaa]})end;return _aa end,setFrameData=function(_aa,aaa)
+if(
+aaa~=nil)then dd[_aa]=aaa else if(type(_aa)=="table")then dd=_aa end end end,setFrameImage=function(_aa)
+for aaa,baa in pairs(_aa.t)do
+dc[aaa]=_aa.t[aaa]_d[aaa]=_aa.fg[aaa]ad[aaa]=_aa.bg[aaa]end end,getFrameImage=function()
+return{t=dc,fg=_d,bg=ad}end,getFrameData=function(_aa)if(_aa~=nil)then return dd[_aa]else return dd end end,blit=function(_aa,aaa,baa,caa,daa)
+a_a(_aa,caa,daa)c_a(aaa,caa,daa)b_a(baa,caa,daa)end,text=a_a,fg=c_a,bg=b_a,getSize=function()return
+bc,cc end,setSize=function(_aa,aaa)local baa,caa,daa={},{},{}
+for _y=1,aaa do
+if(dc[_y]~=nil)then baa[_y]=bb(dc[_y],1,_aa)..cb(" ",
+_aa-bc)else baa[_y]=cb(" ",_aa)end;if(_d[_y]~=nil)then
+caa[_y]=bb(_d[_y],1,_aa)..cb("0",_aa-bc)else caa[_y]=cb("0",_aa)end;if
+(ad[_y]~=nil)then daa[_y]=bb(ad[_y],1,_aa)..cb("f",_aa-bc)else
+daa[_y]=cb("f",_aa)end end;dc,_d,ad=baa,caa,daa;bc,cc=_aa,aaa end}end
+return
+function(_c)local ac={}
+local bc={creator="Bimg Library by NyoriE",date=os.date("!%Y-%m-%dT%TZ")}local cc,dc=0,0;if(_c~=nil)then
+if(_c[1][1][1]~=nil)then cc,dc=bc.width or#_c[1][1][1],
+bc.height or#_c[1]end end;local _d={}
+local function ad(dd,__a)dd=dd or#ac+1
+local a_a=db(__a,_d)table.insert(ac,dd,a_a)if(__a==nil)then
+ac[dd].setSize(cc,dc)end;return a_a end;local function bd(dd)table.remove(ac,dd or#ac)end
+local function cd(dd,__a)
+local a_a=ac[dd]
+if(a_a~=nil)then local b_a=dd+__a;if(b_a>=1)and(b_a<=#ac)then
+table.remove(ac,dd)table.insert(ac,b_a,a_a)end end end
+_d={updateSize=function(dd,__a,a_a)local b_a=a_a==true and true or false
+if(dd>cc)then b_a=true;cc=dd end;if(__a>dc)then b_a=true;dc=__a end
+if(b_a)then for c_a,d_a in pairs(ac)do d_a.setSize(cc,dc)
+d_a.recalculateSize()end end end,text=function(dd,__a,a_a,b_a)
+local c_a=ac[dd]if(c_a==nil)then c_a=ad(dd)end;c_a.text(__a,a_a,b_a)end,fg=function(dd,__a,a_a,b_a)
+local c_a=ac[dd]if(c_a==nil)then c_a=ad(dd)end;c_a.fg(__a,a_a,b_a)end,bg=function(dd,__a,a_a,b_a)
+local c_a=ac[dd]if(c_a==nil)then c_a=ad(dd)end;c_a.bg(__a,a_a,b_a)end,blit=function(dd,__a,a_a,b_a,c_a,d_a)
+local _aa=ac[dd]if(_aa==nil)then _aa=ad(dd)end
+_aa.blit(__a,a_a,b_a,c_a,d_a)end,setSize=function(dd,__a)cc=dd;dc=__a;for a_a,b_a in pairs(ac)do
+b_a.setSize(dd,__a)end end,getFrame=function(dd)if
+(ac[dd]~=nil)then return ac[dd].getFrame()end end,getFrameObjects=function()return
+ac end,getFrames=function()local dd={}for __a,a_a in pairs(ac)do local b_a=a_a.getFrame()
+table.insert(dd,b_a)end;return dd end,getFrameObject=function(dd)return
+ac[dd]end,addFrame=function(dd)if(#ac<=1)then
+if(bc.animated==nil)then bc.animated=true end
+if(bc.secondsPerFrame==nil)then bc.secondsPerFrame=0.2 end end;return ad(dd)end,removeFrame=bd,moveFrame=cd,setFrameData=function(dd,__a,a_a)
+if(
+ac[dd]~=nil)then ac[dd].setFrameData(__a,a_a)end end,getFrameData=function(dd,__a)if(ac[dd]~=nil)then return
+ac[dd].getFrameData(__a)end end,getSize=function()return
+cc,dc end,setAnimation=function(dd)bc.animation=dd end,setMetadata=function(dd,__a)if(__a~=nil)then bc[dd]=__a else if(
+type(dd)=="table")then bc=dd end end end,getMetadata=function(dd)if(
+dd~=nil)then return bc[dd]else return bc end end,createBimg=function()
+local dd={}
+for __a,a_a in pairs(ac)do local b_a=a_a.getFrame()table.insert(dd,b_a)end;for __a,a_a in pairs(bc)do dd[__a]=a_a end;dd.width=cc;dd.height=dc;return dd end}
+if(_c~=nil)then
+for dd,__a in pairs(_c)do if(type(dd)=="string")then bc[dd]=__a end end
+if(bc.width==nil)or(bc.height==nil)then
+cc=bc.width or#_c[1][1][1]dc=bc.height or#_c[1]_d.updateSize(cc,dc,true)end
+for dd,__a in pairs(_c)do if(type(dd)=="number")then ad(dd,__a)end end else ad(1)end;return _d end end
+ba["libraries"]["basaltMon"]=function(...)
+local bb={[colors.white]="0",[colors.orange]="1",[colors.magenta]="2",[colors.lightBlue]="3",[colors.yellow]="4",[colors.lime]="5",[colors.pink]="6",[colors.gray]="7",[colors.lightGray]="8",[colors.cyan]="9",[colors.purple]="a",[colors.blue]="b",[colors.brown]="c",[colors.green]="d",[colors.red]="e",[colors.black]="f"}local cb,db,_c,ac=type,string.len,string.rep,string.sub
+return
+function(bc)local cc={}
+for aba,bba in pairs(bc)do
+cc[aba]={}
+for cba,dba in pairs(bba)do local _ca=peripheral.wrap(dba)if(_ca==nil)then
+error("Unable to find monitor "..dba)end;cc[aba][cba]=_ca
+cc[aba][cba].name=dba end end;local dc,_d,ad,bd,cd,dd,__a,a_a=1,1,1,1,0,0,0,0;local b_a,c_a=false,1
+local d_a,_aa=colors.white,colors.black
+local function aaa()local aba,bba=0,0
+for cba,dba in pairs(cc)do local _ca,aca=0,0
+for bca,cca in pairs(dba)do local dca,_da=cca.getSize()
+_ca=_ca+dca;aca=_da>aca and _da or aca end;aba=aba>_ca and aba or _ca;bba=bba+aca end;__a,a_a=aba,bba end;aaa()
+local function baa()local aba=0;local bba,cba=0,0
+for dba,_ca in pairs(cc)do local aca=0;local bca=0
+for cca,dca in pairs(_ca)do
+local _da,ada=dca.getSize()if(dc-aca>=1)and(dc-aca<=_da)then bba=cca end;dca.setCursorPos(
+dc-aca,_d-aba)aca=aca+_da
+if(bca<ada)then bca=ada end end;if(_d-aba>=1)and(_d-aba<=bca)then cba=dba end
+aba=aba+bca end;ad,bd=bba,cba end;baa()
+local function caa(aba,...)local bba={...}return
+function()for cba,dba in pairs(cc)do for _ca,aca in pairs(dba)do
+aca[aba](table.unpack(bba))end end end end
+local function daa()caa("setCursorBlink",false)()
+if not(b_a)then return end;if(cc[bd]==nil)then return end;local aba=cc[bd][ad]
+if(aba==nil)then return end;aba.setCursorBlink(b_a)end
+local function _ba(aba,bba,cba)if(cc[bd]==nil)then return end;local dba=cc[bd][ad]
+if(dba==nil)then return end;dba.blit(aba,bba,cba)local _ca,aca=dba.getSize()
+if
+(db(aba)+dc>_ca)then local bca=cc[bd][ad+1]if(bca~=nil)then bca.blit(aba,bba,cba)ad=ad+1;dc=dc+
+db(aba)end end;baa()end
+return
+{clear=caa("clear"),setCursorBlink=function(aba)b_a=aba;daa()end,getCursorBlink=function()return b_a end,getCursorPos=function()return dc,_d end,setCursorPos=function(aba,bba)
+dc,_d=aba,bba;baa()daa()end,setTextScale=function(aba)
+caa("setTextScale",aba)()aaa()baa()c_a=aba end,getTextScale=function()return c_a end,blit=function(aba,bba,cba)
+_ba(aba,bba,cba)end,write=function(aba)aba=tostring(aba)local bba=db(aba)
+_ba(aba,_c(bb[d_a],bba),_c(bb[_aa],bba))end,getSize=function()return __a,a_a end,setBackgroundColor=function(aba)
+caa("setBackgroundColor",aba)()_aa=aba end,setTextColor=function(aba)
+caa("setTextColor",aba)()d_a=aba end,calculateClick=function(aba,bba,cba)local dba=0
+for _ca,aca in pairs(cc)do local bca=0;local cca=0
+for dca,_da in pairs(aca)do
+local ada,bda=_da.getSize()if(_da.name==aba)then return bba+bca,cba+dba end
+bca=bca+ada;if(bda>cca)then cca=bda end end;dba=dba+cca end;return bba,cba end}end end
+ba["libraries"]["basaltEvent"]=function(...)
+return
+function()local bb={}
+local cb={registerEvent=function(db,_c,ac)
+if(bb[_c]==nil)then bb[_c]={}end;table.insert(bb[_c],ac)end,removeEvent=function(db,_c,ac)bb[_c][ac[_c]]=
+nil end,hasEvent=function(db,_c)return bb[_c]~=nil end,getEventCount=function(db,_c)return
+bb[_c]~=nil and#bb[_c]or 0 end,getEvents=function(db)
+local _c={}for ac,bc in pairs(bb)do table.insert(_c,ac)end;return _c end,clearEvent=function(db,_c)bb[_c]=
+nil end,clear=function(db,_c)bb={}end,sendEvent=function(db,_c,...)local ac
+if(bb[_c]~=nil)then for bc,cc in pairs(bb[_c])do
+local dc=cc(...)if(dc==false)then ac=dc end end end;return ac end}cb.__index=cb;return cb end end
+ba["loadObjects"]=function(...)local bb={}if(ca)then
+for _c,ac in pairs(ab("objects"))do bb[_c]=ac()end;return bb end;local cb=table.pack(...)local db=fs.getDir(
+cb[2]or"Basalt")if(db==nil)then
+error("Unable to find directory "..cb[2]..
+" please report this bug to our discord.")end
+for _c,ac in
+pairs(fs.list(fs.combine(db,"objects")))do if(ac~="example.lua")and not(ac:find(".disabled"))then
+local bc=ac:gsub(".lua","")bb[bc]=_b(bc)end end;return bb end;ba["plugins"]={}
+ba["plugins"]["basaltAdditions"]=function(...)return
+{basalt=function()return{cool=function()
+print("ello")sleep(2)end}end}end
+ba["plugins"]["shadow"]=function(...)local bb=_b("utils")local cb=bb.xmlValue
+return
+{VisualObject=function(db)local _c=false
+local ac={setShadow=function(bc,cc)
+_c=cc;bc:updateDraw()return bc end,getShadow=function(bc)return _c end,draw=function(bc)
+db.draw(bc)
+bc:addDraw("shadow",function()
+if(_c~=false)then local cc,dc=bc:getSize()
+if(_c)then
+bc:addBackgroundBox(cc+1,2,1,dc,_c)bc:addBackgroundBox(2,dc+1,cc,1,_c)
+bc:addForegroundBox(cc+1,2,1,dc,_c)bc:addForegroundBox(2,dc+1,cc,1,_c)end end end)end,setValuesByXMLData=function(bc,cc,dc)
+db.setValuesByXMLData(bc,cc,dc)if(cb("shadow",cc)~=nil)then
+bc:setShadow(cb("shadow",cc))end;return bc end}return ac end}end
+ba["plugins"]["advancedBackground"]=function(...)local bb=_b("utils")
+local cb=bb.xmlValue
+return
+{VisualObject=function(db)local _c=false;local ac=colors.black
+local bc={setBackground=function(cc,dc,_d,ad)db.setBackground(cc,dc)
+_c=_d or _c;ac=ad or ac;return cc end,setBackgroundSymbol=function(cc,dc,_d)_c=dc
+ac=_d or ac;cc:updateDraw()return cc end,getBackgroundSymbol=function(cc)return _c end,getBackgroundSymbolColor=function(cc)return
+ac end,setValuesByXMLData=function(cc,dc,_d)db.setValuesByXMLData(cc,dc,_d)if(
+cb("background-symbol",dc)~=nil)then
+cc:setBackgroundSymbol(cb("background-symbol",dc),cb("background-symbol-color",dc))end;return cc end,draw=function(cc)
+db.draw(cc)
+cc:addDraw("advanced-bg",function()local dc,_d=cc:getSize()if(_c~=false)then
+cc:addTextBox(1,1,dc,_d,_c:sub(1,1))
+if(_c~=" ")then cc:addForegroundBox(1,1,dc,_d,ac)end end end,2)end}return bc end}end
+ba["plugins"]["themes"]=function(...)
+local bb={BaseFrameBG=colors.lightGray,BaseFrameText=colors.black,FrameBG=colors.gray,FrameText=colors.black,ButtonBG=colors.gray,ButtonText=colors.black,CheckboxBG=colors.lightGray,CheckboxText=colors.black,InputBG=colors.black,InputText=colors.lightGray,TextfieldBG=colors.black,TextfieldText=colors.white,ListBG=colors.gray,ListText=colors.black,MenubarBG=colors.gray,MenubarText=colors.black,DropdownBG=colors.gray,DropdownText=colors.black,RadioBG=colors.gray,RadioText=colors.black,SelectionBG=colors.black,SelectionText=colors.lightGray,GraphicBG=colors.black,ImageBG=colors.black,PaneBG=colors.black,ProgramBG=colors.black,ProgressbarBG=colors.gray,ProgressbarText=colors.black,ProgressbarActiveBG=colors.black,ScrollbarBG=colors.lightGray,ScrollbarText=colors.gray,ScrollbarSymbolColor=colors.black,SliderBG=false,SliderText=colors.gray,SliderSymbolColor=colors.black,SwitchBG=colors.lightGray,SwitchText=colors.gray,LabelBG=false,LabelText=colors.black,GraphBG=colors.gray,GraphText=colors.black}
+local cb={Container=function(db,_c,ac)local bc={}
+local cc={getTheme=function(dc,_d)local ad=dc:getParent()return bc[_d]or(ad~=nil and ad:getTheme(_d)or
+bb[_d])end,setTheme=function(dc,_d,ad)
+if(
+type(_d)=="table")then bc=_d elseif(type(_d)=="string")then bc[_d]=ad end;dc:updateDraw()return dc end}return cc end,basalt=function()
+return
+{getTheme=function(db)return
+bb[db]end,setTheme=function(db,_c)if(type(db)=="table")then bb=db elseif(type(db)=="string")then
+bb[db]=_c end end}end}
+for db,_c in
+pairs({"BaseFrame","Frame","ScrollableFrame","MovableFrame","Button","Checkbox","Dropdown","Graph","Graphic","Input","Label","List","Menubar","Pane","Program","Progressbar","Radio","Scrollbar","Slider","Switch","Textfield"})do
+cb[_c]=function(ac,bc,cc)
+local dc={init=function(_d)if(ac.init(_d))then local ad=_d:getParent()or _d
+_d:setBackground(ad:getTheme(_c.."BG"))
+_d:setForeground(ad:getTheme(_c.."Text"))end end}return dc end end;return cb end
+ba["plugins"]["pixelbox"]=function(...)
+local bb,cb,db=table.sort,table.concat,string.char;local function _c(_d,ad)return _d[2]>ad[2]end
+local ac={{5,256,16,8,64,32},{4,16,16384,256,128},[4]={4,64,1024,256,128},[8]={4,512,2048,256,1},[16]={4,2,16384,256,1},[32]={4,8192,4096,256,1},[64]={4,4,1024,256,1},[128]={6,32768,256,1024,2048,4096,16384},[256]={6,1,128,2,512,4,8192},[512]={4,8,2048,256,128},[1024]={4,4,64,128,32768},[2048]={4,512,8,128,32768},[4096]={4,8192,32,128,32768},[8192]={3,32,4096,256128},[16384]={4,2,16,128,32768},[32768]={5,128,1024,2048,4096,16384}}local bc={}for i=0,15 do bc[("%x"):format(i)]=2 ^i end
+local cc={}for i=0,15 do cc[2 ^i]=("%x"):format(i)end
+local function dc(_d,ad)ad=ad or"f"local bd,cd=#
+_d[1],#_d;local dd={}local __a={}local a_a=false
+local function b_a()
+for y=1,cd*3 do for x=1,bd*2 do
+if not __a[y]then __a[y]={}end;__a[y][x]=ad end end;for aaa,baa in ipairs(_d)do
+for x=1,#baa do local caa=baa:sub(x,x)__a[aaa][x]=bc[caa]end end end;b_a()local function c_a(aaa,baa)bd,cd=aaa,baa;__a={}a_a=false;b_a()end
+local function d_a(aaa,baa,caa,daa,_ba,aba)
+local bba={aaa,baa,caa,daa,_ba,aba}local cba={}local dba={}local _ca=0
+for i=1,6 do local dca=bba[i]if not cba[dca]then _ca=_ca+1
+cba[dca]={0,_ca}end;local _da=cba[dca]local ada=_da[1]+1;_da[1]=ada
+dba[_da[2]]={dca,ada}end;local aca=#dba
+while aca>2 do bb(dba,_c)local dca=ac[dba[aca][1]]
+local _da,ada=1,false;local bda=aca-1
+for i=2,dca[1]do if ada then break end;local __b=dca[i]for j=1,bda do if dba[j][1]==__b then _da=j
+ada=true;break end end end;local cda,dda=dba[aca][1],dba[_da][1]
+for i=1,6 do if bba[i]==cda then bba[i]=dda
+local __b=dba[_da]__b[2]=__b[2]+1 end end;dba[aca]=nil;aca=aca-1 end;local bca=128;local cca=bba[6]if bba[1]~=cca then bca=bca+1 end;if bba[2]~=cca then bca=bca+
+2 end;if bba[3]~=cca then bca=bca+4 end;if
+bba[4]~=cca then bca=bca+8 end;if bba[5]~=cca then bca=bca+16 end;if
+dba[1][1]==bba[6]then return db(bca),dba[2][1],bba[6]else
+return db(bca),dba[1][1],bba[6]end end
+local function _aa()local aaa=bd*2;local baa=0
+for y=1,cd*3,3 do baa=baa+1;local caa=__a[y]local daa=__a[y+1]
+local _ba=__a[y+2]local aba,bba,cba={},{},{}local dba=0
+for x=1,aaa,2 do local _ca=x+1
+local aca,bca,cca,dca,_da,ada=caa[x],caa[_ca],daa[x],daa[_ca],_ba[x],_ba[_ca]local bda,cda,dda=" ",1,aca;if not(
+bca==aca and cca==aca and dca==aca and _da==aca and ada==aca)then
+bda,cda,dda=d_a(aca,bca,cca,dca,_da,ada)end;dba=dba+1
+aba[dba]=bda;bba[dba]=cc[cda]cba[dba]=cc[dda]end;dd[baa]={cb(aba),cb(bba),cb(cba)}end;a_a=true end
+return
+{convert=_aa,generateCanvas=b_a,setSize=c_a,getSize=function()return bd,cd end,set=function(aaa,baa)_d=aaa;ad=baa or ad;__a={}a_a=false;b_a()end,get=function(aaa)if
+not a_a then _aa()end
+return aaa~=nil and dd[aaa]or dd end}end
+return
+{Image=function(_d,ad)
+return
+{shrink=function(bd)local cd=bd:getImageFrame(1)local dd={}for a_a,b_a in pairs(cd)do if(type(a_a)=="number")then
+table.insert(dd,b_a[3])end end
+local __a=dc(dd,bd:getBackground()).get()bd:setImage(__a)return bd end,getShrinkedImage=function(bd)
+local cd=bd:getImageFrame(1)local dd={}for __a,a_a in pairs(cd)do
+if(type(__a)=="number")then table.insert(dd,a_a[3])end end;return
+dc(dd,bd:getBackground()).get()end}end}end
+ba["plugins"]["textures"]=function(...)local bb=_b("images")local cb=_b("utils")
+local db=cb.xmlValue
+return
+{VisualObject=function(_c)local ac,bc=1,true;local cc,dc,_d;local ad="default"
+local bd={addTexture=function(cd,dd,__a)cc=bb.loadImageAsBimg(dd)
+dc=cc[1]
+if(__a)then if(cc.animated)then cd:listenEvent("other_event")local a_a=cc[ac].duration or
+cc.secondsPerFrame or 0.2
+_d=os.startTimer(a_a)end end;cd:setBackground(false)cd:setForeground(false)
+cd:setDrawState("texture-base",true)cd:updateDraw()return cd end,setTextureMode=function(cd,dd)ad=
+dd or ad;cd:updateDraw()return cd end,setInfinitePlay=function(cd,dd)bc=dd
+return cd end,eventHandler=function(cd,dd,__a,...)_c.eventHandler(cd,dd,__a,...)
+if(dd=="timer")then
+if
+(__a==_d)then
+if(cc[ac+1]~=nil)then ac=ac+1;dc=cc[ac]local a_a=
+cc[ac].duration or cc.secondsPerFrame or 0.2
+_d=os.startTimer(a_a)cd:updateDraw()else
+if(bc)then ac=1;dc=cc[1]local a_a=
+cc[ac].duration or cc.secondsPerFrame or 0.2
+_d=os.startTimer(a_a)cd:updateDraw()end end end end end,draw=function(cd)
+_c.draw(cd)
+cd:addDraw("texture-base",function()local dd=cd:getParent()or cd
+local __a,a_a=cd:getPosition()local b_a,c_a=cd:getSize()local d_a,_aa=dd:getSize()local aaa=cc.width or
+#cc[ac][1][1]local baa=cc.height or#cc[ac]
+local caa,daa=0,0
+if(ad=="center")then caa=__a+math.floor((b_a-aaa)/2 +0.5)-
+1;daa=a_a+
+math.floor((c_a-baa)/2 +0.5)-1 elseif(ad=="default")then
+caa,daa=__a,a_a elseif(ad=="right")then caa,daa=__a+b_a-aaa,a_a+c_a-baa end;local _ba=__a-caa;local aba=a_a-daa
+if caa<__a then caa=__a;aaa=aaa-_ba end;if daa<a_a then daa=a_a;baa=baa-aba end;if caa+aaa>__a+b_a then aaa=
+(__a+b_a)-caa end;if daa+baa>a_a+c_a then
+baa=(a_a+c_a)-daa end
+for k=1,baa do if(dc[k+aba]~=nil)then
+local bba,cba,dba=table.unpack(dc[k+aba])
+cd:addBlit(1,k,bba:sub(_ba,_ba+aaa),cba:sub(_ba,_ba+aaa),dba:sub(_ba,_ba+aaa))end end end,1)cd:setDrawState("texture-base",false)end,setValuesByXMLData=function(cd,dd,__a)
+_c.setValuesByXMLData(cd,dd,__a)if(db("texture",dd)~=nil)then
+cd:addTexture(db("texture",dd),db("animate",dd))end;if(db("textureMode",dd)~=nil)then
+cd:setTextureMode(db("textureMode",dd))end;if(db("infinitePlay",dd)~=nil)then
+cd:setInfinitePlay(db("infinitePlay",dd))end;return cd end}return bd end}end
+ba["plugins"]["border"]=function(...)local bb=_b("utils")local cb=bb.xmlValue
+return
+{VisualObject=function(db)local _c=true
+local ac={top=false,bottom=false,left=false,right=false}
+local bc={setBorder=function(cc,...)local dc={...}
+if(dc~=nil)then
+for _d,ad in pairs(dc)do
+if(ad=="left")or(#dc==1)then ac["left"]=dc[1]end;if(ad=="top")or(#dc==1)then ac["top"]=dc[1]end;if
+(ad=="right")or(#dc==1)then ac["right"]=dc[1]end;if
+(ad=="bottom")or(#dc==1)then ac["bottom"]=dc[1]end end end;cc:updateDraw()return cc end,draw=function(cc)
+db.draw(cc)
+cc:addDraw("border",function()local dc,_d=cc:getPosition()local ad,bd=cc:getSize()
+local cd=cc:getBackground()
+if(_c)then
+if(ac["left"]~=false)then cc:addTextBox(1,1,1,bd,"\149")if(cd~=false)then
+cc:addBackgroundBox(1,1,1,bd,cd)end
+cc:addForegroundBox(1,1,1,bd,ac["left"])end
+if(ac["top"]~=false)then cc:addTextBox(1,1,ad,1,"\131")if(cd~=false)then
+cc:addBackgroundBox(1,1,ad,1,cd)end
+cc:addForegroundBox(1,1,ad,1,ac["top"])end
+if(ac["left"]~=false)and(ac["top"]~=false)then
+cc:addTextBox(1,1,1,1,"\151")
+if(cd~=false)then cc:addBackgroundBox(1,1,1,1,cd)end;cc:addForegroundBox(1,1,1,1,ac["left"])end
+if(ac["right"]~=false)then cc:addTextBox(ad,1,1,bd,"\149")if
+(cd~=false)then cc:addForegroundBox(ad,1,1,bd,cd)end
+cc:addBackgroundBox(ad,1,1,bd,ac["right"])end
+if(ac["bottom"]~=false)then cc:addTextBox(1,bd,ad,1,"\143")if
+(cd~=false)then cc:addForegroundBox(1,bd,ad,1,cd)end
+cc:addBackgroundBox(1,bd,ad,1,ac["bottom"])end
+if(ac["top"]~=false)and(ac["right"]~=false)then
+cc:addTextBox(ad,1,1,1,"\148")
+if(cd~=false)then cc:addForegroundBox(ad,1,1,1,cd)end;cc:addBackgroundBox(ad,1,1,1,ac["right"])end
+if(ac["right"]~=false)and(ac["bottom"]~=false)then
+cc:addTextBox(ad,bd,1,1,"\133")
+if(cd~=false)then cc:addForegroundBox(ad,bd,1,1,cd)end;cc:addBackgroundBox(ad,bd,1,1,ac["right"])end
+if(ac["bottom"]~=false)and(ac["left"]~=false)then
+cc:addTextBox(1,bd,1,1,"\138")
+if(cd~=false)then cc:addForegroundBox(0,bd,1,1,cd)end;cc:addBackgroundBox(1,bd,1,1,ac["left"])end end end)end,setValuesByXMLData=function(cc,dc,_d)
+db.setValuesByXMLData(cc,dc)local ad={}
+if(cb("border",dc)~=nil)then
+ad["top"]=colors[cb("border",dc)]ad["bottom"]=colors[cb("border",dc)]
+ad["left"]=colors[cb("border",dc)]ad["right"]=colors[cb("border",dc)]end;if(cb("borderTop",dc)~=nil)then
+ad["top"]=colors[cb("borderTop",dc)]end;if(cb("borderBottom",dc)~=nil)then
+ad["bottom"]=colors[cb("borderBottom",dc)]end;if(cb("borderLeft",dc)~=nil)then
+ad["left"]=colors[cb("borderLeft",dc)]end;if(cb("borderRight",dc)~=nil)then
+ad["right"]=colors[cb("borderRight",dc)]end
+cc:setBorder(ad["top"],ad["bottom"],ad["left"],ad["right"])return cc end}return bc end}end
+ba["plugins"]["debug"]=function(...)local bb=_b("utils")local cb=bb.wrapText
+return
+{basalt=function(db)
+local _c=db.getMainFrame()local ac;local bc;local cc;local dc
+local function _d()local ad=16;local bd=6;local cd=99;local dd=99;local __a,a_a=_c:getSize()
+ac=_c:addMovableFrame("basaltDebuggingFrame"):setSize(
+__a-20,a_a-10):setBackground(colors.gray):setForeground(colors.white):setZIndex(100):hide()
+ac:addPane():setSize("parent.w",1):setPosition(1,1):setBackground(colors.black):setForeground(colors.white)
+ac:setPosition(-__a,a_a/2 -ac:getHeight()/2):setBorder(colors.black)
+local b_a=ac:addButton():setPosition("parent.w","parent.h"):setSize(1,1):setText("\133"):setForeground(colors.gray):setBackground(colors.black):onClick(function()
+end):onDrag(function(c_a,d_a,_aa,aaa,baa)
+local caa,daa=ac:getSize()local _ba,aba=caa,daa;if(caa+aaa-1 >=ad)and(caa+aaa-1 <=cd)then _ba=caa+
+aaa-1 end
+if(daa+baa-1 >=bd)and(
+daa+baa-1 <=dd)then aba=daa+baa-1 end;ac:setSize(_ba,aba)end)
+dc=ac:addButton():setText("Close"):setPosition("parent.w - 6",1):setSize(7,1):setBackground(colors.red):setForeground(colors.white):onClick(function()
+ac:animatePosition(
+-__a,a_a/2 -ac:getHeight()/2,0.5)end)
+bc=ac:addList():setSize("parent.w - 2","parent.h - 3"):setPosition(2,3):setBackground(colors.gray):setForeground(colors.white):setSelectionColor(colors.gray,colors.white)
+if(cc==nil)then
+cc=_c:addLabel():setPosition(1,"parent.h"):setBackground(colors.black):setForeground(colors.white):setZIndex(100):onClick(function()
+ac:show()
+ac:animatePosition(__a/2 -ac:getWidth()/2,a_a/2 -ac:getHeight()/2,0.5)end)end end
+return
+{debug=function(...)local ad={...}if(_c==nil)then _c=db.getMainFrame()
+if(_c~=nil)then _d()else print(...)return end end
+if
+(_c:getName()~="basaltDebuggingFrame")then if(_c~=ac)then cc:setParent(_c)end end;local bd=""for cd,dd in pairs(ad)do
+bd=bd..tostring(dd).. (#ad~=cd and", "or"")end
+cc:setText("[Debug] "..bd)
+for cd,dd in pairs(cb(bd,bc:getWidth()))do bc:addItem(dd)end
+if(bc:getItemCount()>50)then bc:removeItem(1)end
+bc:setValue(bc:getItem(bc:getItemCount()))
+if(bc.getItemCount()>bc:getHeight())then bc:setOffset(bc:getItemCount()-
+bc:getHeight())end;cc:show()end}end}end
+ba["plugins"]["dynamicValues"]=function(...)local bb=_b("utils")local cb=bb.tableCount
+local db=bb.xmlValue
+return
+{VisualObject=function(_c,ac)local bc={}local cc={}
+local dc={x="getX",y="getY",w="getWidth",h="getHeight"}
+local function _d(dd)
+local __a,a_a=pcall(load("return "..dd,"",nil,{math=math}))if not(__a)then
+error(dd.." - is not a valid dynamic value string")end;return a_a end
+local function ad(dd,__a,a_a)local b_a={}local c_a=dc
+for aaa,baa in pairs(c_a)do for caa in a_a:gmatch("%a+%."..aaa)do
+local daa=caa:gsub("%."..aaa,"")
+if(daa~="self")and(daa~="parent")then table.insert(b_a,daa)end end end;local d_a=dd:getParent()local _aa={}
+for aaa,baa in pairs(b_a)do
+_aa[baa]=d_a:getObject(baa)if(_aa[baa]==nil)then
+error("Dynamic Values - unable to find object: "..baa)end end;_aa["self"]=dd;_aa["parent"]=d_a
+bc[__a]=function()local aaa=a_a
+for baa,caa in pairs(c_a)do
+for daa in
+a_a:gmatch("%w+%."..baa)do local _ba=_aa[daa:gsub("%."..baa,"")]if(_ba~=nil)then
+aaa=aaa:gsub(daa,_ba[caa](_ba))else
+error("Dynamic Values - unable to find object: "..daa)end end end;cc[__a]=math.floor(_d(aaa)+0.5)end;bc[__a]()end
+local function bd(dd)
+if(cb(bc)>0)then for a_a,b_a in pairs(bc)do b_a()end
+local __a={x="getX",y="getY",w="getWidth",h="getHeight"}
+for a_a,b_a in pairs(__a)do
+if(bc[a_a]~=nil)then
+if(cc[a_a]~=dd[b_a](dd))then if
+(a_a=="x")or(a_a=="y")then
+_c.setPosition(dd,cc["x"]or dd:getX(),cc["y"]or dd:getY())end;if(a_a=="w")or(a_a=="h")then
+_c.setSize(dd,
+cc["w"]or dd:getWidth(),cc["h"]or dd:getHeight())end end end end end end
+local cd={updatePositions=bd,createDynamicValue=ad,setPosition=function(dd,__a,a_a,b_a)cc.x=__a;cc.y=a_a
+if(type(__a)=="string")then ad(dd,"x",__a)else bc["x"]=nil end
+if(type(a_a)=="string")then ad(dd,"y",a_a)else bc["y"]=nil end;_c.setPosition(dd,cc.x,cc.y,b_a)return dd end,setSize=function(dd,__a,a_a,b_a)
+cc.w=__a;cc.h=a_a
+if(type(__a)=="string")then ad(dd,"w",__a)else bc["w"]=nil end
+if(type(a_a)=="string")then ad(dd,"h",a_a)else bc["h"]=nil end;_c.setSize(dd,cc.w,cc.h,b_a)return dd end,customEventHandler=function(dd,__a,...)
+_c.customEventHandler(dd,__a,...)if
+(__a=="basalt_FrameReposition")or(__a=="basalt_FrameResize")then bd(dd)end end}return cd end}end
+ba["plugins"]["bigfonts"]=function(...)local bb=_b("tHex")
+local cb={{"\32\32\32\137\156\148\158\159\148\135\135\144\159\139\32\136\157\32\159\139\32\32\143\32\32\143\32\32\32\32\32\32\32\32\147\148\150\131\148\32\32\32\151\140\148\151\140\147","\32\32\32\149\132\149\136\156\149\144\32\133\139\159\129\143\159\133\143\159\133\138\32\133\138\32\133\32\32\32\32\32\32\150\150\129\137\156\129\32\32\32\133\131\129\133\131\132","\32\32\32\130\131\32\130\131\32\32\129\32\32\32\32\130\131\32\130\131\32\32\32\32\143\143\143\32\32\32\32\32\32\130\129\32\130\135\32\32\32\32\131\32\32\131\32\131","\139\144\32\32\143\148\135\130\144\149\32\149\150\151\149\158\140\129\32\32\32\135\130\144\135\130\144\32\149\32\32\139\32\159\148\32\32\32\32\159\32\144\32\148\32\147\131\132","\159\135\129\131\143\149\143\138\144\138\32\133\130\149\149\137\155\149\159\143\144\147\130\132\32\149\32\147\130\132\131\159\129\139\151\129\148\32\32\139\131\135\133\32\144\130\151\32","\32\32\32\32\32\32\130\135\32\130\32\129\32\129\129\131\131\32\130\131\129\140\141\132\32\129\32\32\129\32\32\32\32\32\32\32\131\131\129\32\32\32\32\32\32\32\32\32","\32\32\32\32\149\32\159\154\133\133\133\144\152\141\132\133\151\129\136\153\32\32\154\32\159\134\129\130\137\144\159\32\144\32\148\32\32\32\32\32\32\32\32\32\32\32\151\129","\32\32\32\32\133\32\32\32\32\145\145\132\141\140\132\151\129\144\150\146\129\32\32\32\138\144\32\32\159\133\136\131\132\131\151\129\32\144\32\131\131\129\32\144\32\151\129\32","\32\32\32\32\129\32\32\32\32\130\130\32\32\129\32\129\32\129\130\129\129\32\32\32\32\130\129\130\129\32\32\32\32\32\32\32\32\133\32\32\32\32\32\129\32\129\32\32","\150\156\148\136\149\32\134\131\148\134\131\148\159\134\149\136\140\129\152\131\32\135\131\149\150\131\148\150\131\148\32\148\32\32\148\32\32\152\129\143\143\144\130\155\32\134\131\148","\157\129\149\32\149\32\152\131\144\144\131\148\141\140\149\144\32\149\151\131\148\32\150\32\150\131\148\130\156\133\32\144\32\32\144\32\130\155\32\143\143\144\32\152\129\32\134\32","\130\131\32\131\131\129\131\131\129\130\131\32\32\32\129\130\131\32\130\131\32\32\129\32\130\131\32\130\129\32\32\129\32\32\133\32\32\32\129\32\32\32\130\32\32\32\129\32","\150\140\150\137\140\148\136\140\132\150\131\132\151\131\148\136\147\129\136\147\129\150\156\145\138\143\149\130\151\32\32\32\149\138\152\129\149\32\32\157\152\149\157\144\149\150\131\148","\149\143\142\149\32\149\149\32\149\149\32\144\149\32\149\149\32\32\149\32\32\149\32\149\149\32\149\32\149\32\144\32\149\149\130\148\149\32\32\149\32\149\149\130\149\149\32\149","\130\131\129\129\32\129\131\131\32\130\131\32\131\131\32\131\131\129\129\32\32\130\131\32\129\32\129\130\131\32\130\131\32\129\32\129\131\131\129\129\32\129\129\32\129\130\131\32","\136\140\132\150\131\148\136\140\132\153\140\129\131\151\129\149\32\149\149\32\149\149\32\149\137\152\129\137\152\129\131\156\133\149\131\32\150\32\32\130\148\32\152\137\144\32\32\32","\149\32\32\149\159\133\149\32\149\144\32\149\32\149\32\149\32\149\150\151\129\138\155\149\150\130\148\32\149\32\152\129\32\149\32\32\32\150\32\32\149\32\32\32\32\32\32\32","\129\32\32\130\129\129\129\32\129\130\131\32\32\129\32\130\131\32\32\129\32\129\32\129\129\32\129\32\129\32\131\131\129\130\131\32\32\32\129\130\131\32\32\32\32\140\140\132","\32\154\32\159\143\32\149\143\32\159\143\32\159\144\149\159\143\32\159\137\145\159\143\144\149\143\32\32\145\32\32\32\145\149\32\144\32\149\32\143\159\32\143\143\32\159\143\32","\32\32\32\152\140\149\151\32\149\149\32\145\149\130\149\157\140\133\32\149\32\154\143\149\151\32\149\32\149\32\144\32\149\149\153\32\32\149\32\149\133\149\149\32\149\149\32\149","\32\32\32\130\131\129\131\131\32\130\131\32\130\131\129\130\131\129\32\129\32\140\140\129\129\32\129\32\129\32\137\140\129\130\32\129\32\130\32\129\32\129\129\32\129\130\131\32","\144\143\32\159\144\144\144\143\32\159\143\144\159\138\32\144\32\144\144\32\144\144\32\144\144\32\144\144\32\144\143\143\144\32\150\129\32\149\32\130\150\32\134\137\134\134\131\148","\136\143\133\154\141\149\151\32\129\137\140\144\32\149\32\149\32\149\154\159\133\149\148\149\157\153\32\154\143\149\159\134\32\130\148\32\32\149\32\32\151\129\32\32\32\32\134\32","\133\32\32\32\32\133\129\32\32\131\131\32\32\130\32\130\131\129\32\129\32\130\131\129\129\32\129\140\140\129\131\131\129\32\130\129\32\129\32\130\129\32\32\32\32\32\129\32","\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32","\32\32\32\32\32\32\32\32\32\32\32\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\32\32\32\32\32\32\32\32\32\32\32","\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32","\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32","\32\32\32\32\32\32\32\32\32\32\32\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\32\32\32\32\32\32\32\32\32\32\32","\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32","\32\32\32\32\145\32\159\139\32\151\131\132\155\143\132\134\135\145\32\149\32\158\140\129\130\130\32\152\147\155\157\134\32\32\144\144\32\32\32\32\32\32\152\131\155\131\131\129","\32\32\32\32\149\32\149\32\145\148\131\32\149\32\149\140\157\132\32\148\32\137\155\149\32\32\32\149\154\149\137\142\32\153\153\32\131\131\149\131\131\129\149\135\145\32\32\32","\32\32\32\32\129\32\130\135\32\131\131\129\134\131\132\32\129\32\32\129\32\131\131\32\32\32\32\130\131\129\32\32\32\32\129\129\32\32\32\32\32\32\130\131\129\32\32\32","\150\150\32\32\148\32\134\32\32\132\32\32\134\32\32\144\32\144\150\151\149\32\32\32\32\32\32\145\32\32\152\140\144\144\144\32\133\151\129\133\151\129\132\151\129\32\145\32","\130\129\32\131\151\129\141\32\32\142\32\32\32\32\32\149\32\149\130\149\149\32\143\32\32\32\32\142\132\32\154\143\133\157\153\132\151\150\148\151\158\132\151\150\148\144\130\148","\32\32\32\140\140\132\32\32\32\32\32\32\32\32\32\151\131\32\32\129\129\32\32\32\32\134\32\32\32\32\32\32\32\129\129\32\129\32\129\129\130\129\129\32\129\130\131\32","\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\159\142\32\150\151\129\150\131\132\140\143\144\143\141\145\137\140\148\141\141\144\157\142\32\159\140\32\151\134\32\157\141\32","\157\140\149\157\140\149\157\140\149\157\140\149\157\140\149\157\140\149\151\151\32\154\143\132\157\140\32\157\140\32\157\140\32\157\140\32\32\149\32\32\149\32\32\149\32\32\149\32","\129\32\129\129\32\129\129\32\129\129\32\129\129\32\129\129\32\129\129\131\129\32\134\32\131\131\129\131\131\129\131\131\129\131\131\129\130\131\32\130\131\32\130\131\32\130\131\32","\151\131\148\152\137\145\155\140\144\152\142\145\153\140\132\153\137\32\154\142\144\155\159\132\150\156\148\147\32\144\144\130\145\136\137\32\146\130\144\144\130\145\130\136\32\151\140\132","\151\32\149\151\155\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\152\137\144\157\129\149\149\32\149\149\32\149\149\32\149\149\32\149\130\150\32\32\157\129\149\32\149","\131\131\32\129\32\129\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\32\32\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\129\32\130\131\32\133\131\32","\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\159\142\32\159\159\144\152\140\144\156\143\32\159\141\129\153\140\132\157\141\32\130\145\32\32\147\32\136\153\32\130\146\32","\152\140\149\152\140\149\152\140\149\152\140\149\152\140\149\152\140\149\149\157\134\154\143\132\157\140\133\157\140\133\157\140\133\157\140\133\32\149\32\32\149\32\32\149\32\32\149\32","\130\131\129\130\131\129\130\131\129\130\131\129\130\131\129\130\131\129\130\130\131\32\134\32\130\131\129\130\131\129\130\131\129\130\131\129\32\129\32\32\129\32\32\129\32\32\129\32","\159\134\144\137\137\32\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\32\132\32\159\143\32\147\32\144\144\130\145\136\137\32\146\130\144\144\130\145\130\138\32\146\130\144","\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\131\147\129\138\134\149\149\32\149\149\32\149\149\32\149\149\32\149\154\143\149\32\157\129\154\143\149","\130\131\32\129\32\129\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\32\32\130\131\32\130\131\129\130\131\129\130\131\129\130\131\129\140\140\129\130\131\32\140\140\129"},{"000110000110110000110010101000000010000000100101","000000110110000000000010101000000010000000100101","000000000000000000000000000000000000000000000000","100010110100000010000110110000010100000100000110","000000110000000010110110000110000000000000110000","000000000000000000000000000000000000000000000000","000000110110000010000000100000100000000000000010","000000000110110100010000000010000000000000000100","000000000000000000000000000000000000000000000000","010000000000100110000000000000000000000110010000","000000000000000000000000000010000000010110000000","000000000000000000000000000000000000000000000000","011110110000000100100010110000000100000000000000","000000000000000000000000000000000000000000000000","000000000000000000000000000000000000000000000000","110000110110000000000000000000010100100010000000","000010000000000000110110000000000100010010000000","000000000000000000000000000000000000000000000000","010110010110100110110110010000000100000110110110","000000000000000000000110000000000110000000000000","000000000000000000000000000000000000000000000000","010100010110110000000000000000110000000010000000","110110000000000000110000110110100000000010000000","000000000000000000000000000000000000000000000000","000100011111000100011111000100011111000100011111","000000000000100100100100011011011011111111111111","000000000000000000000000000000000000000000000000","000100011111000100011111000100011111000100011111","000000000000100100100100011011011011111111111111","100100100100100100100100100100100100100100100100","000000110100110110000010000011110000000000011000","000000000100000000000010000011000110000000001000","000000000000000000000000000000000000000000000000","010000100100000000000000000100000000010010110000","000000000000000000000000000000110110110110110000","000000000000000000000000000000000000000000000000","110110110110110110000000110110110110110110110110","000000000000000000000110000000000000000000000000","000000000000000000000000000000000000000000000000","000000000000110110000110010000000000000000010010","000010000000000000000000000000000000000000000000","000000000000000000000000000000000000000000000000","110110110110110110110000110110110110000000000000","000000000000000000000110000000000000000000000000","000000000000000000000000000000000000000000000000","110110110110110110110000110000000000000000010000","000000000000000000000000100000000000000110000110","000000000000000000000000000000000000000000000000"}}local db={}local _c={}
+do local _d=0;local ad=#cb[1]local bd=#cb[1][1]
+for i=1,ad,3 do
+for j=1,bd,3 do
+local cd=string.char(_d)local dd={}dd[1]=cb[1][i]:sub(j,j+2)
+dd[2]=cb[1][i+1]:sub(j,j+2)dd[3]=cb[1][i+2]:sub(j,j+2)local __a={}__a[1]=cb[2][i]:sub(j,
+j+2)
+__a[2]=cb[2][i+1]:sub(j,j+2)__a[3]=cb[2][i+2]:sub(j,j+2)_c[cd]={dd,__a}
+_d=_d+1 end end;db[1]=_c end
+local function ac(_d,ad)local bd={["0"]="1",["1"]="0"}if _d<=#db then return true end
+for f=#db+1,_d do local cd={}local dd=db[
+f-1]
+for char=0,255 do local __a=string.char(char)local a_a={}local b_a={}
+local c_a=dd[__a][1]local d_a=dd[__a][2]
+for i=1,#c_a do local _aa,aaa,baa,caa,daa,_ba={},{},{},{},{},{}
+for j=1,#c_a[1]do
+local aba=_c[c_a[i]:sub(j,j)][1]table.insert(_aa,aba[1])
+table.insert(aaa,aba[2])table.insert(baa,aba[3])
+local bba=_c[c_a[i]:sub(j,j)][2]
+if d_a[i]:sub(j,j)=="1"then
+table.insert(caa,(bba[1]:gsub("[01]",bd)))
+table.insert(daa,(bba[2]:gsub("[01]",bd)))
+table.insert(_ba,(bba[3]:gsub("[01]",bd)))else table.insert(caa,bba[1])
+table.insert(daa,bba[2])table.insert(_ba,bba[3])end end;table.insert(a_a,table.concat(_aa))
+table.insert(a_a,table.concat(aaa))table.insert(a_a,table.concat(baa))
+table.insert(b_a,table.concat(caa))table.insert(b_a,table.concat(daa))
+table.insert(b_a,table.concat(_ba))end;cd[__a]={a_a,b_a}if ad then ad="Font"..f.."Yeld"..char
+os.queueEvent(ad)os.pullEvent(ad)end end;db[f]=cd end;return true end
+local function bc(_d,ad,bd,cd,dd)
+if not type(ad)=="string"then error("Not a String",3)end
+local __a=type(bd)=="string"and bd:sub(1,1)or bb[bd]or
+error("Wrong Front Color",3)
+local a_a=type(cd)=="string"and cd:sub(1,1)or bb[cd]or
+error("Wrong Back Color",3)if(db[_d]==nil)then ac(3,false)end;local b_a=db[_d]or
+error("Wrong font size selected",3)if ad==""then
+return{{""},{""},{""}}end;local c_a={}
+for _ba in ad:gmatch('.')do table.insert(c_a,_ba)end;local d_a={}local _aa=#b_a[c_a[1]][1]
+for nLine=1,_aa do local _ba={}for i=1,#c_a do
+_ba[i]=
+b_a[c_a[i]]and b_a[c_a[i]][1][nLine]or""end;d_a[nLine]=table.concat(_ba)end;local aaa={}local baa={}local caa={["0"]=__a,["1"]=a_a}
+local daa={["0"]=a_a,["1"]=__a}
+for nLine=1,_aa do local _ba={}local aba={}
+for i=1,#c_a do local bba=
+b_a[c_a[i]]and b_a[c_a[i]][2][nLine]or""
+_ba[i]=bba:gsub("[01]",dd and
+{["0"]=bd:sub(i,i),["1"]=cd:sub(i,i)}or caa)
+aba[i]=bba:gsub("[01]",
+dd and{["0"]=cd:sub(i,i),["1"]=bd:sub(i,i)}or daa)end;aaa[nLine]=table.concat(_ba)
+baa[nLine]=table.concat(aba)end;return{d_a,aaa,baa}end;local cc=_b("utils")local dc=cc.xmlValue
+return
+{Label=function(_d)local ad=1;local bd
+local cd={setFontSize=function(dd,__a)
+if(type(__a)=="number")then ad=__a
+if(ad>
+1)then dd:setDrawState("label",false)
+bd=bc(ad-1,dd:getText(),dd:getForeground(),
+dd:getBackground()or colors.lightGray)if(dd:getAutoSize())then
+dd:getBase():setSize(#bd[1][1],#bd[1]-1)end else
+dd:setDrawState("label",true)end;dd:updateDraw()end;return dd end,getFontSize=function(dd)return
+ad end,getSize=function(dd)local __a,a_a=_d.getSize(dd)
+if
+(ad>1)and(dd:getAutoSize())then
+return ad==2 and dd:getText():len()*3 or math.floor(
+dd:getText():len()*8.5),
+ad==2 and a_a*2 or math.floor(a_a)else return __a,a_a end end,getWidth=function(dd)
+local __a=_d.getWidth(dd)if(ad>1)and(dd:getAutoSize())then return ad==2 and
+dd:getText():len()*3 or
+math.floor(dd:getText():len()*8.5)else
+return __a end end,getHeight=function(dd)
+local __a=_d.getHeight(dd)if(ad>1)and(dd:getAutoSize())then return
+ad==2 and __a*2 or math.floor(__a)else return __a end end,setValuesByXMLData=function(dd,__a,a_a)
+_d.setValuesByXMLData(dd,__a,a_a)if(dc("fontSize",__a)~=nil)then
+dd:setFontSize(dc("fontSize",__a))end;return dd end,draw=function(dd)
+_d.draw(dd)
+dd:addDraw("bigfonts",function()
+if(ad>1)then local __a,a_a=dd:getPosition()local b_a=dd:getParent()
+local c_a,d_a=b_a:getSize()local _aa,aaa=#bd[1][1],#bd[1]__a=__a or
+math.floor((c_a-_aa)/2)+1;a_a=a_a or
+math.floor((d_a-aaa)/2)+1
+for i=1,aaa do dd:addFG(1,i,bd[2][i])
+dd:addBG(1,i,bd[3][i])dd:addText(1,i,bd[1][i])end end end)end}return cd end}end
+ba["plugins"]["xml"]=function(...)local bb=_b("utils")local cb=bb.uuid;local db=bb.xmlValue
+local function _c(bd)
+local cd={}cd.___value=nil;cd.___name=bd;cd.___children={}cd.___props={}
+cd.___reactiveProps={}function cd:value()return self.___value end
+function cd:setValue(dd)self.___value=dd end;function cd:name()return self.___name end
+function cd:setName(dd)self.___name=dd end;function cd:children()return self.___children end;function cd:numChildren()return
+#self.___children end
+function cd:addChild(dd)
+if self[dd:name()]~=nil then
+if
+type(self[dd:name()].name)=="function"then local __a={}
+table.insert(__a,self[dd:name()])self[dd:name()]=__a end;table.insert(self[dd:name()],dd)else
+self[dd:name()]=dd end;table.insert(self.___children,dd)end;function cd:properties()return self.___props end;function cd:numProperties()
+return#self.___props end
+function cd:addProperty(dd,__a)local a_a="@"..dd
+if self[a_a]~=nil then if
+type(self[a_a])=="string"then local b_a={}table.insert(b_a,self[a_a])
+self[a_a]=b_a end
+table.insert(self[a_a],__a)else self[a_a]=__a end
+table.insert(self.___props,{name=dd,value=self[a_a]})end;function cd:reactiveProperties()return self.___reactiveProps end;function cd:addReactiveProperty(dd,__a)
+self.___reactiveProps[dd]=__a end;return cd end;local ac={}
+function ac:ToXmlString(bd)bd=string.gsub(bd,"&","&amp;")
+bd=string.gsub(bd,"<","&lt;")bd=string.gsub(bd,">","&gt;")
+bd=string.gsub(bd,"\"","&quot;")
+bd=string.gsub(bd,"([^%w%&%;%p%\t% ])",function(cd)
+return string.format("&#x%X;",string.byte(cd))end)return bd end
+function ac:FromXmlString(bd)
+bd=string.gsub(bd,"&#x([%x]+)%;",function(cd)
+return string.char(tonumber(cd,16))end)
+bd=string.gsub(bd,"&#([0-9]+)%;",function(cd)return string.char(tonumber(cd,10))end)bd=string.gsub(bd,"&quot;","\"")
+bd=string.gsub(bd,"&apos;","'")bd=string.gsub(bd,"&gt;",">")
+bd=string.gsub(bd,"&lt;","<")bd=string.gsub(bd,"&amp;","&")return bd end;function ac:ParseProps(bd,cd)
+string.gsub(cd,"(%w+)=([\"'])(.-)%2",function(dd,__a,a_a)
+bd:addProperty(dd,self:FromXmlString(a_a))end)end;function ac:ParseReactiveProps(bd,cd)
+string.gsub(cd,"(%w+)={(.-)}",function(dd,__a)
+bd:addReactiveProperty(dd,__a)end)end
+function ac:ParseXmlText(bd)
+local cd={}local dd=_c()table.insert(cd,dd)local __a,a_a,b_a,c_a,d_a;local _aa,aaa=1,1
+while true do
+__a,aaa,a_a,b_a,c_a,d_a=string.find(bd,"<(%/?)([%w_:]+)(.-)(%/?)>",_aa)if not __a then break end;local caa=string.sub(bd,_aa,__a-1)
+if not
+string.find(caa,"^%s*$")then
+local daa=(dd:value()or"")..self:FromXmlString(caa)cd[#cd]:setValue(daa)end
+if d_a=="/"then local daa=_c(b_a)self:ParseProps(daa,c_a)
+self:ParseReactiveProps(daa,c_a)dd:addChild(daa)elseif a_a==""then local daa=_c(b_a)
+self:ParseProps(daa,c_a)self:ParseReactiveProps(daa,c_a)
+table.insert(cd,daa)dd=daa else local daa=table.remove(cd)dd=cd[#cd]
+if#cd<1 then error("XmlParser: nothing to close with "..
+b_a)end;if daa:name()~=b_a then
+error("XmlParser: trying to close "..daa.name.." with "..b_a)end;dd:addChild(daa)end;_aa=aaa+1 end;local baa=string.sub(bd,_aa)if#cd>1 then
+error("XmlParser: unclosed "..cd[#cd]:name())end;return dd end;local function bc(bd,cd)local dd=db('script',bd)if(dd~=nil)then
+load(dd,nil,"t",cd.env)()end end
+local function cc(bd,cd,dd,__a)
+local a_a=__a.env
+if(cd:sub(1,1)=="$")then local b_a=cd:sub(2)
+dd(bd,bd:getBasalt().getVariable(b_a))else
+dd(bd,function(...)a_a.event={...}local b_a,c_a=pcall(load(cd,nil,"t",a_a))if
+not b_a then error("XML Error: "..c_a)end end)end end
+local function dc(bd,cd,dd,__a)
+for a_a,b_a in pairs(dd)do local c_a=cd:reactiveProperties()[b_a]if(c_a~=nil)then cc(bd,
+c_a.."()",bd[b_a],__a)end end end;local _d=nil
+local ad=function(bd)
+for cd,dd in ipairs(bd.dependencies)do for __a,a_a in ipairs(dd)do if(a_a==bd)then
+table.remove(dd,__a)end end end;bd.dependencies={}end
+return
+{basalt=function(bd)
+local cd={layout=function(dd)return{path=dd}end,reactive=function(dd)local __a=dd;local a_a={}
+local b_a=function()
+if(_d~=nil)then
+table.insert(a_a,_d)table.insert(_d.dependencies,a_a)end;return __a end
+local c_a=function(d_a)__a=d_a;local _aa={}for aaa,baa in ipairs(a_a)do _aa[aaa]=baa end;for aaa,baa in ipairs(_aa)do
+baa.execute()end end;return b_a,c_a end,untracked=function(dd)
+local __a=_d;_d=nil;local a_a=dd()_d=__a;return a_a end,effect=function(dd)
+local __a={dependencies={}}
+local a_a=function()ad(__a)local b_a=_d;_d=__a;dd()_d=b_a end;__a.execute=a_a;__a.execute()end,derived=function(dd)
+local __a,a_a=bd.reactive()bd.effect(function()a_a(dd())end)return __a end}return cd end,VisualObject=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;local c_a,d_a=__a:getPosition()
+local _aa,aaa=__a:getSize()
+if(a_a=="x")then __a:setPosition(b_a,d_a)elseif(a_a=="y")then
+__a:setPosition(c_a,b_a)elseif(a_a=="width")then __a:setSize(b_a,aaa)elseif(a_a=="height")then
+__a:setSize(_aa,b_a)elseif(a_a=="background")then __a:setBackground(colors[b_a])elseif
+(a_a=="foreground")then __a:setForeground(colors[b_a])end end,updateSpecifiedValuesByXMLData=function(__a,a_a,b_a)for c_a,d_a in
+ipairs(b_a)do local _aa=db(d_a,a_a)
+if(_aa~=nil)then __a:updateValue(d_a,_aa)end end end,setValuesByXMLData=function(__a,a_a,b_a)
+b_a.env[__a:getName()]=__a
+for c_a,d_a in pairs(a_a:reactiveProperties())do
+local _aa=function()
+local aaa=load("return "..d_a,nil,"t",b_a.env)()__a:updateValue(c_a,aaa)end;cd.effect(_aa)end
+__a:updateSpecifiedValuesByXMLData(a_a,{"x","y","width","height","background","foreground"})
+dc(__a,a_a,{"onClick","onClickUp","onHover","onScroll","onDrag","onKey","onKeyUp","onRelease","onChar","onGetFocus","onLoseFocus","onResize","onReposition","onEvent","onLeave"},b_a)return __a end}return dd end,ChangeableObject=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)if
+(a_a=="value")then __a:setValue(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"value"})cc(__a,a_a,{"onChange"},b_a)return __a end}return dd end,Container=function(bd,cd)
+local dd={}local function __a(d_a,_aa,aaa)
+if(_aa~=nil)then _aa:setValuesByXMLData(d_a,aaa)end end
+local function a_a(d_a,_aa,aaa,baa)
+if(d_a~=nil)then if(d_a.properties~=nil)then
+d_a={d_a}end
+for caa,daa in pairs(d_a)do
+local _ba=_aa(aaa,daa["@id"]or cb())dd[_ba:getName()]=_ba;__a(daa,_ba,baa)end end end
+local function b_a(d_a,_aa,aaa,baa)local caa={}
+for _ba,aba in ipairs(aaa:properties())do caa[aba.name]=aba.value end;local daa={}for _ba,aba in pairs(aaa:reactiveProperties())do
+daa[_ba]=cd.derived(function()return load("return "..aba,
+nil,"t",baa.env)()end)end
+setmetatable(caa,{__index=function(_ba,aba)return
+daa[aba]()end})d_a:loadLayout(_aa.path,caa)end
+local c_a={setValuesByXMLData=function(d_a,_aa,aaa)dd={}bd.setValuesByXMLData(d_a,_aa,aaa)
+local baa=_aa:children()local caa=cd.getObjects()
+for daa,_ba in pairs(baa)do local aba=_ba.___name
+if(aba~="animation")then
+local bba=aaa.env[aba]local cba=aba:gsub("^%l",string.upper)
+if(bba~=nil)then
+b_a(d_a,bba,_ba,aaa)elseif(caa[cba]~=nil)then local dba=d_a["add"..cba]a_a(_ba,dba,d_a,aaa)end end end;a_a(_aa["animation"],d_a.addAnimation,d_a,aaa)return
+d_a end,loadLayout=function(d_a,_aa,aaa)
+if
+(fs.exists(_aa))then local baa={}baa.env=_ENV;baa.env.props=aaa;local caa=fs.open(_aa,"r")
+local daa=ac:ParseXmlText(caa.readAll())caa.close()dd={}bc(daa,baa)
+d_a:setValuesByXMLData(daa,baa)end;return d_a end,getXMLElements=function(d_a)return
+dd end}return c_a end,BaseFrame=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getOffset()if(a_a=="layout")then __a:setLayout(b_a)elseif(a_a=="xOffset")then
+__a:setOffset(b_a,d_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"layout","xOffset"})return __a end}return dd end,Frame=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getOffset()
+if(a_a=="layout")then __a:setLayout(b_a)elseif(a_a=="xOffset")then
+__a:setOffset(b_a,d_a)elseif(a_a=="yOffset")then __a:setOffset(c_a,b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"layout","xOffset","yOffset"})return __a end}return dd end,Flexbox=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+if
+(a_a=="flexDirection")then __a:setFlexDirection(b_a)elseif(a_a=="justifyContent")then
+__a:setJustifyContent(b_a)elseif(a_a=="alignItems")then __a:setAlignItems(b_a)elseif(a_a=="spacing")then
+__a:setSpacing(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"flexDirection","justifyContent","alignItems","spacing"})return __a end}return dd end,Button=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+if(a_a=="text")then
+__a:setText(b_a)elseif(a_a=="horizontalAlign")then __a:setHorizontalAlign(b_a)elseif
+(a_a=="verticalAlign")then __a:setVerticalAlign(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"text","horizontalAlign","verticalAlign"})return __a end}return dd end,Label=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+if(a_a=="text")then
+__a:setText(b_a)elseif(a_a=="align")then __a:setAlign(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"text","align"})return __a end}return dd end,Input=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a,_aa=__a:getDefaultText()
+if(a_a=="defaultText")then __a:setDefaultText(b_a,d_a,_aa)elseif
+(a_a=="defaultFG")then __a:setDefaultText(c_a,b_a,_aa)elseif(a_a=="defaultBG")then
+__a:setDefaultText(c_a,d_a,b_a)elseif(a_a=="offset")then __a:setOffset(b_a)elseif(a_a=="textOffset")then
+__a:setTextOffset(b_a)elseif(a_a=="text")then __a:setText(b_a)elseif(a_a=="inputLimit")then
+__a:setInputLimit(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"defaultText","defaultFG","defaultBG","offset","textOffset","text","inputLimit"})return __a end}return dd end,Image=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getOffset()
+if(a_a=="xOffset")then __a:setOffset(b_a,d_a)elseif(a_a=="yOffset")then
+__a:setOffset(c_a,b_a)elseif(a_a=="path")then __a:loadImage(b_a)elseif(a_a=="usePalette")then
+__a:usePalette(b_a)elseif(a_a=="play")then __a:play(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"xOffset","yOffset","path","usePalette","play"})return __a end}return dd end,Checkbox=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getSymbol()
+if(a_a=="text")then __a:setText(b_a)elseif(a_a=="checked")then
+__a:setChecked(b_a)elseif(a_a=="textPosition")then __a:setTextPosition(b_a)elseif(a_a=="activeSymbol")then
+__a:setSymbol(b_a,d_a)elseif(a_a=="inactiveSymbol")then __a:setSymbol(c_a,b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"text","checked","textPosition","activeSymbol","inactiveSymbol"})return __a end}return dd end,Program=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)if
+(a_a=="execute")then __a:execute(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"execute"})return __a end}return dd end,Progressbar=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a,_aa=__a:getProgressBar()
+if(a_a=="direction")then __a:setDirection(b_a)elseif(a_a=="activeBarColor")then
+__a:setProgressBar(b_a,d_a,_aa)elseif(a_a=="activeBarSymbol")then __a:setProgressBar(c_a,b_a,_aa)elseif(a_a==
+"activeBarSymbolColor")then __a:setProgressBar(c_a,d_a,b_a)elseif
+(a_a=="backgroundSymbol")then __a:setBackgroundSymbol(b_a)elseif(a_a=="progress")then
+__a:setProgress(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"direction","activeBarColor","activeBarSymbol","activeBarSymbolColor","backgroundSymbol","progress"})return __a end}return dd end,Slider=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+if
+(a_a=="symbol")then __a:setSymbol(b_a)elseif(a_a=="symbolColor")then
+__a:setSymbolColor(b_a)elseif(a_a=="index")then __a:setIndex(b_a)elseif(a_a=="maxValue")then
+__a:setMaxValue(b_a)elseif(a_a=="barType")then __a:setBarType(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"symbol","symbolColor","index","maxValue","barType"})return __a end}return dd end,Scrollbar=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+if
+(a_a=="symbol")then __a:setSymbol(b_a)elseif(a_a=="symbolColor")then
+__a:setSymbolColor(b_a)elseif(a_a=="symbolSize")then __a:setSymbolSize(b_a)elseif(a_a=="scrollAmount")then
+__a:setScrollAmount(b_a)elseif(a_a=="index")then __a:setIndex(b_a)elseif(a_a=="maxValue")then
+__a:setMaxValue(b_a)elseif(a_a=="barType")then __a:setBarType(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"symbol","symbolColor","symbolSize","scrollAmount","index","maxValue","barType"})return __a end}return dd end,MonitorFrame=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)if
+(a_a=="monitor")then __a:setMonitor(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"monitor"})return __a end}return dd end,Switch=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+if
+(a_a=="symbol")then __a:setSymbol(b_a)elseif(a_a=="activeBackground")then
+__a:setActiveBackground(b_a)elseif(a_a=="inactiveBackground")then __a:setInactiveBackground(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"symbol","activeBackground","inactiveBackground"})return __a end}return dd end,Textfield=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getSelection()local _aa,aaa=__a:getOffset()
+if(a_a=="bgSelection")then
+__a:setSelection(c_a,b_a)elseif(a_a=="fgSelection")then __a:setSelection(b_a,d_a)elseif(a_a=="xOffset")then
+__a:setOffset(b_a,aaa)elseif(a_a=="yOffset")then __a:setOffset(_aa,b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"bgSelection","fgSelection","xOffset","yOffset"})
+if(a_a["lines"]~=nil)then local c_a=a_a["lines"]["line"]if
+(c_a.properties~=nil)then c_a={c_a}end;for d_a,_aa in pairs(c_a)do
+__a:addLine(_aa:value())end end
+if(a_a["keywords"]~=nil)then
+for c_a,d_a in pairs(a_a["keywords"])do
+if(colors[c_a]~=nil)then
+local _aa=d_a;if(_aa.properties~=nil)then _aa={_aa}end;local aaa={}
+for baa,caa in pairs(_aa)do
+local daa=caa["keyword"]if(caa["keyword"].properties~=nil)then
+daa={caa["keyword"]}end;for _ba,aba in pairs(daa)do
+table.insert(aaa,aba:value())end end;__a:addKeywords(colors[c_a],aaa)end end end
+if(a_a["rules"]~=nil)then
+if(a_a["rules"]["rule"]~=nil)then
+local c_a=a_a["rules"]["rule"]if(a_a["rules"]["rule"].properties~=nil)then
+c_a={a_a["rules"]["rule"]}end
+for d_a,_aa in pairs(c_a)do if(db("pattern",_aa)~=nil)then
+__a:addRule(db("pattern",_aa),colors[db("fg",_aa)],colors[db("bg",_aa)])end end end end;return __a end}return dd end,Thread=function(bd,cd)
+local dd={setValuesByXMLData=function(__a,a_a,b_a)local c_a=
+db("start",a_a)~=nil;if(c_a~=nil)then
+local d_a=load(c_a,nil,"t",b_a.env)__a:start(d_a)end;return __a end}return dd end,Timer=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+if
+(a_a=="start")then __a:start(b_a)elseif(a_a=="time")then __a:setTime(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"start","time"})dc(__a,a_a,{"onCall"},b_a)return __a end}return dd end,List=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getSelectionColor()
+if(a_a=="align")then __a:setTextAlign(b_a)elseif(a_a=="offset")then
+__a:setOffset(b_a)elseif(a_a=="selectionBg")then __a:setSelectionColor(b_a,d_a)elseif
+(a_a=="selectionFg")then __a:setSelectionColor(c_a,b_a)elseif(a_a=="scrollable")then
+__a:setScrollable(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"align","offset","selectionBg","selectionFg","scrollable"})
+if(a_a["item"]~=nil)then local c_a=a_a["item"]
+if(c_a.properties~=nil)then c_a={c_a}end
+for d_a,_aa in pairs(c_a)do if(__a:getType()~="Radio")then
+__a:addItem(db("text",_aa),colors[db("bg",_aa)],colors[db("fg",_aa)])end end end;return __a end}return dd end,Dropdown=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getDropdownSize()
+if(a_a=="dropdownWidth")then __a:setDropdownSize(b_a,d_a)elseif
+(a_a=="dropdownHeight")then __a:setDropdownSize(c_a,b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"dropdownWidth","dropdownHeight"})return __a end}return dd end,Radio=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getBoxSelectionColor()local _aa,aaa=__a:setBoxDefaultColor()
+if(a_a=="selectionBg")then
+__a:setBoxSelectionColor(b_a,d_a)elseif(a_a=="selectionFg")then __a:setBoxSelectionColor(c_a,b_a)elseif
+(a_a=="defaultBg")then __a:setBoxDefaultColor(b_a,aaa)elseif(a_a=="defaultFg")then
+__a:setBoxDefaultColor(_aa,b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"selectionBg","selectionFg","defaultBg","defaultFg"})
+if(a_a["item"]~=nil)then local c_a=a_a["item"]
+if(c_a.properties~=nil)then c_a={c_a}end;for d_a,_aa in pairs(c_a)do
+__a:addItem(db("text",_aa),db("x",_aa),db("y",_aa),colors[db("bg",_aa)],colors[db("fg",_aa)])end end;return __a end}return dd end,Menubar=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)if
+(a_a=="space")then __a:setSpace(b_a)elseif(a_a=="scrollable")then
+__a:setScrollable(b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"space","scrollable"})return __a end}return dd end,Graph=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getGraphSymbol()
+if(a_a=="maxEntries")then __a:setMaxEntries(b_a)elseif(a_a=="type")then
+__a:setType(b_a)elseif(a_a=="minValue")then __a:setMinValue(b_a)elseif(a_a=="maxValue")then
+__a:setMaxValue(b_a)elseif(a_a=="symbol")then __a:setGraphSymbol(b_a,d_a)elseif(a_a=="symbolColor")then
+__a:setGraphSymbol(c_a,b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"maxEntries","type","minValue","maxValue","symbol","symbolColor"})
+if(a_a["item"]~=nil)then local c_a=a_a["item"]
+if(c_a.properties~=nil)then c_a={c_a}end
+for d_a,_aa in pairs(c_a)do __a:addDataPoint(db("value"))end end;return __a end}return dd end,Treeview=function(bd,cd)
+local dd={updateValue=function(__a,a_a,b_a)if(
+b_a==nil)then return end;bd.updateValue(__a,a_a,b_a)
+local c_a,d_a=__a:getSelectionColor()local _aa,aaa=__a:getOffset()
+if(a_a=="space")then __a:setSpace(b_a)elseif(a_a==
+"scrollable")then __a:setScrollable(b_a)elseif(a_a=="selectionBg")then
+__a:setSelectionColor(b_a,d_a)elseif(a_a=="selectionFg")then __a:setSelectionColor(c_a,b_a)elseif
+(a_a=="xOffset")then __a:setOffset(b_a,aaa)elseif(a_a=="yOffset")then
+__a:setOffset(_aa,b_a)end end,setValuesByXMLData=function(__a,a_a,b_a)
+bd.setValuesByXMLData(__a,a_a,b_a)
+__a:updateSpecifiedValuesByXMLData(a_a,{"space","scrollable","selectionBg","selectionFg","xOffset","yOffset"})
+local function c_a(d_a,_aa)
+if(_aa["node"]~=nil)then local aaa=_aa["node"]
+if(aaa.properties~=nil)then aaa={aaa}end
+for baa,caa in pairs(aaa)do
+local daa=d_a:addNode(db("text",caa),colors[db("bg",caa)],colors[db("fg",caa)])c_a(daa,caa)end end end
+if(a_a["node"]~=nil)then local d_a=a_a["node"]
+if(d_a.properties~=nil)then d_a={d_a}end
+for _aa,aaa in pairs(d_a)do
+local baa=__a:addNode(db("text",aaa),colors[db("bg",aaa)],colors[db("fg",aaa)])c_a(baa,aaa)end end;return __a end}return dd end}end
+ba["plugins"]["betterError"]=function(...)local bb=_b("utils")local cb=bb.wrapText
+return
+{basalt=function(db)local _c
+local ac
+return
+{getBasaltErrorFrame=function()return _c end,basaltError=function(bc)
+if(_c==nil)then local dc=db.getMainFrame()
+local _d,ad=dc:getSize()
+_c=dc:addMovableFrame("basaltErrorFrame"):setSize(_d-10,ad-4):setBackground(colors.lightGray):setForeground(colors.white):setZIndex(500)
+_c:addPane("titleBackground"):setSize(_d,1):setPosition(1,1):setBackground(colors.black):setForeground(colors.white)
+_c:setPosition(_d/2 -_c:getWidth()/2,ad/2 -_c:getHeight()/2):setBorder(colors.black)
+_c:addLabel("title"):setText("Basalt Unexpected Error"):setPosition(2,1):setBackground(colors.black):setForeground(colors.white)
+ac=_c:addList("errorList"):setSize(_c:getWidth()-2,_c:getHeight()-6):setPosition(2,3):setBackground(colors.lightGray):setForeground(colors.white):setSelectionColor(colors.lightGray,colors.gray)
+_c:addButton("xButton"):setText("x"):setPosition(_c:getWidth(),1):setSize(1,1):setBackground(colors.black):setForeground(colors.red):onClick(function()
+_c:hide()end)
+_c:addButton("Clear"):setText("Clear"):setPosition(
+_c:getWidth()-19,_c:getHeight()-1):setSize(9,1):setBackground(colors.black):setForeground(colors.white):onClick(function()
+ac:clear()end)
+_c:addButton("Close"):setText("Close"):setPosition(
+_c:getWidth()-9,_c:getHeight()-1):setSize(9,1):setBackground(colors.black):setForeground(colors.white):onClick(function()
+db.autoUpdate(false)term.clear()term.setCursorPos(1,1)end)end;_c:show()
+ac:addItem(("-"):rep(_c:getWidth()-2))local cc=cb(bc,_c:getWidth()-2)for i=1,#cc do
+ac:addItem(cc[i])end end}end}end
+ba["plugins"]["animations"]=function(...)
+local bb,cb,db,_c,ac,bc=math.floor,math.sin,math.cos,math.pi,math.sqrt,math.pow;local function cc(cab,dab,_bb)return cab+ (dab-cab)*_bb end
+local function dc(cab)return cab end;local function _d(cab)return 1 -cab end
+local function ad(cab)return cab*cab*cab end;local function bd(cab)return _d(ad(_d(cab)))end;local function cd(cab)return
+cc(ad(cab),bd(cab),cab)end
+local function dd(cab)return cb((cab*_c)/2)end;local function __a(cab)return _d(db((cab*_c)/2))end;local function a_a(cab)return- (
+db(_c*x)-1)/2 end
+local function b_a(cab)local dab=1.70158
+local _bb=dab+1;return _bb*cab^3 -dab*cab^2 end;local function c_a(cab)return cab^3 end;local function d_a(cab)local dab=(2 *_c)/3
+return cab==0 and 0 or(cab==1 and 1 or
+(-2 ^ (10 *
+cab-10)*cb((cab*10 -10.75)*dab)))end
+local function _aa(cab)return
+cab==0 and 0 or 2 ^ (10 *cab-10)end
+local function aaa(cab)return cab==0 and 0 or 2 ^ (10 *cab-10)end
+local function baa(cab)local dab=1.70158;local _bb=dab*1.525;return
+cab<0.5 and( (2 *cab)^2 *
+( (_bb+1)*2 *cab-_bb))/2 or
+(
+(2 *cab-2)^2 * ( (_bb+1)* (cab*2 -2)+_bb)+2)/2 end;local function caa(cab)return
+cab<0.5 and 4 *cab^3 or 1 - (-2 *cab+2)^3 /2 end
+local function daa(cab)
+local dab=(2 *_c)/4.5
+return
+cab==0 and 0 or(cab==1 and 1 or
+(
+cab<0.5 and- (2 ^ (20 *cab-10)*
+cb((20 *cab-11.125)*dab))/2 or
+(2 ^ (-20 *cab+10)*cb((20 *cab-11.125)*dab))/2 +1))end
+local function _ba(cab)return
+cab==0 and 0 or(cab==1 and 1 or
+(
+cab<0.5 and 2 ^ (20 *cab-10)/2 or(2 -2 ^ (-20 *cab+10))/2))end;local function aba(cab)return
+cab<0.5 and 2 *cab^2 or 1 - (-2 *cab+2)^2 /2 end;local function bba(cab)return
+cab<0.5 and 8 *
+cab^4 or 1 - (-2 *cab+2)^4 /2 end;local function cba(cab)return
+cab<0.5 and 16 *
+cab^5 or 1 - (-2 *cab+2)^5 /2 end;local function dba(cab)
+return cab^2 end;local function _ca(cab)return cab^4 end
+local function aca(cab)return cab^5 end;local function bca(cab)local dab=1.70158;local _bb=dab+1;return
+1 +_bb* (cab-1)^3 +dab* (cab-1)^2 end;local function cca(cab)return 1 -
+(1 -cab)^3 end
+local function dca(cab)local dab=(2 *_c)/3;return
+
+cab==0 and 0 or(cab==1 and 1 or(
+2 ^ (-10 *cab)*cb((cab*10 -0.75)*dab)+1))end
+local function _da(cab)return cab==1 and 1 or 1 -2 ^ (-10 *cab)end;local function ada(cab)return 1 - (1 -cab)* (1 -cab)end;local function bda(cab)return 1 - (
+1 -cab)^4 end;local function cda(cab)
+return 1 - (1 -cab)^5 end
+local function dda(cab)return 1 -ac(1 -bc(cab,2))end;local function __b(cab)return ac(1 -bc(cab-1,2))end
+local function a_b(cab)return
+
+cab<0.5 and(1 -ac(
+1 -bc(2 *cab,2)))/2 or(ac(1 -bc(-2 *cab+2,2))+1)/2 end
+local function b_b(cab)local dab=7.5625;local _bb=2.75
+if(cab<1 /_bb)then return dab*cab*cab elseif(cab<2 /_bb)then local abb=cab-
+1.5 /_bb;return dab*abb*abb+0.75 elseif(cab<2.5 /_bb)then local abb=cab-
+2.25 /_bb;return dab*abb*abb+0.9375 else
+local abb=cab-2.625 /_bb;return dab*abb*abb+0.984375 end end;local function c_b(cab)return 1 -b_b(1 -cab)end;local function d_b(cab)return
+x<0.5 and(1 -
+b_b(1 -2 *cab))/2 or(1 +b_b(2 *cab-1))/2 end
+local _ab={linear=dc,lerp=cc,flip=_d,easeIn=ad,easeInSine=__a,easeInBack=b_a,easeInCubic=c_a,easeInElastic=d_a,easeInExpo=aaa,easeInQuad=dba,easeInQuart=_ca,easeInQuint=aca,easeInCirc=dda,easeInBounce=c_b,easeOut=bd,easeOutSine=dd,easeOutBack=bca,easeOutCubic=cca,easeOutElastic=dca,easeOutExpo=_da,easeOutQuad=ada,easeOutQuart=bda,easeOutQuint=cda,easeOutCirc=__b,easeOutBounce=b_b,easeInOut=cd,easeInOutSine=a_a,easeInOutBack=baa,easeInOutCubic=caa,easeInOutElastic=daa,easeInOutExpo=_ba,easeInOutQuad=aba,easeInOutQuart=bba,easeInOutQuint=cba,easeInOutCirc=a_b,easeInOutBounce=d_b}local aab=_b("utils")local bab=aab.xmlValue
+return
+{VisualObject=function(cab,dab)local _bb={}local abb="linear"
+local function bbb(acb,bcb)for ccb,dcb in pairs(_bb)do if(dcb.timerId==
+bcb)then return dcb end end end
+local function cbb(acb,bcb,ccb,dcb,_db,adb,bdb,cdb,ddb,__c)local a_c,b_c=ddb(acb)if(_bb[bdb]~=nil)then
+os.cancelTimer(_bb[bdb].timerId)end;_bb[bdb]={}
+_bb[bdb].call=function()
+local c_c=_bb[bdb].progress
+local d_c=math.floor(_ab.lerp(a_c,bcb,_ab[adb](c_c/dcb))+0.5)
+local _ac=math.floor(_ab.lerp(b_c,ccb,_ab[adb](c_c/dcb))+0.5)__c(acb,d_c,_ac)end
+_bb[bdb].finished=function()__c(acb,bcb,ccb)if(cdb~=nil)then cdb(acb)end end;_bb[bdb].timerId=os.startTimer(0.05 +_db)
+_bb[bdb].progress=0;_bb[bdb].duration=dcb;_bb[bdb].mode=adb
+acb:listenEvent("other_event")end
+local function dbb(acb,bcb,ccb,dcb,_db,...)local adb={...}if(_bb[dcb]~=nil)then
+os.cancelTimer(_bb[dcb].timerId)end;_bb[dcb]={}local bdb=1;_bb[dcb].call=function()
+local cdb=adb[bdb]_db(acb,cdb)end end
+local _cb={animatePosition=function(acb,bcb,ccb,dcb,_db,adb,bdb)adb=adb or abb;dcb=dcb or 1;_db=_db or 0
+bcb=math.floor(bcb+0.5)ccb=math.floor(ccb+0.5)
+cbb(acb,bcb,ccb,dcb,_db,adb,"position",bdb,acb.getPosition,acb.setPosition)return acb end,animateSize=function(acb,bcb,ccb,dcb,_db,adb,bdb)adb=
+adb or abb;dcb=dcb or 1;_db=_db or 0
+cbb(acb,bcb,ccb,dcb,_db,adb,"size",bdb,acb.getSize,acb.setSize)return acb end,animateOffset=function(acb,bcb,ccb,dcb,_db,adb,bdb)adb=
+adb or abb;dcb=dcb or 1;_db=_db or 0
+cbb(acb,bcb,ccb,dcb,_db,adb,"offset",bdb,acb.getOffset,acb.setOffset)return acb end,animateBackground=function(acb,bcb,ccb,dcb,_db,adb)_db=
+_db or abb;ccb=ccb or 1;dcb=dcb or 0
+dbb(acb,bcb,nil,ccb,dcb,_db,"background",adb,acb.getBackground,acb.setBackground)return acb end,doneHandler=function(acb,bcb,...)
+for ccb,dcb in
+pairs(_bb)do if(dcb.timerId==bcb)then _bb[ccb]=nil
+acb:sendEvent("animation_done",acb,"animation_done",ccb)end end end,onAnimationDone=function(acb,...)
+for bcb,ccb in
+pairs(table.pack(...))do if(type(ccb)=="function")then
+acb:registerEvent("animation_done",ccb)end end;return acb end,eventHandler=function(acb,bcb,ccb,...)
+cab.eventHandler(acb,bcb,ccb,...)
+if(bcb=="timer")then local dcb=bbb(acb,ccb)
+if(dcb~=nil)then
+if(dcb.progress<dcb.duration)then
+dcb.call()dcb.progress=dcb.progress+0.05
+dcb.timerId=os.startTimer(0.05)else dcb.finished()acb:doneHandler(ccb)end end end end,setValuesByXMLData=function(acb,bcb,ccb)
+cab.setValuesByXMLData(acb,bcb,ccb)
+local dcb,_db,adb,bdb,cdb=bab("animateX",bcb),bab("animateY",bcb),bab("animateDuration",bcb),bab("animateTimeOffset",bcb),bab("animateMode",bcb)
+local ddb,__c,a_c,b_c,c_c=bab("animateW",bcb),bab("animateH",bcb),bab("animateDuration",bcb),bab("animateTimeOffset",bcb),bab("animateMode",bcb)
+local d_c,_ac,aac,bac,cac=bab("animateXOffset",bcb),bab("animateYOffset",bcb),bab("animateDuration",bcb),bab("animateTimeOffset",bcb),bab("animateMode",bcb)if(dcb~=nil and _db~=nil)then
+acb:animatePosition(dcb,_db,aac,bac,cac)end;if(ddb~=nil and __c~=nil)then
+acb:animateSize(ddb,__c,aac,bac,cac)end;if(d_c~=nil and _ac~=nil)then
+acb:animateOffset(d_c,_ac,aac,bac,cac)end;return acb end}return _cb end}end;return ba["main"]()

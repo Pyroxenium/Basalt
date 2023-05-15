@@ -33,7 +33,7 @@ local getProject = function(subDir)
 end
 ]]
 
-local projectContentEnd = '\n return project["main"]()'
+local projectContentEnd = '\nreturn project["main"]()'
 
 local function split(s, delimiter)
     local result = {}
@@ -437,7 +437,7 @@ function installer.generateCustomBasalt(files, basePath, branch)
     local function downloadFile(url, path)
         local folder = split(path, "/")
         if(#folder>1)then
-            project[basePath..path] = {content=installer.get(url), folder=folder[1], filename=folder[#folder], url=url}
+            project[basePath..path] = {content=installer.get(url), folder=folder[2], filename=folder[#folder], url=url}
         else
             project[basePath..path] = {content=installer.get(url), folder="", filename=path, url=url}
         end
@@ -480,12 +480,12 @@ function installer.downloadCustomBasalt(files, version, basePath, branch, minify
             f.close()
         end
     elseif(version=="packed")then
-        local projectContent = projectContentStart.."\nproject = {objects={}, plugins={}, libraries={}}\n"
+        local projectContent = projectContentStart.."\nproject = {objects={}, plugins={}, libraries={}}"
         for _,v in pairs(project)do
             if(v.folder~="")then
-                projectContent = projectContent.."project['"..v.folder.."']['"..v.filename:gsub(".lua", "").."'] =".."function(...) "..v.content.." end\n"
+                projectContent = projectContent.."\nproject['"..v.folder.."']['"..v.filename:gsub(".lua", "").."'] = ".."function(...)\n"..v.content.."\nend"
             else
-                projectContent = projectContent.."project['"..v.filename:gsub(".lua", "").."'] =".."function(...) "..v.content.." end\n"
+                projectContent = projectContent.."\nproject['"..v.filename:gsub(".lua", "").."'] = ".."function(...)\n"..v.content.."\nend"
             end
         end
         projectContent = projectContent..projectContentEnd
