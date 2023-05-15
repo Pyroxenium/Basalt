@@ -636,8 +636,8 @@ return {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
-                    "bgSelection",
-                    "fgSelection",
+                    "selectionBG",
+                    "selectionFG",
                     "xOffset",
                     "yOffset"
                 })
