@@ -43,7 +43,7 @@ return function(name, basalt)
         end,
 
         setXOffset = function(self, newXOffset)
-            return self:setOffset(newXOffset, yOffset)
+            return self:setOffset(newXOffset, nil)
         end,
 
         getYOffset = function(self)
@@ -51,7 +51,7 @@ return function(name, basalt)
         end,
 
         setYOffset = function(self, newYOffset)
-            return self:setOffset(xOffset, newYOffset)
+            return self:setOffset(nil, newYOffset)
         end,
 
         setParent = function(self, p, ...)
