@@ -70,6 +70,18 @@ local getVariable = function(name)
     return variables[name]
 end
 
+local getObjects = function()
+    return moddedObjects
+end
+
+local getObject = function(id)
+    return getObjects()[id]
+end
+
+local createObject = function(objectName, id, basalt)
+    return getObject(objectName)(id, basalt)
+end
+
 local bInstance = {
     getDynamicValueEventSetting = function()
         return basalt.dynamicValueEvents
@@ -127,14 +139,12 @@ local bInstance = {
     stop = stop,
     debug = basalt.debug,
     log = basalt.log,
+    
+    getObjects = getObjects,
 
-    getObjects = function()
-        return moddedObjects
-    end,
+    getObject = getObject,
 
-    getObject = function(id)
-        return moddedObjects[id]
-    end,
+    createObject = createObject,
 
     getDirectory = function()
         return projectDirectory
