@@ -78,8 +78,8 @@ local getObject = function(id)
     return getObjects()[id]
 end
 
-local createObject = function(objectName, id, basalt)
-    return getObject(objectName)(id, basalt)
+local createObject = function(self, objectName, id)
+    return getObject(objectName)(id, self)
 end
 
 local bInstance = {
