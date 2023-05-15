@@ -33,7 +33,21 @@ return function(name, basalt)
         isType = function(self, t)
             return objectType==t
         end,
-        
+
+        getProperty = function(self, name)
+            local get = self["get" .. name:gsub("^%l", string.upper)]
+            if (get ~= nil) then
+                return get(self)
+            end
+        end,
+
+        setProperty = function(self, name, ...)
+            local set = self["set" .. name:gsub("^%l", string.upper)]
+            if (set ~= nil) then
+                return set(self, ...)
+            end
+        end,
+
         getName = function(self)
             return name
         end,

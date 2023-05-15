@@ -256,30 +256,11 @@ return {
     VisualObject = function(base, basalt)
 
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                local x, y = self:getPosition()
-                local w, h = self:getSize()
-                if (name == "x") then
-                    self:setPosition(value, y)
-                elseif (name == "y") then
-                    self:setPosition(x, value)
-                elseif (name == "width") then
-                    self:setSize(value, h)
-                elseif (name == "height") then
-                    self:setSize(w, value)
-                elseif (name == "background") then
-                    self:setBackground(colors[value])
-                elseif (name == "foreground") then
-                    self:setForeground(colors[value])
-                end
-            end,
-
             updateSpecifiedValuesByXMLData = function(self, data, valueNames)
                 for _, name in ipairs(valueNames) do
                     local value = xmlValue(name, data)
                     if (value ~= nil) then
-                        self:updateValue(name, value)
+                        self:setProperty(name, value)
                     end
                 end
             end,
@@ -289,7 +270,7 @@ return {
                 for prop, expression in pairs(data:reactiveProperties()) do
                     local update = function()
                         local value = load("return " .. expression, nil, "t", renderContext.env)()
-                        self:updateValue(prop, value)
+                        self:setProperty(prop, value)
                     end
                     basalt.effect(update)
                 end
@@ -326,14 +307,6 @@ return {
 
     ChangeableObject = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "value") then
-                    self:setValue(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -439,17 +412,6 @@ return {
 
     BaseFrame = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local _, yOffset = self:getOffset()
-                if (name == "layout") then
-                    self:setLayout(value)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -464,19 +426,6 @@ return {
 
     Frame = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local xOffset, yOffset = self:getOffset()
-                if (name == "layout") then
-                    self:setLayout(value)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                elseif (name == "yOffset") then
-                    self:setOffset(xOffset, value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -492,20 +441,6 @@ return {
 
     Flexbox = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "flexDirection") then
-                    self:setFlexDirection(value)
-                elseif (name == "justifyContent") then
-                    self:setJustifyContent(value)
-                elseif (name == "alignItems") then
-                    self:setAlignItems(value)
-                elseif (name == "spacing") then
-                    self:setSpacing(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -522,18 +457,6 @@ return {
 
     Button = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "text") then
-                    self:setText(value)
-                elseif (name == "horizontalAlign") then
-                    self:setHorizontalAlign(value)
-                elseif (name == "verticalAlign") then
-                    self:setVerticalAlign(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -549,16 +472,6 @@ return {
 
     Label = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "text") then
-                    self:setText(value)
-                elseif (name == "align") then
-                    self:setAlign(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -573,27 +486,6 @@ return {
 
     Input = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local defaultText, defaultFG, defaultBG = self:getDefaultText()
-                if (name == "defaultText") then
-                    self:setDefaultText(value, defaultFG, defaultBG)
-                elseif (name == "defaultFG") then
-                    self:setDefaultText(defaultText, value, defaultBG)
-                elseif (name == "defaultBG") then
-                    self:setDefaultText(defaultText, defaultFG, value)
-                elseif (name == "offset") then
-                    self:setOffset(value)
-                elseif (name == "textOffset") then
-                    self:setTextOffset(value)
-                elseif (name == "text") then
-                    self:setText(value)
-                elseif (name == "inputLimit") then
-                    self:setInputLimit(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -613,23 +505,6 @@ return {
 
     Image = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local xOffset, yOffset = self:getOffset()
-                if (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                elseif (name == "yOffset") then
-                    self:setOffset(xOffset, value)
-                elseif (name == "path") then
-                    self:loadImage(value)
-                elseif (name == "usePalette") then
-                    self:usePalette(value)
-                elseif (name == "play") then
-                    self:play(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -647,23 +522,6 @@ return {
 
     Checkbox = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local activeSymbol, inactiveSymbol = self:getSymbol()
-                if (name == "text") then
-                    self:setText(value)
-                elseif (name == "checked") then
-                    self:setChecked(value)
-                elseif (name == "textPosition") then
-                    self:setTextPosition(value)
-                elseif (name == "activeSymbol") then
-                    self:setSymbol(value, inactiveSymbol)
-                elseif (name == "inactiveSymbol") then
-                    self:setSymbol(activeSymbol, value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -681,14 +539,6 @@ return {
 
     Program = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "execute") then
-                    self:execute(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -702,25 +552,6 @@ return {
 
     Progressbar = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local activeBarColor, activeBarSymbol, activeBarSymbolCol = self:getProgressBar()
-                if (name == "direction") then
-                    self:setDirection(value)
-                elseif (name == "activeBarColor") then
-                    self:setProgressBar(value, activeBarSymbol, activeBarSymbolCol)
-                elseif (name == "activeBarSymbol") then
-                    self:setProgressBar(activeBarColor, value, activeBarSymbolCol)
-                elseif (name == "activeBarSymbolColor") then
-                    self:setProgressBar(activeBarColor, activeBarSymbol, value)
-                elseif (name == "backgroundSymbol") then
-                    self:setBackgroundSymbol(value)
-                elseif (name == "progress") then
-                    self:setProgress(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -739,22 +570,6 @@ return {
 
     Slider = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "symbol") then
-                    self:setSymbol(value)
-                elseif (name == "symbolColor") then
-                    self:setSymbolColor(value)
-                elseif (name == "index") then
-                    self:setIndex(value)
-                elseif (name == "maxValue") then
-                    self:setMaxValue(value)
-                elseif (name == "barType") then
-                    self:setBarType(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -772,26 +587,6 @@ return {
 
     Scrollbar = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "symbol") then
-                    self:setSymbol(value)
-                elseif (name == "symbolColor") then
-                    self:setSymbolColor(value)
-                elseif (name == "symbolSize") then
-                    self:setSymbolSize(value)
-                elseif (name == "scrollAmount") then
-                    self:setScrollAmount(value)
-                elseif (name == "index") then
-                    self:setIndex(value)
-                elseif (name == "maxValue") then
-                    self:setMaxValue(value)
-                elseif (name == "barType") then
-                    self:setBarType(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -811,14 +606,6 @@ return {
 
     MonitorFrame = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "monitor") then
-                    self:setMonitor(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -832,18 +619,6 @@ return {
 
     Switch = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "symbol") then
-                    self:setSymbol(value)
-                elseif (name == "activeBackground") then
-                    self:setActiveBackground(value)
-                elseif (name == "inactiveBackground") then
-                    self:setInactiveBackground(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -859,22 +634,6 @@ return {
 
     Textfield = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local fgSel, bgSel = self:getSelection()
-                local xOffset, yOffset = self:getOffset()
-                if (name == "bgSelection") then
-                    self:setSelection(fgSel, value)
-                elseif (name == "fgSelection") then
-                    self:setSelection(value, bgSel)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                elseif (name == "yOffset") then
-                    self:setOffset(xOffset, value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -943,16 +702,6 @@ return {
 
     Timer = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "start") then
-                    self:start(value)
-                elseif (name == "time") then
-                    self:setTime(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -970,23 +719,6 @@ return {
 
     List = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local selBg, selFg = self:getSelectionColor()
-                if (name == "align") then
-                    self:setTextAlign(value)
-                elseif (name == "offset") then
-                    self:setOffset(value)
-                elseif (name == "selectionBg") then
-                    self:setSelectionColor(value, selFg)
-                elseif (name == "selectionFg") then
-                    self:setSelectionColor(selBg, value)
-                elseif (name == "scrollable") then
-                    self:setScrollable(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -1014,17 +746,6 @@ return {
 
     Dropdown = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local w, h = self:getDropdownSize()
-                if (name == "dropdownWidth") then
-                    self:setDropdownSize(value, h)
-                elseif (name == "dropdownHeight") then
-                    self:setDropdownSize(w, value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -1039,22 +760,6 @@ return {
 
     Radio = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local selBg, selFg = self:getBoxSelectionColor()
-                local defBg, defFg = self:setBoxDefaultColor()
-                if (name == "selectionBg") then
-                    self:setBoxSelectionColor(value, selFg)
-                elseif (name == "selectionFg") then
-                    self:setBoxSelectionColor(selBg, value)
-                elseif (name == "defaultBg") then
-                    self:setBoxDefaultColor(value, defFg)
-                elseif (name == "defaultFg") then
-                    self:setBoxDefaultColor(defBg, value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -1079,16 +784,6 @@ return {
 
     Menubar = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                if (name == "space") then
-                    self:setSpace(value)
-                elseif (name == "scrollable") then
-                    self:setScrollable(value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -1103,25 +798,6 @@ return {
 
     Graph = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local symbol, symbolCol = self:getGraphSymbol()
-                if (name == "maxEntries") then
-                    self:setMaxEntries(value)
-                elseif (name == "type") then
-                    self:setType(value)
-                elseif (name == "minValue") then
-                    self:setMinValue(value)
-                elseif (name == "maxValue") then
-                    self:setMaxValue(value)
-                elseif (name == "symbol") then
-                    self:setGraphSymbol(value, symbolCol)
-                elseif (name == "symbolColor") then
-                    self:setGraphSymbol(symbol, value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
@@ -1147,26 +823,6 @@ return {
 
     Treeview = function(base, basalt)
         local object = {
-            updateValue = function(self, name, value)
-                if (value == nil) then return end
-                base.updateValue(self, name, value)
-                local selBg, selFg = self:getSelectionColor()
-                local xOffset, yOffset = self:getOffset()
-                if (name == "space") then
-                    self:setSpace(value)
-                elseif (name == "scrollable") then
-                    self:setScrollable(value)
-                elseif (name == "selectionBg") then
-                    self:setSelectionColor(value, selFg)
-                elseif (name == "selectionFg") then
-                    self:setSelectionColor(selBg, value)
-                elseif (name == "xOffset") then
-                    self:setOffset(value, yOffset)
-                elseif (name == "yOffset") then
-                    self:setOffset(xOffset, value)
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
