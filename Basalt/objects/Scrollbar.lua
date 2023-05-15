@@ -62,6 +62,26 @@ return function(name, basalt)
             return self
         end,
 
+        setSymbolBG = function(self, bg)
+            return self:setSymbol(symbol, bg, nil)
+        end,
+
+        setSymbolFG = function(self, fg)
+            return self:setSymbol(symbol, nil, fg)
+        end,
+
+        getSymbol = function(self)
+            return symbol
+        end,
+
+        getSymbolBG = function(self)
+            return symbolBG
+        end,
+
+        getSymbolFG = function(self)
+            return symbolFG
+        end,
+
         setIndex = function(self, _index)
             index = _index
             if (index < 1) then
@@ -81,6 +101,10 @@ return function(name, basalt)
             return self
         end,
 
+        getScrollAmount = function(self)
+            return scrollAmount
+        end,
+
         getIndex = function(self)
             local w,h = self:getSize()
             return scrollAmount > (barType=="vertical" and h or w) and math.floor(scrollAmount/(barType=="vertical" and h or w) * index) or index
@@ -94,11 +118,19 @@ return function(name, basalt)
             return self
         end,
 
+        getSymbolSize = function(self)
+            return symbolSize
+        end,
+
         setBarType = function(self, _typ)
             barType = _typ:lower()
             updateSymbolSize()
             self:updateDraw()
             return self
+        end,
+
+        getBarType = function(self)
+            return barType
         end,
 
         mouseHandler = function(self, button, x, y, ...)

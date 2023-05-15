@@ -161,8 +161,24 @@ return function(name, basalt)
             return self
         end,
 
+        setSelectionFG = function(self, fg)
+            return self:setSelection(fg, nil)
+        end,
+
+        setSelectionBG = function(self, bg)
+            return self:setSelection(nil, bg)
+        end,
+
         getSelection = function(self)
             return selectionFG, selectionBG
+        end,
+
+        getSelectionFG = function(self)
+            return selectionFG
+        end,
+
+        getSelectionBG = function(self)
+            return selectionBG
         end,
 
         getLines = function(self)
@@ -287,6 +303,22 @@ return function(name, basalt)
             hIndex = yOff or hIndex
             self:updateDraw()
             return self
+        end,
+
+        getXOffset = function(self, xOff)
+            return wIndex
+        end,
+
+        setXOffset = function(self, xOff)
+            return self:setOffset(xOff, nil)
+        end,
+
+        getYOffset = function(self, xOff)
+            return hIndex
+        end,
+
+        setYOffset = function(self, yOff)
+            return self:setOffset(nil, yOff)
         end,
 
         getFocusHandler = function(self)

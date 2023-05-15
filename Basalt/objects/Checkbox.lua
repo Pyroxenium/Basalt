@@ -32,8 +32,24 @@ return function(name, basalt)
             return self
         end,
 
+        setActiveSymbol = function(self, sym)
+            return self:setSymbol(sym, nil)
+        end,
+
+        setInactiveSymbol = function(self, inactive)
+            return self:setSymbol(nil, inactive)
+        end,
+
         getSymbol = function(self)
             return symbol, inactiveSymbol
+        end,
+
+        getActiveSymbol = function(self)
+            return symbol
+        end,
+
+        getInactiveSymbol = function(self)
+            return inactiveSymbol
         end,
 
         setText = function(self, _text)
@@ -41,12 +57,22 @@ return function(name, basalt)
             return self
         end,
 
+        getText = function(self)
+            return text
+        end,
+
         setTextPosition = function(self, pos)
             textPos = pos or textPos
             return self
         end,
 
+        getTextPosition = function(self)
+            return textPos
+        end,
+
         setChecked = base.setValue,
+
+        getChecked = base.getValue,
 
         mouseHandler = function(self, button, x, y)
             if (base.mouseHandler(self, button, x, y)) then

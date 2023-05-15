@@ -53,8 +53,24 @@ return function(name, basalt)
             return self
         end,
 
+        setBoxSelectionBG = function(self, bg)
+            return self:setBoxSelectionColor(bg, boxSelectedFG)
+        end,
+
+        setBoxSelectionFG = function(self, fg)
+            return self:setBoxSelectionColor(boxSelectedBG, fg)
+        end,
+
         getBoxSelectionColor = function(self)
             return boxSelectedBG, boxSelectedFG
+        end,
+
+        getBoxSelectionBG = function(self)
+            return boxSelectedBG
+        end,
+
+        getBoxSelectionFG = function(self)
+            return boxSelectedFG
         end,
 
         setBoxDefaultColor = function(self, bg, fg)
@@ -63,8 +79,24 @@ return function(name, basalt)
             return self
         end,
 
+        setBoxDefaultBG = function(self, bg)
+            return self:setBoxDefaultColor(bg, boxNotSelectedFG)
+        end,
+
+        setBoxDefaultFG = function(self, fg)
+            return self:setBoxDefaultColor(boxNotSelectedBG, fg)
+        end,
+
         getBoxDefaultColor = function(self)
             return boxNotSelectedBG, boxNotSelectedFG
+        end,
+
+        getBoxDefaultBG = function(self)
+            return boxNotSelectedBG
+        end,
+
+        getBoxDefaultFG = function(self)
+            return boxNotSelectedFG
         end,
 
         mouseHandler = function(self, button, x, y, ...)

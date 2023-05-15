@@ -76,6 +76,10 @@ return function(name, basalt)
             return spacing
         end,
 
+        getFlexDirection = function(self)
+            return flexDirection
+        end,
+
         setFlexDirection = function(self, direction)
             if direction == "row" or direction == "column" then
                 flexDirection = direction
@@ -84,12 +88,20 @@ return function(name, basalt)
             return self
         end,
 
+        getJustifyContent = function(self)
+            return justifyContent
+        end,
+
         setJustifyContent = function(self, alignment)
             if alignment == "flex-start" or alignment == "flex-end" or alignment == "center" or alignment == "space-between" or alignment == "space-around" then
                 justifyContent = alignment
                 applyLayout(self)
             end
             return self
+        end,
+
+        getAlignItems = function(self)
+            return alignItems
         end,
 
         setAlignItems = function(self, alignment)
@@ -101,9 +113,9 @@ return function(name, basalt)
         end,
     }
 
-    for k,v in pairs(basalt.getObjects())do
-        object["add"..k] = function(self, name)
-            local obj = base["add"..k](self, name)
+    for objectName, _ in pairs(basalt.getObjects()) do
+        object["add" .. objectName] = function(self, id)
+            local obj = base["add" .. objectName](self, id)
             applyLayout(base)
             return obj
         end

@@ -25,6 +25,10 @@ return function(name, basalt)
             return self
         end,
 
+        getDirection = function(self)
+            return direction
+        end,
+
         setProgressBar = function(self, color, symbol, symbolcolor)
             activeBarColor = color or activeBarColor
             activeBarSymbol = symbol or activeBarSymbol
@@ -37,10 +41,38 @@ return function(name, basalt)
             return activeBarColor, activeBarSymbol, activeBarSymbolCol
         end,
 
+        setActiveBarColor = function(self, color)
+            return self:setProgressBar(color, nil, nil)
+        end,
+
+        getActiveBarColor = function(self)
+            return activeBarColor
+        end,
+
+        setActiveBarSymbol = function(self, symbol)
+            return self:setProgressBar(nil, symbol, nil)
+        end,
+
+        getActiveBarSymbol = function(self)
+            return activeBarSymbol
+        end,
+
+        setActiveBarSymbolColor = function(self, symbolColor)
+            return self:setProgressBar(nil, nil, symbolColor)
+        end,
+
+        getActiveBarSymbolColor = function(self)
+            return activeBarSymbolCol
+        end,
+
         setBackgroundSymbol = function(self, symbol)
             bgBarSymbol = symbol:sub(1, 1)
             self:updateDraw()
             return self
+        end,
+
+        getBackgroundSymbol = function(self)
+            return bgBarSymbol
         end,
 
         setProgress = function(self, value)

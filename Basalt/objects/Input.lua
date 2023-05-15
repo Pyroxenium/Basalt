@@ -37,6 +37,14 @@ return function(name, basalt)
             return objectType==t or base.isType~=nil and base.isType(t) or false
         end,
 
+        setDefaultFG = function(self, fCol)
+            return self:setDefaultText(self, defaultText, fCol, nil)
+        end,
+
+        setDefaultBG = function(self, bCol)
+            return self:setDefaultText(self, defaultText, nil, bCol)
+        end,
+
         setDefaultText = function(self, text, fCol, bCol)
             defaultText = text
             defaultFGCol = fCol or defaultFGCol
