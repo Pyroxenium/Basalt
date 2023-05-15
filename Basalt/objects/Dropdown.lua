@@ -83,8 +83,24 @@ return function(name, basalt)
             return self
         end,
 
+        setDropdownWidth = function(self, width)
+            return self:setDropdownSize(width, dropdownH)
+        end,
+
+        setDropdownHeight = function(self, height)
+            return self:setDropdownSize(dropdownW, height)
+        end,
+
         getDropdownSize = function(self)
             return dropdownW, dropdownH
+        end,
+
+        getDropdownWidth = function(self)
+            return dropdownW
+        end,
+
+        getDropdownHeight = function(self)
+            return dropdownH
         end,
 
         mouseHandler = function(self, button, x, y, isMon)
