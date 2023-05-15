@@ -825,7 +825,6 @@ return {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
-                    "space",
                     "scrollable",
                     "selectionBg",
                     "selectionFg",
