@@ -151,8 +151,24 @@ return function(name, basalt)
             return self
         end,
 
+        setSelectionBG = function(self, bgCol)
+            return self:setSelectionColor(bgCol, nil, selectionColorActive)
+        end,
+
+        setSelectionFG = function(self, fgCol)
+            return self:setSelectionColor(nil, fgCol, selectionColorActive)
+        end,
+
         getSelectionColor = function(self)
             return itemSelectedBG, itemSelectedFG
+        end,
+
+        getSelectionBG = function(self)
+            return itemSelectedBG
+        end,
+
+        getSelectionFG = function(self)
+            return itemSelectedFG
         end,
 
         isSelectionColorActive = function(self)
@@ -164,6 +180,10 @@ return function(name, basalt)
             if(scroll==nil)then scrollable = true end
             self:updateDraw()
             return self
+        end,
+
+        getScrollable = function(self)
+            return scrollable
         end,
 
         scrollHandler = function(self, dir, x, y)

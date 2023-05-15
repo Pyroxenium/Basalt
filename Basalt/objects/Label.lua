@@ -77,6 +77,12 @@ return function(name, basalt)
             return self
         end,
 
+        --- Gets the text alignment of the label.
+        --- @return string
+        getTextAlign = function(self)
+            return textAlign
+        end,
+
         --- Sets the text alignment of the label.
         --- @param align string  The alignment of the text. Can be "left", "center", or "right".
         --- @return object

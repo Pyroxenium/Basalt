@@ -73,6 +73,14 @@ return function(name, basalt)
             return self
         end,
 
+        setXOffset = function(self, _x)
+            return self:setOffset(self, _x, nil)
+        end,
+
+        setYOffset = function(self, _y)
+            return self:setOffset(self, nil, _y)
+        end,
+
         setSize = function(self, _x, _y)
             base:setSize(_x, _y)
             autoSize = false
@@ -81,6 +89,14 @@ return function(name, basalt)
 
         getOffset = function(self)
             return xOffset, yOffset
+        end,
+
+        getXOffset = function(self)
+            return xOffset
+        end,
+
+        getYOffset = function(self)
+            return yOffset
         end,
 
         selectFrame = function(self, id)
@@ -142,6 +158,10 @@ return function(name, basalt)
             return self
         end,
 
+        setPath = function(self, path)
+            return self:loadImage(path)
+        end,
+
         setImage = function(self, t)
             if(type(t)=="table")then
                 bimgLibrary = bimg(t)
@@ -176,6 +196,14 @@ return function(name, basalt)
             return self
         end,
 
+        getUsePalette = function(self)
+            return usePalette
+        end,
+
+        setUsePalette = function(self, use)
+            return self:usePalette(use)
+        end,
+
         play = function(self, inf)
             if(bimgLibrary.getMetadata("animated"))then
                 local t = bimgLibrary.getMetadata("duration") or bimgLibrary.getMetadata("secondsPerFrame") or 0.2
@@ -184,6 +212,10 @@ return function(name, basalt)
                 infinitePlay = inf or false
             end
             return self
+        end,
+
+        setPlay = function(self, inf)
+            return self:play(inf)
         end,
 
         stop = function(self)

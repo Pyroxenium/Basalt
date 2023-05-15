@@ -157,13 +157,33 @@ return function(name, basalt)
             return self
         end,
 
+        setXOffset = function(self, x)
+            return self:setOffset(x, yOffset)
+        end,
+
+        setYOffset = function(self, y)
+            return self:setOffset(xOffset, y)
+        end,
+
         getOffset = function(self)
             return xOffset, yOffset
+        end,
+
+        getXOffset = function(self)
+            return xOffset
+        end,
+
+        getYOffset = function(self)
+            return yOffset
         end,
 
         setScrollable = function(self, scroll)
             scrollable = scroll
             return self
+        end,
+
+        getScrollable = function(self, scroll)
+            return scrollable
         end,
 
         setSelectionColor = function(self, bgCol, fgCol, active)
@@ -174,8 +194,24 @@ return function(name, basalt)
             return self
         end,
 
+        setSelectionBG = function(self, bgCol)
+            return self:setSelectionColor(bgCol, nil, selectionColorActive)
+        end,
+
+        setSelectionFG = function(self, fgCol)
+            return self:setSelectionColor(nil, fgCol, selectionColorActive)
+        end,
+
         getSelectionColor = function(self)
             return itemSelectedBG, itemSelectedFG
+        end,
+
+        getSelectionBG = function(self)
+            return itemSelectedBG
+        end,
+
+        getSelectionFG = function(self)
+            return itemSelectedFG
         end,
 
         isSelectionColorActive = function(self)

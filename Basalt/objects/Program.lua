@@ -479,6 +479,10 @@ return function(name, basalt)
             return self
         end;
 
+        setExecute = function(self, path, ...)
+            return self:execute(path, ...)
+        end,
+
         stop = function(self)            
             local parent = self:getParent()
             if (curProcess ~= nil) then

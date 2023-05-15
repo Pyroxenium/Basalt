@@ -46,6 +46,10 @@ return function(name, basalt)
             return self
         end,
 
+        getSymbol = function(self)
+            return symbol
+        end,
+
         setIndex = function(self, _index)
             index = _index
             if (index < 1) then
@@ -67,16 +71,28 @@ return function(name, basalt)
             return self
         end,
 
+        getMaxValue = function(self)
+            return maxValue
+        end,
+
         setSymbolColor = function(self, col)
             symbolColor = col
             self:updateDraw()
             return self
         end,
 
+        getSymbolColor = function(self)
+            return symbolColor
+        end,
+
         setBarType = function(self, _typ)
             barType = _typ:lower()
             self:updateDraw()
             return self
+        end,
+
+        getBarType = function(self)
+            return barType
         end,
 
         mouseHandler = function(self, button, x, y)

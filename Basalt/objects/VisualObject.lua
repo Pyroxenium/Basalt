@@ -138,8 +138,16 @@ return function(name, basalt)
             return x
         end,
 
+        setX = function(self, newX)
+            return self:setPosition(newX, y)
+        end,
+
         getY = function(self)
             return y
+        end,
+
+        setY = function(self, newY)
+            return self:setPosition(x, newY)
         end,
 
         getPosition = function(self)
@@ -167,8 +175,16 @@ return function(name, basalt)
             return height
         end,
 
+        setHeight = function(self, newHeight)
+            return self:setSize(width, newHeight)
+        end,
+
         getWidth = function(self)
             return width
+        end,
+
+        setWidth = function(self, newWidth)
+            return self:setSize(newWidth, height)
         end,
 
         getSize = function(self)

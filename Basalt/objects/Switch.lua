@@ -20,14 +20,26 @@ return function(name, basalt)
             return self
         end,
 
+        getSymbol = function(self)
+            return bgSymbol
+        end,
+
         setActiveBackground = function(self, col)
             activeBG = col
             return self
         end,
 
+        getActiveBackground = function(self)
+            return activeBG
+        end,
+
         setInactiveBackground = function(self, col)
             inactiveBG = col
             return self
+        end,
+
+        getInactiveBackground = function(self)
+            return inactiveBG
         end,
 
 
