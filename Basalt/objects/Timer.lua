@@ -19,6 +19,10 @@ return function(name, basalt)
             return self
         end,
 
+        getTime = function(self)
+            return timer
+        end,
+
         start = function(self)
             if(timerIsActive)then
                 os.cancelTimer(timerObj)
@@ -41,6 +45,14 @@ return function(name, basalt)
             timerIsActive = false
             self:removeEvent("other_event")
             return self
+        end,
+
+        setStart = function(self, start)
+            if (start == true) then
+                return self:start()
+            else
+                return self:cancel()
+            end
         end,
 
         onCall = function(self, func)
