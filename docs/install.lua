@@ -130,6 +130,24 @@ function installer.download(url, file)
     end
 end
 
+local basaltDataCache
+function installer.getBasaltData()
+    if(basaltDataCache~=nil)then return basaltDataCache end
+    local content
+    printStatus("Downloading basalt data...")
+    if(fs.exists("basaltdata.json"))then
+        content = fs.open("basaltdata.json", "r")
+    else
+        content = installer.get("https://basalt.madefor.cc/basaltdata.json")
+    end
+    if(content~=nil)then
+        content = content.readAll()
+        basaltDataCache = textutils.unserializeJSON(content)
+        printStatus("Successfully downloaded basalt data!")
+        return basaltDataCache
+    end
+end
+
 function installer.getRelease(version)
     local v = installer.getBasaltData().versions[version]
     if(v~=nil)then
