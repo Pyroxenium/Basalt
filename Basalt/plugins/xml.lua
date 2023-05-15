@@ -590,11 +590,11 @@ return {
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
                     "symbol",
-                    "symbolColor",
+                    "symbolBG",
+                    "symbolFG",
                     "symbolSize",
                     "scrollAmount",
                     "index",
-                    "maxValue",
                     "barType"
                 })
                 return self
