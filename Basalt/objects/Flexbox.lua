@@ -101,9 +101,9 @@ return function(name, basalt)
         end,
     }
 
-    for k,v in pairs(basalt.getObjects())do
-        object["add"..k] = function(self, name)
-            local obj = base["add"..k](self, name)
+    for objectName, _ in pairs(basalt.getObjects()) do
+        object["add" .. objectName] = function(self, id)
+            local obj = base["add" .. objectName](self, id)
             applyLayout(base)
             return obj
         end
