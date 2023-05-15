@@ -386,7 +386,7 @@ return function(name, basalt)
 
     for objectName, _ in pairs(basalt.getObjects()) do
         container["add" .. objectName] = function(self, id)
-            return addObject(self, basalt.createObject(objectName, id, basalt))
+            return addObject(self, basalt:createObject(objectName, id))
         end
     end
 
