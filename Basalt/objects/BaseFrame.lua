@@ -41,6 +41,22 @@ return function(name, basalt)
             return self
         end,
 
+        getXOffset = function(self)
+            return xOffset
+        end,
+
+        setXOffset = function(self, newXOffset)
+            return self:setOffset(newXOffset, yOffset)
+        end,
+
+        getYOffset = function(self)
+            return yOffset
+        end,
+
+        setYOffset = function(self, newYOffset)
+            return self:setOffset(xOffset, newYOffset)
+        end,
+
         setPalette = function(self, col, ...)            
             if(self==basalt.getActiveFrame())then
                 if(type(col)=="string")then

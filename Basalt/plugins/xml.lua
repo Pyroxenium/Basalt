@@ -415,8 +415,8 @@ return {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
-                    "layout",
-                    "xOffset"
+                    "xOffset",
+                    "yOffset"
                 })
                 return self
             end,
@@ -429,7 +429,6 @@ return {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
-                    "layout",
                     "xOffset",
                     "yOffset"
                 })

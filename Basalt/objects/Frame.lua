@@ -38,6 +38,22 @@ return function(name, basalt)
             return self
         end,
 
+        getXOffset = function(self)
+            return xOffset
+        end,
+
+        setXOffset = function(self, newXOffset)
+            return self:setOffset(newXOffset, yOffset)
+        end,
+
+        getYOffset = function(self)
+            return yOffset
+        end,
+
+        setYOffset = function(self, newYOffset)
+            return self:setOffset(xOffset, newYOffset)
+        end,
+
         setParent = function(self, p, ...)
             base.setParent(self, p, ...)
             parent = p
