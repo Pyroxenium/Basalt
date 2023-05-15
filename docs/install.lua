@@ -149,14 +149,14 @@ function installer.getBasaltData()
 end
 
 function installer.getRelease(version)
-    local v = installer.getBasaltData().versions[version]
-    if(v~=nil)then
+    --local v = installer.getBasaltData().versions[version]
+    --if(v~=nil)then
         printStatus("Downloading basalt "..version)
-        local content = http.get("https://basalt.madefor.cc/versions/"..v, {Authorization =  _G._GIT_API_KEY and  "token ".._G._GIT_API_KEY})
+        local content = http.get("https://basalt.madefor.cc/versions/"..version, {Authorization =  _G._GIT_API_KEY and  "token ".._G._GIT_API_KEY})
         if(content~=nil)then
             return content.readAll()
         end
-    end
+    --end
 end
 
 function installer.downloadRelease(file, version)
