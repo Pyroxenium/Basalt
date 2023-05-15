@@ -801,11 +801,11 @@ return {
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
                     "maxEntries",
-                    "type",
+                    "graphType",
                     "minValue",
                     "maxValue",
-                    "symbol",
-                    "symbolColor"
+                    "graphSymbol",
+                    "graphSymbolColor"
                 })
                 if(data["item"]~=nil)then
                     local tab = data["item"]

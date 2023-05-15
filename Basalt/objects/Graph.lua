@@ -32,8 +32,16 @@ return function(name, basalt)
             return self
         end,
 
+        setGraphSymbolColor = function(self, symbolColor)
+            return self:setGraphSymbolColor(nil, symbolColor)
+        end,
+
         getGraphSymbol = function(self)
             return graphSymbol, graphSymbolCol
+        end,
+
+        getGraphSymbolColor = function(self)
+            return graphSymbolCol
         end,
 
         addDataPoint = function(self, value)
@@ -73,6 +81,10 @@ return function(name, basalt)
                 self:updateDraw()
             end
             return self
+        end,
+
+        getGraphType = function(self)
+            return graphType
         end,
 
         setMaxEntries = function(self, value)
