@@ -475,7 +475,7 @@ return {
                 base.setValuesByXMLData(self, data, renderContext)
                 self:updateSpecifiedValuesByXMLData(data, {
                     "text",
-                    "align"
+                    "textAlign"
                 })
                 return self
             end,

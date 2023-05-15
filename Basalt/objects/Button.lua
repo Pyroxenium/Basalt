@@ -23,7 +23,11 @@ return function(name, basalt)
 
         getBase = function(self)
             return base
-        end,  
+        end,
+
+        getHorizontalAlign = function(self)
+            return textHorizontalAlign
+        end,
         
         setHorizontalAlign = function(self, pos)
             textHorizontalAlign = pos
@@ -31,10 +35,18 @@ return function(name, basalt)
             return self
         end,
 
+        getVerticalAlign = function(self)
+            return textVerticalAlign
+        end,
+
         setVerticalAlign = function(self, pos)
             textVerticalAlign = pos
             self:updateDraw()
             return self
+        end,
+
+        getText = function(self)
+            return text
         end,
 
         setText = function(self, newText)
