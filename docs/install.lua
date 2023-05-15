@@ -439,7 +439,7 @@ function installer.generateCustomBasalt(files, basePath, branch)
         if(#folder>1)then
             project[basePath..path] = {content=installer.get(url), folder=folder[1], filename=folder[#folder], url=url}
         else
-            project[basePath..path] = {content=installer.get(url), folder="", filename=folder[1], url=url}
+            project[basePath..path] = {content=installer.get(url), folder="", filename=path, url=url}
         end
     end
 
