@@ -449,9 +449,9 @@ function installer.generateCustomBasalt(files, basePath, branch)
     for k,v in pairs(projectFiles)do
         local folder = split(k, "/")
         if(#folder>1)then
-            project[fs.combine(basePath, k)] = {content=v, folder=folder[1], url=""}
+            project[fs.combine(basePath, k)] = {content=v, folder=folder[1], filename=folder[#folder], url=""}
         else
-            project[fs.combine(basePath, k)] = {content=v, folder="", url=""}
+            project[fs.combine(basePath, k)] = {content=v, folder="", filename=k, url=""}
         end
     end
 
