@@ -256,15 +256,6 @@ return {
     VisualObject = function(base, basalt)
 
         local object = {
-            updateSpecifiedValuesByXMLData = function(self, data, valueNames)
-                for _, name in ipairs(valueNames) do
-                    local value = xmlValue(name, data)
-                    if (value ~= nil) then
-                        self:setProperty(name, value)
-                    end
-                end
-            end,
-
             setValuesByXMLData = function(self, data, renderContext)
                 renderContext.env[self:getName()] = self
                 for prop, expression in pairs(data:reactiveProperties()) do
@@ -274,14 +265,9 @@ return {
                     end
                     basalt.effect(update)
                 end
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "x",
-                    "y",
-                    "width",
-                    "height",
-                    "background",
-                    "foreground"
-                })
+                for _, prop in ipairs(data:properties()) do
+                    self:setProperty(prop.name, prop.value)
+                end
                 registerFunctionEvents(self, data, {
                     "onClick",
                     "onClickUp",
@@ -309,9 +295,6 @@ return {
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "value"
-                })
                 registerFunctionEvent(self, data, {
                     "onChange"
                 }, renderContext)
@@ -410,239 +393,10 @@ return {
         return object
     end,
 
-    BaseFrame = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "xOffset",
-                    "yOffset"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Frame = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "xOffset",
-                    "yOffset"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Flexbox = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "flexDirection",
-                    "justifyContent",
-                    "alignItems",
-                    "spacing"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Button = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "text",
-                    "horizontalAlign",
-                    "verticalAlign"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Label = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "text",
-                    "textAlign"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Input = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "defaultText",
-                    "defaultFG",
-                    "defaultBG",
-                    "offset",
-                    "textOffset",
-                    "text",
-                    "inputLimit"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Image = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "xOffset",
-                    "yOffset",
-                    "path",
-                    "usePalette",
-                    "play"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Checkbox = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "text",
-                    "checked",
-                    "textPosition",
-                    "activeSymbol",
-                    "inactiveSymbol"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Program = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "execute"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Progressbar = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "direction",
-                    "activeBarColor",
-                    "activeBarSymbol",
-                    "activeBarSymbolColor",
-                    "backgroundSymbol",
-                    "progress"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Slider = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "symbol",
-                    "symbolColor",
-                    "index",
-                    "maxValue",
-                    "barType"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Scrollbar = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "symbol",
-                    "symbolBG",
-                    "symbolFG",
-                    "symbolSize",
-                    "scrollAmount",
-                    "index",
-                    "barType"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    MonitorFrame = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "monitor"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Switch = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "symbol",
-                    "activeBackground",
-                    "inactiveBackground"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
     Textfield = function(base, basalt)
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "selectionBG",
-                    "selectionFG",
-                    "xOffset",
-                    "yOffset"
-                })
-
-
                 if(data["lines"]~=nil)then
                     local l = data["lines"]["line"]
                     if(l.properties~=nil)then l = {l} end
@@ -703,10 +457,6 @@ return {
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "start",
-                    "time"
-                })
                 registerFunctionEvents(self, data, {
                     "onCall"
                 }, renderContext)
@@ -720,14 +470,6 @@ return {
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "textAlign",
-                    "offset",
-                    "selectionBg",
-                    "selectionFg",
-                    "scrollable"
-                })
-
                 if(data["item"]~=nil)then
                     local tab = data["item"]
                     if(tab.properties~=nil)then tab = {tab} end
@@ -747,10 +489,6 @@ return {
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "dropdownWidth",
-                    "dropdownHeight"
-                })
                 return self
             end,
         }
@@ -761,13 +499,6 @@ return {
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "selectionBg",
-                    "selectionFg",
-                    "defaultBg",
-                    "defaultFg"
-                })
-
                 if(data["item"]~=nil)then
                     local tab = data["item"]
                     if(tab.properties~=nil)then tab = {tab} end
@@ -781,32 +512,10 @@ return {
         return object
     end,
 
-    Menubar = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "space",
-                    "scrollable"
-                })
-                return self
-            end,
-        }
-        return object
-    end,
-
     Graph = function(base, basalt)
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "maxEntries",
-                    "graphType",
-                    "minValue",
-                    "maxValue",
-                    "graphSymbol",
-                    "graphSymbolColor"
-                })
                 if(data["item"]~=nil)then
                     local tab = data["item"]
                     if(tab.properties~=nil)then tab = {tab} end
@@ -824,13 +533,6 @@ return {
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 base.setValuesByXMLData(self, data, renderContext)
-                self:updateSpecifiedValuesByXMLData(data, {
-                    "scrollable",
-                    "selectionBg",
-                    "selectionFg",
-                    "xOffset",
-                    "yOffset"
-                })
                 local function addNode(node, data)
                     if(data["node"]~=nil)then
                         local tab = data["node"]
