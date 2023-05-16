@@ -273,28 +273,6 @@ removeTags = removeTags,
 
 wrapText = wrapText,
 
-xmlValue = function(name, tab)
-    local var
-    if(type(tab)~="table")then return end
-    if(tab[name]~=nil)then
-        if(type(tab[name])=="table")then
-            if(tab[name].value~=nil)then
-                var = tab[name]:value()
-            end
-        end
-    end
-    if(var==nil)then var = tab["@"..name] end
-
-    if(var=="true")then 
-        var = true 
-    elseif(var=="false")then 
-        var = false
-    elseif(tonumber(var)~=nil)then 
-        var = tonumber(var)
-    end
-    return var
-end,
-
 convertRichText = convertRichText,
 
 --- Writes text with special color tags

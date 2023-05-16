@@ -140,8 +140,7 @@ local function makeText(nSize, sString, nFC, nBC, bBlit)
 end
 
 -- The following code is related to basalt and has nothing to do with bigfonts, it creates a plugin which will be added to labels:
-local utils = require("utils")
-local xmlValue = utils.xmlValue
+local XMLParser = require("xmlParser")
 return {
     Label = function(base)
         local fontsize = 1
@@ -196,12 +195,6 @@ return {
                 end
             end,
 
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("fontSize", data)~=nil)then self:setFontSize(xmlValue("fontSize", data)) end
-                return self
-            end,
-
             draw = function(self)
                 base.draw(self)
                 self:addDraw("bigfonts", function()
@@ -220,7 +213,7 @@ return {
                         end
                     end
                 end)
-            end,
+            end
         }
         return object
     end

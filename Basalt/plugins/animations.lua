@@ -215,8 +215,7 @@ local lerp = {
     easeInOutBounce=easeInOutBounce,
 }
 
-local utils = require("utils")
-local xmlValue = utils.xmlValue
+local XMLParser = require("xmlParser")
 
 return {
     VisualObject = function(base, basalt)
@@ -337,24 +336,7 @@ return {
                         end
                     end
                 end
-            end,
-
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                local animX, animY, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateX", data), xmlValue("animateY", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
-                local animW, animH, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateW", data), xmlValue("animateH", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
-                local animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateXOffset", data), xmlValue("animateYOffset", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
-                if(animX~=nil and animY~=nil)then
-                    self:animatePosition(animX, animY, animateDuration, animeteTimeOffset, animateMode)
-                end
-                if(animW~=nil and animH~=nil)then
-                    self:animateSize(animW, animH, animateDuration, animeteTimeOffset, animateMode)
-                end
-                if(animXOffset~=nil and animYOffset~=nil)then
-                    self:animateOffset(animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode)
-                end                
-                return self
-            end,
+            end
         }
 
         return object

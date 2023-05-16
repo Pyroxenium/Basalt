@@ -1,5 +1,4 @@
-local utils = require("utils")
-local xmlValue = utils.xmlValue
+local XMLParser = require("xmlParser")
 
 return {
     VisualObject = function(base)
@@ -80,23 +79,6 @@ return {
                         end
                     end
                 end)
-            end,
-
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data)
-                local borders = {}
-                if(xmlValue("border", data)~=nil)then 
-                    borders["top"] = colors[xmlValue("border", data)]
-                    borders["bottom"] = colors[xmlValue("border", data)]
-                    borders["left"] = colors[xmlValue("border", data)]
-                    borders["right"] = colors[xmlValue("border", data)]
-                end
-                if(xmlValue("borderTop", data)~=nil)then borders["top"] = colors[xmlValue("borderTop", data)] end
-                if(xmlValue("borderBottom", data)~=nil)then borders["bottom"] = colors[xmlValue("borderBottom", data)] end
-                if(xmlValue("borderLeft", data)~=nil)then borders["left"] = colors[xmlValue("borderLeft", data)] end
-                if(xmlValue("borderRight", data)~=nil)then borders["right"] = colors[xmlValue("borderRight", data)] end
-                self:setBorder(borders["top"], borders["bottom"], borders["left"], borders["right"])
-                return self
             end
         }
 
