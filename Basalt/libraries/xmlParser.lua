@@ -3,8 +3,8 @@ local XMLNode = {
         return {
             tag = tag,
             value = nil,
-            children = {},
             attributes = {},
+            children = {},
 
             addChild = function(self, child)
                 if self[child.tag] ~= nil then
