@@ -6,7 +6,6 @@ XMLNode.new = function(name)
     node.name = name
     node.children = {}
     node.attributes = {}
-    node.computedAttributes = {}
 
     function node:addChild(child)
         if self[child.name] ~= nil then
@@ -23,22 +22,7 @@ XMLNode.new = function(name)
     end
 
     function node:addAttribute(name, value)
-        local lName = "@" .. name
-        if self[lName] ~= nil then
-            if type(self[lName]) == "string" then
-                local tempTable = {}
-                table.insert(tempTable, self[lName])
-                self[lName] = tempTable
-            end
-            table.insert(self[lName], value)
-        else
-            self[lName] = value
-        end
-        table.insert(self.attributes, { name = name, value = self[lName] })
-    end
-
-    function node:addComputedAttribute(name, value)
-        self.computedAttributes[name] = value
+        self.attributes[name] = value
     end
 
     return node
@@ -98,14 +82,13 @@ function XMLParser:FromXmlString(value)
 end
 
 function XMLParser:ParseAttributes(node, s)
-    string.gsub(s, "(%w+)=([\"'])(.-)%2", function(w, _, a)
-        node:addAttribute(w, self:FromXmlString(a))
+    -- Parse "" style attributes
+    local _, _ = string.gsub(s, "(%w+)=([\"'])(.-)%2", function(w, _, a)
+        node:addAttribute(w, "\"" .. self:FromXmlString(a) .. "\"")
     end)
-end
-
-function XMLParser:ParseComputedAttributes(node, s)
-    string.gsub(s, "(%w+)={(.-)}", function(w, a)
-        node:addComputedAttribute(w, a)
+    -- Parse {} style attributes
+    local _, _ = string.gsub(s, "(%w+)={(.-)}", function(w, a)
+        node:addAttribute(w, a)
     end)
 end
 
@@ -126,12 +109,10 @@ function XMLParser:ParseXmlText(xmlText)
         if empty == "/" then -- empty element tag
             local lNode = XMLNode.new(label)
             self:ParseAttributes(lNode, xarg)
-            self:ParseComputedAttributes(lNode, xarg)
             top:addChild(lNode)
         elseif c == "" then -- start tag
             local lNode = XMLNode.new(label)
             self:ParseAttributes(lNode, xarg)
-            self:ParseComputedAttributes(lNode, xarg)
             table.insert(stack, lNode)
     top = lNode
         else -- end tag

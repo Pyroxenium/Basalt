@@ -27,7 +27,7 @@ end
 
 local function registerFunctionEvents(self, data, events, renderContext)
     for _, event in pairs(events) do
-        local expression = data.computedAttributes[event]
+        local expression = data.attributes[event]
         if (expression ~= nil) then
             registerFunctionEvent(self, expression .. "()", self[event], renderContext)
         end
@@ -116,15 +116,12 @@ return {
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 renderContext.env[self:getName()] = self
-                for prop, expression in pairs(data.computedAttributes) do
+                for attribute, expression in pairs(data.attributes) do
                     local update = function()
                         local value = load("return " .. expression, nil, "t", renderContext.env)()
-                        self:setProperty(prop, value)
+                        self:setProperty(attribute, value)
                     end
                     basalt.effect(update)
-                end
-                for _, prop in ipairs(data.attributes) do
-                    self:setProperty(prop.name, prop.value)
                 end
                 registerFunctionEvents(self, data, {
                     "onClick",
@@ -185,16 +182,13 @@ return {
         end
 
         local function insertChildLayout(self, layout, node, renderContext)
-            local props = {}
-            for _, prop in ipairs(node.attributes) do
-                props[prop.name] = prop.value
-            end
             local updateFns = {}
-            for prop, expression in pairs(node.computedAttributes) do
+            for prop, expression in pairs(node.attributes) do
                 updateFns[prop] = basalt.derived(function()
                     return load("return " .. expression, nil, "t", renderContext.env)()
                 end)
             end
+            local props = {}
             setmetatable(props, {
                 __index = function(_, k)
                     return updateFns[k]()
