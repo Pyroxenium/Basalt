@@ -4,7 +4,7 @@ local uuid = utils.uuid
 
 local function maybeExecuteScript(nodeTree, renderContext)
     for _, node in ipairs(nodeTree.children) do
-        if (node.name == "script") then
+        if (node.tag == "script") then
             return load(node.value, nil, "t", renderContext.env)()
         end
     end
@@ -201,7 +201,7 @@ return {
                 local _OBJECTS = basalt.getObjects()
 
                 for _, childNode in pairs(node.children) do
-                    local tagName = childNode.name
+                    local tagName = childNode.tag
                     if (tagName ~= "animation") then
                         local layout = renderContext.env[tagName]
                         local objectKey = tagName:gsub("^%l", string.upper)

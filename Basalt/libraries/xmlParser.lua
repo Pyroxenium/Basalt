@@ -1,27 +1,27 @@
 local XMLNode = {
-    new = function(name)
+    new = function(tag)
         return {
-            name = name,
+            tag = tag,
             value = nil,
             children = {},
             attributes = {},
 
             addChild = function(self, child)
-                if self[child.name] ~= nil then
-                    if type(self[child.name].name) == "function" then
+                if self[child.tag] ~= nil then
+                    if type(self[child.tag].tag) == "function" then
                         local tempTable = {}
-                        table.insert(tempTable, self[child.name])
-                        self[child.name] = tempTable
+                        table.insert(tempTable, self[child.tag])
+                        self[child.tag] = tempTable
                     end
-                    table.insert(self[child.name], child)
+                    table.insert(self[child.tag], child)
                 else
-                    self[child.name] = child
+                    self[child.tag] = child
                 end
                 table.insert(self.children, child)
             end,
 
-            addAttribute = function(self, name, value)
-                self.attributes[name] = value
+            addAttribute = function(self, tag, value)
+                self.attributes[tag] = value
             end
         }
     end
@@ -39,17 +39,17 @@ local parseAttributes = function(node, s)
 end
 
 local XMLParser = {
-    xmlValue = function(name, tab)
+    xmlValue = function(tag, tab)
         local var
         if(type(tab)~="table")then return end
-        if(tab[name]~=nil)then
-            if(type(tab[name])=="table")then
-                if(tab[name].value~=nil)then
-                    var = tab[name].value
+        if(tab[tag]~=nil)then
+            if(type(tab[tag])=="table")then
+                if(tab[tag].value~=nil)then
+                    var = tab[tag].value
                 end
             end
         end
-        if(var==nil)then var = tab["@"..name] end
+        if(var==nil)then var = tab["@"..tag] end
 
         if(var=="true")then
             var = true 
@@ -91,8 +91,8 @@ local XMLParser = {
                 if #stack < 1 then
                     error("XMLParser: nothing to close with " .. label)
                 end
-                if toclose.name ~= label then
-                    error("XMLParser: trying to close " .. toclose.name .. " with " .. label)
+                if toclose.tag ~= label then
+                    error("XMLParser: trying to close " .. toclose.tag .. " with " .. label)
                 end
                 top:addChild(toclose)
             end
@@ -100,7 +100,7 @@ local XMLParser = {
         end
         local text = string.sub(xmlText, i);
         if #stack > 1 then
-            error("XMLParser: unclosed " .. stack[#stack].name)
+            error("XMLParser: unclosed " .. stack[#stack].tag)
         end
         return top
     end
