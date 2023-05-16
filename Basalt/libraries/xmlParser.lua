@@ -2,35 +2,27 @@ local XMLNode = {}
 
 XMLNode.new = function(name)
     local node = {}
-    node.___value = nil
-    node.___name = name
-    node.___children = {}
-    node.___props = {}
-    node.___reactiveProps = {}
+    node.value = nil
+    node.name = name
+    node.children = {}
+    node.attributes = {}
+    node.computedAttributes = {}
 
-    function node:value() return self.___value end
-    function node:setValue(val) self.___value = val end
-    function node:name() return self.___name end
-    function node:setName(name) self.___name = name end
-    function node:children() return self.___children end
-    function node:numChildren() return #self.___children end
     function node:addChild(child)
-        if self[child:name()] ~= nil then
-            if type(self[child:name()].name) == "function" then
+        if self[child.name] ~= nil then
+            if type(self[child.name].name) == "function" then
                 local tempTable = {}
-                table.insert(tempTable, self[child:name()])
-                self[child:name()] = tempTable
+                table.insert(tempTable, self[child.name])
+                self[child.name] = tempTable
             end
-            table.insert(self[child:name()], child)
+            table.insert(self[child.name], child)
         else
-            self[child:name()] = child
+            self[child.name] = child
         end
-        table.insert(self.___children, child)
+        table.insert(self.children, child)
     end
 
-    function node:properties() return self.___props end
-    function node:numProperties() return #self.___props end
-    function node:addProperty(name, value)
+    function node:addAttribute(name, value)
         local lName = "@" .. name
         if self[lName] ~= nil then
             if type(self[lName]) == "string" then
@@ -42,12 +34,11 @@ XMLNode.new = function(name)
         else
             self[lName] = value
         end
-        table.insert(self.___props, { name = name, value = self[lName] })
+        table.insert(self.attributes, { name = name, value = self[lName] })
     end
 
-    function node:reactiveProperties() return self.___reactiveProps end
-    function node:addReactiveProperty(name, value)
-        self.___reactiveProps[name] = value
+    function node:addComputedAttribute(name, value)
+        self.computedAttributes[name] = value
     end
 
     return node
@@ -61,7 +52,7 @@ function XMLParser.XmlValue(name, tab)
     if(tab[name]~=nil)then
         if(type(tab[name])=="table")then
             if(tab[name].value~=nil)then
-                var = tab[name]:value()
+                var = tab[name].value
             end
         end
     end
@@ -106,15 +97,15 @@ function XMLParser:FromXmlString(value)
     return value;
 end
 
-function XMLParser:ParseProps(node, s)
+function XMLParser:ParseAttributes(node, s)
     string.gsub(s, "(%w+)=([\"'])(.-)%2", function(w, _, a)
-        node:addProperty(w, self:FromXmlString(a))
+        node:addAttribute(w, self:FromXmlString(a))
     end)
 end
 
-function XMLParser:ParseReactiveProps(node, s)
+function XMLParser:ParseComputedAttributes(node, s)
     string.gsub(s, "(%w+)={(.-)}", function(w, a)
-        node:addReactiveProperty(w, a)
+        node:addComputedAttribute(w, a)
     end)
 end
 
@@ -129,18 +120,18 @@ function XMLParser:ParseXmlText(xmlText)
         if not ni then break end
         local text = string.sub(xmlText, i, ni - 1);
         if not string.find(text, "^%s*$") then
-            local lVal = (top:value() or "") .. self:FromXmlString(text)
-            stack[#stack]:setValue(lVal)
+            local lVal = (top.value or "") .. self:FromXmlString(text)
+            stack[#stack].value = lVal
         end
         if empty == "/" then -- empty element tag
             local lNode = XMLNode.new(label)
-            self:ParseProps(lNode, xarg)
-            self:ParseReactiveProps(lNode, xarg)
+            self:ParseAttributes(lNode, xarg)
+            self:ParseComputedAttributes(lNode, xarg)
             top:addChild(lNode)
         elseif c == "" then -- start tag
             local lNode = XMLNode.new(label)
-            self:ParseProps(lNode, xarg)
-            self:ParseReactiveProps(lNode, xarg)
+            self:ParseAttributes(lNode, xarg)
+            self:ParseComputedAttributes(lNode, xarg)
             table.insert(stack, lNode)
     top = lNode
         else -- end tag
@@ -150,7 +141,7 @@ function XMLParser:ParseXmlText(xmlText)
             if #stack < 1 then
                 error("XMLParser: nothing to close with " .. label)
             end
-            if toclose:name() ~= label then
+            if toclose.name ~= label then
                 error("XMLParser: trying to close " .. toclose.name .. " with " .. label)
             end
             top:addChild(toclose)
@@ -159,7 +150,7 @@ function XMLParser:ParseXmlText(xmlText)
     end
     local text = string.sub(xmlText, i);
     if #stack > 1 then
-        error("XMLParser: unclosed " .. stack[#stack]:name())
+        error("XMLParser: unclosed " .. stack[#stack].name)
     end
     return top
 end

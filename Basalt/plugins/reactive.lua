@@ -27,7 +27,7 @@ end
 
 local function registerFunctionEvents(self, data, events, renderContext)
     for _, event in pairs(events) do
-        local expression = data:reactiveProperties()[event]
+        local expression = data.computedAttributes[event]
         if (expression ~= nil) then
             registerFunctionEvent(self, expression .. "()", self[event], renderContext)
         end
@@ -116,14 +116,14 @@ return {
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
                 renderContext.env[self:getName()] = self
-                for prop, expression in pairs(data:reactiveProperties()) do
+                for prop, expression in pairs(data.computedAttributes) do
                     local update = function()
                         local value = load("return " .. expression, nil, "t", renderContext.env)()
                         self:setProperty(prop, value)
                     end
                     basalt.effect(update)
                 end
-                for _, prop in ipairs(data:properties()) do
+                for _, prop in ipairs(data.attributes) do
                     self:setProperty(prop.name, prop.value)
                 end
                 registerFunctionEvents(self, data, {
@@ -173,7 +173,7 @@ return {
 
         local function addXMLObjectType(node, addFn, self, renderContext)
             if (node ~= nil) then
-                if (node.properties ~= nil) then
+                if (node.attributes ~= nil) then
                     node = {node}
                 end
                 for _, v in pairs(node) do
@@ -186,11 +186,11 @@ return {
 
         local function insertChildLayout(self, layout, node, renderContext)
             local props = {}
-            for _, prop in ipairs(node:properties()) do
+            for _, prop in ipairs(node.attributes) do
                 props[prop.name] = prop.value
             end
             local updateFns = {}
-            for prop, expression in pairs(node:reactiveProperties()) do
+            for prop, expression in pairs(node.computedAttributes) do
                 updateFns[prop] = basalt.derived(function()
                     return load("return " .. expression, nil, "t", renderContext.env)()
                 end)
@@ -207,12 +207,11 @@ return {
             setValuesByXMLData = function(self, data, renderContext)
                 lastXMLReferences = {}
                 base.setValuesByXMLData(self, data, renderContext)
-    
-                local children = data:children()
+
                 local _OBJECTS = basalt.getObjects()
 
-                for _, childNode in pairs(children) do
-                    local tagName = childNode.___name
+                for _, childNode in pairs(data.children) do
+                    local tagName = childNode.name
                     if (tagName ~= "animation") then
                         local layout = renderContext.env[tagName]
                         local objectKey = tagName:gsub("^%l", string.upper)
@@ -257,22 +256,22 @@ return {
                 base.setValuesByXMLData(self, data, renderContext)
                 if(data["lines"]~=nil)then
                     local l = data["lines"]["line"]
-                    if(l.properties~=nil)then l = {l} end
+                    if(l.attributes~=nil)then l = {l} end
                     for _,v in pairs(l)do
-                        self:addLine(v:value())
+                        self:addLine(v.value)
                     end
                 end
                 if(data["keywords"]~=nil)then
                     for k,v in pairs(data["keywords"])do
                         if(colors[k]~=nil)then
                             local entry = v
-                            if(entry.properties~=nil)then entry = {entry} end
+                            if(entry.attributes~=nil)then entry = {entry} end
                             local tab = {}
                             for a,b in pairs(entry)do
                                 local keywordList = b["keyword"]
-                                if(b["keyword"].properties~=nil)then keywordList = {b["keyword"]} end
+                                if(b["keyword"].attributes~=nil)then keywordList = {b["keyword"]} end
                                 for c,d in pairs(keywordList)do
-                                    table.insert(tab, d:value())
+                                    table.insert(tab, d.value)
                                 end
                             end
                             self:addKeywords(colors[k], tab)
@@ -282,7 +281,7 @@ return {
                 if(data["rules"]~=nil)then
                     if(data["rules"]["rule"]~=nil)then
                         local tab = data["rules"]["rule"]
-                        if(data["rules"]["rule"].properties~=nil)then tab = {data["rules"]["rule"]} end
+                        if(data["rules"]["rule"].attributes~=nil)then tab = {data["rules"]["rule"]} end
                         for k,v in pairs(tab)do
 
                             if(XMLParser.XmlValue("pattern", v)~=nil)then
@@ -330,7 +329,7 @@ return {
                 base.setValuesByXMLData(self, data, renderContext)
                 if(data["item"]~=nil)then
                     local tab = data["item"]
-                    if(tab.properties~=nil)then tab = {tab} end
+                    if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
                         if(self:getType()~="Radio")then
                             self:addItem(XMLParser.XmlValue("text", v), colors[XMLParser.XmlValue("bg", v)], colors[XMLParser.XmlValue("fg", v)])
@@ -359,7 +358,7 @@ return {
                 base.setValuesByXMLData(self, data, renderContext)
                 if(data["item"]~=nil)then
                     local tab = data["item"]
-                    if(tab.properties~=nil)then tab = {tab} end
+                    if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
                         self:addItem(XMLParser.XmlValue("text", v), XMLParser.XmlValue("x", v), XMLParser.XmlValue("y", v), colors[XMLParser.XmlValue("bg", v)], colors[XMLParser.XmlValue("fg", v)])
                     end
@@ -376,7 +375,7 @@ return {
                 base.setValuesByXMLData(self, data, renderContext)
                 if(data["item"]~=nil)then
                     local tab = data["item"]
-                    if(tab.properties~=nil)then tab = {tab} end
+                    if(tab.attributes~=nil)then tab = {tab} end
                     for _,_ in pairs(tab)do
                         self:addDataPoint(XMLParser.XmlValue("value"))
                     end
@@ -394,7 +393,7 @@ return {
                 local function addNode(node, data)
                     if(data["node"]~=nil)then
                         local tab = data["node"]
-                        if(tab.properties~=nil)then tab = {tab} end
+                        if(tab.attributes~=nil)then tab = {tab} end
                         for _,v in pairs(tab)do
                             local n = node:addNode(XMLParser.XmlValue("text", v), colors[XMLParser.XmlValue("bg", v)], colors[XMLParser.XmlValue("fg", v)])
                             addNode(n, v)
@@ -403,7 +402,7 @@ return {
                 end
                 if(data["node"]~=nil)then
                     local tab = data["node"]
-                    if(tab.properties~=nil)then tab = {tab} end
+                    if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
                         local n = self:addNode(XMLParser.XmlValue("text", v), colors[XMLParser.XmlValue("bg", v)], colors[XMLParser.XmlValue("fg", v)])
                         addNode(n, v)
