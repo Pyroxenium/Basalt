@@ -84,16 +84,16 @@ return {
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data)
                 local borders = {}
-                if(XMLParser.XmlValue("border", data)~=nil)then 
-                    borders["top"] = colors[XMLParser.XmlValue("border", data)]
-                    borders["bottom"] = colors[XMLParser.XmlValue("border", data)]
-                    borders["left"] = colors[XMLParser.XmlValue("border", data)]
-                    borders["right"] = colors[XMLParser.XmlValue("border", data)]
+                if(XMLParser.xmlValue("border", data)~=nil)then 
+                    borders["top"] = colors[XMLParser.xmlValue("border", data)]
+                    borders["bottom"] = colors[XMLParser.xmlValue("border", data)]
+                    borders["left"] = colors[XMLParser.xmlValue("border", data)]
+                    borders["right"] = colors[XMLParser.xmlValue("border", data)]
                 end
-                if(XMLParser.XmlValue("borderTop", data)~=nil)then borders["top"] = colors[XMLParser.XmlValue("borderTop", data)] end
-                if(XMLParser.XmlValue("borderBottom", data)~=nil)then borders["bottom"] = colors[XMLParser.XmlValue("borderBottom", data)] end
-                if(XMLParser.XmlValue("borderLeft", data)~=nil)then borders["left"] = colors[XMLParser.XmlValue("borderLeft", data)] end
-                if(XMLParser.XmlValue("borderRight", data)~=nil)then borders["right"] = colors[XMLParser.XmlValue("borderRight", data)] end
+                if(XMLParser.xmlValue("borderTop", data)~=nil)then borders["top"] = colors[XMLParser.xmlValue("borderTop", data)] end
+                if(XMLParser.xmlValue("borderBottom", data)~=nil)then borders["bottom"] = colors[XMLParser.xmlValue("borderBottom", data)] end
+                if(XMLParser.xmlValue("borderLeft", data)~=nil)then borders["left"] = colors[XMLParser.xmlValue("borderLeft", data)] end
+                if(XMLParser.xmlValue("borderRight", data)~=nil)then borders["right"] = colors[XMLParser.xmlValue("borderRight", data)] end
                 self:setBorder(borders["top"], borders["bottom"], borders["left"], borders["right"])
                 return self
             end

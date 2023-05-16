@@ -111,9 +111,9 @@ return {
 
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(XMLParser.XmlValue("texture", data)~=nil)then self:addTexture(XMLParser.XmlValue("texture", data), XMLParser.XmlValue("animate", data)) end
-                if(XMLParser.XmlValue("textureMode", data)~=nil)then self:setTextureMode(XMLParser.XmlValue("textureMode", data)) end
-                if(XMLParser.XmlValue("infinitePlay", data)~=nil)then self:setInfinitePlay(XMLParser.XmlValue("infinitePlay", data)) end
+                if(XMLParser.xmlValue("texture", data)~=nil)then self:addTexture(XMLParser.xmlValue("texture", data), XMLParser.xmlValue("animate", data)) end
+                if(XMLParser.xmlValue("textureMode", data)~=nil)then self:setTextureMode(XMLParser.xmlValue("textureMode", data)) end
+                if(XMLParser.xmlValue("infinitePlay", data)~=nil)then self:setInfinitePlay(XMLParser.xmlValue("infinitePlay", data)) end
                 return self
             end
         }

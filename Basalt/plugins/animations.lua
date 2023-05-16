@@ -340,9 +340,9 @@ return {
 
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                local animX, animY, animateDuration, animeteTimeOffset, animateMode = XMLParser.XmlValue("animateX", data), XMLParser.XmlValue("animateY", data), XMLParser.XmlValue("animateDuration", data), XMLParser.XmlValue("animateTimeOffset", data), XMLParser.XmlValue("animateMode", data)
-                local animW, animH, animateDuration, animeteTimeOffset, animateMode = XMLParser.XmlValue("animateW", data), XMLParser.XmlValue("animateH", data), XMLParser.XmlValue("animateDuration", data), XMLParser.XmlValue("animateTimeOffset", data), XMLParser.XmlValue("animateMode", data)
-                local animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode = XMLParser.XmlValue("animateXOffset", data), XMLParser.XmlValue("animateYOffset", data), XMLParser.XmlValue("animateDuration", data), XMLParser.XmlValue("animateTimeOffset", data), XMLParser.XmlValue("animateMode", data)
+                local animX, animY, animateDuration, animeteTimeOffset, animateMode = XMLParser.xmlValue("animateX", data), XMLParser.xmlValue("animateY", data), XMLParser.xmlValue("animateDuration", data), XMLParser.xmlValue("animateTimeOffset", data), XMLParser.xmlValue("animateMode", data)
+                local animW, animH, animateDuration, animeteTimeOffset, animateMode = XMLParser.xmlValue("animateW", data), XMLParser.xmlValue("animateH", data), XMLParser.xmlValue("animateDuration", data), XMLParser.xmlValue("animateTimeOffset", data), XMLParser.xmlValue("animateMode", data)
+                local animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode = XMLParser.xmlValue("animateXOffset", data), XMLParser.xmlValue("animateYOffset", data), XMLParser.xmlValue("animateDuration", data), XMLParser.xmlValue("animateTimeOffset", data), XMLParser.xmlValue("animateMode", data)
                 if(animX~=nil and animY~=nil)then
                     self:animatePosition(animX, animY, animateDuration, animeteTimeOffset, animateMode)
                 end

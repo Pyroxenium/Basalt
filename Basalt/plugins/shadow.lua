@@ -32,7 +32,7 @@ return {
 
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(XMLParser.XmlValue("shadow", data)~=nil)then self:setShadow(XMLParser.XmlValue("shadow", data)) end
+                if(XMLParser.xmlValue("shadow", data)~=nil)then self:setShadow(XMLParser.xmlValue("shadow", data)) end
                 return self
             end
         }

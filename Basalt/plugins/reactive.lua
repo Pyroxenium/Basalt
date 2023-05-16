@@ -3,7 +3,7 @@ local utils = require("utils")
 local uuid = utils.uuid
 
 local function maybeExecuteScript(data, renderContext)
-    local script = XMLParser.XmlValue('script', data)
+    local script = XMLParser.xmlValue('script', data)
     if (script ~= nil) then
         load(script, nil, "t", renderContext.env)()
     end
@@ -228,7 +228,7 @@ return {
                     renderContext.env = _ENV
                     renderContext.env.props = props
                     local f = fs.open(path, "r")
-                    local data = XMLParser:ParseXmlText(f.readAll())
+                    local data = XMLParser.parseText(f.readAll())
                     f.close()
                     lastXMLReferences = {}
                     maybeExecuteScript(data, renderContext)
@@ -278,8 +278,8 @@ return {
                         if(data["rules"]["rule"].attributes~=nil)then tab = {data["rules"]["rule"]} end
                         for k,v in pairs(tab)do
 
-                            if(XMLParser.XmlValue("pattern", v)~=nil)then
-                                self:addRule(XMLParser.XmlValue("pattern", v), colors[XMLParser.XmlValue("fg", v)], colors[XMLParser.XmlValue("bg", v)])
+                            if(XMLParser.xmlValue("pattern", v)~=nil)then
+                                self:addRule(XMLParser.xmlValue("pattern", v), colors[XMLParser.xmlValue("fg", v)], colors[XMLParser.xmlValue("bg", v)])
                             end
                         end
                     end
@@ -293,7 +293,7 @@ return {
     Thread = function(base, basalt)
         local object = {
             setValuesByXMLData = function(self, data, renderContext)
-                local script = XMLParser.XmlValue("start", data)~=nil
+                local script = XMLParser.xmlValue("start", data)~=nil
                 if(script~=nil)then
                     local f = load(script, nil, "t", renderContext.env)
                     self:start(f)
@@ -326,7 +326,7 @@ return {
                     if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
                         if(self:getType()~="Radio")then
-                            self:addItem(XMLParser.XmlValue("text", v), colors[XMLParser.XmlValue("bg", v)], colors[XMLParser.XmlValue("fg", v)])
+                            self:addItem(XMLParser.xmlValue("text", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
                         end
                     end
                 end
@@ -354,7 +354,7 @@ return {
                     local tab = data["item"]
                     if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
-                        self:addItem(XMLParser.XmlValue("text", v), XMLParser.XmlValue("x", v), XMLParser.XmlValue("y", v), colors[XMLParser.XmlValue("bg", v)], colors[XMLParser.XmlValue("fg", v)])
+                        self:addItem(XMLParser.xmlValue("text", v), XMLParser.xmlValue("x", v), XMLParser.xmlValue("y", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
                     end
                 end
                 return self
@@ -371,7 +371,7 @@ return {
                     local tab = data["item"]
                     if(tab.attributes~=nil)then tab = {tab} end
                     for _,_ in pairs(tab)do
-                        self:addDataPoint(XMLParser.XmlValue("value"))
+                        self:addDataPoint(XMLParser.xmlValue("value"))
                     end
                 end
                 return self
@@ -389,7 +389,7 @@ return {
                         local tab = data["node"]
                         if(tab.attributes~=nil)then tab = {tab} end
                         for _,v in pairs(tab)do
-                            local n = node:addNode(XMLParser.XmlValue("text", v), colors[XMLParser.XmlValue("bg", v)], colors[XMLParser.XmlValue("fg", v)])
+                            local n = node:addNode(XMLParser.xmlValue("text", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
                             addNode(n, v)
                         end
                     end
@@ -398,7 +398,7 @@ return {
                     local tab = data["node"]
                     if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
-                        local n = self:addNode(XMLParser.XmlValue("text", v), colors[XMLParser.XmlValue("bg", v)], colors[XMLParser.XmlValue("fg", v)])
+                        local n = self:addNode(XMLParser.xmlValue("text", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
                         addNode(n, v)
                     end
                 end

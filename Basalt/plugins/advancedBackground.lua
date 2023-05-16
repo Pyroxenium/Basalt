@@ -30,7 +30,7 @@ return {
 
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(XMLParser.XmlValue("background-symbol", data)~=nil)then self:setBackgroundSymbol(XMLParser.XmlValue("background-symbol", data), XMLParser.XmlValue("background-symbol-color", data)) end
+                if(XMLParser.xmlValue("background-symbol", data)~=nil)then self:setBackgroundSymbol(XMLParser.xmlValue("background-symbol", data), XMLParser.xmlValue("background-symbol-color", data)) end
                 return self
             end,
 
