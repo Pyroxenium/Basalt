@@ -28,11 +28,11 @@ local XMLNode = {
 }
 
 local parseAttributes = function(node, s)
-    -- Parse "" style attributes
+    -- Parse "" style string attributes
     local _, _ = string.gsub(s, "(%w+)=([\"'])(.-)%2", function(attribute, _, value)
         node:addAttribute(attribute, "\"" .. value .. "\"")
     end)
-    -- Parse {} style attributes
+    -- Parse {} style computed attributes
     local _, _ = string.gsub(s, "(%w+)={(.-)}", function(attribute, expression)
         node:addAttribute(attribute, expression)
     end)
