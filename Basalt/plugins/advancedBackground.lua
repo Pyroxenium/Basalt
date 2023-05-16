@@ -28,9 +28,9 @@ return {
                 return bgSymbolColor
             end,
 
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(XMLParser.xmlValue("background-symbol", data)~=nil)then self:setBackgroundSymbol(XMLParser.xmlValue("background-symbol", data), XMLParser.xmlValue("background-symbol-color", data)) end
+            setValuesByXMLData = function(self, node, scripts)
+                base.setValuesByXMLData(self, node, scripts)
+                if(XMLParser.xmlValue("background-symbol", node)~=nil)then self:setBackgroundSymbol(XMLParser.xmlValue("background-symbol", node), XMLParser.xmlValue("background-symbol-color", node)) end
                 return self
             end,
 

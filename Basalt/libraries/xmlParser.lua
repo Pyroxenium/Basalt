@@ -1,8 +1,8 @@
 local XMLNode = {
     new = function(name)
         return {
-            value = nil,
             name = name,
+            value = nil,
             children = {},
             attributes = {},
 

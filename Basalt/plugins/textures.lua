@@ -109,11 +109,11 @@ return {
                 self:setDrawState("texture-base", false)
             end,
 
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(XMLParser.xmlValue("texture", data)~=nil)then self:addTexture(XMLParser.xmlValue("texture", data), XMLParser.xmlValue("animate", data)) end
-                if(XMLParser.xmlValue("textureMode", data)~=nil)then self:setTextureMode(XMLParser.xmlValue("textureMode", data)) end
-                if(XMLParser.xmlValue("infinitePlay", data)~=nil)then self:setInfinitePlay(XMLParser.xmlValue("infinitePlay", data)) end
+            setValuesByXMLData = function(self, node, scripts)
+                base.setValuesByXMLData(self, node, scripts)
+                if(XMLParser.xmlValue("texture", node)~=nil)then self:addTexture(XMLParser.xmlValue("texture", node), XMLParser.xmlValue("animate", node)) end
+                if(XMLParser.xmlValue("textureMode", node)~=nil)then self:setTextureMode(XMLParser.xmlValue("textureMode", node)) end
+                if(XMLParser.xmlValue("infinitePlay", node)~=nil)then self:setInfinitePlay(XMLParser.xmlValue("infinitePlay", node)) end
                 return self
             end
         }

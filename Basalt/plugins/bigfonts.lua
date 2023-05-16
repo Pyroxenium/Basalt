@@ -195,9 +195,9 @@ return {
                 end
             end,
 
-            setValuesByXMLData = function(self, data, scripts)
-                base.setValuesByXMLData(self, data, scripts)
-                if(XMLParser.xmlValue("fontSize", data)~=nil)then self:setFontSize(XMLParser.xmlValue("fontSize", data)) end
+            setValuesByXMLData = function(self, node, scripts)
+                base.setValuesByXMLData(self, node, scripts)
+                if(XMLParser.xmlValue("fontSize", node)~=nil)then self:setFontSize(XMLParser.xmlValue("fontSize", node)) end
                 return self
             end,
 

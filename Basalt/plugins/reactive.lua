@@ -2,34 +2,30 @@ local XMLParser = require("xmlParser")
 local utils = require("utils")
 local uuid = utils.uuid
 
-local function maybeExecuteScript(data, renderContext)
-    local script = XMLParser.xmlValue('script', data)
-    if (script ~= nil) then
-        load(script, nil, "t", renderContext.env)()
+local function maybeExecuteScript(nodeTree, renderContext)
+    for _, node in ipairs(nodeTree.children) do
+        if (node.name == "script") then
+            return load(node.value, nil, "t", renderContext.env)()
+        end
     end
 end
 
-local function registerFunctionEvent(self, data, event, renderContext)
+local function registerFunctionEvent(self, event, script, renderContext)
     local eventEnv = renderContext.env
-    if(data:sub(1,1)=="$")then
-        local data = data:sub(2)
-        event(self, self:getBasalt().getVariable(data))
-    else
-        event(self, function(...)
-            eventEnv.event = {...}
-            local success, msg = pcall(load(data, nil, "t", eventEnv))
-            if not success then
-                error("XML Error: "..msg)
-            end
-        end)
-    end
+    event(self, function(...)
+        eventEnv.event = {...}
+        local success, msg = pcall(load(script, nil, "t", eventEnv))
+        if not success then
+            error("XML Error: "..msg)
+        end
+    end)
 end
 
-local function registerFunctionEvents(self, data, events, renderContext)
+local function registerFunctionEvents(self, node, events, renderContext)
     for _, event in pairs(events) do
-        local expression = data.attributes[event]
+        local expression = node.attributes[event]
         if (expression ~= nil) then
-            registerFunctionEvent(self, expression .. "()", self[event], renderContext)
+            registerFunctionEvent(self, self[event], expression .. "()", renderContext)
         end
     end
 end
@@ -114,16 +110,16 @@ return {
     VisualObject = function(base, basalt)
 
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
+            setValuesByXMLData = function(self, node, renderContext)
                 renderContext.env[self:getName()] = self
-                for attribute, expression in pairs(data.attributes) do
+                for attribute, expression in pairs(node.attributes) do
                     local update = function()
                         local value = load("return " .. expression, nil, "t", renderContext.env)()
                         self:setProperty(attribute, value)
                     end
                     basalt.effect(update)
                 end
-                registerFunctionEvents(self, data, {
+                registerFunctionEvents(self, node, {
                     "onClick",
                     "onClickUp",
                     "onHover",
@@ -148,9 +144,9 @@ return {
 
     ChangeableObject = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                registerFunctionEvent(self, data, {
+            setValuesByXMLData = function(self, node, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
+                registerFunctionEvent(self, node, {
                     "onChange"
                 }, renderContext)
                 return self
@@ -162,9 +158,9 @@ return {
     Container = function(base, basalt)
         local lastXMLReferences = {}
 
-        local function xmlDefaultValues(data, obj, renderContext)
+        local function xmlDefaultValues(node, obj, renderContext)
             if (obj~=nil) then
-                obj:setValuesByXMLData(data, renderContext)
+                obj:setValuesByXMLData(node, renderContext)
             end
         end
 
@@ -198,13 +194,13 @@ return {
         end
 
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
+            setValuesByXMLData = function(self, node, renderContext)
                 lastXMLReferences = {}
-                base.setValuesByXMLData(self, data, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
 
                 local _OBJECTS = basalt.getObjects()
 
-                for _, childNode in pairs(data.children) do
+                for _, childNode in pairs(node.children) do
                     local tagName = childNode.name
                     if (tagName ~= "animation") then
                         local layout = renderContext.env[tagName]
@@ -218,7 +214,7 @@ return {
                     end
                 end
                 
-                addXMLObjectType(data["animation"], self.addAnimation, self, renderContext)
+                addXMLObjectType(node["animation"], self.addAnimation, self, renderContext)
                 return self
             end,
 
@@ -228,11 +224,11 @@ return {
                     renderContext.env = _ENV
                     renderContext.env.props = props
                     local f = fs.open(path, "r")
-                    local data = XMLParser.parseText(f.readAll())
+                    local nodeTree = XMLParser.parseText(f.readAll())
                     f.close()
                     lastXMLReferences = {}
-                    maybeExecuteScript(data, renderContext)
-                    self:setValuesByXMLData(data, renderContext)
+                    maybeExecuteScript(nodeTree, renderContext)
+                    self:setValuesByXMLData(nodeTree, renderContext)
                 end
                 return self
             end,
@@ -246,17 +242,17 @@ return {
 
     Textfield = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                if(data["lines"]~=nil)then
-                    local l = data["lines"]["line"]
+            setValuesByXMLData = function(self, node, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
+                if(node["lines"]~=nil)then
+                    local l = node["lines"]["line"]
                     if(l.attributes~=nil)then l = {l} end
                     for _,v in pairs(l)do
                         self:addLine(v.value)
                     end
                 end
-                if(data["keywords"]~=nil)then
-                    for k,v in pairs(data["keywords"])do
+                if(node["keywords"]~=nil)then
+                    for k,v in pairs(node["keywords"])do
                         if(colors[k]~=nil)then
                             local entry = v
                             if(entry.attributes~=nil)then entry = {entry} end
@@ -272,10 +268,10 @@ return {
                         end
                     end
                 end
-                if(data["rules"]~=nil)then
-                    if(data["rules"]["rule"]~=nil)then
-                        local tab = data["rules"]["rule"]
-                        if(data["rules"]["rule"].attributes~=nil)then tab = {data["rules"]["rule"]} end
+                if(node["rules"]~=nil)then
+                    if(node["rules"]["rule"]~=nil)then
+                        local tab = node["rules"]["rule"]
+                        if(node["rules"]["rule"].attributes~=nil)then tab = {node["rules"]["rule"]} end
                         for k,v in pairs(tab)do
 
                             if(XMLParser.xmlValue("pattern", v)~=nil)then
@@ -292,8 +288,8 @@ return {
 
     Thread = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                local script = XMLParser.xmlValue("start", data)~=nil
+            setValuesByXMLData = function(self, node, renderContext)
+                local script = XMLParser.xmlValue("start", node)~=nil
                 if(script~=nil)then
                     local f = load(script, nil, "t", renderContext.env)
                     self:start(f)
@@ -306,9 +302,9 @@ return {
 
     Timer = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                registerFunctionEvents(self, data, {
+            setValuesByXMLData = function(self, node, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
+                registerFunctionEvents(self, node, {
                     "onCall"
                 }, renderContext)
                 return self
@@ -319,10 +315,10 @@ return {
 
     List = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                if(data["item"]~=nil)then
-                    local tab = data["item"]
+            setValuesByXMLData = function(self, node, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
+                if(node["item"]~=nil)then
+                    local tab = node["item"]
                     if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
                         if(self:getType()~="Radio")then
@@ -338,8 +334,8 @@ return {
 
     Dropdown = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
+            setValuesByXMLData = function(self, node, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
                 return self
             end,
         }
@@ -348,10 +344,10 @@ return {
 
     Radio = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                if(data["item"]~=nil)then
-                    local tab = data["item"]
+            setValuesByXMLData = function(self, node, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
+                if(node["item"]~=nil)then
+                    local tab = node["item"]
                     if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
                         self:addItem(XMLParser.xmlValue("text", v), XMLParser.xmlValue("x", v), XMLParser.xmlValue("y", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
@@ -365,10 +361,10 @@ return {
 
     Graph = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                if(data["item"]~=nil)then
-                    local tab = data["item"]
+            setValuesByXMLData = function(self, node, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
+                if(node["item"]~=nil)then
+                    local tab = node["item"]
                     if(tab.attributes~=nil)then tab = {tab} end
                     for _,_ in pairs(tab)do
                         self:addDataPoint(XMLParser.xmlValue("value"))
@@ -382,11 +378,11 @@ return {
 
     Treeview = function(base, basalt)
         local object = {
-            setValuesByXMLData = function(self, data, renderContext)
-                base.setValuesByXMLData(self, data, renderContext)
-                local function addNode(node, data)
-                    if(data["node"]~=nil)then
-                        local tab = data["node"]
+            setValuesByXMLData = function(self, node, renderContext)
+                base.setValuesByXMLData(self, node, renderContext)
+                local function addNode(node, node)
+                    if(node["node"]~=nil)then
+                        local tab = node["node"]
                         if(tab.attributes~=nil)then tab = {tab} end
                         for _,v in pairs(tab)do
                             local n = node:addNode(XMLParser.xmlValue("text", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
@@ -394,8 +390,8 @@ return {
                         end
                     end
                 end
-                if(data["node"]~=nil)then
-                    local tab = data["node"]
+                if(node["node"]~=nil)then
+                    local tab = node["node"]
                     if(tab.attributes~=nil)then tab = {tab} end
                     for _,v in pairs(tab)do
                         local n = self:addNode(XMLParser.xmlValue("text", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
