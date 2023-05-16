@@ -130,36 +130,11 @@ function installer.download(url, file)
     end
 end
 
-local basaltDataCache
-function installer.getBasaltData()
-    if(basaltDataCache~=nil)then return basaltDataCache end
-    local content
-    printStatus("Downloading basalt data...")
-    if(fs.exists("basaltdata.json"))then
-        content = fs.open("basaltdata.json", "r")
-    else
-        content = installer.get("https://basalt.madefor.cc/basaltdata.json")
-    end
-    if(content~=nil)then
-        content = content.readAll()
-        basaltDataCache = textutils.unserializeJSON(content)
-        printStatus("Successfully downloaded basalt data!")
-        return basaltDataCache
-    end
-end
-
 function installer.getRelease(version)
-    --local v = installer.getBasaltData().versions[version]
-    --if(v~=nil)then
-        printStatus("Downloading basalt "..version)
-        local content = http.get("https://basalt.madefor.cc/versions/"..version, {Authorization =  _G._GIT_API_KEY and  "token ".._G._GIT_API_KEY})
-        if(content~=nil)then
-            return content.readAll()
-        end
-    --end
+    return installer.get("https://raw.githubusercontent.com/Pyroxenium/Basalt/master/docs/versions/"..version)
 end
 
-function installer.downloadRelease(file, version)
+function installer.downloadRelease(version, file)
     local content = installer.getRelease(version)
     if(content~=nil)then
         local f = fs.open(file or "basalt.lua", "w")
