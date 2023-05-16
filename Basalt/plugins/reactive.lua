@@ -200,22 +200,21 @@ return {
 
                 local _OBJECTS = basalt.getObjects()
 
-                for _, childNode in pairs(node.children) do
-                    local tagName = childNode.tag
-                    if (tagName ~= "animation") then
+                for _, child in pairs(node.children) do
+                    local tagName = child.tag
+                    if (tagName == "animation") then
+                        addXMLObjectType(child, self.addAnimation, self, renderContext)
+                    else
                         local layout = renderContext.env[tagName]
                         local objectKey = tagName:gsub("^%l", string.upper)
                         if (layout ~= nil) then
-                            insertChildLayout(self, layout, childNode, renderContext)
+                            insertChildLayout(self, layout, child, renderContext)
                         elseif (_OBJECTS[objectKey] ~= nil) then
                             local addFn = self["add" .. objectKey]
-                            addXMLObjectType(childNode, addFn, self, renderContext)
+                            addXMLObjectType(child, addFn, self, renderContext)
                         end
                     end
                 end
-                
-                addXMLObjectType(node["animation"], self.addAnimation, self, renderContext)
-                return self
             end,
 
             loadLayout = function(self, path, props)
@@ -238,172 +237,5 @@ return {
             end,
         }
         return object
-    end,
-
-    Textfield = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                base.setValuesByXMLData(self, node, renderContext)
-                if(node["lines"]~=nil)then
-                    local l = node["lines"]["line"]
-                    if(l.attributes~=nil)then l = {l} end
-                    for _,v in pairs(l)do
-                        self:addLine(v.value)
-                    end
-                end
-                if(node["keywords"]~=nil)then
-                    for k,v in pairs(node["keywords"])do
-                        if(colors[k]~=nil)then
-                            local entry = v
-                            if(entry.attributes~=nil)then entry = {entry} end
-                            local tab = {}
-                            for a,b in pairs(entry)do
-                                local keywordList = b["keyword"]
-                                if(b["keyword"].attributes~=nil)then keywordList = {b["keyword"]} end
-                                for c,d in pairs(keywordList)do
-                                    table.insert(tab, d.value)
-                                end
-                            end
-                            self:addKeywords(colors[k], tab)
-                        end
-                    end
-                end
-                if(node["rules"]~=nil)then
-                    if(node["rules"]["rule"]~=nil)then
-                        local tab = node["rules"]["rule"]
-                        if(node["rules"]["rule"].attributes~=nil)then tab = {node["rules"]["rule"]} end
-                        for k,v in pairs(tab)do
-
-                            if(XMLParser.xmlValue("pattern", v)~=nil)then
-                                self:addRule(XMLParser.xmlValue("pattern", v), colors[XMLParser.xmlValue("fg", v)], colors[XMLParser.xmlValue("bg", v)])
-                            end
-                        end
-                    end
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Thread = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                local script = XMLParser.xmlValue("start", node)~=nil
-                if(script~=nil)then
-                    local f = load(script, nil, "t", renderContext.env)
-                    self:start(f)
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Timer = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                base.setValuesByXMLData(self, node, renderContext)
-                registerFunctionEvents(self, node, {
-                    "onCall"
-                }, renderContext)
-                return self
-            end,
-        }
-        return object
-    end,
-
-    List = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                base.setValuesByXMLData(self, node, renderContext)
-                if(node["item"]~=nil)then
-                    local tab = node["item"]
-                    if(tab.attributes~=nil)then tab = {tab} end
-                    for _,v in pairs(tab)do
-                        if(self:getType()~="Radio")then
-                            self:addItem(XMLParser.xmlValue("text", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
-                        end
-                    end
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Dropdown = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                base.setValuesByXMLData(self, node, renderContext)
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Radio = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                base.setValuesByXMLData(self, node, renderContext)
-                if(node["item"]~=nil)then
-                    local tab = node["item"]
-                    if(tab.attributes~=nil)then tab = {tab} end
-                    for _,v in pairs(tab)do
-                        self:addItem(XMLParser.xmlValue("text", v), XMLParser.xmlValue("x", v), XMLParser.xmlValue("y", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
-                    end
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Graph = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                base.setValuesByXMLData(self, node, renderContext)
-                if(node["item"]~=nil)then
-                    local tab = node["item"]
-                    if(tab.attributes~=nil)then tab = {tab} end
-                    for _,_ in pairs(tab)do
-                        self:addDataPoint(XMLParser.xmlValue("value"))
-                    end
-                end
-                return self
-            end,
-        }
-        return object
-    end,
-
-    Treeview = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                base.setValuesByXMLData(self, node, renderContext)
-                local function addNode(node, node)
-                    if(node["node"]~=nil)then
-                        local tab = node["node"]
-                        if(tab.attributes~=nil)then tab = {tab} end
-                        for _,v in pairs(tab)do
-                            local n = node:addNode(XMLParser.xmlValue("text", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
-                            addNode(n, v)
-                        end
-                    end
-                end
-                if(node["node"]~=nil)then
-                    local tab = node["node"]
-                    if(tab.attributes~=nil)then tab = {tab} end
-                    for _,v in pairs(tab)do
-                        local n = self:addNode(XMLParser.xmlValue("text", v), colors[XMLParser.xmlValue("bg", v)], colors[XMLParser.xmlValue("fg", v)])
-                        addNode(n, v)
-                    end
-                end
-
-
-                return self
-            end,
-        }
-        return object
-    end,
-
+    end
 }

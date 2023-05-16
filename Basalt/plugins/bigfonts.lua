@@ -195,12 +195,6 @@ return {
                 end
             end,
 
-            setValuesByXMLData = function(self, node, scripts)
-                base.setValuesByXMLData(self, node, scripts)
-                if(XMLParser.xmlValue("fontSize", node)~=nil)then self:setFontSize(XMLParser.xmlValue("fontSize", node)) end
-                return self
-            end,
-
             draw = function(self)
                 base.draw(self)
                 self:addDraw("bigfonts", function()
@@ -219,7 +213,7 @@ return {
                         end
                     end
                 end)
-            end,
+            end
         }
         return object
     end

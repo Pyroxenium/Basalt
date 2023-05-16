@@ -28,12 +28,6 @@ return {
                         end
                     end
                 end)
-            end,
-
-            setValuesByXMLData = function(self, node, scripts)
-                base.setValuesByXMLData(self, node, scripts)
-                if(XMLParser.xmlValue("shadow", node)~=nil)then self:setShadow(XMLParser.xmlValue("shadow", node)) end
-                return self
             end
         }
 

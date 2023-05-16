@@ -336,24 +336,7 @@ return {
                         end
                     end
                 end
-            end,
-
-            setValuesByXMLData = function(self, node, scripts)
-                base.setValuesByXMLData(self, node, scripts)
-                local animX, animY, animateDuration, animeteTimeOffset, animateMode = XMLParser.xmlValue("animateX", node), XMLParser.xmlValue("animateY", node), XMLParser.xmlValue("animateDuration", node), XMLParser.xmlValue("animateTimeOffset", node), XMLParser.xmlValue("animateMode", node)
-                local animW, animH, animateDuration, animeteTimeOffset, animateMode = XMLParser.xmlValue("animateW", node), XMLParser.xmlValue("animateH", node), XMLParser.xmlValue("animateDuration", node), XMLParser.xmlValue("animateTimeOffset", node), XMLParser.xmlValue("animateMode", node)
-                local animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode = XMLParser.xmlValue("animateXOffset", node), XMLParser.xmlValue("animateYOffset", node), XMLParser.xmlValue("animateDuration", node), XMLParser.xmlValue("animateTimeOffset", node), XMLParser.xmlValue("animateMode", node)
-                if(animX~=nil and animY~=nil)then
-                    self:animatePosition(animX, animY, animateDuration, animeteTimeOffset, animateMode)
-                end
-                if(animW~=nil and animH~=nil)then
-                    self:animateSize(animW, animH, animateDuration, animeteTimeOffset, animateMode)
-                end
-                if(animXOffset~=nil and animYOffset~=nil)then
-                    self:animateOffset(animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode)
-                end                
-                return self
-            end,
+            end
         }
 
         return object

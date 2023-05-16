@@ -7,16 +7,6 @@ local XMLNode = {
             children = {},
 
             addChild = function(self, child)
-                if self[child.tag] ~= nil then
-                    if type(self[child.tag].tag) == "function" then
-                        local tempTable = {}
-                        table.insert(tempTable, self[child.tag])
-                        self[child.tag] = tempTable
-                    end
-                    table.insert(self[child.tag], child)
-                else
-                    self[child.tag] = child
-                end
                 table.insert(self.children, child)
             end,
 
@@ -39,28 +29,6 @@ local parseAttributes = function(node, s)
 end
 
 local XMLParser = {
-    xmlValue = function(tag, tab)
-        local var
-        if(type(tab)~="table")then return end
-        if(tab[tag]~=nil)then
-            if(type(tab[tag])=="table")then
-                if(tab[tag].value~=nil)then
-                    var = tab[tag].value
-                end
-            end
-        end
-        if(var==nil)then var = tab["@"..tag] end
-
-        if(var=="true")then
-            var = true 
-        elseif(var=="false")then
-            var = false
-        elseif(tonumber(var)~=nil)then
-            var = tonumber(var)
-        end
-        return var
-    end,
-
     parseText = function(xmlText)
         local stack = {}
         local top = XMLNode.new()
