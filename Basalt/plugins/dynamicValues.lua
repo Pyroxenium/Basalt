@@ -1,6 +1,5 @@
 local utils = require("utils")
 local count = utils.tableCount
-local xmlValue = utils.xmlValue
 
 return {
     VisualObject = function(base, basalt)

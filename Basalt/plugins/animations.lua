@@ -215,8 +215,7 @@ local lerp = {
     easeInOutBounce=easeInOutBounce,
 }
 
-local utils = require("utils")
-local xmlValue = utils.xmlValue
+local XMLParser = require("xmlParser")
 
 return {
     VisualObject = function(base, basalt)
@@ -341,9 +340,9 @@ return {
 
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                local animX, animY, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateX", data), xmlValue("animateY", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
-                local animW, animH, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateW", data), xmlValue("animateH", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
-                local animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode = xmlValue("animateXOffset", data), xmlValue("animateYOffset", data), xmlValue("animateDuration", data), xmlValue("animateTimeOffset", data), xmlValue("animateMode", data)
+                local animX, animY, animateDuration, animeteTimeOffset, animateMode = XMLParser.XmlValue("animateX", data), XMLParser.XmlValue("animateY", data), XMLParser.XmlValue("animateDuration", data), XMLParser.XmlValue("animateTimeOffset", data), XMLParser.XmlValue("animateMode", data)
+                local animW, animH, animateDuration, animeteTimeOffset, animateMode = XMLParser.XmlValue("animateW", data), XMLParser.XmlValue("animateH", data), XMLParser.XmlValue("animateDuration", data), XMLParser.XmlValue("animateTimeOffset", data), XMLParser.XmlValue("animateMode", data)
+                local animXOffset, animYOffset, animateDuration, animeteTimeOffset, animateMode = XMLParser.XmlValue("animateXOffset", data), XMLParser.XmlValue("animateYOffset", data), XMLParser.XmlValue("animateDuration", data), XMLParser.XmlValue("animateTimeOffset", data), XMLParser.XmlValue("animateMode", data)
                 if(animX~=nil and animY~=nil)then
                     self:animatePosition(animX, animY, animateDuration, animeteTimeOffset, animateMode)
                 end

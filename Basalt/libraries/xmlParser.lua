@@ -55,6 +55,28 @@ end
 
 local XMLParser = {}
 
+function XMLParser.XmlValue(name, tab)
+    local var
+    if(type(tab)~="table")then return end
+    if(tab[name]~=nil)then
+        if(type(tab[name])=="table")then
+            if(tab[name].value~=nil)then
+                var = tab[name]:value()
+            end
+        end
+    end
+    if(var==nil)then var = tab["@"..name] end
+
+    if(var=="true")then 
+        var = true 
+    elseif(var=="false")then 
+        var = false
+    elseif(tonumber(var)~=nil)then 
+        var = tonumber(var)
+    end
+    return var
+end
+
 function XMLParser:ToXmlString(value)
     value = string.gsub(value, "&", "&amp;"); -- '&' -> "&amp;"
     value = string.gsub(value, "<", "&lt;"); -- '<' -> "&lt;"

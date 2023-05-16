@@ -1,5 +1,4 @@
-local utils = require("utils")
-local xmlValue = utils.xmlValue
+local XMLParser = require("xmlParser")
 
 return {
     VisualObject = function(base)
@@ -33,7 +32,7 @@ return {
 
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("shadow", data)~=nil)then self:setShadow(xmlValue("shadow", data)) end
+                if(XMLParser.XmlValue("shadow", data)~=nil)then self:setShadow(XMLParser.XmlValue("shadow", data)) end
                 return self
             end
         }

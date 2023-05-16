@@ -1,6 +1,6 @@
 local images = require("images")
 local utils = require("utils")
-local xmlValue = utils.xmlValue
+local XMLParser = require("xmlParser")
 return {
     VisualObject = function(base)
         local textureId, infinitePlay = 1, true
@@ -111,9 +111,9 @@ return {
 
             setValuesByXMLData = function(self, data, scripts)
                 base.setValuesByXMLData(self, data, scripts)
-                if(xmlValue("texture", data)~=nil)then self:addTexture(xmlValue("texture", data), xmlValue("animate", data)) end
-                if(xmlValue("textureMode", data)~=nil)then self:setTextureMode(xmlValue("textureMode", data)) end
-                if(xmlValue("infinitePlay", data)~=nil)then self:setInfinitePlay(xmlValue("infinitePlay", data)) end
+                if(XMLParser.XmlValue("texture", data)~=nil)then self:addTexture(XMLParser.XmlValue("texture", data), XMLParser.XmlValue("animate", data)) end
+                if(XMLParser.XmlValue("textureMode", data)~=nil)then self:setTextureMode(XMLParser.XmlValue("textureMode", data)) end
+                if(XMLParser.XmlValue("infinitePlay", data)~=nil)then self:setInfinitePlay(XMLParser.XmlValue("infinitePlay", data)) end
                 return self
             end
         }
