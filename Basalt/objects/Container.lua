@@ -59,6 +59,9 @@ return function(name, basalt)
         table.insert(elements, {element = element, zIndex = zIndex, objId = objId})
         sorted = false
         element:setParent(self, true)
+        for event, _ in pairs(element:getRegisteredEvents()) do
+            self:addEvent(event, element)
+        end
         if(element.init~=nil)then element:init() end
         if(element.load~=nil)then element:load() end
         if(element.draw~=nil)then element:draw() end
@@ -96,6 +99,7 @@ return function(name, basalt)
                 return true
             end
         end
+        self:removeEvents(element)
         sorted = false
     end
 
