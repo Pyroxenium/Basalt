@@ -18,11 +18,11 @@ local Layout = {
     end
 }
 
-local function executeScript(script, env)
+local executeScript = function(script, env)
     return load(script, nil, "t", env)()
 end
 
-local function registerFunctionEvent(object, event, script, env)
+local registerFunctionEvent = function(object, event, script, env)
     event(object, function(...)
         local success, msg = pcall(load(script, nil, "t", env))
         if not success then
@@ -46,6 +46,38 @@ end
 
 return {
     basalt = function(basalt)
+        local createObjectsFromXMLNode = function(node, env)
+            local layout = env[node.tag]
+            if (layout ~= nil) then
+                local props = {}
+                for prop, expression in pairs(node.attributes) do
+                    props[prop] = load("return " .. expression, nil, "t", env)
+                end
+                return basalt.createObjectsFromLayout(layout, props)
+            end
+        
+            local objectName = node.tag:gsub("^%l", string.upper)
+            local object = basalt:createObject(objectName, node.attributes["id"])
+            for attribute, expression in pairs(node.attributes) do
+                if (attribute:sub(1, 2) == "on") then
+                    registerFunctionEvent(object, object[attribute], expression .. "()", env)
+                else
+                    local update = function()
+                        local value = load("return " .. expression, nil, "t", env)()
+                        object:setProperty(attribute, value)
+                    end
+                    basalt.effect(update)
+                end
+            end
+            for _, child in ipairs(node.children) do
+                local childObjects = basalt.createObjectsFromXMLNode(child, env)
+                for _, childObject in ipairs(childObjects) do
+                    object:addChild(childObject)
+                end
+            end
+            return {object}
+        end
+
         local object = {
             reactive = function(initialValue)
                 local value = initialValue
@@ -109,57 +141,26 @@ return {
                 return Layout.fromXML(text)
             end,
 
-            createObjectsFromXMLNode = function(node, env)
-                local objects
-                local layout = env[node.tag]
-                if (layout ~= nil) then
-                    local updateFns = {}
-                    for prop, expression in pairs(node.attributes) do
-                        updateFns[prop] = basalt.derived(function()
-                            return load("return " .. expression, nil, "t", env)()
-                        end)
-                    end
-                    local props = {}
-                    setmetatable(props, {
-                        __index = function(_, k)
-                            return updateFns[k]()
-                        end
-                    })
-                    objects = basalt.createObjectsFromLayout(layout, props)
-                else
-                    local objectName = node.tag:gsub("^%l", string.upper)
-                    local object = basalt:createObject(objectName, node.attributes["id"])
-                    for attribute, expression in pairs(node.attributes) do
-                        if (attribute:sub(1, 2) == "on") then
-                            registerFunctionEvent(object, object[attribute], expression .. "()", env)
-                        else
-                            local update = function()
-                                local value = load("return " .. expression, nil, "t", env)()
-                                object:setProperty(attribute, value)
-                            end
-                            basalt.effect(update)
-                        end
-                    end
-                    for _, child in ipairs(node.children) do
-                        local childObjects = basalt.createObjectsFromXMLNode(child, env)
-                        for _, childObject in ipairs(childObjects) do
-                            object:addChild(childObject)
-                        end
-                    end
-                    objects = {object}
-                end
-                return objects
-            end,
-
             createObjectsFromLayout = function(layout, props)
                 local env = _ENV
-                env.props = props
+                env.props = {}
+                local updateFns = {}
+                for prop, getFn in pairs(props) do
+                    updateFns[prop] = basalt.derived(function()
+                        return getFn()
+                    end)
+                end
+                setmetatable(env.props, {
+                    __index = function(_, k)
+                        return updateFns[k]()
+                    end
+                })
                 if (layout.script ~= nil) then
                     executeScript(layout.script, env)
                 end
                 local objects = {}
                 for _, node in ipairs(layout.nodes) do
-                    local _objects = basalt.createObjectsFromXMLNode(node, env)
+                    local _objects = createObjectsFromXMLNode(node, env)
                     for _, object in ipairs(_objects) do
                         table.insert(objects, object)
                     end
@@ -173,11 +174,17 @@ return {
     Container = function(base, basalt)
         local object = {
             loadLayout = function(self, path, props)
+                local wrappedProps = {}
                 if (props == nil) then
                     props = {}
                 end
+                for prop, value in pairs(props) do
+                    wrappedProps[prop] = function()
+                        return value
+                    end
+                end
                 local layout = basalt.layout(path)
-                local objects = basalt.createObjectsFromLayout(layout, props)
+                local objects = basalt.createObjectsFromLayout(layout, wrappedProps)
                 for _, object in ipairs(objects) do
                     self:addChild(object)
                 end
