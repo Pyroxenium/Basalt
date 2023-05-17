@@ -74,12 +74,12 @@ local getObjects = function()
     return moddedObjects
 end
 
-local getObject = function(id)
-    return getObjects()[id]
+local getObject = function(objectName)
+    return getObjects()[objectName]
 end
 
-local createObject = function(self, objectName, id)
-    return getObject(objectName)(id, self)
+local createObject = function(basalt, objectName, id)
+    return getObject(objectName)(id, basalt)
 end
 
 local bInstance = {
@@ -436,6 +436,11 @@ basalt = {
 
     setVariable = setVariable,
     getVariable = getVariable,
+
+    getObjects = getObjects,
+    getObject = getObject,
+
+    createObject = createObject,
 
     setBaseTerm = function(_baseTerm)
         baseTerm = _baseTerm

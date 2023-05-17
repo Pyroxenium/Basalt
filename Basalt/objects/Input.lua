@@ -162,7 +162,7 @@ return function(name, basalt)
                         end
                     end
                     if (key == keys.enter) then
-                        parent:removeFocusedObject(self)
+                        parent:clearFocusedChild(self)
                     end
                     if (key == keys.right) then
                         local tLength = tostring(base.getValue()):len()
@@ -263,7 +263,7 @@ return function(name, basalt)
                     end
                 end
                 local parent = self:getParent()
-                parent:removeFocusedObject()
+                parent:clearFocusedChild()
             end
         end,
 

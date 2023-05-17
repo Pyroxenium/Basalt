@@ -61,7 +61,7 @@ return function(name, basalt)
             if(noRemove)then parent = newParent return self end
             if (newParent.getType ~= nil and newParent:isType("Container")) then
                 self:remove()
-                newParent:addObject(self)
+                newParent:addChild(self)
                 if (self.show) then
                     self:show()
                 end
@@ -113,7 +113,7 @@ return function(name, basalt)
 
         remove = function(self)
             if (parent ~= nil) then
-                parent:removeObject(self)
+                parent:removeChild(self)
             end
             self:updateDraw()
             return self
