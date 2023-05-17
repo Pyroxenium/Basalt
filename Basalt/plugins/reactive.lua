@@ -127,7 +127,8 @@ return {
                     })
                     objects = basalt.createObjectsFromLayout(layout, props)
                 else
-                    local object = basalt:createObject(node.tag, node.attributes["id"])
+                    local objectName = node.tag:gsub("^%l", string.upper)
+                    local object = basalt:createObject(objectName, node.attributes["id"])
                     for attribute, expression in pairs(node.attributes) do
                         if (attribute:sub(1, 2) == "on") then
                             registerFunctionEvent(object, object[attribute], expression .. "()", env)
