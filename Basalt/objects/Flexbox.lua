@@ -21,12 +21,12 @@ return function(name, basalt)
     end
 
     local function applyLayout(self)
-        local objects = self:getObjects()
-        local totalElements = #objects
+        local children = self:getChildren()
+        local totalChildren = #children
         local width, height = self:getSize()
-    
+
         local mainAxisTotalChildSize = 0
-        for _, obj in ipairs(objects) do
+        for _, obj in ipairs(children) do
             local objWidth, objHeight = obj.element:getSize()
             if flexDirection == "row" then
                 mainAxisTotalChildSize = mainAxisTotalChildSize + objWidth
@@ -34,15 +34,15 @@ return function(name, basalt)
                 mainAxisTotalChildSize = mainAxisTotalChildSize + objHeight
             end
         end
-        local mainAxisAvailableSpace = (flexDirection == "row" and width or height) - mainAxisTotalChildSize - (spacing * (totalElements - 1))
+        local mainAxisAvailableSpace = (flexDirection == "row" and width or height) - mainAxisTotalChildSize - (spacing * (totalChildren - 1))
         local justifyContentOffset = 1
         if justifyContent == "center" then
             justifyContentOffset = 1 + mainAxisAvailableSpace / 2
         elseif justifyContent == "flex-end" then
-            justifyContentOffset = 1 + mainAxisvailableSpace
+            justifyContentOffset = 1 + mainAxisAvailableSpace
         end
-    
-        for _, obj in ipairs(objects) do
+
+        for _, obj in ipairs(children) do
             local alignItemsOffset = getObjectOffAxisOffset(self, obj)
             if flexDirection == "row" then
                 obj.element:setPosition(justifyContentOffset, alignItemsOffset)
@@ -55,7 +55,7 @@ return function(name, basalt)
             end
         end
     end
-    
+
 
     local object = {
         getType = function()
@@ -71,7 +71,7 @@ return function(name, basalt)
             applyLayout(self)
             return self
         end,
-    
+
         getSpacing = function(self)
             return spacing
         end,

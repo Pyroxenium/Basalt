@@ -120,10 +120,10 @@ return function(name, basalt)
                 if(self:isVisible())then
                     if(updateRender)then
                         base.render(self)
-                        local objects = self:getObjects()
-                        for _, obj in ipairs(objects) do
-                            if (obj.element.render ~= nil) then
-                                obj.element:render()
+                        local children = self:getChildren()
+                        for _, child in ipairs(children) do
+                            if (child.element.render ~= nil) then
+                                child.element:render()
                             end
                         end
                         updateRender = false

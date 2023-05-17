@@ -11,8 +11,8 @@ return function(name, basalt)
 
     local function getHorizontalScrollAmount(self)
         local amount = 0
-        local objects = self:getObjects()
-        for _, b in pairs(objects) do
+        local children = self:getChildren()
+        for _, b in pairs(children) do
             if(b.element.getWidth~=nil)and(b.element.getX~=nil)then
                 local w, x = b.element:getWidth(), b.element:getX()
                 local width = self:getWidth()
@@ -35,8 +35,8 @@ return function(name, basalt)
 
     local function getVerticalScrollAmount(self)
         local amount = 0
-        local objects = self:getObjects()
-        for _, b in pairs(objects) do
+        local children = self:getChildren()
+        for _, b in pairs(children) do
             if(b.element.getHeight~=nil)and(b.element.getY~=nil)then
                 local h, y = b.element:getHeight(), b.element:getY()
                 local height = self:getHeight()
@@ -106,7 +106,7 @@ return function(name, basalt)
 
         scrollHandler = function(self, dir, x, y)
             if(base:getBase().scrollHandler(self, dir, x, y))then
-                self:sortElementOrder()
+                self:sortChildren()
                 for _, obj in ipairs(self:getEvents("mouse_scroll")) do
                     if (obj.element.scrollHandler ~= nil) then
                         local xO, yO = 0, 0
@@ -122,7 +122,7 @@ return function(name, basalt)
                     end
                 end
                 scrollHandler(self, dir, x, y)
-                self:removeFocusedObject()
+                self:clearFocusedChild()
                 return true
             end
         end,

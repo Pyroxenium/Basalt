@@ -3,7 +3,7 @@ local tHex = require("tHex")
 
 local sub, find, insert = string.sub, string.find, table.insert
 
-return function(name, basalt)   
+return function(name, basalt)
     local base = basalt.getObject("Object")(name, basalt)
     -- Base object
     local objectType = "VisualObject" -- not changeable
@@ -94,7 +94,7 @@ return function(name, basalt)
 
         setFocus = function(self)
             if (parent ~= nil) then
-                parent:setFocusedObject(self)
+                parent:setFocusedChild(self)
             end
             return self
         end,
@@ -312,7 +312,7 @@ return function(name, basalt)
                 local val = self:sendEvent("mouse_click", button, x - (objX-1), y - (objY-1), x, y, isMon)
                 if(val==false)then return false end
                 if(parent~=nil)then
-                    parent:setFocusedObject(self)
+                    parent:setFocusedChild(self)
                 end
                 isClicked = true
                 isDragging = true
@@ -343,7 +343,7 @@ return function(name, basalt)
                 dragStartX, dragStartY = x, y 
                 if(val~=nil)then return val end
                 if(parent~=nil)then
-                    parent:setFocusedObject(self)
+                    parent:setFocusedChild(self)
                 end
                 return true
             end
@@ -361,7 +361,7 @@ return function(name, basalt)
                 local val = self:sendEvent("mouse_scroll", dir, x - (objX-1), y - (objY-1))
                 if(val==false)then return false end
                 if(parent~=nil)then
-                    parent:setFocusedObject(self)
+                    parent:setFocusedChild(self)
                 end
                 return true
             end
