@@ -13,6 +13,7 @@ return function(name, basalt)
     local isEnabled,initialized = true,false
 
     local eventSystem = basaltEvent()
+    local registeredEvents = {}
     local activeEvents = {}
 
     local parent
@@ -113,7 +114,6 @@ return function(name, basalt)
         remove = function(self)
             if (parent ~= nil) then
                 parent:removeObject(self)
-                parent:removeEvents(self)
             end
             self:updateDraw()
             return self
@@ -139,11 +139,19 @@ return function(name, basalt)
             return eventSystem
         end,
 
+        getRegisteredEvents = function(self)
+            return registeredEvents
+        end,
+
         registerEvent = function(self, event, func)
             if(parent~=nil)then
                 parent:addEvent(event, self)
             end
-            return eventSystem:registerEvent(event, func)
+            eventSystem:registerEvent(event, func)
+            if (registeredEvents[event] == nil) then
+                registeredEvents[event] = {}
+            end
+            table.insert(registeredEvents[event], func)
         end,
 
         removeEvent = function(self, event, index)
@@ -152,7 +160,13 @@ return function(name, basalt)
                     parent:removeEvent(event, self)
                 end
             end
-            return eventSystem:removeEvent(event, index)
+            eventSystem:removeEvent(event, index)
+            if (registeredEvents[event] ~= nil) then
+                table.remove(registeredEvents[event], index)
+                if (#registeredEvents[event] == 0) then
+                    registeredEvents[event] = nil
+                end
+            end
         end,
 
         eventHandler = function(self, event, ...)
@@ -262,7 +276,7 @@ return function(name, basalt)
             end
             return self
         end,
-        }
+    }
 
     object.__index = object
     return object
