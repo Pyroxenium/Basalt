@@ -173,6 +173,9 @@ return {
     Container = function(base, basalt)
         local object = {
             loadLayout = function(self, path, props)
+                if (props == nil) then
+                    props = {}
+                end
                 local layout = basalt.layout(path)
                 local objects = basalt.createObjectsFromLayout(layout, props)
                 for _, object in ipairs(objects) do
