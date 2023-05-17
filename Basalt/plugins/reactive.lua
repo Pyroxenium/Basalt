@@ -1,33 +1,34 @@
 local XMLParser = require("xmlParser")
-local utils = require("utils")
-local uuid = utils.uuid
 
-local function maybeExecuteScript(nodeTree, renderContext)
-    for _, node in ipairs(nodeTree.children) do
-        if (node.tag == "script") then
-            return load(node.value, nil, "t", renderContext.env)()
+local Layout = {
+    fromXML = function(text)
+        local nodes = XMLParser.parseText(text)
+        local script = nil
+        for index, node in ipairs(nodes) do
+            if (node.tag == "script") then
+                script = node.value
+                table.remove(nodes, index)
+                break
+            end
         end
+        return {
+            nodes = nodes,
+            script = script
+        }
     end
+}
+
+local function executeScript(script, env)
+    return load(script, nil, "t", env)()
 end
 
-local function registerFunctionEvent(self, event, script, renderContext)
-    local eventEnv = renderContext.env
-    event(self, function(...)
-        eventEnv.event = {...}
-        local success, msg = pcall(load(script, nil, "t", eventEnv))
+local function registerFunctionEvent(object, event, script, env)
+    event(object, function(...)
+        local success, msg = pcall(load(script, nil, "t", env))
         if not success then
             error("XML Error: "..msg)
         end
     end)
-end
-
-local function registerFunctionEvents(self, node, events, renderContext)
-    for _, event in pairs(events) do
-        local expression = node.attributes[event]
-        if (expression ~= nil) then
-            registerFunctionEvent(self, self[event], expression .. "()", renderContext)
-        end
-    end
 end
 
 local currentEffect = nil
@@ -46,12 +47,6 @@ end
 return {
     basalt = function(basalt)
         local object = {
-            layout = function(path)
-                return {
-                    path = path,
-                }
-            end,
-
             reactive = function(initialValue)
                 local value = initialValue
                 local observerEffects = {}
@@ -102,139 +97,88 @@ return {
                     setValue(computeFn())
                 end)
                 return getValue;
-            end
-        }
-        return object
-    end,
+            end,
 
-    VisualObject = function(base, basalt)
-
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                renderContext.env[self:getName()] = self
-                for attribute, expression in pairs(node.attributes) do
-                    local update = function()
-                        local value = load("return " .. expression, nil, "t", renderContext.env)()
-                        self:setProperty(attribute, value)
-                    end
-                    basalt.effect(update)
+            layout = function(path)
+                if (not fs.exists(path)) then
+                    error("Can't open file " .. path)
                 end
-                registerFunctionEvents(self, node, {
-                    "onClick",
-                    "onClickUp",
-                    "onHover",
-                    "onScroll",
-                    "onDrag",
-                    "onKey",
-                    "onKeyUp",
-                    "onRelease",
-                    "onChar",
-                    "onGetFocus",
-                    "onLoseFocus",
-                    "onResize",
-                    "onReposition",
-                    "onEvent",
-                    "onLeave"
-                }, renderContext)
-                return self
+                local f = fs.open(path, "r")
+                local text = f.readAll()
+                f.close()
+                return Layout.fromXML(text)
             end,
-        }
-        return object
-    end,
 
-    ChangeableObject = function(base, basalt)
-        local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                base.setValuesByXMLData(self, node, renderContext)
-                registerFunctionEvent(self, node, {
-                    "onChange"
-                }, renderContext)
-                return self
+            createObjectsFromXMLNode = function(node, env)
+                local objects
+                local layout = env[node.tag]
+                if (layout ~= nil) then
+                    local updateFns = {}
+                    for prop, expression in pairs(node.attributes) do
+                        updateFns[prop] = basalt.derived(function()
+                            return load("return " .. expression, nil, "t", env)()
+                        end)
+                    end
+                    local props = {}
+                    setmetatable(props, {
+                        __index = function(_, k)
+                            return updateFns[k]()
+                        end
+                    })
+                    objects = basalt.createObjectsFromLayout(layout, props)
+                else
+                    local object = basalt:createObject(node.tag, node.attributes["id"])
+                    for attribute, expression in pairs(node.attributes) do
+                        if (attribute:sub(1, 2) == "on") then
+                            registerFunctionEvent(object, object[attribute], expression .. "()", env)
+                        else
+                            local update = function()
+                                local value = load("return " .. expression, nil, "t", env)()
+                                object:setProperty(attribute, value)
+                            end
+                            basalt.effect(update)
+                        end
+                    end
+                    for _, child in ipairs(node.children) do
+                        local childObjects = basalt.createObjectsFromXMLNode(child, env)
+                        for _, childObject in ipairs(childObjects) do
+                            object:addChild(childObject)
+                        end
+                    end
+                    objects = {object}
+                end
+                return objects
             end,
+
+            createObjectsFromLayout = function(layout, props)
+                local env = _ENV
+                env.props = props
+                if (layout.script ~= nil) then
+                    executeScript(layout.script, env)
+                end
+                local objects = {}
+                for _, node in ipairs(layout.nodes) do
+                    local _objects = basalt.createObjectsFromXMLNode(node, env)
+                    for _, object in ipairs(_objects) do
+                        table.insert(objects, object)
+                    end
+                end
+                return objects
+            end
         }
         return object
     end,
 
     Container = function(base, basalt)
-        local lastXMLReferences = {}
-
-        local function xmlDefaultValues(node, obj, renderContext)
-            if (obj~=nil) then
-                obj:setValuesByXMLData(node, renderContext)
-            end
-        end
-
-        local function addXMLObjectType(node, addFn, self, renderContext)
-            if (node ~= nil) then
-                if (node.attributes ~= nil) then
-                    node = {node}
-                end
-                for _, v in pairs(node) do
-                    local obj = addFn(self, v["@id"] or uuid())
-                    lastXMLReferences[obj:getName()] = obj
-                    xmlDefaultValues(v, obj, renderContext)
-                end
-            end
-        end
-
-        local function insertChildLayout(self, layout, node, renderContext)
-            local updateFns = {}
-            for prop, expression in pairs(node.attributes) do
-                updateFns[prop] = basalt.derived(function()
-                    return load("return " .. expression, nil, "t", renderContext.env)()
-                end)
-            end
-            local props = {}
-            setmetatable(props, {
-                __index = function(_, k)
-                    return updateFns[k]()
-                end
-            })
-            self:loadLayout(layout.path, props)
-        end
-
         local object = {
-            setValuesByXMLData = function(self, node, renderContext)
-                lastXMLReferences = {}
-                base.setValuesByXMLData(self, node, renderContext)
-
-                local _OBJECTS = basalt.getObjects()
-
-                for _, child in pairs(node.children) do
-                    local tagName = child.tag
-                    if (tagName == "animation") then
-                        addXMLObjectType(child, self.addAnimation, self, renderContext)
-                    else
-                        local layout = renderContext.env[tagName]
-                        local objectKey = tagName:gsub("^%l", string.upper)
-                        if (layout ~= nil) then
-                            insertChildLayout(self, layout, child, renderContext)
-                        elseif (_OBJECTS[objectKey] ~= nil) then
-                            local addFn = self["add" .. objectKey]
-                            addXMLObjectType(child, addFn, self, renderContext)
-                        end
-                    end
-                end
-            end,
-
             loadLayout = function(self, path, props)
-                if(fs.exists(path))then
-                    local renderContext = {}
-                    renderContext.env = _ENV
-                    renderContext.env.props = props
-                    local f = fs.open(path, "r")
-                    local nodeTree = XMLParser.parseText(f.readAll())
-                    f.close()
-                    lastXMLReferences = {}
-                    maybeExecuteScript(nodeTree, renderContext)
-                    self:setValuesByXMLData(nodeTree, renderContext)
+                local layout = basalt.layout(path)
+                local objects = basalt.createObjectsFromLayout(layout, props)
+                for _, object in ipairs(objects) do
+                    self:addChild(object)
                 end
                 return self
-            end,
-
-            getXMLElements = function(self)
-                return lastXMLReferences
-            end,
+            end
         }
         return object
     end

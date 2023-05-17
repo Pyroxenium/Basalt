@@ -70,7 +70,7 @@ local XMLParser = {
         if #stack > 1 then
             error("XMLParser: unclosed " .. stack[#stack].tag)
         end
-        return top
+        return top.children
     end
 }
 
