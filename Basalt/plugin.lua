@@ -20,8 +20,14 @@ if(packaged)then
 else
     if(fs.exists(pluginDir))then
         for _,v in pairs(fs.list(pluginDir))do
-            table.insert(pluginNames, v)
-            local newPlugin = require(v:gsub(".lua", ""))
+            local newPlugin
+            if(fs.isDir(fs.combine(pluginDir, v)))then
+                table.insert(pluginNames, fs.combine(pluginDir, v))
+                newPlugin = require(v.."/init")
+            else
+                table.insert(pluginNames, v)
+                newPlugin = require(v:gsub(".lua", ""))
+            end
             if(type(newPlugin)=="table")then
                 for a,b in pairs(newPlugin)do
                     if(type(a)=="string")then
