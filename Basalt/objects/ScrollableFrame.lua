@@ -98,6 +98,11 @@ return function(name, basalt)
             self:listenEvent("mouse_scroll")
         end,
 
+        removeChildren = function(self)
+            base.removeChildren(self)
+            self:listenEvent("mouse_scroll")
+        end,
+
         setParent = function(self, p, ...)
             base.setParent(self, p, ...)
             parent = p

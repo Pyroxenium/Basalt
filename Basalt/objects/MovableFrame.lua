@@ -40,6 +40,13 @@ return function(name, basalt)
             self:listenEvent("mouse_drag")
         end,
 
+        removeChildren = function(self)
+            base.removeChildren(self)
+            self:listenEvent("mouse_click")
+            self:listenEvent("mouse_up")
+            self:listenEvent("mouse_drag")
+        end,
+
         dragHandler = function(self, btn, x, y)
             if(base.dragHandler(self, btn, x, y))then
                 if (isDragging) then
