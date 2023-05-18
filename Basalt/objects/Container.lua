@@ -102,6 +102,17 @@ return function(name, basalt)
         sorted = false
     end
 
+    local function removeChildren(self)
+        local parent = self:getParent()
+        children = {}
+        events = {}
+        sorted = false
+        objId = 0
+        evId = 0
+        focusedChild = nil
+        parent:removeEvents(self)
+    end
+
     local function updateZIndex(self, element, newZ)
         objId = objId + 1
         evId = evId + 1
@@ -303,6 +314,7 @@ return function(name, basalt)
         getDeepChildren = getDeepChild,
         addChild = addChild,
         removeChild = removeChild,
+        removeChildren = removeChildren,
         getEvents = getEvents,
         getEvent = getEvent,
         addEvent = addEvent,
