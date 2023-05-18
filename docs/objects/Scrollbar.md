@@ -16,14 +16,11 @@ In addition to the Object and VisualObject methods, Scrollbar objects have the f
 Here's an example of how to create a Scrollbar object and set its properties:
 
 ```lua
-local mainFrame = basalt.createFrame()
-local scrollbar = mainFrame:addScrollbar()
+local main = basalt.createFrame()
+local subFrame = main:addFrame():setSize(30, 15)
+local scrollbar = main:addScrollbar():setPosition(31, 1):setSize(1, 15):setScrollAmount(10)
 
-scrollbar:setBarType("vertical")
-scrollbar:setScrollAmount(100)
-scrollbar:setIndex(50)
-
-scrollbar:onChange(function(self, event, value)
-  basalt.debug("Scrollbar value changed to:", value.text)
+scrollbar:onChange(function(self, _, value)
+  subFrame:setOffset(0, value-1)
 end)
 ```
