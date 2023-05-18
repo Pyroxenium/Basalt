@@ -1,4 +1,4 @@
-## getObject
+## getChild
 
 ### Description
 
@@ -21,7 +21,7 @@ local button = main:addButton("myButton")
     :setText("My Button")
 
 -- Get the button object by its ID
-local retrievedButton = main:getObject("myButton")
+local retrievedButton = main:getChild("myButton")
 if retrievedButton then
     basalt.debug("Button found!")
 end

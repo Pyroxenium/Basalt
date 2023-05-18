@@ -1,4 +1,4 @@
-## removeObject
+## removeChild
 
 ### Description
 
@@ -25,7 +25,7 @@ main:addButton()
     :setPosition(2, 4)
     :setText("Remove the button above")
     :onClick(function()
-        local removed = container:removeObject("removableButton")
+        local removed = container:removeChild("removableButton")
         if removed then
             basalt.debug("Button removed!")
         else

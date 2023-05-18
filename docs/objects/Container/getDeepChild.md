@@ -1,4 +1,4 @@
-## getDeepObject
+## getDeepChild
 
 ### Description
 
@@ -21,7 +21,7 @@ local button = container:addButton("myButton")
     :setPosition(2, 2)
     :setText("My Button")
 -- Get the button object by its ID, searching through all containers
-local retrievedButton = main:getDeepObject("myButton")
+local retrievedButton = main:getDeepChild("myButton")
 if retrievedButton then
     basalt.debug("Button found!")
 end

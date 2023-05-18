@@ -1,8 +1,8 @@
-## removeFocusedObject
+## clearFocusedChild
 
 ### Description
 
-Removes the focus from the currently focused object within the container. If no object is focused, this method has no effect.
+Clears the focus from the currently focused object within the container. If no object is focused, this method has no effect.
 
 ### Returns
 
@@ -18,13 +18,13 @@ local inputField1 = container:addInputField()
 local inputField2 = container:addInputField()
     :setPosition(2, 4)
 
-container:setFocusedObject(inputField1)
+container:setFocusedChild(inputField1)
 
 main:addButton()
     :setPosition(2, 6)
     :setText("Remove focus from input fields")
     :onClick(function()
-        container:removeFocusedObject()
+        container:clearFocusedChild()
         basalt.debug("Focus removed from input fields!")
     end)
 

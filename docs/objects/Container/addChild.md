@@ -1,4 +1,4 @@
-## addObject
+## addChild
 
 ### Description
 
