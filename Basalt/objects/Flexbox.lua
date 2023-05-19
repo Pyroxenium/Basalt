@@ -123,9 +123,10 @@ return function(name, basalt)
 
                 if v == lineBreakFakeObject then
                     lineOffset = lineOffset + lineSize + spacing
+                    usedSize = 0
                     lineSize = 1
                     index = index + 1
-                    sortedChildren[index] = {offset=lineOffset, v}
+                    sortedChildren[index] = {offset=lineOffset}
                 else
                     local objSize = direction == "row" and v:getWidth() or v:getHeight()
                     if(objSize+usedSize>maxSize)then
