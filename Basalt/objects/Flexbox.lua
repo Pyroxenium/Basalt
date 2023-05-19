@@ -4,6 +4,8 @@ local function flexObjectPlugin(base, basalt)
     local flexShrink = 0
     local flexBasis = 12
 
+    local baseWidth, baseHeight = base:getSize()
+
     local object = {
         getFlexGrow = function(self)
             return flexGrow
@@ -30,14 +32,31 @@ local function flexObjectPlugin(base, basalt)
         setFlexBasis = function(self, value)
             flexBasis = value
             return self
-        end
+        end,
+
+        getSize = function(self)
+            return baseWidth, baseHeight
+        end,
+
+        getWidth = function(self)
+            return baseWidth
+        end,
+
+        getHeight = function(self)
+            return baseHeight
+        end,
+
+        setSize = function(self, width, height, rel, internalCall)
+            base.setSize(self, width, height, rel)
+            if not internalCall then
+                baseWidth, baseHeight = base:getSize()
+            end
+            return self
+        end,
     }
 
-    for k,v in pairs(object)do
-        base[k] = v
-    end
-
-    return base
+    object.__index = object
+    return setmetatable(object, base)
 end
 
 return function(name, basalt)
@@ -157,7 +176,7 @@ return function(name, basalt)
                 end
 
                 child:setPosition(currentX, children.offset or 1)
-                child:setSize(childWidth, child:getHeight())
+                child:setSize(childWidth, child:getHeight(), false, true)
                 currentX = currentX + childWidth + spacing
             end
         end
@@ -245,7 +264,7 @@ return function(name, basalt)
                 end
 
                 child:setPosition(children.offset, currentY)
-                child:setSize(child:getWidth(), childHeight)
+                child:setSize(child:getWidth(), childHeight, false, true)
                 currentY = currentY + childHeight + spacing
             end
         end
@@ -367,6 +386,13 @@ return function(name, basalt)
             table.insert(children, lineBreakFakeObject)
             updateLayout = true
             return self
+        end,
+
+        customEventHandler = function(self, event, ...)
+            base.customEventHandler(self, event, ...)
+            if event == "basalt_FrameResize" then
+                updateLayout = true
+            end
         end,
 
         draw = function(self)
