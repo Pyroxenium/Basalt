@@ -99,7 +99,7 @@ return function(name, basalt)
                     lineOffset = lineOffset + lineSize + spacing
                     lineSize = 1
                     index = index + 1
-                    sortedChildren[index] = {offset=lineOffset, v}
+                    sortedChildren[index] = {offset=lineOffset}
                 else
                     table.insert(sortedChildren[index], v)
                 end
@@ -113,13 +113,8 @@ return function(name, basalt)
             local usedSize = 0
             local index = 1
 
-            for _,v in pairs(children)do
-                if(sortedChildren[index]==nil)then sortedChildren[index]={offset=1} end
-
-                local childHeight = direction == "row" and v:getHeight() or v:getWidth()
-                if childHeight > lineSize then
-                    lineSize = childHeight
-                end
+            for _,v in pairs(children) do
+                if(sortedChildren[index]==nil) then sortedChildren[index]={offset=1} end
 
                 if v == lineBreakFakeObject then
                     lineOffset = lineOffset + lineSize + spacing
@@ -129,18 +124,24 @@ return function(name, basalt)
                     sortedChildren[index] = {offset=lineOffset}
                 else
                     local objSize = direction == "row" and v:getWidth() or v:getHeight()
-                    if(objSize+usedSize>maxSize)then
+                    if(objSize+usedSize<=maxSize) then
+                        table.insert(sortedChildren[index], v)
+                        usedSize = usedSize + objSize + spacing
+                    else
                         lineOffset = lineOffset + lineSize + spacing
                         lineSize = direction == "row" and v:getHeight() or v:getWidth()
                         index = index + 1
                         usedSize = objSize + spacing
                         sortedChildren[index] = {offset=lineOffset, v}
-                    else
-                        usedSize = usedSize + objSize + spacing
-                        table.insert(sortedChildren[index], v)
+                    end
+
+                    local childHeight = direction == "row" and v:getHeight() or v:getWidth()
+                    if childHeight > lineSize then
+                        lineSize = childHeight
                     end
                 end
             end
+
         end
     end
 
