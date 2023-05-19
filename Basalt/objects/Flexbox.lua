@@ -61,6 +61,7 @@ return function(name, basalt)
         setPosition = function(self) end,
         setSize = function(self) end,
     })
+    lineBreakFakeObject:setFlexBasis(0)
 
     local function sortChildren(self)
         if(wrap=="nowrap")then
@@ -112,10 +113,10 @@ return function(name, basalt)
                         lineOffset = lineOffset + lineSize + spacing
                         lineSize = direction == "row" and v:getHeight() or v:getWidth()
                         index = index + 1
-                        usedSize = 0
+                        usedSize = objSize + spacing
                         sortedChildren[index] = {offset=lineOffset, v}
                     else
-                        usedSize = usedSize + objSize
+                        usedSize = usedSize + objSize + spacing
                         table.insert(sortedChildren[index], v)
                     end
                 end
@@ -157,7 +158,6 @@ return function(name, basalt)
 
                 child:setPosition(currentX, children.offset or 1)
                 child:setSize(childWidth, child:getHeight())
-                basalt.log(children.offset)
                 currentX = currentX + childWidth + spacing
             end
         end
@@ -381,7 +381,8 @@ return function(name, basalt)
 
     for k, _ in pairs(basalt.getObjects()) do
         object["add" .. k] = function(self, name)
-            local child = flexObjectPlugin(base["add" .. k](self, name), basalt)
+            local baseChild = base["add" .. k](self, name)
+            local child = flexObjectPlugin(baseChild, basalt)
             table.insert(children, child)
             updateLayout = true
             return child
