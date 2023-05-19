@@ -267,7 +267,7 @@ return function(name, basalt)
 
         isFocused = function(self)
             if (parent ~= nil) then
-                return parent:getFocusedObject() == self
+                return parent:getFocused() == self
             end
             return true
         end,

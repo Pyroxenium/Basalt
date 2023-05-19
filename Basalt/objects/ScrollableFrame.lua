@@ -25,7 +25,7 @@ return function(name, basalt)
                     end
                 end
 
-                if (h + x - width >= amount) then
+                if (w + x - width >= amount) then
                     amount = max(w + x - width, 0)
                 end
             end
