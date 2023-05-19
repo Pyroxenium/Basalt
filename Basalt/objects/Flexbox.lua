@@ -2,7 +2,7 @@
 local function flexObjectPlugin(base, basalt)
     local flexGrow = 0
     local flexShrink = 0
-    local flexBasis = 6
+    local flexBasis = 12
 
     local object = {
         getFlexGrow = function(self)
@@ -353,7 +353,7 @@ return function(name, basalt)
             return spacing
         end,
 
-        setFlexWrap = function(self, value)
+        setWrap = function(self, value)
             wrap = value
             updateLayout = true
             return self
