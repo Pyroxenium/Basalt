@@ -34,7 +34,6 @@ Here's an example of how to create a Flexbox object:
 
 ```lua
 local main = basalt.createFrame()
-local main = basalt.createFrame()
 local flexbox = main:addFlexbox()
   :setDirection("column")
   :setJustifyContent("space-between")
