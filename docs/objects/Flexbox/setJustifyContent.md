@@ -6,7 +6,7 @@ Determines how the children are aligned along the main axis
 
 ### Parameters
 
-1. `string` One of ("flex-start", "flex-end", "center", "space-between", "space-around") - default is flex-start. Works the same as the property of the same name in [CSS flexboxes](https://css-tricks.com/snippets/css/a-guide-to-flexbox/#aa-flexbox-properties)
+1. `string` One of ("flex-start", "flex-end", "center", "space-between", "space-around", "space-evenly") - default is flex-start. Works the same as the property of the same name in [CSS flexboxes](https://css-tricks.com/snippets/css/a-guide-to-flexbox/#aa-flexbox-properties)
 
 ### Returns
 

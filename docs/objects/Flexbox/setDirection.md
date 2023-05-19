@@ -1,4 +1,4 @@
-## setFlexDirection
+## setDirection
 
 ### Description
 
@@ -19,5 +19,5 @@ Sets the direction in which the children will be placed
 ```lua
 local main = basalt.createFrame()
 local flexbox = mainFrame:addFlexbox()
-      :setFlexDirection("column")
+      :setDirection("column")
 ```
