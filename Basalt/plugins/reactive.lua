@@ -79,7 +79,7 @@ return {
         end
 
         local object = {
-            reactive = function(initialValue)
+            observable = function(initialValue)
                 local value = initialValue
                 local observerEffects = {}
                 local get = function()
