@@ -89,23 +89,23 @@ This layout can be passed props like any other object in the layout, as seen in 
 
 ## Reactivity (BETA)
 
-Reacting to user input is easier than ever with Basalt XML's concept of reactive values and observers for said values. This powerful feature allows for properties to be derived automatically from reactive values, without needing the programmer to manually call functions to update the object.
+Reacting to user input is easier than ever with Basalt XML's concept of observable values and observers for said values. This powerful feature allows for properties to be updated automatically from observable values, without needing the programmer to manually call functions to update the object.
 
-To create a reactive value, simply use the `basalt.reactive(initialValue)` function, which returns getter and setter functions. For example:
+To create an obervable value, simply use the `basalt.observable(initialValue)` function, which returns getter and setter functions. For example:
 
 ```xml
 <script>
     local basalt = require("basalt")
-    getTimesClicked, setTimesClicked = basalt.reactive(0)
+    getTimesClicked, setTimesClicked = basalt.observable(0)
 </script>
 ```
 
-You could then hook up this reactive value to a property.
+You could then hook up this observable value to a property.
 
 ```xml
 <script>
     local basalt = require("basalt")
-    getTimesClicked, setTimesClicked = basalt.reactive(0)
+    getTimesClicked, setTimesClicked = basalt.observable(0)
 </script>
 
 <button text={"Times clicked: " .. getTimesClicked()} />
@@ -116,7 +116,7 @@ This subscribes the button text to the value of times clicked. If this value is 
 ```xml
 <script>
     local basalt = require("basalt")
-    getTimesClicked, setTimesClicked = basalt.reactive(0)
+    getTimesClicked, setTimesClicked = basalt.observable(0)
     onClick = function()
         setTimesClicked(getTimesClicked() + 1)
     end
@@ -129,16 +129,16 @@ Voila. You now have a button that displays the number of times it's been clicked
 
 # Effects
 
-In addition to reactive values, there are effects that are triggered by them. You can think about it like this: reactive values produce updates, while effects detect them and do something in response.
+In addition to observable values, there are effects that are triggered by them. You can think about it like this: observable values produce updates, while effects detect them and do something in response.
 
-Effects are created using the `basalt.effect(function)` function. Any reactive values that are accessed during the effect's execution are automatically subscribed to, and the effect will re-run in response to updates to these values.
+Effects are created using the `basalt.effect(function)` function. Any observable values that are accessed during the effect's execution are automatically subscribed to, and the effect will re-run in response to updates to these values.
 
 For example, you could create an effect that writes a message to the logs whenever the times clicked updates:
 
 ```xml
 <script>
     local basalt = require("basalt")
-    getTimesClicked, setTimesClicked = basalt.reactive(0)
+    getTimesClicked, setTimesClicked = basalt.observable(0)
     onClick = function()
         setTimesClicked(getTimesClicked() + 1)
     end
@@ -150,20 +150,20 @@ For example, you could create an effect that writes a message to the logs whenev
 <button text={"Times clicked: " .. getTimesClicked()} onClick={onClick} />
 ```
 
-In fact, props are internally implemented using effects! Effects that set the corresponding property in the object to the new reactive value.
+In fact, props are internally implemented using effects! Effects that set the corresponding property in the object to the new observable value.
 
 # Derived values
 
-If reactive values are the source of truth, derived values can be thought of as a dependency that uses them and transforms them. Similarly to effects, they also update whenever the reactive values they observe update.
+If observable values are the source of truth, derived values can be thought of as a dependency that uses them and transforms them. Similarly to effects, they also update whenever the observable values they observe update.
 
-To create a derived value, use the `basalt.derived(function)` function, which returns a getter function for the value. Any effect observing this derived value will update if the derived value updates, which itself updates in response to a source reactive value updating, in a chain reaction.
+To create a derived value, use the `basalt.derived(function)` function, which returns a getter function for the value. Any effect observing this derived value will update if the derived value updates, which itself updates in response to a source observable value updating, in a chain reaction.
 
 The above button example could be rewritten as:
 
 ```xml
 <script>
     local basalt = require("basalt")
-    getTimesClicked, setTimesClicked = basalt.reactive(0)
+    getTimesClicked, setTimesClicked = basalt.observable(0)
     onClick = function()
         setTimesClicked(getTimesClicked() + 1)
     end
@@ -175,14 +175,14 @@ The above button example could be rewritten as:
 <button text={getButtonText()} onClick={onClick} />
 ```
 
-# Untracked reactive value access
+# Untracked observable value access
 
-Sometimes you might want to use a reactive value in an unreactive way. Perhaps you would like a property to be computed based on it only once, never updating afterwards. This can be accomplished using the `basalt.untracked(function)` function:
+Sometimes you might want to use a observable value without subscribing to updates. Perhaps you would like a property to be computed based on it only once, never updating afterwards. This can be accomplished using the `basalt.untracked(function)` function:
 
 ```xml
 <script>
     basalt = require("basalt")
-    getTimesClicked, setTimesClicked = basalt.reactive(0)
+    getTimesClicked, setTimesClicked = basalt.observable(0)
     onClick = function()
         setTimesClicked(getTimesClicked() + 1)
     end
