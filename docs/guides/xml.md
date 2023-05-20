@@ -91,7 +91,7 @@ This layout can be passed props like any other object in the layout, as seen in 
 
 Reacting to user input is easier than ever with Basalt XML's concept of observable values and observers for said values. This powerful feature allows for properties to be updated automatically from observable values, without needing the programmer to manually call functions to update the object.
 
-To create an obervable value, simply use the `basalt.observable(initialValue)` function, which returns getter and setter functions. For example:
+To create an observable value, simply use the `basalt.observable(initialValue)` function, which returns getter and setter functions. For example:
 
 ```xml
 <script>
