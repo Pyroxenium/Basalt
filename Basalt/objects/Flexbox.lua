@@ -80,7 +80,7 @@ return function(name, basalt)
         setPosition = function(self) end,
         setSize = function(self) end,
     })
-    lineBreakFakeObject:setFlexBasis(0)
+    lineBreakFakeObject:setFlexBasis(0):setFlexGrow(0):setFlexShrink(0)
 
     local function sortChildren(self)
         if(wrap=="nowrap")then
