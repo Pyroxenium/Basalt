@@ -2,7 +2,7 @@
 local function flexObjectPlugin(base, basalt)
     local flexGrow = 0
     local flexShrink = 0
-    local flexBasis = 12
+    local flexBasis = 0
 
     local baseWidth, baseHeight = base:getSize()
 
@@ -141,7 +141,6 @@ return function(name, basalt)
                     end
                 end
             end
-
         end
     end
 
@@ -167,14 +166,15 @@ return function(name, basalt)
                 local flexGrow = child:getFlexGrow()
                 local flexShrink = child:getFlexShrink()
 
+                local baseWidth = child:getFlexBasis() ~= 0 and child:getFlexBasis() or child:getWidth()
                 if totalFlexGrow > 0 then
-                    childWidth = child:getFlexBasis() + flexGrow / totalFlexGrow * remainingSpace
+                    childWidth = baseWidth + flexGrow / totalFlexGrow * remainingSpace
                 else
-                    childWidth = child:getFlexBasis()
+                    childWidth = baseWidth
                 end
 
                 if remainingSpace < 0 and totalFlexShrink > 0 then
-                    childWidth = child:getFlexBasis() + flexShrink / totalFlexShrink * remainingSpace
+                    childWidth = baseWidth + flexShrink / totalFlexShrink * remainingSpace
                 end
 
                 child:setPosition(currentX, children.offset or 1)
@@ -255,14 +255,15 @@ return function(name, basalt)
                 local flexGrow = child:getFlexGrow()
                 local flexShrink = child:getFlexShrink()
 
+                local baseHeight = child:getFlexBasis() ~= 0 and child:getFlexBasis() or child:getHeight()
                 if totalFlexGrow > 0 then
-                    childHeight = child:getFlexBasis() + flexGrow / totalFlexGrow * remainingSpace
+                    childHeight = baseHeight + flexGrow / totalFlexGrow * remainingSpace
                 else
-                    childHeight = child:getFlexBasis()
+                    childHeight = baseHeight
                 end
 
                 if remainingSpace < 0 and totalFlexShrink > 0 then
-                    childHeight = child:getFlexBasis() + flexShrink / totalFlexShrink * remainingSpace
+                    childHeight = baseHeight + flexShrink / totalFlexShrink * remainingSpace
                 end
 
                 child:setPosition(children.offset, currentY)
@@ -347,6 +348,7 @@ return function(name, basalt)
         setJustifyContent = function(self, value)
             justifyContent = value
             updateLayout = true
+            self:updateDraw()
             return self
         end,
 
@@ -357,6 +359,7 @@ return function(name, basalt)
         setDirection = function(self, value)
             direction = value
             updateLayout = true
+            self:updateDraw()
             return self
         end,
 
@@ -367,6 +370,7 @@ return function(name, basalt)
         setSpacing = function(self, value)
             spacing = value
             updateLayout = true
+            self:updateDraw()
             return self
         end,
 
@@ -377,16 +381,23 @@ return function(name, basalt)
         setWrap = function(self, value)
             wrap = value
             updateLayout = true
+            self:updateDraw()
             return self
+        end,
+
+        getWrap = function(self)
+            return wrap
         end,
 
         updateLayout = function(self)
             updateLayout = true
+            self:updateDraw()
         end,
 
         addBreak = function(self)
             table.insert(children, lineBreakFakeObject)
             updateLayout = true
+            self:updateDraw()
             return self
         end,
 
