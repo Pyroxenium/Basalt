@@ -49,7 +49,7 @@ aList:addItem("Item 1")
 aList:addItem("Item 2", colors.yellow)
 aList:addItem("Item 3", colors.yellow, colors.green)
 
-aList:onSelect(function(self, item)
+aList:onSelect(function(self, event, item)
   basalt.debug("Selected item: ", item.text)
 end)
 ```
