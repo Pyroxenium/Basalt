@@ -50,45 +50,6 @@ if(ad~=nil)then
 bc[dc]=function(...)local bd=_d(...)
 for cd,dd in pairs(ad)do local __a=dd(bd,cc,...)
 __a.__index=__a;bd=setmetatable(__a,bd)end;return bd end end end;return bc end}end;aa["plugins"]={}
-aa["plugins"]["dynamicValues"]=function(...)
-local ab=da("utils")local bb=ab.tableCount
-return
-{VisualObject=function(cb,db)local _c={}local ac={}
-local bc={x="getX",y="getY",w="getWidth",h="getHeight"}
-local function cc(bd)
-local cd,dd=pcall(load("return "..bd,"",nil,{math=math}))if not(cd)then
-error(bd.." - is not a valid dynamic value string")end;return dd end
-local function dc(bd,cd,dd)local __a={}local a_a=bc
-for d_a,_aa in pairs(a_a)do for aaa in dd:gmatch("%a+%."..d_a)do
-local baa=aaa:gsub("%."..d_a,"")
-if(baa~="self")and(baa~="parent")then table.insert(__a,baa)end end end;local b_a=bd:getParent()local c_a={}
-for d_a,_aa in pairs(__a)do
-c_a[_aa]=b_a:getChild(_aa)if(c_a[_aa]==nil)then
-error("Dynamic Values - unable to find object: ".._aa)end end;c_a["self"]=bd;c_a["parent"]=b_a
-_c[cd]=function()local d_a=dd
-for _aa,aaa in pairs(a_a)do
-for baa in
-dd:gmatch("%w+%.".._aa)do local caa=c_a[baa:gsub("%.".._aa,"")]if(caa~=nil)then
-d_a=d_a:gsub(baa,caa[aaa](caa))else
-error("Dynamic Values - unable to find object: "..baa)end end end;ac[cd]=math.floor(cc(d_a)+0.5)end;_c[cd]()end
-local function _d(bd)
-if(bb(_c)>0)then for dd,__a in pairs(_c)do __a()end
-local cd={x="getX",y="getY",w="getWidth",h="getHeight"}
-for dd,__a in pairs(cd)do
-if(_c[dd]~=nil)then
-if(ac[dd]~=bd[__a](bd))then if(dd=="x")or(dd=="y")then
-cb.setPosition(bd,
-ac["x"]or bd:getX(),ac["y"]or bd:getY())end;if(dd=="w")or(dd=="h")then
-cb.setSize(bd,
-ac["w"]or bd:getWidth(),ac["h"]or bd:getHeight())end end end end end end
-local ad={updatePositions=_d,createDynamicValue=dc,setPosition=function(bd,cd,dd,__a)ac.x=cd;ac.y=dd
-if(type(cd)=="string")then dc(bd,"x",cd)else _c["x"]=nil end
-if(type(dd)=="string")then dc(bd,"y",dd)else _c["y"]=nil end;cb.setPosition(bd,ac.x,ac.y,__a)return bd end,setSize=function(bd,cd,dd,__a)
-ac.w=cd;ac.h=dd
-if(type(cd)=="string")then dc(bd,"w",cd)else _c["w"]=nil end
-if(type(dd)=="string")then dc(bd,"h",dd)else _c["h"]=nil end;cb.setSize(bd,ac.w,ac.h,__a)return bd end,customEventHandler=function(bd,cd,...)
-cb.customEventHandler(bd,cd,...)if
-(cd=="basalt_FrameReposition")or(cd=="basalt_FrameResize")then _d(bd)end end}return ad end}end
 aa["plugins"]["pixelbox"]=function(...)
 local ab,bb,cb=table.sort,table.concat,string.char;local function db(dc,_d)return dc[2]>_d[2]end
 local _c={{5,256,16,8,64,32},{4,16,16384,256,128},[4]={4,64,1024,256,128},[8]={4,512,2048,256,1},[16]={4,2,16384,256,1},[32]={4,8192,4096,256,1},[64]={4,4,1024,256,1},[128]={6,32768,256,1024,2048,4096,16384},[256]={6,1,128,2,512,4,8192},[512]={4,8,2048,256,128},[1024]={4,4,64,128,32768},[2048]={4,512,8,128,32768},[4096]={4,8192,32,128,32768},[8192]={3,32,4096,256128},[16384]={4,2,16,128,32768},[32768]={5,128,1024,2048,4096,16384}}local ac={}for i=0,15 do ac[("%x"):format(i)]=2 ^i end
@@ -135,59 +96,6 @@ local dd=cc(cd,ad:getBackground()).get()ad:setImage(dd)return ad end,getShrinked
 local bd=ad:getImageFrame(1)local cd={}for dd,__a in pairs(bd)do
 if(type(dd)=="number")then table.insert(cd,__a[3])end end;return
 cc(cd,ad:getBackground()).get()end}end}end
-aa["plugins"]["themes"]=function(...)
-local ab={BaseFrameBG=colors.lightGray,BaseFrameText=colors.black,FrameBG=colors.gray,FrameText=colors.black,ButtonBG=colors.gray,ButtonText=colors.black,CheckboxBG=colors.lightGray,CheckboxText=colors.black,InputBG=colors.black,InputText=colors.lightGray,TextfieldBG=colors.black,TextfieldText=colors.white,ListBG=colors.gray,ListText=colors.black,MenubarBG=colors.gray,MenubarText=colors.black,DropdownBG=colors.gray,DropdownText=colors.black,RadioBG=colors.gray,RadioText=colors.black,SelectionBG=colors.black,SelectionText=colors.lightGray,GraphicBG=colors.black,ImageBG=colors.black,PaneBG=colors.black,ProgramBG=colors.black,ProgressbarBG=colors.gray,ProgressbarText=colors.black,ProgressbarActiveBG=colors.black,ScrollbarBG=colors.lightGray,ScrollbarText=colors.gray,ScrollbarSymbolColor=colors.black,SliderBG=false,SliderText=colors.gray,SliderSymbolColor=colors.black,SwitchBG=colors.lightGray,SwitchText=colors.gray,LabelBG=false,LabelText=colors.black,GraphBG=colors.gray,GraphText=colors.black}
-local bb={Container=function(cb,db,_c)local ac={}
-local bc={getTheme=function(cc,dc)local _d=cc:getParent()return ac[dc]or(_d~=nil and _d:getTheme(dc)or
-ab[dc])end,setTheme=function(cc,dc,_d)
-if(
-type(dc)=="table")then ac=dc elseif(type(dc)=="string")then ac[dc]=_d end;cc:updateDraw()return cc end}return bc end,basalt=function()
-return
-{getTheme=function(cb)return
-ab[cb]end,setTheme=function(cb,db)if(type(cb)=="table")then ab=cb elseif(type(cb)=="string")then
-ab[cb]=db end end}end}
-for cb,db in
-pairs({"BaseFrame","Frame","ScrollableFrame","MovableFrame","Button","Checkbox","Dropdown","Graph","Graphic","Input","Label","List","Menubar","Pane","Program","Progressbar","Radio","Scrollbar","Slider","Switch","Textfield"})do
-bb[db]=function(_c,ac,bc)
-local cc={init=function(dc)if(_c.init(dc))then local _d=dc:getParent()or dc
-dc:setBackground(_d:getTheme(db.."BG"))
-dc:setForeground(_d:getTheme(db.."Text"))end end}return cc end end;return bb end
-aa["plugins"]["textures"]=function(...)local ab=da("images")local bb=da("utils")
-local cb=da("xmlParser")
-return
-{VisualObject=function(db)local _c,ac=1,true;local bc,cc,dc;local _d="default"
-local ad={addTexture=function(bd,cd,dd)bc=ab.loadImageAsBimg(cd)
-cc=bc[1]
-if(dd)then if(bc.animated)then bd:listenEvent("other_event")local __a=bc[_c].duration or
-bc.secondsPerFrame or 0.2
-dc=os.startTimer(__a)end end;bd:setBackground(false)bd:setForeground(false)
-bd:setDrawState("texture-base",true)bd:updateDraw()return bd end,setTextureMode=function(bd,cd)_d=
-cd or _d;bd:updateDraw()return bd end,setInfinitePlay=function(bd,cd)ac=cd
-return bd end,eventHandler=function(bd,cd,dd,...)db.eventHandler(bd,cd,dd,...)
-if(cd=="timer")then
-if
-(dd==dc)then
-if(bc[_c+1]~=nil)then _c=_c+1;cc=bc[_c]local __a=
-bc[_c].duration or bc.secondsPerFrame or 0.2
-dc=os.startTimer(__a)bd:updateDraw()else
-if(ac)then _c=1;cc=bc[1]local __a=
-bc[_c].duration or bc.secondsPerFrame or 0.2
-dc=os.startTimer(__a)bd:updateDraw()end end end end end,draw=function(bd)
-db.draw(bd)
-bd:addDraw("texture-base",function()local cd=bd:getParent()or bd
-local dd,__a=bd:getPosition()local a_a,b_a=bd:getSize()local c_a,d_a=cd:getSize()local _aa=bc.width or
-#bc[_c][1][1]local aaa=bc.height or#bc[_c]
-local baa,caa=0,0
-if(_d=="center")then
-baa=dd+math.floor((a_a-_aa)/2 +0.5)-1
-caa=__a+math.floor((b_a-aaa)/2 +0.5)-1 elseif(_d=="default")then baa,caa=dd,__a elseif(_d=="right")then
-baa,caa=dd+a_a-_aa,__a+b_a-aaa end;local daa=dd-baa;local _ba=__a-caa;if baa<dd then baa=dd;_aa=_aa-daa end;if
-caa<__a then caa=__a;aaa=aaa-_ba end;if baa+_aa>dd+a_a then
-_aa=(dd+a_a)-baa end
-if caa+aaa>__a+b_a then aaa=(__a+b_a)-caa end
-for k=1,aaa do if(cc[k+_ba]~=nil)then local aba,bba,cba=table.unpack(cc[k+_ba])
-bd:addBlit(1,k,aba:sub(daa,
-daa+_aa),bba:sub(daa,daa+_aa),cba:sub(daa,daa+_aa))end end end,1)bd:setDrawState("texture-base",false)end}return ad end}end
 aa["plugins"]["border"]=function(...)local ab=da("xmlParser")
 return
 {VisualObject=function(bb)local cb=true
@@ -226,53 +134,57 @@ if(ad~=false)then ac:addForegroundBox(dc,_d,1,1,ad)end;ac:addBackgroundBox(dc,_d
 if(db["bottom"]~=false)and(db["left"]~=false)then
 ac:addTextBox(1,_d,1,1,"\138")
 if(ad~=false)then ac:addForegroundBox(0,_d,1,1,ad)end;ac:addBackgroundBox(1,_d,1,1,db["left"])end end end)end}return _c end}end
-aa["plugins"]["reactive"]=function(...)local ab=da("xmlParser")
-local bb={fromXML=function(bc)
-local cc=ab.parseText(bc)local dc=nil
-for _d,ad in ipairs(cc)do if(ad.tag=="script")then dc=ad.value;table.remove(cc,_d)
-break end end;return{nodes=cc,script=dc}end}
-local cb=function(bc,cc)return load(bc,nil,"t",cc)()end
-local db=function(bc,cc,dc,_d)
-cc(bc,function(...)local ad,bd=pcall(load(dc,nil,"t",_d))if not ad then
-error("XML Error: "..bd)end end)end;local _c=nil
-local ac=function(bc)
-for cc,dc in ipairs(bc.dependencies)do for _d,ad in ipairs(dc)do
-if(ad==bc)then table.remove(dc,_d)end end end;bc.dependencies={}end
+aa["plugins"]["reactive"]=function(...)local ab=da("xmlParser")local bb={}
+bb.currentEffect=nil
+bb.observable=function(ac)local bc=ac;local cc={}
+local dc=function()if(bb.currentEffect~=nil)then
+table.insert(cc,bb.currentEffect)
+table.insert(bb.currentEffect.dependencies,cc)end;return bc end
+local _d=function(ad)bc=ad;local bd={}for cd,dd in ipairs(cc)do bd[cd]=dd end;for cd,dd in ipairs(bd)do
+dd.execute()end end;return dc,_d end
+bb.untracked=function(ac)local bc=bb.currentEffect;bb.currentEffect=nil;local cc=ac()
+bb.currentEffect=bc;return cc end
+bb.effect=function(ac)local bc={dependencies={}}
+local cc=function()bb.clearEffectDependencies(bc)
+local dc=bb.currentEffect;bb.currentEffect=bc;ac()bb.currentEffect=dc end;bc.execute=cc;bc.execute()end
+bb.derived=function(ac)local bc,cc=bb.observable()
+bb.effect(function()cc(ac())end)return bc end
+bb.clearEffectDependencies=function(ac)
+for bc,cc in ipairs(ac.dependencies)do for dc,_d in ipairs(cc)do if(_d==ac)then
+table.remove(cc,dc)end end end;ac.dependencies={}end
+local cb={fromXML=function(ac)local bc=ab.parseText(ac)local cc=nil
+for dc,_d in ipairs(bc)do if(_d.tag=="script")then cc=_d.value
+table.remove(bc,dc)break end end;return{nodes=bc,script=cc}end}
+local db=function(ac,bc)return load(ac,nil,"t",bc)()end
+local _c=function(ac,bc,cc,dc)
+bc(ac,function(...)local _d,ad=pcall(load(cc,nil,"t",dc))if not _d then
+error("XML Error: "..ad)end end)end
 return
-{basalt=function(bc)
-local cc=function(_d,ad)local bd=ad[_d.tag]
-if(bd~=nil)then local __a={}
-for a_a,b_a in pairs(_d.attributes)do __a[a_a]=load("return "..b_a,
-nil,"t",ad)end;return bc.createObjectsFromLayout(bd,__a)end;local cd=_d.tag:gsub("^%l",string.upper)
-local dd=bc:createObject(cd,_d.attributes["id"])
-for __a,a_a in pairs(_d.attributes)do
-if(__a:sub(1,2)=="on")then
-db(dd,dd[__a],a_a.."()",ad)else
-local b_a=function()local c_a=load("return "..a_a,nil,"t",ad)()
-dd:setProperty(__a,c_a)end;bc.effect(b_a)end end
-for __a,a_a in ipairs(_d.children)do
-local b_a=bc.createObjectsFromXMLNode(a_a,ad)for c_a,d_a in ipairs(b_a)do dd:addChild(d_a)end end;return{dd}end
-local dc={observable=function(_d)local ad=_d;local bd={}
-local cd=function()if(_c~=nil)then table.insert(bd,_c)
-table.insert(_c.dependencies,bd)end;return ad end
-local dd=function(__a)ad=__a;local a_a={}for b_a,c_a in ipairs(bd)do a_a[b_a]=c_a end;for b_a,c_a in ipairs(a_a)do
-c_a.execute()end end;return cd,dd end,untracked=function(_d)
-local ad=_c;_c=nil;local bd=_d()_c=ad;return bd end,effect=function(_d)
-local ad={dependencies={}}
-local bd=function()ac(ad)local cd=_c;_c=ad;_d()_c=cd end;ad.execute=bd;ad.execute()end,derived=function(_d)
-local ad,bd=bc.reactive()bc.effect(function()bd(_d())end)return ad end,layout=function(_d)if(
-not fs.exists(_d))then
-error("Can't open file ".._d)end;local ad=fs.open(_d,"r")
-local bd=ad.readAll()ad.close()return bb.fromXML(bd)end,createObjectsFromLayout=function(_d,ad)
-local bd=_ENV;bd.props={}local cd={}for __a,a_a in pairs(ad)do
-cd[__a]=bc.derived(function()return a_a()end)end
-setmetatable(bd.props,{__index=function(__a,a_a)return cd[a_a]()end})if(_d.script~=nil)then cb(_d.script,bd)end;local dd={}for __a,a_a in
-ipairs(_d.nodes)do local b_a=cc(a_a,bd)
-for c_a,d_a in ipairs(b_a)do table.insert(dd,d_a)end end;return dd end}return dc end,Container=function(bc,cc)
-local dc={loadLayout=function(_d,ad,bd)
-local cd={}if(bd==nil)then bd={}end
-for a_a,b_a in pairs(bd)do cd[a_a]=function()return b_a end end;local dd=cc.layout(ad)
-local __a=cc.createObjectsFromLayout(dd,cd)for a_a,b_a in ipairs(__a)do _d:addChild(b_a)end;return _d end}return dc end}end
+{basalt=function(ac)
+local bc=function(dc,_d)local ad=_d[dc.tag]
+if(ad~=nil)then local dd={}for __a,a_a in pairs(dc.attributes)do
+dd[__a]=load("return "..a_a,nil,"t",_d)end
+return ac.createObjectsFromLayout(ad,dd)end;local bd=dc.tag:gsub("^%l",string.upper)
+local cd=ac:createObject(bd,dc.attributes["id"])
+for dd,__a in pairs(dc.attributes)do
+if(dd:sub(1,2)=="on")then
+_c(cd,cd[dd],__a.."()",_d)else
+local a_a=function()local b_a=load("return "..__a,nil,"t",_d)()
+cd:setProperty(dd,b_a)end;ac.effect(a_a)end end
+for dd,__a in ipairs(dc.children)do
+local a_a=ac.createObjectsFromXMLNode(__a,_d)for b_a,c_a in ipairs(a_a)do cd:addChild(c_a)end end;return{cd}end
+local cc={observable=bb.observable,untracked=bb.untracked,effect=bb.effect,derived=bb.derived,layout=function(dc)if(not fs.exists(dc))then
+error("Can't open file "..dc)end;local _d=fs.open(dc,"r")
+local ad=_d.readAll()_d.close()return cb.fromXML(ad)end,createObjectsFromLayout=function(dc,_d)
+local ad=_ENV;ad.props={}local bd={}for dd,__a in pairs(_d)do
+bd[dd]=ac.derived(function()return __a()end)end
+setmetatable(ad.props,{__index=function(dd,__a)return bd[__a]()end})if(dc.script~=nil)then db(dc.script,ad)end;local cd={}for dd,__a in
+ipairs(dc.nodes)do local a_a=bc(__a,ad)
+for b_a,c_a in ipairs(a_a)do table.insert(cd,c_a)end end;return cd end}return cc end,Container=function(ac,bc)
+local cc={loadLayout=function(dc,_d,ad)
+local bd={}if(ad==nil)then ad={}end
+for __a,a_a in pairs(ad)do bd[__a]=function()return a_a end end;local cd=bc.layout(_d)
+local dd=bc.createObjectsFromLayout(cd,bd)for __a,a_a in ipairs(dd)do dc:addChild(a_a)end;return dc end}return cc end}end
 aa["plugins"]["shadow"]=function(...)local ab=da("xmlParser")
 return
 {VisualObject=function(bb)local cb=false
@@ -284,41 +196,45 @@ cb~=false)then local ac,bc=_c:getSize()
 if(cb)then
 _c:addBackgroundBox(ac+1,2,1,bc,cb)_c:addBackgroundBox(2,bc+1,ac,1,cb)
 _c:addForegroundBox(ac+1,2,1,bc,cb)_c:addForegroundBox(2,bc+1,ac,1,cb)end end end)end}return db end}end
-aa["plugins"]["debug"]=function(...)local ab=da("utils")local bb=ab.wrapText
+aa["plugins"]["dynamicValues"]=function(...)local ab=da("utils")local bb=ab.tableCount
 return
-{basalt=function(cb)
-local db=cb.getMainFrame()local _c;local ac;local bc;local cc
-local function dc()local _d=16;local ad=6;local bd=99;local cd=99;local dd,__a=db:getSize()
-_c=db:addMovableFrame("basaltDebuggingFrame"):setSize(
-dd-20,__a-10):setBackground(colors.gray):setForeground(colors.white):setZIndex(100):hide()
-_c:addPane():setSize("parent.w",1):setPosition(1,1):setBackground(colors.black):setForeground(colors.white)
-_c:setPosition(-dd,__a/2 -_c:getHeight()/2):setBorder(colors.black)
-local a_a=_c:addButton():setPosition("parent.w","parent.h"):setSize(1,1):setText("\133"):setForeground(colors.gray):setBackground(colors.black):onClick(function()
-end):onDrag(function(b_a,c_a,d_a,_aa,aaa)
-local baa,caa=_c:getSize()local daa,_ba=baa,caa;if(baa+_aa-1 >=_d)and(baa+_aa-1 <=bd)then daa=baa+
-_aa-1 end
-if(caa+aaa-1 >=ad)and(
-caa+aaa-1 <=cd)then _ba=caa+aaa-1 end;_c:setSize(daa,_ba)end)
-cc=_c:addButton():setText("Close"):setPosition("parent.w - 6",1):setSize(7,1):setBackground(colors.red):setForeground(colors.white):onClick(function()
-_c:animatePosition(
--dd,__a/2 -_c:getHeight()/2,0.5)end)
-ac=_c:addList():setSize("parent.w - 2","parent.h - 3"):setPosition(2,3):setBackground(colors.gray):setForeground(colors.white):setSelectionColor(colors.gray,colors.white)
-if(bc==nil)then
-bc=db:addLabel():setPosition(1,"parent.h"):setBackground(colors.black):setForeground(colors.white):setZIndex(100):onClick(function()
-_c:show()
-_c:animatePosition(dd/2 -_c:getWidth()/2,__a/2 -_c:getHeight()/2,0.5)end)end end
-return
-{debug=function(...)local _d={...}if(db==nil)then db=cb.getMainFrame()
-if(db~=nil)then dc()else print(...)return end end
-if
-(db:getName()~="basaltDebuggingFrame")then if(db~=_c)then bc:setParent(db)end end;local ad=""for bd,cd in pairs(_d)do
-ad=ad..tostring(cd).. (#_d~=bd and", "or"")end
-bc:setText("[Debug] "..ad)
-for bd,cd in pairs(bb(ad,ac:getWidth()))do ac:addItem(cd)end
-if(ac:getItemCount()>50)then ac:removeItem(1)end
-ac:setValue(ac:getItem(ac:getItemCount()))
-if(ac.getItemCount()>ac:getHeight())then ac:setOffset(ac:getItemCount()-
-ac:getHeight())end;bc:show()end}end}end
+{VisualObject=function(cb,db)
+local _c={}local ac={}local bc={x="getX",y="getY",w="getWidth",h="getHeight"}
+local function cc(bd)
+local cd,dd=pcall(load(
+"return "..bd,"",nil,{math=math}))if not(cd)then
+error(bd.." - is not a valid dynamic value string")end;return dd end
+local function dc(bd,cd,dd)local __a={}local a_a=bc
+for d_a,_aa in pairs(a_a)do for aaa in dd:gmatch("%a+%."..d_a)do
+local baa=aaa:gsub("%."..d_a,"")
+if(baa~="self")and(baa~="parent")then table.insert(__a,baa)end end end;local b_a=bd:getParent()local c_a={}
+for d_a,_aa in pairs(__a)do
+c_a[_aa]=b_a:getChild(_aa)if(c_a[_aa]==nil)then
+error("Dynamic Values - unable to find object: ".._aa)end end;c_a["self"]=bd;c_a["parent"]=b_a
+_c[cd]=function()local d_a=dd
+for _aa,aaa in pairs(a_a)do
+for baa in
+dd:gmatch("%w+%.".._aa)do local caa=c_a[baa:gsub("%.".._aa,"")]if(caa~=nil)then
+d_a=d_a:gsub(baa,caa[aaa](caa))else
+error("Dynamic Values - unable to find object: "..baa)end end end;ac[cd]=math.floor(cc(d_a)+0.5)end;_c[cd]()end
+local function _d(bd)
+if(bb(_c)>0)then for dd,__a in pairs(_c)do __a()end
+local cd={x="getX",y="getY",w="getWidth",h="getHeight"}
+for dd,__a in pairs(cd)do
+if(_c[dd]~=nil)then
+if(ac[dd]~=bd[__a](bd))then if(dd=="x")or(dd=="y")then
+cb.setPosition(bd,
+ac["x"]or bd:getX(),ac["y"]or bd:getY())end;if(dd=="w")or(dd=="h")then
+cb.setSize(bd,
+ac["w"]or bd:getWidth(),ac["h"]or bd:getHeight())end end end end end end
+local ad={updatePositions=_d,createDynamicValue=dc,setPosition=function(bd,cd,dd,__a)ac.x=cd;ac.y=dd
+if(type(cd)=="string")then dc(bd,"x",cd)else _c["x"]=nil end
+if(type(dd)=="string")then dc(bd,"y",dd)else _c["y"]=nil end;cb.setPosition(bd,ac.x,ac.y,__a)return bd end,setSize=function(bd,cd,dd,__a)
+ac.w=cd;ac.h=dd
+if(type(cd)=="string")then dc(bd,"w",cd)else _c["w"]=nil end
+if(type(dd)=="string")then dc(bd,"h",dd)else _c["h"]=nil end;cb.setSize(bd,ac.w,ac.h,__a)return bd end,customEventHandler=function(bd,cd,...)
+cb.customEventHandler(bd,cd,...)if
+(cd=="basalt_FrameReposition")or(cd=="basalt_FrameResize")then _d(bd)end end}return ad end}end
 aa["plugins"]["bigfonts"]=function(...)local ab=da("tHex")
 local bb={{"\32\32\32\137\156\148\158\159\148\135\135\144\159\139\32\136\157\32\159\139\32\32\143\32\32\143\32\32\32\32\32\32\32\32\147\148\150\131\148\32\32\32\151\140\148\151\140\147","\32\32\32\149\132\149\136\156\149\144\32\133\139\159\129\143\159\133\143\159\133\138\32\133\138\32\133\32\32\32\32\32\32\150\150\129\137\156\129\32\32\32\133\131\129\133\131\132","\32\32\32\130\131\32\130\131\32\32\129\32\32\32\32\130\131\32\130\131\32\32\32\32\143\143\143\32\32\32\32\32\32\130\129\32\130\135\32\32\32\32\131\32\32\131\32\131","\139\144\32\32\143\148\135\130\144\149\32\149\150\151\149\158\140\129\32\32\32\135\130\144\135\130\144\32\149\32\32\139\32\159\148\32\32\32\32\159\32\144\32\148\32\147\131\132","\159\135\129\131\143\149\143\138\144\138\32\133\130\149\149\137\155\149\159\143\144\147\130\132\32\149\32\147\130\132\131\159\129\139\151\129\148\32\32\139\131\135\133\32\144\130\151\32","\32\32\32\32\32\32\130\135\32\130\32\129\32\129\129\131\131\32\130\131\129\140\141\132\32\129\32\32\129\32\32\32\32\32\32\32\131\131\129\32\32\32\32\32\32\32\32\32","\32\32\32\32\149\32\159\154\133\133\133\144\152\141\132\133\151\129\136\153\32\32\154\32\159\134\129\130\137\144\159\32\144\32\148\32\32\32\32\32\32\32\32\32\32\32\151\129","\32\32\32\32\133\32\32\32\32\145\145\132\141\140\132\151\129\144\150\146\129\32\32\32\138\144\32\32\159\133\136\131\132\131\151\129\32\144\32\131\131\129\32\144\32\151\129\32","\32\32\32\32\129\32\32\32\32\130\130\32\32\129\32\129\32\129\130\129\129\32\32\32\32\130\129\130\129\32\32\32\32\32\32\32\32\133\32\32\32\32\32\129\32\129\32\32","\150\156\148\136\149\32\134\131\148\134\131\148\159\134\149\136\140\129\152\131\32\135\131\149\150\131\148\150\131\148\32\148\32\32\148\32\32\152\129\143\143\144\130\155\32\134\131\148","\157\129\149\32\149\32\152\131\144\144\131\148\141\140\149\144\32\149\151\131\148\32\150\32\150\131\148\130\156\133\32\144\32\32\144\32\130\155\32\143\143\144\32\152\129\32\134\32","\130\131\32\131\131\129\131\131\129\130\131\32\32\32\129\130\131\32\130\131\32\32\129\32\130\131\32\130\129\32\32\129\32\32\133\32\32\32\129\32\32\32\130\32\32\32\129\32","\150\140\150\137\140\148\136\140\132\150\131\132\151\131\148\136\147\129\136\147\129\150\156\145\138\143\149\130\151\32\32\32\149\138\152\129\149\32\32\157\152\149\157\144\149\150\131\148","\149\143\142\149\32\149\149\32\149\149\32\144\149\32\149\149\32\32\149\32\32\149\32\149\149\32\149\32\149\32\144\32\149\149\130\148\149\32\32\149\32\149\149\130\149\149\32\149","\130\131\129\129\32\129\131\131\32\130\131\32\131\131\32\131\131\129\129\32\32\130\131\32\129\32\129\130\131\32\130\131\32\129\32\129\131\131\129\129\32\129\129\32\129\130\131\32","\136\140\132\150\131\148\136\140\132\153\140\129\131\151\129\149\32\149\149\32\149\149\32\149\137\152\129\137\152\129\131\156\133\149\131\32\150\32\32\130\148\32\152\137\144\32\32\32","\149\32\32\149\159\133\149\32\149\144\32\149\32\149\32\149\32\149\150\151\129\138\155\149\150\130\148\32\149\32\152\129\32\149\32\32\32\150\32\32\149\32\32\32\32\32\32\32","\129\32\32\130\129\129\129\32\129\130\131\32\32\129\32\130\131\32\32\129\32\129\32\129\129\32\129\32\129\32\131\131\129\130\131\32\32\32\129\130\131\32\32\32\32\140\140\132","\32\154\32\159\143\32\149\143\32\159\143\32\159\144\149\159\143\32\159\137\145\159\143\144\149\143\32\32\145\32\32\32\145\149\32\144\32\149\32\143\159\32\143\143\32\159\143\32","\32\32\32\152\140\149\151\32\149\149\32\145\149\130\149\157\140\133\32\149\32\154\143\149\151\32\149\32\149\32\144\32\149\149\153\32\32\149\32\149\133\149\149\32\149\149\32\149","\32\32\32\130\131\129\131\131\32\130\131\32\130\131\129\130\131\129\32\129\32\140\140\129\129\32\129\32\129\32\137\140\129\130\32\129\32\130\32\129\32\129\129\32\129\130\131\32","\144\143\32\159\144\144\144\143\32\159\143\144\159\138\32\144\32\144\144\32\144\144\32\144\144\32\144\144\32\144\143\143\144\32\150\129\32\149\32\130\150\32\134\137\134\134\131\148","\136\143\133\154\141\149\151\32\129\137\140\144\32\149\32\149\32\149\154\159\133\149\148\149\157\153\32\154\143\149\159\134\32\130\148\32\32\149\32\32\151\129\32\32\32\32\134\32","\133\32\32\32\32\133\129\32\32\131\131\32\32\130\32\130\131\129\32\129\32\130\131\129\129\32\129\140\140\129\131\131\129\32\130\129\32\129\32\130\129\32\32\32\32\32\129\32","\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32","\32\32\32\32\32\32\32\32\32\32\32\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\32\32\32\32\32\32\32\32\32\32\32","\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32\32","\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32\32\32\32\32\149\32\32\149\32\32\32\32","\32\32\32\32\32\32\32\32\32\32\32\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\32\32\32\32\32\32\32\32\32\32\32","\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32\32\149\32","\32\32\32\32\145\32\159\139\32\151\131\132\155\143\132\134\135\145\32\149\32\158\140\129\130\130\32\152\147\155\157\134\32\32\144\144\32\32\32\32\32\32\152\131\155\131\131\129","\32\32\32\32\149\32\149\32\145\148\131\32\149\32\149\140\157\132\32\148\32\137\155\149\32\32\32\149\154\149\137\142\32\153\153\32\131\131\149\131\131\129\149\135\145\32\32\32","\32\32\32\32\129\32\130\135\32\131\131\129\134\131\132\32\129\32\32\129\32\131\131\32\32\32\32\130\131\129\32\32\32\32\129\129\32\32\32\32\32\32\130\131\129\32\32\32","\150\150\32\32\148\32\134\32\32\132\32\32\134\32\32\144\32\144\150\151\149\32\32\32\32\32\32\145\32\32\152\140\144\144\144\32\133\151\129\133\151\129\132\151\129\32\145\32","\130\129\32\131\151\129\141\32\32\142\32\32\32\32\32\149\32\149\130\149\149\32\143\32\32\32\32\142\132\32\154\143\133\157\153\132\151\150\148\151\158\132\151\150\148\144\130\148","\32\32\32\140\140\132\32\32\32\32\32\32\32\32\32\151\131\32\32\129\129\32\32\32\32\134\32\32\32\32\32\32\32\129\129\32\129\32\129\129\130\129\129\32\129\130\131\32","\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\159\142\32\150\151\129\150\131\132\140\143\144\143\141\145\137\140\148\141\141\144\157\142\32\159\140\32\151\134\32\157\141\32","\157\140\149\157\140\149\157\140\149\157\140\149\157\140\149\157\140\149\151\151\32\154\143\132\157\140\32\157\140\32\157\140\32\157\140\32\32\149\32\32\149\32\32\149\32\32\149\32","\129\32\129\129\32\129\129\32\129\129\32\129\129\32\129\129\32\129\129\131\129\32\134\32\131\131\129\131\131\129\131\131\129\131\131\129\130\131\32\130\131\32\130\131\32\130\131\32","\151\131\148\152\137\145\155\140\144\152\142\145\153\140\132\153\137\32\154\142\144\155\159\132\150\156\148\147\32\144\144\130\145\136\137\32\146\130\144\144\130\145\130\136\32\151\140\132","\151\32\149\151\155\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\152\137\144\157\129\149\149\32\149\149\32\149\149\32\149\149\32\149\130\150\32\32\157\129\149\32\149","\131\131\32\129\32\129\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\32\32\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\129\32\130\131\32\133\131\32","\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\159\142\32\159\159\144\152\140\144\156\143\32\159\141\129\153\140\132\157\141\32\130\145\32\32\147\32\136\153\32\130\146\32","\152\140\149\152\140\149\152\140\149\152\140\149\152\140\149\152\140\149\149\157\134\154\143\132\157\140\133\157\140\133\157\140\133\157\140\133\32\149\32\32\149\32\32\149\32\32\149\32","\130\131\129\130\131\129\130\131\129\130\131\129\130\131\129\130\131\129\130\130\131\32\134\32\130\131\129\130\131\129\130\131\129\130\131\129\32\129\32\32\129\32\32\129\32\32\129\32","\159\134\144\137\137\32\156\143\32\159\141\129\153\140\132\153\137\32\157\141\32\32\132\32\159\143\32\147\32\144\144\130\145\136\137\32\146\130\144\144\130\145\130\138\32\146\130\144","\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\149\32\149\131\147\129\138\134\149\149\32\149\149\32\149\149\32\149\149\32\149\154\143\149\32\157\129\154\143\149","\130\131\32\129\32\129\130\131\32\130\131\32\130\131\32\130\131\32\130\131\32\32\32\32\130\131\32\130\131\129\130\131\129\130\131\129\130\131\129\140\140\129\130\131\32\140\140\129"},{"000110000110110000110010101000000010000000100101","000000110110000000000010101000000010000000100101","000000000000000000000000000000000000000000000000","100010110100000010000110110000010100000100000110","000000110000000010110110000110000000000000110000","000000000000000000000000000000000000000000000000","000000110110000010000000100000100000000000000010","000000000110110100010000000010000000000000000100","000000000000000000000000000000000000000000000000","010000000000100110000000000000000000000110010000","000000000000000000000000000010000000010110000000","000000000000000000000000000000000000000000000000","011110110000000100100010110000000100000000000000","000000000000000000000000000000000000000000000000","000000000000000000000000000000000000000000000000","110000110110000000000000000000010100100010000000","000010000000000000110110000000000100010010000000","000000000000000000000000000000000000000000000000","010110010110100110110110010000000100000110110110","000000000000000000000110000000000110000000000000","000000000000000000000000000000000000000000000000","010100010110110000000000000000110000000010000000","110110000000000000110000110110100000000010000000","000000000000000000000000000000000000000000000000","000100011111000100011111000100011111000100011111","000000000000100100100100011011011011111111111111","000000000000000000000000000000000000000000000000","000100011111000100011111000100011111000100011111","000000000000100100100100011011011011111111111111","100100100100100100100100100100100100100100100100","000000110100110110000010000011110000000000011000","000000000100000000000010000011000110000000001000","000000000000000000000000000000000000000000000000","010000100100000000000000000100000000010010110000","000000000000000000000000000000110110110110110000","000000000000000000000000000000000000000000000000","110110110110110110000000110110110110110110110110","000000000000000000000110000000000000000000000000","000000000000000000000000000000000000000000000000","000000000000110110000110010000000000000000010010","000010000000000000000000000000000000000000000000","000000000000000000000000000000000000000000000000","110110110110110110110000110110110110000000000000","000000000000000000000110000000000000000000000000","000000000000000000000000000000000000000000000000","110110110110110110110000110000000000000000010000","000000000000000000000000100000000000000110000110","000000000000000000000000000000000000000000000000"}}local cb={}local db={}
 do local cc=0;local dc=#bb[1]local _d=#bb[1][1]
@@ -397,6 +313,9 @@ math.floor((a_a-c_a)/2)+1;dd=dd or
 math.floor((b_a-d_a)/2)+1
 for i=1,d_a do bd:addFG(1,i,_d[2][i])
 bd:addBG(1,i,_d[3][i])bd:addText(1,i,_d[1][i])end end end)end}return ad end}end
+aa["plugins"]["basaltAdditions"]=function(...)return
+{basalt=function()return
+{cool=function()print("ello")sleep(2)end}end}end
 aa["plugins"]["animations"]=function(...)
 local ab,bb,cb,db,_c,ac=math.floor,math.sin,math.cos,math.pi,math.sqrt,math.pow;local function bc(aab,bab,cab)return aab+ (bab-aab)*cab end
 local function cc(aab)return aab end;local function dc(aab)return 1 -aab end
@@ -496,9 +415,6 @@ if(bcb~=nil)then
 if(bcb.progress<bcb.duration)then
 bcb.call()bcb.progress=bcb.progress+0.05
 bcb.timerId=os.startTimer(0.05)else bcb.finished()dbb:doneHandler(acb)end end end end}return cbb end}end
-aa["plugins"]["basaltAdditions"]=function(...)return
-{basalt=function()return
-{cool=function()print("ello")sleep(2)end}end}end
 aa["plugins"]["advancedBackground"]=function(...)local ab=da("xmlParser")
 return
 {VisualObject=function(bb)local cb=false
@@ -509,20 +425,144 @@ return cb end,getBackgroundSymbolColor=function(ac)return db end,draw=function(a
 ac:addDraw("advanced-bg",function()
 local bc,cc=ac:getSize()
 if(cb~=false)then ac:addTextBox(1,1,bc,cc,cb:sub(1,1))if(cb~=" ")then
-ac:addForegroundBox(1,1,bc,cc,db)end end end,2)end}return _c end}end;aa["libraries"]={}
-aa["libraries"]["basaltDraw"]=function(...)
-local ab=da("tHex")local bb=da("utils")local cb=bb.splitString;local db,_c=string.sub,string.rep
+ac:addForegroundBox(1,1,bc,cc,db)end end end,2)end}return _c end}end
+aa["plugins"]["themes"]=function(...)
+local ab={BaseFrameBG=colors.lightGray,BaseFrameText=colors.black,FrameBG=colors.gray,FrameText=colors.black,ButtonBG=colors.gray,ButtonText=colors.black,CheckboxBG=colors.lightGray,CheckboxText=colors.black,InputBG=colors.black,InputText=colors.lightGray,TextfieldBG=colors.black,TextfieldText=colors.white,ListBG=colors.gray,ListText=colors.black,MenubarBG=colors.gray,MenubarText=colors.black,DropdownBG=colors.gray,DropdownText=colors.black,RadioBG=colors.gray,RadioText=colors.black,SelectionBG=colors.black,SelectionText=colors.lightGray,GraphicBG=colors.black,ImageBG=colors.black,PaneBG=colors.black,ProgramBG=colors.black,ProgressbarBG=colors.gray,ProgressbarText=colors.black,ProgressbarActiveBG=colors.black,ScrollbarBG=colors.lightGray,ScrollbarText=colors.gray,ScrollbarSymbolColor=colors.black,SliderBG=false,SliderText=colors.gray,SliderSymbolColor=colors.black,SwitchBG=colors.lightGray,SwitchText=colors.gray,LabelBG=false,LabelText=colors.black,GraphBG=colors.gray,GraphText=colors.black}
+local bb={Container=function(cb,db,_c)local ac={}
+local bc={getTheme=function(cc,dc)local _d=cc:getParent()return ac[dc]or(_d~=nil and _d:getTheme(dc)or
+ab[dc])end,setTheme=function(cc,dc,_d)
+if(
+type(dc)=="table")then ac=dc elseif(type(dc)=="string")then ac[dc]=_d end;cc:updateDraw()return cc end}return bc end,basalt=function()
 return
-function(ac)local bc=ac or
-term.current()local cc;local dc,_d=bc.getSize()local ad={}local bd={}local cd={}
-local dd;local __a={}local function a_a()dd=_c(" ",dc)
-for n=0,15 do local caa=2 ^n;local daa=ab[caa]__a[caa]=_c(daa,dc)end end;a_a()
-local function b_a()a_a()local caa=dd
-local daa=__a[colors.white]local _ba=__a[colors.black]
+{getTheme=function(cb)return
+ab[cb]end,setTheme=function(cb,db)if(type(cb)=="table")then ab=cb elseif(type(cb)=="string")then
+ab[cb]=db end end}end}
+for cb,db in
+pairs({"BaseFrame","Frame","ScrollableFrame","MovableFrame","Button","Checkbox","Dropdown","Graph","Graphic","Input","Label","List","Menubar","Pane","Program","Progressbar","Radio","Scrollbar","Slider","Switch","Textfield"})do
+bb[db]=function(_c,ac,bc)
+local cc={init=function(dc)if(_c.init(dc))then local _d=dc:getParent()or dc
+dc:setBackground(_d:getTheme(db.."BG"))
+dc:setForeground(_d:getTheme(db.."Text"))end end}return cc end end;return bb end
+aa["plugins"]["debug"]=function(...)local ab=da("utils")local bb=ab.wrapText
+return
+{basalt=function(cb)
+local db=cb.getMainFrame()local _c;local ac;local bc;local cc
+local function dc()local _d=16;local ad=6;local bd=99;local cd=99;local dd,__a=db:getSize()
+_c=db:addMovableFrame("basaltDebuggingFrame"):setSize(
+dd-20,__a-10):setBackground(colors.gray):setForeground(colors.white):setZIndex(100):hide()
+_c:addPane():setSize("parent.w",1):setPosition(1,1):setBackground(colors.black):setForeground(colors.white)
+_c:setPosition(-dd,__a/2 -_c:getHeight()/2):setBorder(colors.black)
+local a_a=_c:addButton():setPosition("parent.w","parent.h"):setSize(1,1):setText("\133"):setForeground(colors.gray):setBackground(colors.black):onClick(function()
+end):onDrag(function(b_a,c_a,d_a,_aa,aaa)
+local baa,caa=_c:getSize()local daa,_ba=baa,caa;if(baa+_aa-1 >=_d)and(baa+_aa-1 <=bd)then daa=baa+
+_aa-1 end
+if(caa+aaa-1 >=ad)and(
+caa+aaa-1 <=cd)then _ba=caa+aaa-1 end;_c:setSize(daa,_ba)end)
+cc=_c:addButton():setText("Close"):setPosition("parent.w - 6",1):setSize(7,1):setBackground(colors.red):setForeground(colors.white):onClick(function()
+_c:animatePosition(
+-dd,__a/2 -_c:getHeight()/2,0.5)end)
+ac=_c:addList():setSize("parent.w - 2","parent.h - 3"):setPosition(2,3):setBackground(colors.gray):setForeground(colors.white):setSelectionColor(colors.gray,colors.white)
+if(bc==nil)then
+bc=db:addLabel():setPosition(1,"parent.h"):setBackground(colors.black):setForeground(colors.white):setZIndex(100):onClick(function()
+_c:show()
+_c:animatePosition(dd/2 -_c:getWidth()/2,__a/2 -_c:getHeight()/2,0.5)end)end end
+return
+{debug=function(...)local _d={...}if(db==nil)then db=cb.getMainFrame()
+if(db~=nil)then dc()else print(...)return end end
+if
+(db:getName()~="basaltDebuggingFrame")then if(db~=_c)then bc:setParent(db)end end;local ad=""for bd,cd in pairs(_d)do
+ad=ad..tostring(cd).. (#_d~=bd and", "or"")end
+bc:setText("[Debug] "..ad)
+for bd,cd in pairs(bb(ad,ac:getWidth()))do ac:addItem(cd)end
+if(ac:getItemCount()>50)then ac:removeItem(1)end
+ac:setValue(ac:getItem(ac:getItemCount()))
+if(ac.getItemCount()>ac:getHeight())then ac:setOffset(ac:getItemCount()-
+ac:getHeight())end;bc:show()end}end}end
+aa["plugins"]["textures"]=function(...)local ab=da("images")local bb=da("utils")
+local cb=da("xmlParser")
+return
+{VisualObject=function(db)local _c,ac=1,true;local bc,cc,dc;local _d="default"
+local ad={addTexture=function(bd,cd,dd)bc=ab.loadImageAsBimg(cd)
+cc=bc[1]
+if(dd)then if(bc.animated)then bd:listenEvent("other_event")local __a=bc[_c].duration or
+bc.secondsPerFrame or 0.2
+dc=os.startTimer(__a)end end;bd:setBackground(false)bd:setForeground(false)
+bd:setDrawState("texture-base",true)bd:updateDraw()return bd end,setTextureMode=function(bd,cd)_d=
+cd or _d;bd:updateDraw()return bd end,setInfinitePlay=function(bd,cd)ac=cd
+return bd end,eventHandler=function(bd,cd,dd,...)db.eventHandler(bd,cd,dd,...)
+if(cd=="timer")then
+if
+(dd==dc)then
+if(bc[_c+1]~=nil)then _c=_c+1;cc=bc[_c]local __a=
+bc[_c].duration or bc.secondsPerFrame or 0.2
+dc=os.startTimer(__a)bd:updateDraw()else
+if(ac)then _c=1;cc=bc[1]local __a=
+bc[_c].duration or bc.secondsPerFrame or 0.2
+dc=os.startTimer(__a)bd:updateDraw()end end end end end,draw=function(bd)
+db.draw(bd)
+bd:addDraw("texture-base",function()local cd=bd:getParent()or bd
+local dd,__a=bd:getPosition()local a_a,b_a=bd:getSize()local c_a,d_a=cd:getSize()local _aa=bc.width or
+#bc[_c][1][1]local aaa=bc.height or#bc[_c]
+local baa,caa=0,0
+if(_d=="center")then
+baa=dd+math.floor((a_a-_aa)/2 +0.5)-1
+caa=__a+math.floor((b_a-aaa)/2 +0.5)-1 elseif(_d=="default")then baa,caa=dd,__a elseif(_d=="right")then
+baa,caa=dd+a_a-_aa,__a+b_a-aaa end;local daa=dd-baa;local _ba=__a-caa;if baa<dd then baa=dd;_aa=_aa-daa end;if
+caa<__a then caa=__a;aaa=aaa-_ba end;if baa+_aa>dd+a_a then
+_aa=(dd+a_a)-baa end
+if caa+aaa>__a+b_a then aaa=(__a+b_a)-caa end
+for k=1,aaa do if(cc[k+_ba]~=nil)then local aba,bba,cba=table.unpack(cc[k+_ba])
+bd:addBlit(1,k,aba:sub(daa,
+daa+_aa),bba:sub(daa,daa+_aa),cba:sub(daa,daa+_aa))end end end,1)bd:setDrawState("texture-base",false)end}return ad end}end;aa["libraries"]={}
+aa["libraries"]["basaltLogs"]=function(...)local ab=""
+local bb="basaltLog.txt"local cb="Debug"
+fs.delete(ab~=""and ab.."/"..bb or bb)
+local db={__call=function(_c,ac,bc)if(ac==nil)then return end
+local cc=ab~=""and ab.."/"..bb or bb
+local dc=fs.open(cc,fs.exists(cc)and"a"or"w")
+dc.writeLine("[Basalt]["..
+os.date("%Y-%m-%d %H:%M:%S").."][".. (bc and bc or cb)..
+"]: "..tostring(ac))dc.close()end}return setmetatable({},db)end
+aa["libraries"]["process"]=function(...)local ab={}local bb={}local cb=0
+local db=dofile("rom/modules/main/cc/require.lua").make
+function bb:new(_c,ac,bc,...)local cc={...}
+local dc=setmetatable({path=_c},{__index=self})dc.window=ac;ac.current=term.current;ac.redirect=term.redirect
+dc.processId=cb
+if(type(_c)=="string")then
+dc.coroutine=coroutine.create(function()
+local _d=shell.resolveProgram(_c)local ad=setmetatable(bc,{__index=_ENV})ad.shell=shell
+ad.basaltProgram=true;ad.arg={[0]=_c,table.unpack(cc)}
+if(_d==nil)then error("The path ".._c..
+" does not exist!")end;ad.require,ad.package=db(ad,fs.getDir(_d))
+if(fs.exists(_d))then
+local bd=fs.open(_d,"r")local cd=bd.readAll()bd.close()local dd=load(cd,_c,"bt",ad)if(dd~=nil)then return
+dd()end end end)elseif(type(_c)=="function")then
+dc.coroutine=coroutine.create(function()
+_c(table.unpack(cc))end)else return end;ab[cb]=dc;cb=cb+1;return dc end
+function bb:resume(_c,...)local ac=term.current()term.redirect(self.window)
+if(
+self.filter~=nil)then if(_c~=self.filter)then return end;self.filter=nil end;local bc,cc=coroutine.resume(self.coroutine,_c,...)if bc then
+self.filter=cc else printError(cc)end;term.redirect(ac)
+return bc,cc end
+function bb:isDead()
+if(self.coroutine~=nil)then
+if
+(coroutine.status(self.coroutine)=="dead")then table.remove(ab,self.processId)return true end else return true end;return false end
+function bb:getStatus()if(self.coroutine~=nil)then
+return coroutine.status(self.coroutine)end;return nil end
+function bb:start()coroutine.resume(self.coroutine)end;return bb end
+aa["libraries"]["basaltDraw"]=function(...)local ab=da("tHex")local bb=da("utils")
+local cb=bb.splitString;local db,_c=string.sub,string.rep
+return
+function(ac)local bc=ac or term.current()
+local cc;local dc,_d=bc.getSize()local ad={}local bd={}local cd={}local dd;local __a={}
+local function a_a()dd=_c(" ",dc)for n=0,15 do
+local caa=2 ^n;local daa=ab[caa]__a[caa]=_c(daa,dc)end end;a_a()
+local function b_a()a_a()local caa=dd;local daa=__a[colors.white]
+local _ba=__a[colors.black]
 for currentY=1,_d do
-ad[currentY]=db(
-ad[currentY]==nil and caa or
-ad[currentY]..caa:sub(1,dc-ad[currentY]:len()),1,dc)
+ad[currentY]=db(ad[currentY]==nil and caa or ad[currentY]..caa:sub(1,dc-
+ad[currentY]:len()),1,dc)
 cd[currentY]=db(cd[currentY]==nil and daa or cd[currentY]..daa:sub(1,dc-
 cd[currentY]:len()),1,dc)
 bd[currentY]=db(bd[currentY]==nil and _ba or bd[currentY].._ba:sub(1,dc-
@@ -576,6 +616,142 @@ bc.setCursorBlink(_ba)bc.setCursorPos(caa,daa)
 if(cc~=nil)then
 cc.setBackgroundColor(colors.black)cc.setCursorBlink(_ba)cc.setCursorPos(caa,daa)end end,setTerm=function(caa)
 bc=caa end}return baa end end
+aa["libraries"]["basaltEvent"]=function(...)
+return
+function()local ab={}
+local bb={registerEvent=function(cb,db,_c)
+if(ab[db]==nil)then ab[db]={}end;table.insert(ab[db],_c)end,removeEvent=function(cb,db,_c)ab[db][_c[db]]=
+nil end,hasEvent=function(cb,db)return ab[db]~=nil end,getEventCount=function(cb,db)return
+ab[db]~=nil and#ab[db]or 0 end,getEvents=function(cb)
+local db={}for _c,ac in pairs(ab)do table.insert(db,_c)end;return db end,clearEvent=function(cb,db)ab[db]=
+nil end,clear=function(cb,db)ab={}end,sendEvent=function(cb,db,...)local _c
+if(ab[db]~=nil)then for ac,bc in pairs(ab[db])do
+local cc=bc(...)if(cc==false)then _c=cc end end end;return _c end}bb.__index=bb;return bb end end
+aa["libraries"]["images"]=function(...)local ab,bb=string.sub,math.floor;local function cb(ad)return
+{[1]={{},{},paintutils.loadImage(ad)}},"bimg"end;local function db(ad)return
+paintutils.loadImage(ad),"nfp"end
+local function _c(ad,bd)
+local cd=fs.open(ad,bd and"rb"or"r")if(cd==nil)then
+error("Path - "..ad.." doesn't exist!")end
+local dd=textutils.unserialize(cd.readAll())cd.close()if(dd~=nil)then return dd,"bimg"end end;local function ac(ad)end;local function bc(ad)end;local function cc(ad,bd,cd)
+if(ab(ad,-4)==".bimg")then return _c(ad,cd)elseif
+(ab(ad,-3)==".bbf")then return ac(ad,cd)else return db(ad,cd)end end;local function dc(ad)
+if
+(ad:find(".bimg"))then return _c(ad)elseif(ad:find(".bbf"))then return bc(ad)else return cb(ad)end end
+local function _d(ad,bd,cd)local dd,__a=ad.width or#
+ad[1][1][1],ad.height or#ad[1]local a_a={}
+for b_a,c_a in
+pairs(ad)do
+if(type(b_a)=="number")then local d_a={}
+for y=1,cd do local _aa,aaa,baa="","",""
+local caa=bb(y/cd*__a+0.5)
+if(c_a[caa]~=nil)then
+for x=1,bd do local daa=bb(x/bd*dd+0.5)_aa=_aa..
+ab(c_a[caa][1],daa,daa)
+aaa=aaa..ab(c_a[caa][2],daa,daa)baa=baa..ab(c_a[caa][3],daa,daa)end;table.insert(d_a,{_aa,aaa,baa})end end;table.insert(a_a,b_a,d_a)else a_a[b_a]=c_a end end;a_a.width=bd;a_a.height=cd;return a_a end
+return{loadNFP=db,loadBIMG=_c,loadImage=cc,resizeBIMG=_d,loadImageAsBimg=dc}end
+aa["libraries"]["utils"]=function(...)local ab=da("tHex")
+local bb,cb,db,_c,ac,bc=string.sub,string.find,string.reverse,string.rep,table.insert,string.len
+local function cc(cd,dd)local __a={}if cd==""or dd==""then return __a end;local a_a=1
+local b_a,c_a=cb(cd,dd,a_a)while b_a do ac(__a,bb(cd,a_a,b_a-1))a_a=c_a+1
+b_a,c_a=cb(cd,dd,a_a)end;ac(__a,bb(cd,a_a))return __a end;local function dc(cd)return cd:gsub("{[^}]+}","")end
+local function _d(cd,dd)cd=dc(cd)if
+(cd=="")or(dd==0)then return{""}end;local __a=cc(cd,"\n")local a_a={}
+for b_a,c_a in
+pairs(__a)do
+if#c_a==0 then table.insert(a_a,"")else
+while#c_a>dd do local d_a=dd;for i=dd,1,-1 do if bb(c_a,i,i)==" "then
+d_a=i;break end end
+if d_a==dd then
+local _aa=bb(c_a,1,d_a-1).."-"table.insert(a_a,_aa)c_a=bb(c_a,d_a)else
+local _aa=bb(c_a,1,d_a-1)table.insert(a_a,_aa)c_a=bb(c_a,d_a+1)end;if#c_a<=dd then break end end;if#c_a>0 then table.insert(a_a,c_a)end end end;return a_a end
+local function ad(cd)local dd={}local __a=1;local a_a=1
+while __a<=#cd do local b_a,c_a;local d_a,_aa;local aaa,baa
+for _ba,aba in pairs(colors)do
+local bba="{fg:".._ba.."}"local cba="{bg:".._ba.."}"local dba,_ca=cd:find(bba,__a)
+local aca,bca=cd:find(cba,__a)
+if dba and(not b_a or dba<b_a)then b_a=dba;d_a=_ba;aaa=_ca end
+if aca and(not c_a or aca<c_a)then c_a=aca;_aa=_ba;baa=bca end end;local caa
+if b_a and(not c_a or b_a<c_a)then caa=b_a elseif c_a then caa=c_a else caa=#cd+1 end;local daa=cd:sub(__a,caa-1)
+if#daa>0 then
+table.insert(dd,{color=nil,bgColor=nil,text=daa,position=a_a})a_a=a_a+#daa;__a=__a+#daa end
+if b_a and(not c_a or b_a<c_a)then
+table.insert(dd,{color=d_a,bgColor=nil,text="",position=a_a})__a=aaa+1 elseif c_a then
+table.insert(dd,{color=nil,bgColor=_aa,text="",position=a_a})__a=baa+1 else break end end;return dd end
+local function bd(cd,dd)local __a=ad(cd)local a_a={}local b_a,c_a=1,1;local d_a,_aa;local function aaa(baa)
+table.insert(a_a,{x=b_a,y=c_a,text=baa.text,color=baa.color or d_a,bgColor=
+baa.bgColor or _aa})end
+for baa,caa in ipairs(__a)do
+if
+caa.color then d_a=caa.color elseif caa.bgColor then _aa=caa.bgColor else local daa=cc(caa.text," ")
+for _ba,aba in
+ipairs(daa)do local bba=#aba
+if _ba>1 then if b_a+1 +bba<=dd then aaa({text=" "})b_a=b_a+1 else b_a=1;c_a=c_a+
+1 end end;while bba>0 do local cba=aba:sub(1,dd-b_a+1)
+aba=aba:sub(dd-b_a+2)bba=#aba;aaa({text=cba})
+if bba>0 then b_a=1;c_a=c_a+1 else b_a=b_a+#cba end end end end;if b_a>dd then b_a=1;c_a=c_a+1 end end;return a_a end
+return
+{getTextHorizontalAlign=function(cd,dd,__a,a_a)cd=bb(cd,1,dd)local b_a=dd-bc(cd)
+if(__a=="right")then
+cd=_c(a_a or" ",b_a)..cd elseif(__a=="center")then
+cd=_c(a_a or" ",math.floor(b_a/2))..cd.._c(a_a or" ",math.floor(
+b_a/2))
+cd=cd.. (bc(cd)<dd and(a_a or" ")or"")else cd=cd.._c(a_a or" ",b_a)end;return cd end,getTextVerticalAlign=function(cd,dd)
+local __a=0
+if(dd=="center")then __a=math.ceil(cd/2)if(__a<1)then __a=1 end end;if(dd=="bottom")then __a=cd end;if(__a<1)then __a=1 end;return __a end,orderedTable=function(cd)
+local dd={}for __a,a_a in pairs(cd)do dd[#dd+1]=a_a end;return dd end,rpairs=function(cd)return
+function(dd,__a)__a=
+__a-1;if __a~=0 then return __a,dd[__a]end end,cd,#cd+1 end,tableCount=function(cd)
+local dd=0;if(cd~=nil)then for __a,a_a in pairs(cd)do dd=dd+1 end end
+return dd end,splitString=cc,removeTags=dc,wrapText=_d,convertRichText=ad,writeRichText=function(cd,dd,__a,a_a)local b_a=ad(a_a)if(#b_a==0)then
+cd:addText(dd,__a,a_a)return end
+local c_a,d_a=cd:getForeground(),cd:getBackground()
+for _aa,aaa in pairs(b_a)do
+cd:addText(dd+aaa.position-1,__a,aaa.text)
+if(aaa.color~=nil)then
+cd:addFG(dd+aaa.position-1,__a,ab[colors[aaa.color]]:rep(
+#aaa.text))c_a=colors[aaa.color]else cd:addFG(dd+aaa.position-1,__a,ab[c_a]:rep(#
+aaa.text))end
+if(aaa.bgColor~=nil)then
+cd:addBG(dd+aaa.position-1,__a,ab[colors[aaa.bgColor]]:rep(
+#aaa.text))d_a=colors[aaa.bgColor]else if(d_a~=false)then
+cd:addBG(dd+aaa.position-1,__a,ab[d_a]:rep(
+#aaa.text))end end end end,wrapRichText=bd,writeWrappedText=function(cd,dd,__a,a_a,b_a,c_a)
+local d_a=bd(a_a,b_a)
+for _aa,aaa in pairs(d_a)do if(aaa.y>c_a)then break end
+if(aaa.text~=nil)then cd:addText(dd+aaa.x-1,__a+
+aaa.y-1,aaa.text)end;if(aaa.color~=nil)then
+cd:addFG(dd+aaa.x-1,__a+aaa.y-1,ab[colors[aaa.color]]:rep(
+#aaa.text))end;if(aaa.bgColor~=nil)then
+cd:addBG(dd+
+aaa.x-1,__a+aaa.y-1,ab[colors[aaa.bgColor]]:rep(#
+aaa.text))end end end,uuid=function()
+return
+string.gsub(string.format('%x-%x-%x-%x-%x',math.random(0,0xffff),math.random(0,0xffff),math.random(0,0xffff),
+math.random(0,0x0fff)+0x4000,math.random(0,0x3fff)+0x8000),' ','0')end}end
+aa["libraries"]["xmlParser"]=function(...)
+local ab={new=function(db)
+return
+{tag=db,value=nil,attributes={},children={},addChild=function(_c,ac)
+table.insert(_c.children,ac)end,addAttribute=function(_c,ac,bc)_c.attributes[ac]=bc end}end}
+local bb=function(db,_c)
+local ac,bc=string.gsub(_c,"(%w+)=([\"'])(.-)%2",function(_d,ad,bd)
+db:addAttribute(_d,"\""..bd.."\"")end)
+local cc,dc=string.gsub(_c,"(%w+)={(.-)}",function(_d,ad)db:addAttribute(_d,ad)end)end
+local cb={parseText=function(db)local _c={}local ac=ab.new()table.insert(_c,ac)local bc,cc,dc,_d,ad;local bd,cd=1,1
+while true do
+bc,cd,cc,dc,_d,ad=string.find(db,"<(%/?)([%w_:]+)(.-)(%/?)>",bd)if not bc then break end;local __a=string.sub(db,bd,bc-1)if not
+string.find(__a,"^%s*$")then local a_a=(ac.value or"")..__a
+_c[#_c].value=a_a end
+if ad=="/"then local a_a=ab.new(dc)
+bb(a_a,_d)ac:addChild(a_a)elseif cc==""then local a_a=ab.new(dc)bb(a_a,_d)
+table.insert(_c,a_a)ac=a_a else local a_a=table.remove(_c)ac=_c[#_c]
+if#_c<1 then error("XMLParser: nothing to close with "..
+dc)end;if a_a.tag~=dc then
+error("XMLParser: trying to close "..a_a.tag.." with "..dc)end;ac:addChild(a_a)end;bd=cd+1 end;local dd=string.sub(db,bd)if#_c>1 then
+error("XMLParser: unclosed ".._c[#_c].tag)end;return ac.children end}return cb end
+aa["libraries"]["tHex"]=function(...)local ab={}
+for i=0,15 do ab[2 ^i]=("%x"):format(i)end;return ab end
 aa["libraries"]["bimg"]=function(...)local ab,bb=string.sub,string.rep
 local function cb(db,_c)local ac,bc=0,0
 local cc,dc,_d={},{},{}local ad,bd=1,1;local cd={}
@@ -667,77 +843,6 @@ for cd,dd in pairs(db)do if(type(cd)=="string")then ac[cd]=dd end end
 if(ac.width==nil)or(ac.height==nil)then
 bc=ac.width or#db[1][1][1]cc=ac.height or#db[1]dc.updateSize(bc,cc,true)end
 for cd,dd in pairs(db)do if(type(cd)=="number")then _d(cd,dd)end end else _d(1)end;return dc end end
-aa["libraries"]["process"]=function(...)local ab={}local bb={}local cb=0
-local db=dofile("rom/modules/main/cc/require.lua").make
-function bb:new(_c,ac,bc,...)local cc={...}
-local dc=setmetatable({path=_c},{__index=self})dc.window=ac;ac.current=term.current;ac.redirect=term.redirect
-dc.processId=cb
-if(type(_c)=="string")then
-dc.coroutine=coroutine.create(function()
-local _d=shell.resolveProgram(_c)local ad=setmetatable(bc,{__index=_ENV})ad.shell=shell
-ad.basaltProgram=true;ad.arg={[0]=_c,table.unpack(cc)}
-if(_d==nil)then error("The path ".._c..
-" does not exist!")end;ad.require,ad.package=db(ad,fs.getDir(_d))
-if(fs.exists(_d))then
-local bd=fs.open(_d,"r")local cd=bd.readAll()bd.close()local dd=load(cd,_c,"bt",ad)if(dd~=nil)then return
-dd()end end end)elseif(type(_c)=="function")then
-dc.coroutine=coroutine.create(function()
-_c(table.unpack(cc))end)else return end;ab[cb]=dc;cb=cb+1;return dc end
-function bb:resume(_c,...)local ac=term.current()term.redirect(self.window)
-if(
-self.filter~=nil)then if(_c~=self.filter)then return end;self.filter=nil end;local bc,cc=coroutine.resume(self.coroutine,_c,...)if bc then
-self.filter=cc else printError(cc)end;term.redirect(ac)
-return bc,cc end
-function bb:isDead()
-if(self.coroutine~=nil)then
-if
-(coroutine.status(self.coroutine)=="dead")then table.remove(ab,self.processId)return true end else return true end;return false end
-function bb:getStatus()if(self.coroutine~=nil)then
-return coroutine.status(self.coroutine)end;return nil end
-function bb:start()coroutine.resume(self.coroutine)end;return bb end
-aa["libraries"]["basaltEvent"]=function(...)
-return
-function()local ab={}
-local bb={registerEvent=function(cb,db,_c)
-if(ab[db]==nil)then ab[db]={}end;table.insert(ab[db],_c)end,removeEvent=function(cb,db,_c)ab[db][_c[db]]=
-nil end,hasEvent=function(cb,db)return ab[db]~=nil end,getEventCount=function(cb,db)return
-ab[db]~=nil and#ab[db]or 0 end,getEvents=function(cb)
-local db={}for _c,ac in pairs(ab)do table.insert(db,_c)end;return db end,clearEvent=function(cb,db)ab[db]=
-nil end,clear=function(cb,db)ab={}end,sendEvent=function(cb,db,...)local _c
-if(ab[db]~=nil)then for ac,bc in pairs(ab[db])do
-local cc=bc(...)if(cc==false)then _c=cc end end end;return _c end}bb.__index=bb;return bb end end
-aa["libraries"]["basaltLogs"]=function(...)local ab=""local bb="basaltLog.txt"local cb="Debug"
-fs.delete(
-ab~=""and ab.."/"..bb or bb)
-local db={__call=function(_c,ac,bc)if(ac==nil)then return end
-local cc=ab~=""and ab.."/"..bb or bb
-local dc=fs.open(cc,fs.exists(cc)and"a"or"w")
-dc.writeLine("[Basalt]["..
-os.date("%Y-%m-%d %H:%M:%S").."][".. (bc and bc or cb)..
-"]: "..tostring(ac))dc.close()end}return setmetatable({},db)end
-aa["libraries"]["images"]=function(...)local ab,bb=string.sub,math.floor;local function cb(ad)return
-{[1]={{},{},paintutils.loadImage(ad)}},"bimg"end;local function db(ad)return
-paintutils.loadImage(ad),"nfp"end
-local function _c(ad,bd)
-local cd=fs.open(ad,bd and"rb"or"r")if(cd==nil)then
-error("Path - "..ad.." doesn't exist!")end
-local dd=textutils.unserialize(cd.readAll())cd.close()if(dd~=nil)then return dd,"bimg"end end;local function ac(ad)end;local function bc(ad)end;local function cc(ad,bd,cd)
-if(ab(ad,-4)==".bimg")then return _c(ad,cd)elseif
-(ab(ad,-3)==".bbf")then return ac(ad,cd)else return db(ad,cd)end end;local function dc(ad)
-if
-(ad:find(".bimg"))then return _c(ad)elseif(ad:find(".bbf"))then return bc(ad)else return cb(ad)end end
-local function _d(ad,bd,cd)local dd,__a=ad.width or#
-ad[1][1][1],ad.height or#ad[1]local a_a={}
-for b_a,c_a in
-pairs(ad)do
-if(type(b_a)=="number")then local d_a={}
-for y=1,cd do local _aa,aaa,baa="","",""
-local caa=bb(y/cd*__a+0.5)
-if(c_a[caa]~=nil)then
-for x=1,bd do local daa=bb(x/bd*dd+0.5)_aa=_aa..
-ab(c_a[caa][1],daa,daa)
-aaa=aaa..ab(c_a[caa][2],daa,daa)baa=baa..ab(c_a[caa][3],daa,daa)end;table.insert(d_a,{_aa,aaa,baa})end end;table.insert(a_a,b_a,d_a)else a_a[b_a]=c_a end end;a_a.width=bd;a_a.height=cd;return a_a end
-return{loadNFP=db,loadBIMG=_c,loadImage=cc,resizeBIMG=_d,loadImageAsBimg=dc}end
 aa["libraries"]["basaltMon"]=function(...)
 local ab={[colors.white]="0",[colors.orange]="1",[colors.magenta]="2",[colors.lightBlue]="3",[colors.yellow]="4",[colors.lime]="5",[colors.pink]="6",[colors.gray]="7",[colors.lightGray]="8",[colors.cyan]="9",[colors.purple]="a",[colors.blue]="b",[colors.brown]="c",[colors.green]="d",[colors.red]="e",[colors.black]="f"}local bb,cb,db,_c=type,string.len,string.rep,string.sub
 return
@@ -782,108 +887,6 @@ for dba,_ca in pairs(bc)do local aca=0;local bca=0
 for cca,dca in pairs(_ca)do
 local _da,ada=dca.getSize()if(dca.name==_ba)then return aba+aca,bba+cba end
 aca=aca+_da;if(ada>bca)then bca=ada end end;cba=cba+bca end;return aba,bba end}end end
-aa["libraries"]["utils"]=function(...)local ab=da("tHex")
-local bb,cb,db,_c,ac,bc=string.sub,string.find,string.reverse,string.rep,table.insert,string.len
-local function cc(cd,dd)local __a={}if cd==""or dd==""then return __a end;local a_a=1
-local b_a,c_a=cb(cd,dd,a_a)while b_a do ac(__a,bb(cd,a_a,b_a-1))a_a=c_a+1
-b_a,c_a=cb(cd,dd,a_a)end;ac(__a,bb(cd,a_a))return __a end;local function dc(cd)return cd:gsub("{[^}]+}","")end
-local function _d(cd,dd)cd=dc(cd)if
-(cd=="")or(dd==0)then return{""}end;local __a=cc(cd,"\n")local a_a={}
-for b_a,c_a in
-pairs(__a)do
-if#c_a==0 then table.insert(a_a,"")else
-while#c_a>dd do local d_a=dd;for i=dd,1,-1 do if bb(c_a,i,i)==" "then
-d_a=i;break end end
-if d_a==dd then
-local _aa=bb(c_a,1,d_a-1).."-"table.insert(a_a,_aa)c_a=bb(c_a,d_a)else
-local _aa=bb(c_a,1,d_a-1)table.insert(a_a,_aa)c_a=bb(c_a,d_a+1)end;if#c_a<=dd then break end end;if#c_a>0 then table.insert(a_a,c_a)end end end;return a_a end
-local function ad(cd)local dd={}local __a=1;local a_a=1
-while __a<=#cd do local b_a,c_a;local d_a,_aa;local aaa,baa
-for _ba,aba in pairs(colors)do
-local bba="{fg:".._ba.."}"local cba="{bg:".._ba.."}"local dba,_ca=cd:find(bba,__a)
-local aca,bca=cd:find(cba,__a)
-if dba and(not b_a or dba<b_a)then b_a=dba;d_a=_ba;aaa=_ca end
-if aca and(not c_a or aca<c_a)then c_a=aca;_aa=_ba;baa=bca end end;local caa
-if b_a and(not c_a or b_a<c_a)then caa=b_a elseif c_a then caa=c_a else caa=#cd+1 end;local daa=cd:sub(__a,caa-1)
-if#daa>0 then
-table.insert(dd,{color=nil,bgColor=nil,text=daa,position=a_a})a_a=a_a+#daa;__a=__a+#daa end
-if b_a and(not c_a or b_a<c_a)then
-table.insert(dd,{color=d_a,bgColor=nil,text="",position=a_a})__a=aaa+1 elseif c_a then
-table.insert(dd,{color=nil,bgColor=_aa,text="",position=a_a})__a=baa+1 else break end end;return dd end
-local function bd(cd,dd)local __a=ad(cd)local a_a={}local b_a,c_a=1,1;local d_a,_aa;local function aaa(baa)
-table.insert(a_a,{x=b_a,y=c_a,text=baa.text,color=baa.color or d_a,bgColor=
-baa.bgColor or _aa})end
-for baa,caa in ipairs(__a)do
-if
-caa.color then d_a=caa.color elseif caa.bgColor then _aa=caa.bgColor else local daa=cc(caa.text," ")
-for _ba,aba in
-ipairs(daa)do local bba=#aba
-if _ba>1 then if b_a+1 +bba<=dd then aaa({text=" "})b_a=b_a+1 else b_a=1;c_a=c_a+
-1 end end;while bba>0 do local cba=aba:sub(1,dd-b_a+1)
-aba=aba:sub(dd-b_a+2)bba=#aba;aaa({text=cba})
-if bba>0 then b_a=1;c_a=c_a+1 else b_a=b_a+#cba end end end end;if b_a>dd then b_a=1;c_a=c_a+1 end end;return a_a end
-return
-{getTextHorizontalAlign=function(cd,dd,__a,a_a)cd=bb(cd,1,dd)local b_a=dd-bc(cd)
-if(__a=="right")then
-cd=_c(a_a or" ",b_a)..cd elseif(__a=="center")then
-cd=_c(a_a or" ",math.floor(b_a/2))..cd.._c(a_a or" ",math.floor(
-b_a/2))
-cd=cd.. (bc(cd)<dd and(a_a or" ")or"")else cd=cd.._c(a_a or" ",b_a)end;return cd end,getTextVerticalAlign=function(cd,dd)
-local __a=0
-if(dd=="center")then __a=math.ceil(cd/2)if(__a<1)then __a=1 end end;if(dd=="bottom")then __a=cd end;if(__a<1)then __a=1 end;return __a end,orderedTable=function(cd)
-local dd={}for __a,a_a in pairs(cd)do dd[#dd+1]=a_a end;return dd end,rpairs=function(cd)return
-function(dd,__a)__a=
-__a-1;if __a~=0 then return __a,dd[__a]end end,cd,#cd+1 end,tableCount=function(cd)
-local dd=0;if(cd~=nil)then for __a,a_a in pairs(cd)do dd=dd+1 end end
-return dd end,splitString=cc,removeTags=dc,wrapText=_d,convertRichText=ad,writeRichText=function(cd,dd,__a,a_a)local b_a=ad(a_a)if(#b_a==0)then
-cd:addText(dd,__a,a_a)return end
-local c_a,d_a=cd:getForeground(),cd:getBackground()
-for _aa,aaa in pairs(b_a)do
-cd:addText(dd+aaa.position-1,__a,aaa.text)
-if(aaa.color~=nil)then
-cd:addFG(dd+aaa.position-1,__a,ab[colors[aaa.color]]:rep(
-#aaa.text))c_a=colors[aaa.color]else cd:addFG(dd+aaa.position-1,__a,ab[c_a]:rep(#
-aaa.text))end
-if(aaa.bgColor~=nil)then
-cd:addBG(dd+aaa.position-1,__a,ab[colors[aaa.bgColor]]:rep(
-#aaa.text))d_a=colors[aaa.bgColor]else if(d_a~=false)then
-cd:addBG(dd+aaa.position-1,__a,ab[d_a]:rep(
-#aaa.text))end end end end,wrapRichText=bd,writeWrappedText=function(cd,dd,__a,a_a,b_a,c_a)
-local d_a=bd(a_a,b_a)
-for _aa,aaa in pairs(d_a)do if(aaa.y>c_a)then break end
-if(aaa.text~=nil)then cd:addText(dd+aaa.x-1,__a+
-aaa.y-1,aaa.text)end;if(aaa.color~=nil)then
-cd:addFG(dd+aaa.x-1,__a+aaa.y-1,ab[colors[aaa.color]]:rep(
-#aaa.text))end;if(aaa.bgColor~=nil)then
-cd:addBG(dd+
-aaa.x-1,__a+aaa.y-1,ab[colors[aaa.bgColor]]:rep(#
-aaa.text))end end end,uuid=function()
-return
-string.gsub(string.format('%x-%x-%x-%x-%x',math.random(0,0xffff),math.random(0,0xffff),math.random(0,0xffff),
-math.random(0,0x0fff)+0x4000,math.random(0,0x3fff)+0x8000),' ','0')end}end
-aa["libraries"]["tHex"]=function(...)local ab={}
-for i=0,15 do ab[2 ^i]=("%x"):format(i)end;return ab end
-aa["libraries"]["xmlParser"]=function(...)
-local ab={new=function(db)
-return
-{tag=db,value=nil,attributes={},children={},addChild=function(_c,ac)
-table.insert(_c.children,ac)end,addAttribute=function(_c,ac,bc)_c.attributes[ac]=bc end}end}
-local bb=function(db,_c)
-local ac,bc=string.gsub(_c,"(%w+)=([\"'])(.-)%2",function(_d,ad,bd)
-db:addAttribute(_d,"\""..bd.."\"")end)
-local cc,dc=string.gsub(_c,"(%w+)={(.-)}",function(_d,ad)db:addAttribute(_d,ad)end)end
-local cb={parseText=function(db)local _c={}local ac=ab.new()table.insert(_c,ac)local bc,cc,dc,_d,ad;local bd,cd=1,1
-while true do
-bc,cd,cc,dc,_d,ad=string.find(db,"<(%/?)([%w_:]+)(.-)(%/?)>",bd)if not bc then break end;local __a=string.sub(db,bd,bc-1)if not
-string.find(__a,"^%s*$")then local a_a=(ac.value or"")..__a
-_c[#_c].value=a_a end
-if ad=="/"then local a_a=ab.new(dc)
-bb(a_a,_d)ac:addChild(a_a)elseif cc==""then local a_a=ab.new(dc)bb(a_a,_d)
-table.insert(_c,a_a)ac=a_a else local a_a=table.remove(_c)ac=_c[#_c]
-if#_c<1 then error("XMLParser: nothing to close with "..
-dc)end;if a_a.tag~=dc then
-error("XMLParser: trying to close "..a_a.tag.." with "..dc)end;ac:addChild(a_a)end;bd=cd+1 end;local dd=string.sub(db,bd)if#_c>1 then
-error("XMLParser: unclosed ".._c[#_c].tag)end;return ac.children end}return cb end
 aa["main"]=function(...)local ab=da("basaltEvent")()
 local bb=da("loadObjects")local cb;local db=da("plugin")local _c=da("utils")local ac=da("basaltLogs")
 local bc=_c.uuid;local cc=_c.wrapText;local dc=_c.tableCount;local _d=300;local ad=0;local bd=0;local cd={}
@@ -1175,6 +1178,64 @@ if(ad==n+1)then for curIndexOffset=0,math.min(bd-1,b_a)do
 __a:addBlit(1,1 +n+curIndexOffset,bc,ab[symbolColor],ab[symbolColor])end else if(n+1 <ad)or(n+1 >
 ad-1 +bd)then
 __a:addBlit(1,1 +n,bgSymbol,ab[d_a],ab[c_a])end end end end end)end}dd.__index=dd;return setmetatable(dd,db)end end
+aa["objects"]["Switch"]=function(...)
+return
+function(ab,bb)
+local cb=bb.getObject("ChangeableObject")(ab,bb)local db="Switch"cb:setSize(4,1)cb:setValue(false)
+cb:setZIndex(5)local _c=colors.black;local ac=colors.red;local bc=colors.green
+local cc={getType=function(dc)return db end,setSymbol=function(dc,_d)
+_c=_d;return dc end,getSymbol=function(dc)return _c end,setActiveBackground=function(dc,_d)bc=_d;return dc end,getActiveBackground=function(dc)return bc end,setInactiveBackground=function(dc,_d)
+ac=_d;return dc end,getInactiveBackground=function(dc)return ac end,load=function(dc)
+dc:listenEvent("mouse_click")end,mouseHandler=function(dc,...)
+if(cb.mouseHandler(dc,...))then
+dc:setValue(not dc:getValue())dc:updateDraw()return true end end,draw=function(dc)cb.draw(dc)
+dc:addDraw("switch",function()
+local _d=dc:getParent()local ad,bd=dc:getBackground(),dc:getForeground()
+local cd,dd=dc:getSize()
+if(dc:getValue())then dc:addBackgroundBox(1,1,cd,dd,bc)
+dc:addBackgroundBox(cd,1,1,dd,_c)else dc:addBackgroundBox(1,1,cd,dd,ac)
+dc:addBackgroundBox(1,1,1,dd,_c)end end)end}cc.__index=cc;return setmetatable(cc,cb)end end
+aa["objects"]["Menubar"]=function(...)local ab=da("utils")local bb=da("tHex")
+return
+function(cb,db)
+local _c=db.getObject("List")(cb,db)local ac="Menubar"local bc={}_c:setSize(30,1)_c:setZIndex(5)local cc=0
+local dc,_d=1,1;local ad=true
+local function bd()local cd=0;local dd=_c:getWidth()local __a=_c:getAll()for n=1,#__a do cd=cd+
+__a[n].text:len()+dc*2 end;return
+math.max(cd-dd,0)end
+bc={init=function(cd)local dd=cd:getParent()cd:listenEvent("mouse_click")
+cd:listenEvent("mouse_drag")cd:listenEvent("mouse_scroll")return _c.init(cd)end,getType=function(cd)return
+ac end,getBase=function(cd)return _c end,setSpace=function(cd,dd)dc=dd or dc;cd:updateDraw()
+return cd end,getSpace=function(cd)return dc end,setScrollable=function(cd,dd)ad=dd
+if(dd==nil)then ad=true end;return cd end,getScrollable=function(cd)return ad end,mouseHandler=function(cd,dd,__a,a_a)
+if
+(_c:getBase().mouseHandler(cd,dd,__a,a_a))then local b_a,c_a=cd:getAbsolutePosition()local d_a,_aa=cd:getSize()local aaa=0
+local baa=cd:getAll()
+for n=1,#baa do
+if(baa[n]~=nil)then
+if
+(b_a+aaa<=__a+cc)and(
+b_a+aaa+baa[n].text:len()+ (dc*2)>__a+cc)and(c_a==a_a)then
+cd:setValue(baa[n])cd:sendEvent(event,cd,event,0,__a,a_a,baa[n])end;aaa=aaa+baa[n].text:len()+dc*2 end end;cd:updateDraw()return true end end,scrollHandler=function(cd,dd,__a,a_a)
+if
+(_c:getBase().scrollHandler(cd,dd,__a,a_a))then if(ad)then cc=cc+dd;if(cc<0)then cc=0 end;local b_a=bd()if(cc>b_a)then cc=b_a end
+cd:updateDraw()end;return true end;return false end,draw=function(cd)
+_c.draw(cd)
+cd:addDraw("list",function()local dd=cd:getParent()local __a,a_a=cd:getSize()local b_a=""local c_a=""
+local d_a=""local _aa,aaa=cd:getSelectionColor()
+for baa,caa in pairs(cd:getAll())do
+local daa=
+(" "):rep(dc)..caa.text.. (" "):rep(dc)b_a=b_a..daa
+if(caa==cd:getValue())then c_a=c_a..
+bb[_aa or caa.bgCol or
+cd:getBackground()]:rep(daa:len())d_a=d_a..
+bb[aaa or
+caa.FgCol or cd:getForeground()]:rep(daa:len())else c_a=c_a..
+bb[caa.bgCol or
+cd:getBackground()]:rep(daa:len())d_a=d_a..
+bb[caa.FgCol or
+cd:getForeground()]:rep(daa:len())end end
+cd:addBlit(1,1,b_a:sub(cc+1,__a+cc),d_a:sub(cc+1,__a+cc),c_a:sub(cc+1,__a+cc))end)end}bc.__index=bc;return setmetatable(bc,_c)end end
 aa["objects"]["Dropdown"]=function(...)local ab=da("utils")local bb=da("tHex")
 return
 function(cb,db)
@@ -1253,22 +1314,6 @@ b_a:addBlit(1,n+1,bba,bb[caa[n+dc].fgCol]:rep(#bba),bb[caa[n+dc].bgCol]:rep(
 #bba))end else
 b_a:addBlit(1,n+1,bba,bb[caa[n+dc].fgCol]:rep(#bba),bb[caa[n+dc].bgCol]:rep(
 #bba))end end end end end)end}a_a.__index=a_a;return setmetatable(a_a,_c)end end
-aa["objects"]["Button"]=function(...)local ab=da("utils")local bb=da("tHex")
-return
-function(cb,db)
-local _c=db.getObject("VisualObject")(cb,db)local ac="Button"local bc="center"local cc="center"local dc="Button"_c:setSize(12,3)
-_c:setZIndex(5)
-local _d={getType=function(ad)return ac end,isType=function(ad,bd)return
-ac==bd or _c.isType~=nil and _c.isType(bd)or false end,getBase=function(ad)return
-_c end,getHorizontalAlign=function(ad)return bc end,setHorizontalAlign=function(ad,bd)bc=bd;ad:updateDraw()return ad end,getVerticalAlign=function(ad)return
-cc end,setVerticalAlign=function(ad,bd)cc=bd;ad:updateDraw()return ad end,getText=function(ad)
-return dc end,setText=function(ad,bd)dc=bd;ad:updateDraw()return ad end,draw=function(ad)
-_c.draw(ad)
-ad:addDraw("button",function()local bd,cd=ad:getSize()
-local dd=ab.getTextVerticalAlign(cd,cc)local __a
-if(bc=="center")then
-__a=math.floor((bd-dc:len())/2)elseif(bc=="right")then __a=bd-dc:len()end;ad:addText(__a+1,dd,dc)
-ad:addFG(__a+1,dd,bb[ad:getForeground()or colors.white]:rep(dc:len()))end)end}_d.__index=_d;return setmetatable(_d,_c)end end
 aa["objects"]["MovableFrame"]=function(...)
 local ab,bb,cb,db=math.max,math.min,string.sub,string.rep
 return
@@ -1302,47 +1347,565 @@ d_a+_ba-1)and(b_a<=d_a+aba-1)and(c_a>=_aa+bba-1)and(c_a<=_aa+cba-1)then bd=true
 _d=d_a-b_a;ad=_aa-c_a;return true end end;return true end end,mouseUpHandler=function(__a,...)
 bd=false;return bc.mouseUpHandler(__a,...)end,setParent=function(__a,a_a,...)
 bc.setParent(__a,a_a,...)dc=a_a;return __a end}dd.__index=dd;return setmetatable(dd,bc)end end
-aa["objects"]["Menubar"]=function(...)local ab=da("utils")local bb=da("tHex")
+aa["objects"]["Radio"]=function(...)local ab=da("utils")local bb=da("tHex")
 return
 function(cb,db)
-local _c=db.getObject("List")(cb,db)local ac="Menubar"local bc={}_c:setSize(30,1)_c:setZIndex(5)local cc=0
-local dc,_d=1,1;local ad=true
-local function bd()local cd=0;local dd=_c:getWidth()local __a=_c:getAll()for n=1,#__a do cd=cd+
-__a[n].text:len()+dc*2 end;return
-math.max(cd-dd,0)end
-bc={init=function(cd)local dd=cd:getParent()cd:listenEvent("mouse_click")
-cd:listenEvent("mouse_drag")cd:listenEvent("mouse_scroll")return _c.init(cd)end,getType=function(cd)return
-ac end,getBase=function(cd)return _c end,setSpace=function(cd,dd)dc=dd or dc;cd:updateDraw()
-return cd end,getSpace=function(cd)return dc end,setScrollable=function(cd,dd)ad=dd
-if(dd==nil)then ad=true end;return cd end,getScrollable=function(cd)return ad end,mouseHandler=function(cd,dd,__a,a_a)
+local _c=db.getObject("List")(cb,db)local ac="Radio"_c:setSize(1,1)_c:setZIndex(5)local bc={}
+local cc=colors.black;local dc=colors.green;local _d=colors.black;local ad=colors.red;local bd=true;local cd="\7"
+local dd="left"
+local __a={getType=function(a_a)return ac end,addItem=function(a_a,b_a,c_a,d_a,_aa,aaa,...)_c.addItem(a_a,b_a,_aa,aaa,...)table.insert(bc,{x=c_a or 1,y=
+d_a or#bc*2})
+return a_a end,removeItem=function(a_a,b_a)
+_c.removeItem(a_a,b_a)table.remove(bc,b_a)return a_a end,clear=function(a_a)
+_c.clear(a_a)bc={}return a_a end,editItem=function(a_a,b_a,c_a,d_a,_aa,aaa,baa,...)
+_c.editItem(a_a,b_a,c_a,aaa,baa,...)table.remove(bc,b_a)
+table.insert(bc,b_a,{x=d_a or 1,y=_aa or 1})return a_a end,setBoxSelectionColor=function(a_a,b_a,c_a)
+cc=b_a;dc=c_a;return a_a end,setBoxSelectionBG=function(a_a,b_a)
+return a_a:setBoxSelectionColor(b_a,dc)end,setBoxSelectionFG=function(a_a,b_a)
+return a_a:setBoxSelectionColor(cc,b_a)end,getBoxSelectionColor=function(a_a)return cc,dc end,getBoxSelectionBG=function(a_a)return cc end,getBoxSelectionFG=function(a_a)
+return dc end,setBoxDefaultColor=function(a_a,b_a,c_a)_d=b_a;ad=c_a;return a_a end,setBoxDefaultBG=function(a_a,b_a)return
+a_a:setBoxDefaultColor(b_a,ad)end,setBoxDefaultFG=function(a_a,b_a)return
+a_a:setBoxDefaultColor(_d,b_a)end,getBoxDefaultColor=function(a_a)return _d,ad end,getBoxDefaultBG=function(a_a)return _d end,getBoxDefaultFG=function(a_a)return
+ad end,mouseHandler=function(a_a,b_a,c_a,d_a,...)
+if(#bc>0)then local _aa,aaa=a_a:getAbsolutePosition()
+local baa=a_a:getAll()
+for caa,daa in pairs(baa)do
 if
-(_c:getBase().mouseHandler(cd,dd,__a,a_a))then local b_a,c_a=cd:getAbsolutePosition()local d_a,_aa=cd:getSize()local aaa=0
-local baa=cd:getAll()
-for n=1,#baa do
-if(baa[n]~=nil)then
+
+(_aa+bc[caa].x-1 <=c_a)and(_aa+bc[caa].x-1 +
+daa.text:len()+1 >=c_a)and(aaa+bc[caa].y-1 ==d_a)then a_a:setValue(daa)
+local _ba=a_a:sendEvent("mouse_click",a_a,"mouse_click",b_a,c_a,d_a,...)a_a:updateDraw()if(_ba==false)then return _ba end;return true end end end end,draw=function(a_a)
+a_a:addDraw("radio",function()
+local b_a,c_a=a_a:getSelectionColor()local d_a=a_a:getAll()
+for _aa,aaa in pairs(d_a)do
+if(aaa==a_a:getValue())then
+a_a:addBlit(bc[_aa].x,bc[_aa].y,cd,bb[dc],bb[cc])
+a_a:addBlit(bc[_aa].x+2,bc[_aa].y,aaa.text,bb[c_a]:rep(#aaa.text),bb[b_a]:rep(
+#aaa.text))else
+a_a:addBackgroundBox(bc[_aa].x,bc[_aa].y,1,1,_d or colors.black)
+a_a:addBlit(bc[_aa].x+2,bc[_aa].y,aaa.text,bb[aaa.fgCol]:rep(#aaa.text),bb[aaa.bgCol]:rep(
+#aaa.text))end end;return true end)end}__a.__index=__a;return setmetatable(__a,_c)end end
+aa["objects"]["Flexbox"]=function(...)
+local function ab(bb,cb)local db=0;local _c=0;local ac=0;local bc,cc=bb:getSize()
+local dc={getFlexGrow=function(_d)return db end,setFlexGrow=function(_d,ad)
+db=ad;return _d end,getFlexShrink=function(_d)return _c end,setFlexShrink=function(_d,ad)_c=ad;return _d end,getFlexBasis=function(_d)return ac end,setFlexBasis=function(_d,ad)
+ac=ad;return _d end,getSize=function(_d)return bc,cc end,getWidth=function(_d)return bc end,getHeight=function(_d)return cc end,setSize=function(_d,ad,bd,cd,dd)
+bb.setSize(_d,ad,bd,cd)if not dd then bc,cc=bb:getSize()end;return _d end}dc.__index=dc;return setmetatable(dc,bb)end
+return
+function(bb,cb)
+local db=cb.getObject("ScrollableFrame")(bb,cb)local _c="Flexbox"local ac="row"local bc=1;local cc="flex-start"local dc="nowrap"local _d={}local ad={}
+local bd=false
+local cd=ab({getHeight=function(d_a)return 0 end,getWidth=function(d_a)return 0 end,getPosition=function(d_a)return 0,0 end,getSize=function(d_a)return 0,0 end,isType=function(d_a)return
+false end,getType=function(d_a)return"lineBreakFakeObject"end,setPosition=function(d_a)end,setSize=function(d_a)end})
+cd:setFlexBasis(0):setFlexGrow(0):setFlexShrink(0)
+local function dd(d_a)
+if(dc=="nowrap")then ad={}local _aa=1;local aaa=1;local baa=1
+for caa,daa in pairs(_d)do if(ad[_aa]==nil)then
+ad[_aa]={offset=1}end
+local _ba=ac=="row"and daa:getHeight()or daa:getWidth()if _ba>aaa then aaa=_ba end
+if(daa==cd)then baa=baa+aaa+bc;aaa=1;_aa=_aa+1
+ad[_aa]={offset=baa}else table.insert(ad[_aa],daa)end end elseif(dc=="wrap")then ad={}local _aa=1;local aaa=1;local baa=ac=="row"and d_a:getWidth()or
+d_a:getHeight()local caa=0;local daa=1
+for _ba,aba in pairs(_d)do if(
+ad[daa]==nil)then ad[daa]={offset=1}end
+if aba==cd then
+aaa=aaa+_aa+bc;caa=0;_aa=1;daa=daa+1;ad[daa]={offset=aaa}else local bba=
+ac=="row"and aba:getWidth()or aba:getHeight()
 if
-(b_a+aaa<=__a+cc)and(
-b_a+aaa+baa[n].text:len()+ (dc*2)>__a+cc)and(c_a==a_a)then
-cd:setValue(baa[n])cd:sendEvent(event,cd,event,0,__a,a_a,baa[n])end;aaa=aaa+baa[n].text:len()+dc*2 end end;cd:updateDraw()return true end end,scrollHandler=function(cd,dd,__a,a_a)
+(bba+caa<=baa)then table.insert(ad[daa],aba)caa=caa+bba+bc else
+aaa=aaa+_aa+bc
+_aa=ac=="row"and aba:getHeight()or aba:getWidth()daa=daa+1;caa=bba+bc;ad[daa]={offset=aaa,aba}end
+local cba=ac=="row"and aba:getHeight()or aba:getWidth()if cba>_aa then _aa=cba end end end end end
+local function __a(d_a,_aa)local aaa,baa=d_a:getSize()local caa=0;local daa=0;local _ba=0
+for cba,dba in ipairs(_aa)do caa=caa+
+dba:getFlexGrow()daa=daa+dba:getFlexShrink()_ba=_ba+
+dba:getFlexBasis()end;local aba=aaa-_ba- (bc* (#_aa-1))local bba=1
+for cba,dba in ipairs(_aa)do
+if(dba~=cd)then
+local _ca;local aca=dba:getFlexGrow()local bca=dba:getFlexShrink()
+local cca=
+dba:getFlexBasis()~=0 and dba:getFlexBasis()or dba:getWidth()if caa>0 then _ca=cca+aca/caa*aba else _ca=cca end;if aba<0 and
+daa>0 then _ca=cca+bca/daa*aba end;dba:setPosition(bba,
+_aa.offset or 1)
+dba:setSize(_ca,dba:getHeight(),false,true)bba=bba+_ca+bc end end
+if cc=="flex-end"then local cba=bba-bc;local dba=aaa-cba+1
+for _ca,aca in ipairs(_aa)do
+local bca,cca=aca:getPosition()aca:setPosition(bca+dba,cca)end elseif cc=="center"then local cba=bba-bc;local dba=(aaa-cba)/2 +1
+for _ca,aca in ipairs(_aa)do
+local bca,cca=aca:getPosition()aca:setPosition(bca+dba,cca)end elseif cc=="space-between"then local cba=bba-bc
+local dba=(aaa-cba)/ (#_aa-1)+1
+for _ca,aca in ipairs(_aa)do if _ca>1 then local bca,cca=aca:getPosition()
+aca:setPosition(bca+dba* (_ca-1),cca)end end elseif cc=="space-around"then local cba=bba-bc;local dba=(aaa-cba)/#_aa
+for _ca,aca in ipairs(_aa)do
+local bca,cca=aca:getPosition()aca:setPosition(bca+dba*_ca-dba/2,cca)end elseif cc=="space-evenly"then local cba=#_aa+1;local dba=0;for cca,dca in ipairs(_aa)do
+dba=dba+dca:getWidth()end;local _ca=aaa-dba
+local aca=math.floor(_ca/cba)local bca=_ca-aca*cba;bba=aca+ (bca>0 and 1 or 0)bca=bca>
+0 and bca-1 or 0
+for cca,dca in ipairs(_aa)do
+dca:setPosition(bba,1)
+bba=bba+dca:getWidth()+aca+ (bca>0 and 1 or 0)bca=bca>0 and bca-1 or 0 end end end
+local function a_a(d_a,_aa)local aaa,baa=d_a:getSize()local caa=0;local daa=0;local _ba=0
+for cba,dba in ipairs(_aa)do caa=caa+
+dba:getFlexGrow()daa=daa+dba:getFlexShrink()_ba=_ba+
+dba:getFlexBasis()end;local aba=baa-_ba- (bc* (#_aa-1))local bba=1
+for cba,dba in ipairs(_aa)do
+if(dba~=cd)then
+local _ca;local aca=dba:getFlexGrow()local bca=dba:getFlexShrink()
+local cca=
+dba:getFlexBasis()~=0 and dba:getFlexBasis()or dba:getHeight()if caa>0 then _ca=cca+aca/caa*aba else _ca=cca end;if aba<0 and
+daa>0 then _ca=cca+bca/daa*aba end
+dba:setPosition(_aa.offset,bba)dba:setSize(dba:getWidth(),_ca,false,true)bba=
+bba+_ca+bc end end
+if cc=="flex-end"then local cba=bba-bc;local dba=baa-cba+1
+for _ca,aca in ipairs(_aa)do
+local bca,cca=aca:getPosition()aca:setPosition(bca,cca+dba)end elseif cc=="center"then local cba=bba-bc;local dba=(baa-cba)/2
+for _ca,aca in ipairs(_aa)do
+local bca,cca=aca:getPosition()aca:setPosition(bca,cca+dba)end elseif cc=="space-between"then local cba=bba-bc
+local dba=(baa-cba)/ (#_aa-1)+1
+for _ca,aca in ipairs(_aa)do if _ca>1 then local bca,cca=aca:getPosition()
+aca:setPosition(bca,cca+dba* (_ca-1))end end elseif cc=="space-around"then local cba=bba-bc;local dba=(baa-cba)/#_aa
+for _ca,aca in ipairs(_aa)do
+local bca,cca=aca:getPosition()aca:setPosition(bca,cca+dba*_ca-dba/2)end elseif cc=="space-evenly"then local cba=#_aa+1;local dba=0;for cca,dca in ipairs(_aa)do
+dba=dba+dca:getHeight()end;local _ca=baa-dba
+local aca=math.floor(_ca/cba)local bca=_ca-aca*cba;bba=aca+ (bca>0 and 1 or 0)bca=bca>
+0 and bca-1 or 0
+for cca,dca in ipairs(_aa)do
+local _da,ada=dca:getPosition()dca:setPosition(_da,bba)bba=
+bba+dca:getHeight()+aca+ (bca>0 and 1 or 0)bca=bca>0 and
+bca-1 or 0 end end end
+local function b_a(d_a)dd(d_a)
+if ac=="row"then for _aa,aaa in pairs(ad)do __a(d_a,aaa)end else for _aa,aaa in pairs(ad)do
+a_a(d_a,aaa)end end;bd=false end
+local c_a={getType=function()return _c end,isType=function(d_a,_aa)return
+_c==_aa or db.isType~=nil and db.isType(_aa)or false end,setJustifyContent=function(d_a,_aa)
+cc=_aa;bd=true;d_a:updateDraw()return d_a end,getJustifyContent=function(d_a)return cc end,setDirection=function(d_a,_aa)
+ac=_aa;bd=true;d_a:updateDraw()return d_a end,getDirection=function(d_a)return ac end,setSpacing=function(d_a,_aa)
+bc=_aa;bd=true;d_a:updateDraw()return d_a end,getSpacing=function(d_a)return bc end,setWrap=function(d_a,_aa)
+dc=_aa;bd=true;d_a:updateDraw()return d_a end,getWrap=function(d_a)return dc end,updateLayout=function(d_a)
+bd=true;d_a:updateDraw()end,addBreak=function(d_a)table.insert(_d,cd)
+bd=true;d_a:updateDraw()return d_a end,customEventHandler=function(d_a,_aa,...)
+db.customEventHandler(d_a,_aa,...)if _aa=="basalt_FrameResize"then bd=true end end,draw=function(d_a)
+db.draw(d_a)
+d_a:addDraw("flexboxDraw",function()if bd then b_a(d_a)end end,1)end}
+for d_a,_aa in pairs(cb.getObjects())do
+c_a["add"..d_a]=function(aaa,baa)
+local caa=db["add"..d_a](aaa,baa)local daa=ab(caa,cb)table.insert(_d,daa)bd=true;return daa end end;c_a.__index=c_a;return setmetatable(c_a,db)end end
+aa["objects"]["MonitorFrame"]=function(...)local ab=da("basaltMon")
+local bb,cb,db,_c=math.max,math.min,string.sub,string.rep
+return
+function(ac,bc)local cc=bc.getObject("BaseFrame")(ac,bc)
+local dc="MonitorFrame"cc:setTerm(nil)local _d=false;local ad
+local bd={getType=function()return dc end,isType=function(cd,dd)
+return dc==dd or cc.isType~=nil and
+cc.isType(dd)or false end,getBase=function(cd)return cc end,setMonitor=function(cd,dd)
 if
-(_c:getBase().scrollHandler(cd,dd,__a,a_a))then if(ad)then cc=cc+dd;if(cc<0)then cc=0 end;local b_a=bd()if(cc>b_a)then cc=b_a end
-cd:updateDraw()end;return true end;return false end,draw=function(cd)
-_c.draw(cd)
-cd:addDraw("list",function()local dd=cd:getParent()local __a,a_a=cd:getSize()local b_a=""local c_a=""
-local d_a=""local _aa,aaa=cd:getSelectionColor()
-for baa,caa in pairs(cd:getAll())do
-local daa=
-(" "):rep(dc)..caa.text.. (" "):rep(dc)b_a=b_a..daa
-if(caa==cd:getValue())then c_a=c_a..
-bb[_aa or caa.bgCol or
-cd:getBackground()]:rep(daa:len())d_a=d_a..
-bb[aaa or
-caa.FgCol or cd:getForeground()]:rep(daa:len())else c_a=c_a..
-bb[caa.bgCol or
-cd:getBackground()]:rep(daa:len())d_a=d_a..
-bb[caa.FgCol or
-cd:getForeground()]:rep(daa:len())end end
-cd:addBlit(1,1,b_a:sub(cc+1,__a+cc),d_a:sub(cc+1,__a+cc),c_a:sub(cc+1,__a+cc))end)end}bc.__index=bc;return setmetatable(bc,_c)end end
+(type(dd)=="string")then local __a=peripheral.wrap(dd)
+if(__a~=nil)then cd:setTerm(__a)end elseif(type(dd)=="table")then cd:setTerm(dd)end;return cd end,setMonitorGroup=function(cd,dd)
+ad=ab(dd)cd:setTerm(ad)_d=true;return cd end,render=function(cd)if(cd:getTerm()~=
+nil)then cc.render(cd)end end,show=function(cd)
+cc:getBase().show(cd)bc.setActiveFrame(cd)
+for dd,__a in pairs(colors)do if(type(__a)=="number")then
+termObject.setPaletteColor(__a,colors.packRGB(term.nativePaletteColor((__a))))end end
+for dd,__a in pairs(colorTheme)do
+if(type(__a)=="number")then
+termObject.setPaletteColor(
+type(dd)=="number"and dd or colors[dd],__a)else local a_a,b_a,c_a=table.unpack(__a)
+termObject.setPaletteColor(
+type(dd)=="number"and dd or colors[dd],a_a,b_a,c_a)end end;return cd end}
+bd.mouseHandler=function(cd,dd,__a,a_a,b_a,c_a,...)
+if(_d)then __a,a_a=ad.calculateClick(c_a,__a,a_a)end;cc.mouseHandler(cd,dd,__a,a_a,b_a,c_a,...)end;bd.__index=bd;return setmetatable(bd,cc)end end
+aa["objects"]["Treeview"]=function(...)local ab=da("utils")local bb=da("tHex")
+return
+function(cb,db)
+local _c=db.getObject("ChangeableObject")(cb,db)local ac="Treeview"local bc={}local cc=colors.black;local dc=colors.lightGray;local _d=true
+local ad="left"local bd,cd=0,0;local dd=true;_c:setSize(16,8)_c:setZIndex(5)
+local function __a(c_a,d_a)
+c_a=c_a or""d_a=d_a or false;local _aa=false;local aaa=nil;local baa={}local caa={}local daa
+caa={getChildren=function(_ba)return baa end,setParent=function(_ba,aba)if(
+aaa~=nil)then
+aaa.removeChild(aaa.findChildrenByText(caa.getText()))end;aaa=aba;_c:updateDraw()return caa end,getParent=function(_ba)return
+aaa end,addChild=function(_ba,aba,bba)local cba=__a(aba,bba)cba.setParent(caa)
+table.insert(baa,cba)_c:updateDraw()return cba end,setExpanded=function(_ba,aba)if
+(d_a)then _aa=aba end;_c:updateDraw()return caa end,isExpanded=function(_ba)return
+_aa end,onSelect=function(_ba,...)for aba,bba in pairs(table.pack(...))do if(type(bba)=="function")then
+daa=bba end end;return caa end,callOnSelect=function(_ba)if(
+daa~=nil)then daa(caa)end end,setExpandable=function(_ba,aba)aba=aba
+_c:updateDraw()return caa end,isExpandable=function(_ba)return d_a end,removeChild=function(_ba,aba)
+if(type(aba)=="table")then for bba,cba in
+pairs(aba)do if(cba==aba)then aba=bba;break end end end;table.remove(baa,aba)_c:updateDraw()return caa end,findChildrenByText=function(_ba,aba)
+local bba={}
+for cba,dba in ipairs(baa)do if string.find(dba.getText(),aba)then
+table.insert(bba,dba)end end;return bba end,getText=function(_ba)return
+c_a end,setText=function(_ba,aba)c_a=aba;_c:updateDraw()return caa end}return caa end;local a_a=__a("Root",true)a_a:setExpanded(true)
+local b_a={init=function(c_a)
+local d_a=c_a:getParent()c_a:listenEvent("mouse_click")
+c_a:listenEvent("mouse_scroll")return _c.init(c_a)end,getBase=function(c_a)return
+_c end,getType=function(c_a)return ac end,isType=function(c_a,d_a)
+return ac==d_a or
+_c.isType~=nil and _c.isType(d_a)or false end,setOffset=function(c_a,d_a,_aa)bd=d_a;cd=_aa;return c_a end,setXOffset=function(c_a,d_a)return
+c_a:setOffset(d_a,cd)end,setYOffset=function(c_a,d_a)return c_a:setOffset(bd,d_a)end,getOffset=function(c_a)return
+bd,cd end,getXOffset=function(c_a)return bd end,getYOffset=function(c_a)return cd end,setScrollable=function(c_a,d_a)dd=d_a;return c_a end,getScrollable=function(c_a,d_a)return
+dd end,setSelectionColor=function(c_a,d_a,_aa,aaa)cc=d_a or c_a:getBackground()dc=_aa or
+c_a:getForeground()_d=aaa~=nil and aaa or true
+c_a:updateDraw()return c_a end,setSelectionBG=function(c_a,d_a)return c_a:setSelectionColor(d_a,
+nil,_d)end,setSelectionFG=function(c_a,d_a)return c_a:setSelectionColor(
+nil,d_a,_d)end,getSelectionColor=function(c_a)
+return cc,dc end,getSelectionBG=function(c_a)return cc end,getSelectionFG=function(c_a)return dc end,isSelectionColorActive=function(c_a)return _d end,getRoot=function(c_a)
+return a_a end,setRoot=function(c_a,d_a)a_a=d_a;d_a.setParent(nil)return c_a end,onSelect=function(c_a,...)
+for d_a,_aa in
+pairs(table.pack(...))do if(type(_aa)=="function")then
+c_a:registerEvent("treeview_select",_aa)end end;return c_a end,selectionHandler=function(c_a,d_a)
+d_a.callOnSelect(d_a)c_a:sendEvent("treeview_select",d_a)return c_a end,mouseHandler=function(c_a,d_a,_aa,aaa)
+if
+_c.mouseHandler(c_a,d_a,_aa,aaa)then local baa=1 -cd;local caa,daa=c_a:getAbsolutePosition()
+local _ba,aba=c_a:getSize()
+local function bba(cba,dba)
+if aaa==daa+baa-1 then
+if _aa>=caa and _aa<caa+_ba then cba:setExpanded(not
+cba:isExpanded())
+c_a:selectionHandler(cba)c_a:setValue(cba)c_a:updateDraw()return true end end;baa=baa+1
+if cba:isExpanded()then for _ca,aca in ipairs(cba:getChildren())do if bba(aca,dba+1)then return
+true end end end;return false end
+for cba,dba in ipairs(a_a:getChildren())do if bba(dba,1)then return true end end end end,scrollHandler=function(c_a,d_a,_aa,aaa)
+if
+_c.scrollHandler(c_a,d_a,_aa,aaa)then
+if dd then local baa,caa=c_a:getSize()cd=cd+d_a;if cd<0 then cd=0 end
+if d_a>=1 then local daa=0
+local function _ba(aba,bba)
+daa=daa+1;if aba:isExpanded()then
+for cba,dba in ipairs(aba:getChildren())do _ba(dba,bba+1)end end end;for aba,bba in ipairs(a_a:getChildren())do _ba(bba,1)end
+if
+daa>caa then if cd>daa-caa then cd=daa-caa end else cd=cd-1 end end;c_a:updateDraw()end;return true end;return false end,draw=function(c_a)
+_c.draw(c_a)
+c_a:addDraw("treeview",function()local d_a=1 -cd;local _aa=c_a:getValue()
+local function aaa(baa,caa)
+local daa,_ba=c_a:getSize()
+if d_a>=1 and d_a<=_ba then
+local aba=(baa==_aa)and cc or c_a:getBackground()
+local bba=(baa==_aa)and dc or c_a:getForeground()local cba=baa.getText()
+c_a:addBlit(1 +caa+bd,d_a,cba,bb[bba]:rep(#cba),bb[aba]:rep(
+#cba))end;d_a=d_a+1;if baa:isExpanded()then for aba,bba in ipairs(baa:getChildren())do
+aaa(bba,caa+1)end end end;for baa,caa in ipairs(a_a:getChildren())do aaa(caa,1)end end)end}b_a.__index=b_a;return setmetatable(b_a,_c)end end
+aa["objects"]["VisualObject"]=function(...)local ab=da("utils")local bb=da("tHex")
+local cb,db,_c=string.sub,string.find,table.insert
+return
+function(ac,bc)local cc=bc.getObject("Object")(ac,bc)
+local dc="VisualObject"local _d,ad,bd,cd,dd=true,false,false,false,false;local __a=1;local a_a,b_a,c_a,d_a=1,1,1,1
+local _aa,aaa,baa,caa=0,0,0,0;local daa,_ba,aba=colors.black,colors.white,false;local bba;local cba={}local dba={}local _ca={}
+local aca={}
+local function bca(dca,_da)local ada={}if dca==""then return ada end;_da=_da or" "local bda=1
+local cda,dda=db(dca,_da,bda)
+while cda do
+_c(ada,{x=bda,value=cb(dca,bda,cda-1)})bda=dda+1;cda,dda=db(dca,_da,bda)end;_c(ada,{x=bda,value=cb(dca,bda)})return ada end
+local cca={getType=function(dca)return dc end,getBase=function(dca)return cc end,isType=function(dca,_da)
+return dc==_da or
+cc.isType~=nil and cc.isType(_da)or false end,getBasalt=function(dca)return bc end,show=function(dca)_d=true
+dca:updateDraw()return dca end,hide=function(dca)_d=false;dca:updateDraw()return dca end,isVisible=function(dca)return
+_d end,setVisible=function(dca,_da)_d=_da or not _d;dca:updateDraw()return dca end,setTransparency=function(dca,_da)aba=
+_da~=nil and _da or true;dca:updateDraw()
+return dca end,setParent=function(dca,_da,ada)
+cc.setParent(dca,_da,ada)bba=_da;return dca end,setFocus=function(dca)if(bba~=nil)then
+bba:setFocusedChild(dca)end;return dca end,setZIndex=function(dca,_da)__a=_da
+if
+(bba~=nil)then bba:updateZIndex(dca,__a)dca:updateDraw()end;return dca end,getZIndex=function(dca)return __a end,updateDraw=function(dca)if(
+bba~=nil)then bba:updateDraw()end;return dca end,setPosition=function(dca,_da,ada,bda)
+local cda,dda=a_a,b_a
+if(type(_da)=="number")then a_a=bda and a_a+_da or _da end
+if(type(ada)=="number")then b_a=bda and b_a+ada or ada end;if(bba~=nil)then
+bba:customEventHandler("basalt_FrameReposition",dca)end;if(dca:getType()=="Container")then
+bba:customEventHandler("basalt_FrameReposition",dca)end;dca:updateDraw()
+dca:repositionHandler(cda,dda)return dca end,getX=function(dca)return
+a_a end,setX=function(dca,_da)return dca:setPosition(_da,b_a)end,getY=function(dca)return
+b_a end,setY=function(dca,_da)return dca:setPosition(a_a,_da)end,getPosition=function(dca)return
+a_a,b_a end,setSize=function(dca,_da,ada,bda)local cda,dda=c_a,d_a;if(type(_da)=="number")then c_a=
+bda and c_a+_da or _da end;if
+(type(ada)=="number")then d_a=bda and d_a+ada or ada end
+if
+(bba~=nil)then bba:customEventHandler("basalt_FrameResize",dca)if(
+dca:getType()=="Container")then
+bba:customEventHandler("basalt_FrameResize",dca)end end;dca:resizeHandler(cda,dda)dca:updateDraw()return dca end,getHeight=function(dca)return
+d_a end,setHeight=function(dca,_da)return dca:setSize(c_a,_da)end,getWidth=function(dca)return
+c_a end,setWidth=function(dca,_da)return dca:setSize(_da,d_a)end,getSize=function(dca)return
+c_a,d_a end,setBackground=function(dca,_da)daa=_da;dca:updateDraw()return dca end,getBackground=function(dca)return
+daa end,setForeground=function(dca,_da)_ba=_da or false;dca:updateDraw()return dca end,getForeground=function(dca)return
+_ba end,getAbsolutePosition=function(dca,_da,ada)if(_da==nil)or(ada==nil)then
+_da,ada=dca:getPosition()end
+if(bba~=nil)then
+local bda,cda=bba:getAbsolutePosition()_da=bda+_da-1;ada=cda+ada-1 end;return _da,ada end,ignoreOffset=function(dca,_da)
+ad=_da;if(_da==nil)then ad=true end;return dca end,getIgnoreOffset=function(dca)return ad end,isCoordsInObject=function(dca,_da,ada)
+if
+(_d)and(dca:isEnabled())then
+if(_da==nil)or(ada==nil)then return false end;local bda,cda=dca:getAbsolutePosition()local dda,__b=dca:getSize()if
+
+(bda<=_da)and(bda+dda>_da)and(cda<=ada)and(cda+__b>ada)then return true end end;return false end,onGetFocus=function(dca,...)
+for _da,ada in
+pairs(table.pack(...))do if(type(ada)=="function")then
+dca:registerEvent("get_focus",ada)end end;return dca end,onLoseFocus=function(dca,...)
+for _da,ada in
+pairs(table.pack(...))do if(type(ada)=="function")then
+dca:registerEvent("lose_focus",ada)end end;return dca end,isFocused=function(dca)if(
+bba~=nil)then return bba:getFocused()==dca end;return
+true end,resizeHandler=function(dca,...)
+if(dca:isEnabled())then
+local _da=dca:sendEvent("basalt_resize",...)if(_da==false)then return false end end;return true end,repositionHandler=function(dca,...)if
+(dca:isEnabled())then local _da=dca:sendEvent("basalt_reposition",...)if(_da==false)then
+return false end end;return
+true end,onResize=function(dca,...)
+for _da,ada in
+pairs(table.pack(...))do if(type(ada)=="function")then
+dca:registerEvent("basalt_resize",ada)end end;return dca end,onReposition=function(dca,...)
+for _da,ada in
+pairs(table.pack(...))do if(type(ada)=="function")then
+dca:registerEvent("basalt_reposition",ada)end end;return dca end,mouseHandler=function(dca,_da,ada,bda,cda)
+if
+(dca:isCoordsInObject(ada,bda))then local dda,__b=dca:getAbsolutePosition()
+local a_b=dca:sendEvent("mouse_click",_da,ada- (dda-1),
+bda- (__b-1),ada,bda,cda)if(a_b==false)then return false end;if(bba~=nil)then
+bba:setFocusedChild(dca)end;cd=true;dd=true;_aa,aaa=ada,bda;return true end end,mouseUpHandler=function(dca,_da,ada,bda)
+dd=false
+if(cd)then local cda,dda=dca:getAbsolutePosition()
+local __b=dca:sendEvent("mouse_release",_da,ada- (cda-1),
+bda- (dda-1),ada,bda)cd=false end
+if(dca:isCoordsInObject(ada,bda))then local cda,dda=dca:getAbsolutePosition()
+local __b=dca:sendEvent("mouse_up",_da,
+ada- (cda-1),bda- (dda-1),ada,bda)if(__b==false)then return false end;return true end end,dragHandler=function(dca,_da,ada,bda)
+if
+(dd)then local cda,dda=dca:getAbsolutePosition()
+local __b=dca:sendEvent("mouse_drag",_da,ada- (cda-1),bda- (
+dda-1),_aa-ada,aaa-bda,ada,bda)_aa,aaa=ada,bda;if(__b~=nil)then return __b end;if(bba~=nil)then
+bba:setFocusedChild(dca)end;return true end
+if(dca:isCoordsInObject(ada,bda))then local cda,dda=dca:getAbsolutePosition()
+_aa,aaa=ada,bda;baa,caa=cda-ada,dda-bda end end,scrollHandler=function(dca,_da,ada,bda)
+if
+(dca:isCoordsInObject(ada,bda))then local cda,dda=dca:getAbsolutePosition()
+local __b=dca:sendEvent("mouse_scroll",_da,ada- (cda-1),
+bda- (dda-1))if(__b==false)then return false end;if(bba~=nil)then
+bba:setFocusedChild(dca)end;return true end end,hoverHandler=function(dca,_da,ada,bda)
+if
+(dca:isCoordsInObject(_da,ada))then local cda=dca:sendEvent("mouse_hover",_da,ada,bda)if(cda==false)then return
+false end;bd=true;return true end
+if(bd)then local cda=dca:sendEvent("mouse_leave",_da,ada,bda)if
+(cda==false)then return false end;bd=false end end,keyHandler=function(dca,_da,ada)if
+(dca:isEnabled())and(_d)then
+if(dca:isFocused())then
+local bda=dca:sendEvent("key",_da,ada)if(bda==false)then return false end;return true end end end,keyUpHandler=function(dca,_da)if
+(dca:isEnabled())and(_d)then
+if(dca:isFocused())then
+local ada=dca:sendEvent("key_up",_da)if(ada==false)then return false end;return true end end end,charHandler=function(dca,_da)if
+(dca:isEnabled())and(_d)then
+if(dca:isFocused())then local ada=dca:sendEvent("char",_da)if(ada==
+false)then return false end;return true end end end,getFocusHandler=function(dca)
+local _da=dca:sendEvent("get_focus")if(_da~=nil)then return _da end;return true end,loseFocusHandler=function(dca)
+dd=false;local _da=dca:sendEvent("lose_focus")
+if(_da~=nil)then return _da end;return true end,addDraw=function(dca,_da,ada,bda,cda,dda)
+local __b=
+(cda==nil or cda==1)and dba or cda==2 and cba or cda==3 and _ca;bda=bda or#__b+1
+if(_da~=nil)then for b_b,c_b in pairs(__b)do if(c_b.name==_da)then
+table.remove(__b,b_b)break end end
+local a_b={name=_da,f=ada,pos=bda,active=
+dda~=nil and dda or true}table.insert(__b,bda,a_b)end;dca:updateDraw()return dca end,addPreDraw=function(dca,_da,ada,bda,cda)
+dca:addDraw(_da,ada,bda,2)return dca end,addPostDraw=function(dca,_da,ada,bda,cda)
+dca:addDraw(_da,ada,bda,3)return dca end,setDrawState=function(dca,_da,ada,bda)
+local cda=
+(bda==nil or bda==1)and dba or bda==2 and cba or bda==3 and _ca
+for dda,__b in pairs(cda)do if(__b.name==_da)then __b.active=ada;break end end;dca:updateDraw()return dca end,getDrawId=function(dca,_da,ada)local bda=
+
+ada==1 and dba or ada==2 and cba or ada==3 and _ca or dba;for cda,dda in pairs(bda)do if(
+dda.name==_da)then return cda end end end,addText=function(dca,_da,ada,bda)local cda=
+dca:getParent()or dca;local dda,__b=dca:getPosition()if(bba~=nil)then
+local b_b,c_b=bba:getOffset()dda=ad and dda or dda-b_b
+__b=ad and __b or __b-c_b end
+if not(aba)then cda:setText(_da+dda-1,
+ada+__b-1,bda)return end;local a_b=bca(bda,"\0")
+for b_b,c_b in pairs(a_b)do if
+(c_b.value~="")and(c_b.value~="\0")then
+cda:setText(_da+c_b.x+dda-2,ada+__b-1,c_b.value)end end end,addBG=function(dca,_da,ada,bda,cda)local dda=
+bba or dca;local __b,a_b=dca:getPosition()if(bba~=nil)then
+local c_b,d_b=bba:getOffset()__b=ad and __b or __b-c_b
+a_b=ad and a_b or a_b-d_b end
+if not(aba)then dda:setBG(_da+__b-1,
+ada+a_b-1,bda)return end;local b_b=bca(bda)
+for c_b,d_b in pairs(b_b)do
+if(d_b.value~="")and(d_b.value~=" ")then
+if(cda~=
+true)then
+dda:setText(_da+d_b.x+__b-2,ada+a_b-1,(" "):rep(#d_b.value))
+dda:setBG(_da+d_b.x+__b-2,ada+a_b-1,d_b.value)else
+table.insert(aca,{x=_da+d_b.x-1,y=ada,bg=d_b.value})dda:setBG(_da+__b-1,ada+a_b-1,fg)end end end end,addFG=function(dca,_da,ada,bda)local cda=
+bba or dca;local dda,__b=dca:getPosition()if(bba~=nil)then
+local b_b,c_b=bba:getOffset()dda=ad and dda or dda-b_b
+__b=ad and __b or __b-c_b end
+if not(aba)then cda:setFG(_da+dda-1,
+ada+__b-1,bda)return end;local a_b=bca(bda)
+for b_b,c_b in pairs(a_b)do if(c_b.value~="")and(c_b.value~=" ")then
+cda:setFG(
+_da+c_b.x+dda-2,ada+__b-1,c_b.value)end end end,addBlit=function(dca,_da,ada,bda,cda,dda)local __b=
+bba or dca;local a_b,b_b=dca:getPosition()if(bba~=nil)then
+local aab,bab=bba:getOffset()a_b=ad and a_b or a_b-aab
+b_b=ad and b_b or b_b-bab end
+if not(aba)then __b:blit(_da+a_b-1,
+ada+b_b-1,bda,cda,dda)return end;local c_b=bca(bda,"\0")local d_b=bca(cda)local _ab=bca(dda)
+for aab,bab in pairs(c_b)do if
+(bab.value~="")or(bab.value~="\0")then
+__b:setText(_da+bab.x+a_b-2,ada+b_b-1,bab.value)end end;for aab,bab in pairs(_ab)do
+if(bab.value~="")or(bab.value~=" ")then __b:setBG(
+_da+bab.x+a_b-2,ada+b_b-1,bab.value)end end;for aab,bab in pairs(d_b)do
+if(
+bab.value~="")or(bab.value~=" ")then __b:setFG(_da+bab.x+a_b-2,ada+
+b_b-1,bab.value)end end end,addTextBox=function(dca,_da,ada,bda,cda,dda)local __b=
+bba or dca;local a_b,b_b=dca:getPosition()if(bba~=nil)then
+local c_b,d_b=bba:getOffset()a_b=ad and a_b or a_b-c_b
+b_b=ad and b_b or b_b-d_b end;__b:drawTextBox(_da+a_b-1,
+ada+b_b-1,bda,cda,dda)end,addForegroundBox=function(dca,_da,ada,bda,cda,dda)local __b=
+bba or dca;local a_b,b_b=dca:getPosition()if(bba~=nil)then
+local c_b,d_b=bba:getOffset()a_b=ad and a_b or a_b-c_b
+b_b=ad and b_b or b_b-d_b end;__b:drawForegroundBox(_da+a_b-1,
+ada+b_b-1,bda,cda,dda)end,addBackgroundBox=function(dca,_da,ada,bda,cda,dda)local __b=
+bba or dca;local a_b,b_b=dca:getPosition()if(bba~=nil)then
+local c_b,d_b=bba:getOffset()a_b=ad and a_b or a_b-c_b
+b_b=ad and b_b or b_b-d_b end;__b:drawBackgroundBox(_da+a_b-1,
+ada+b_b-1,bda,cda,dda)end,render=function(dca)if
+(_d)then dca:redraw()end end,redraw=function(dca)for _da,ada in pairs(cba)do if(ada.active)then
+ada.f(dca)end end;for _da,ada in pairs(dba)do if(ada.active)then
+ada.f(dca)end end;for _da,ada in pairs(_ca)do if(ada.active)then
+ada.f(dca)end end;return true end,draw=function(dca)
+dca:addDraw("base",function()
+local _da,ada=dca:getSize()if(daa~=false)then dca:addTextBox(1,1,_da,ada," ")
+dca:addBackgroundBox(1,1,_da,ada,daa)end;if(_ba~=false)then
+dca:addForegroundBox(1,1,_da,ada,_ba)end end,1)end}cca.__index=cca;return setmetatable(cca,cc)end end
+aa["objects"]["Thread"]=function(...)
+return
+function(ab,bb)
+local cb=bb.getObject("Object")(ab,bb)local db="Thread"local _c;local ac;local bc=false;local cc
+local dc={getType=function(_d)return db end,start=function(_d,ad)if(ad==nil)then
+error("Function provided to thread is nil")end;_c=ad;ac=coroutine.create(_c)
+bc=true;cc=nil;local bd,cd=coroutine.resume(ac)cc=cd;if not(bd)then
+if(cd~="Terminated")then error(
+"Thread Error Occurred - "..cd)end end
+_d:listenEvent("mouse_click")_d:listenEvent("mouse_up")
+_d:listenEvent("mouse_scroll")_d:listenEvent("mouse_drag")_d:listenEvent("key")
+_d:listenEvent("key_up")_d:listenEvent("char")
+_d:listenEvent("other_event")return _d end,getStatus=function(_d,ad)if(
+ac~=nil)then return coroutine.status(ac)end;return nil end,stop=function(_d,ad)
+bc=false;_d:listenEvent("mouse_click",false)
+_d:listenEvent("mouse_up",false)_d:listenEvent("mouse_scroll",false)
+_d:listenEvent("mouse_drag",false)_d:listenEvent("key",false)
+_d:listenEvent("key_up",false)_d:listenEvent("char",false)
+_d:listenEvent("other_event",false)return _d end,mouseHandler=function(_d,...)
+_d:eventHandler("mouse_click",...)end,mouseUpHandler=function(_d,...)_d:eventHandler("mouse_up",...)end,mouseScrollHandler=function(_d,...)
+_d:eventHandler("mouse_scroll",...)end,mouseDragHandler=function(_d,...)
+_d:eventHandler("mouse_drag",...)end,mouseMoveHandler=function(_d,...)
+_d:eventHandler("mouse_move",...)end,keyHandler=function(_d,...)_d:eventHandler("key",...)end,keyUpHandler=function(_d,...)
+_d:eventHandler("key_up",...)end,charHandler=function(_d,...)_d:eventHandler("char",...)end,eventHandler=function(_d,ad,...)
+cb.eventHandler(_d,ad,...)
+if(bc)then
+if(coroutine.status(ac)=="suspended")then if(cc~=nil)then
+if(ad~=cc)then return end;cc=nil end
+local bd,cd=coroutine.resume(ac,ad,...)cc=cd;if not(bd)then if(cd~="Terminated")then
+error("Thread Error Occurred - "..cd)end end else
+_d:stop()end end end}dc.__index=dc;return setmetatable(dc,cb)end end
+aa["objects"]["Timer"]=function(...)
+return
+function(ab,bb)
+local cb=bb.getObject("Object")(ab,bb)local db="Timer"local _c=0;local ac=0;local bc=0;local cc;local dc=false
+local _d={getType=function(ad)return db end,setTime=function(ad,bd,cd)_c=bd or 0
+ac=cd or 1;return ad end,getTime=function(ad)return _c end,start=function(ad)if(dc)then
+os.cancelTimer(cc)end;bc=ac;cc=os.startTimer(_c)dc=true
+ad:listenEvent("other_event")return ad end,isActive=function(ad)return dc end,cancel=function(ad)if(
+cc~=nil)then os.cancelTimer(cc)end;dc=false
+ad:removeEvent("other_event")return ad end,setStart=function(ad,bd)if(bd==true)then
+return ad:start()else return ad:cancel()end end,onCall=function(ad,bd)
+ad:registerEvent("timed_event",bd)return ad end,eventHandler=function(ad,bd,...)cb.eventHandler(ad,bd,...)
+if
+bd=="timer"and tObj==cc and dc then
+ad:sendEvent("timed_event")if(bc>=1)then bc=bc-1;if(bc>=1)then cc=os.startTimer(_c)end elseif(bc==-1)then
+cc=os.startTimer(_c)end end end}_d.__index=_d;return setmetatable(_d,cb)end end
+aa["objects"]["Input"]=function(...)local ab=da("utils")local bb=da("tHex")
+return
+function(cb,db)
+local _c=db.getObject("ChangeableObject")(cb,db)local ac="Input"local bc="text"local cc=0;_c:setZIndex(5)_c:setValue("")
+_c:setSize(12,1)local dc=1;local _d=1;local ad=""local bd=colors.black;local cd=colors.lightGray;local dd=ad
+local __a=false
+local a_a={load=function(b_a)b_a:listenEvent("mouse_click")
+b_a:listenEvent("key")b_a:listenEvent("char")
+b_a:listenEvent("other_event")b_a:listenEvent("mouse_drag")end,getType=function(b_a)return
+ac end,isType=function(b_a,c_a)return
+ac==c_a or _c.isType~=nil and _c.isType(c_a)or false end,setDefaultFG=function(b_a,c_a)return b_a:setDefaultText(b_a,ad,c_a,
+nil)end,setDefaultBG=function(b_a,c_a)return b_a:setDefaultText(b_a,ad,
+nil,c_a)end,setDefaultText=function(b_a,c_a,d_a,_aa)
+ad=c_a;cd=d_a or cd;bd=_aa or bd;if(b_a:isFocused())then dd=""else dd=ad end
+b_a:updateDraw()return b_a end,getDefaultText=function(b_a)return ad,cd,
+bd end,setOffset=function(b_a,c_a)_d=c_a;b_a:updateDraw()return b_a end,getOffset=function(b_a)return
+_d end,setTextOffset=function(b_a,c_a)dc=c_a;b_a:updateDraw()return b_a end,getTextOffset=function(b_a)return
+dc end,setInputType=function(b_a,c_a)bc=c_a;b_a:updateDraw()return b_a end,getInputType=function(b_a)return
+bc end,setValue=function(b_a,c_a)_c.setValue(b_a,tostring(c_a))
+if not(__a)then dc=
+tostring(c_a):len()+1
+_d=math.max(1,dc-b_a:getWidth()+1)
+if(b_a:isFocused())then local d_a=b_a:getParent()
+local _aa,aaa=b_a:getPosition()
+d_a:setCursor(true,_aa+dc-_d,aaa+math.floor(b_a:getHeight()/2),b_a:getForeground())end end;b_a:updateDraw()return b_a end,getValue=function(b_a)
+local c_a=_c.getValue(b_a)
+return bc=="number"and tonumber(c_a)or c_a end,setInputLimit=function(b_a,c_a)
+cc=tonumber(c_a)or cc;b_a:updateDraw()return b_a end,getInputLimit=function(b_a)return cc end,getFocusHandler=function(b_a)
+_c.getFocusHandler(b_a)local c_a=b_a:getParent()
+if(c_a~=nil)then local d_a,_aa=b_a:getPosition()dd=""if(ad~=
+"")then b_a:updateDraw()end
+c_a:setCursor(true,d_a+dc-_d,_aa+math.max(math.ceil(
+b_a:getHeight()/2 -1,1)),b_a:getForeground())end end,loseFocusHandler=function(b_a)
+_c.loseFocusHandler(b_a)local c_a=b_a:getParent()dd=ad
+if(ad~="")then b_a:updateDraw()end;c_a:setCursor(false)end,keyHandler=function(b_a,c_a)
+if
+(_c.keyHandler(b_a,c_a))then local d_a,_aa=b_a:getSize()local aaa=b_a:getParent()__a=true
+if
+(c_a==keys.backspace)then local _ba=tostring(_c.getValue())
+if(dc>1)then b_a:setValue(_ba:sub(1,dc-2)..
+_ba:sub(dc,_ba:len()))dc=math.max(
+dc-1,1)if(dc<_d)then _d=math.max(_d-1,1)end end end
+if(c_a==keys.enter)then aaa:clearFocusedChild(b_a)end
+if(c_a==keys.right)then
+local _ba=tostring(_c.getValue()):len()dc=dc+1;if(dc>_ba)then dc=_ba+1 end;dc=math.max(dc,1)if(dc<_d)or
+(dc>=d_a+_d)then _d=dc-d_a+1 end;_d=math.max(_d,1)end;if(c_a==keys.left)then dc=dc-1;if(dc>=1)then
+if(dc<_d)or(dc>=d_a+_d)then _d=dc end end;dc=math.max(dc,1)
+_d=math.max(_d,1)end
+local baa,caa=b_a:getPosition()local daa=tostring(_c.getValue())b_a:updateDraw()
+__a=false;return true end end,charHandler=function(b_a,c_a)
+if
+(_c.charHandler(b_a,c_a))then __a=true;local d_a,_aa=b_a:getSize()local aaa=_c.getValue()
+if(
+aaa:len()<cc or cc<=0)then
+if(bc=="number")then local _ba=aaa
+if
+(dc==1 and c_a=="-")or(c_a==".")or(tonumber(c_a)~=nil)then
+b_a:setValue(aaa:sub(1,dc-1)..
+c_a..aaa:sub(dc,aaa:len()))dc=dc+1;if(c_a==".")or(c_a=="-")and(#aaa>0)then
+if(
+tonumber(_c.getValue())==nil)then b_a:setValue(_ba)dc=dc-1 end end end else
+b_a:setValue(aaa:sub(1,dc-1)..c_a..aaa:sub(dc,aaa:len()))dc=dc+1 end;if(dc>=d_a+_d)then _d=_d+1 end end;local baa,caa=b_a:getPosition()
+local daa=tostring(_c.getValue())__a=false;b_a:updateDraw()return true end end,mouseHandler=function(b_a,c_a,d_a,_aa)
+if
+(_c.mouseHandler(b_a,c_a,d_a,_aa))then local aaa=b_a:getParent()local baa,caa=b_a:getPosition()
+local daa,_ba=b_a:getAbsolutePosition(baa,caa)local aba,bba=b_a:getSize()dc=d_a-daa+_d;local cba=_c.getValue()if(dc>
+cba:len())then dc=cba:len()+1 end;if(dc<_d)then _d=dc-1
+if(_d<1)then _d=1 end end
+aaa:setCursor(true,baa+dc-_d,caa+
+math.max(math.ceil(bba/2 -1,1)),b_a:getForeground())return true end end,dragHandler=function(b_a,c_a,d_a,_aa,aaa,baa)
+if
+(b_a:isFocused())then if(b_a:isCoordsInObject(d_a,_aa))then
+if(_c.dragHandler(b_a,c_a,d_a,_aa,aaa,baa))then return true end end
+local caa=b_a:getParent()caa:clearFocusedChild()end end,draw=function(b_a)
+_c.draw(b_a)
+b_a:addDraw("input",function()local c_a=b_a:getParent()local d_a,_aa=b_a:getPosition()
+local aaa,baa=b_a:getSize()local caa=ab.getTextVerticalAlign(baa,textVerticalAlign)
+local daa=tostring(_c.getValue())local _ba=b_a:getBackground()local aba=b_a:getForeground()local bba;if(
+daa:len()<=0)then bba=dd;_ba=bd or _ba;aba=cd or aba end
+bba=dd;if(daa~="")then bba=daa end;bba=bba:sub(_d,aaa+_d-1)local cba=aaa-
+bba:len()if(cba<0)then cba=0 end
+if
+(bc=="password")and(daa~="")then bba=string.rep("*",bba:len())end;bba=bba..string.rep(" ",cba)
+b_a:addBlit(1,caa,bba,bb[aba]:rep(bba:len()),bb[_ba]:rep(bba:len()))if(b_a:isFocused())then
+c_a:setCursor(true,d_a+dc-_d,_aa+
+math.floor(b_a:getHeight()/2),b_a:getForeground())end end)end}a_a.__index=a_a;return setmetatable(a_a,_c)end end
 aa["objects"]["Textfield"]=function(...)local ab=da("tHex")
 local bb,cb,db,_c,ac=string.rep,string.find,string.gmatch,string.sub,string.len
 return
@@ -1358,14 +1921,14 @@ if _aa<aaa and baa<=caa then cca=_aa;dca=aaa;if baa<caa then
 _da=baa;ada=caa else _da=caa;ada=baa end elseif _aa>aaa and baa>=caa then
 cca=aaa;dca=_aa;if baa>caa then _da=caa;ada=baa else _da=baa;ada=caa end elseif baa>caa then
 cca=aaa;dca=_aa;_da=caa;ada=baa end;return cca,dca,_da,ada end end
-local function cba(cca)local dca,_da,ada,bda=bba(cca)local cda=__a[ada]local dda=__a[bda]
-__a[ada]=
-cda:sub(1,dca-1)..dda:sub(_da+1,dda:len())a_a[ada]=a_a[ada]:sub(1,dca-1)..
-a_a[bda]:sub(_da+1,a_a[bda]:len())
-b_a[ada]=b_a[ada]:sub(1,
-dca-1)..b_a[bda]:sub(_da+1,b_a[bda]:len())
-for i=bda,ada+1,-1 do if i~=ada then table.remove(__a,i)table.remove(a_a,i)
-table.remove(b_a,i)end end;cd,dd=dca,ada;_aa,aaa,baa,caa=nil,nil,nil,nil;return cca end
+local function cba(cca)local dca,_da,ada,bda=bba()local cda=__a[ada]local dda=__a[bda]__a[ada]=cda:sub(1,dca-1)..dda:sub(
+_da+1,dda:len())
+a_a[ada]=a_a[ada]:sub(1,
+dca-1)..a_a[bda]:sub(_da+1,a_a[bda]:len())b_a[ada]=b_a[ada]:sub(1,dca-1)..
+b_a[bda]:sub(_da+1,b_a[bda]:len())for i=bda,ada+1,-1 do
+if i~=ada then
+table.remove(__a,i)table.remove(a_a,i)table.remove(b_a,i)end end;cd,dd=dca,ada
+_aa,aaa,baa,caa=nil,nil,nil,nil;return cca end
 local function dba(cca,dca)local _da={}
 if(cca:len()>0)then
 for ada in db(cca,dca)do local bda,cda=cb(cca,ada)
@@ -1426,14 +1989,14 @@ if(#__a>1)then table.remove(__a,
 dca or#__a)
 table.remove(a_a,dca or#a_a)table.remove(b_a,dca or#b_a)else __a={""}a_a={""}b_a={""}end;cca:updateDraw()return cca end,getTextCursor=function(cca)return
 cd,dd end,getOffset=function(cca)return bd,ad end,setOffset=function(cca,dca,_da)bd=dca or bd;ad=_da or ad
-cca:updateDraw()return cca end,getXOffset=function(cca,dca)return bd end,setXOffset=function(cca,dca)return
-cca:setOffset(dca,nil)end,getYOffset=function(cca,dca)return ad end,setYOffset=function(cca,dca)return
+cca:updateDraw()return cca end,getXOffset=function(cca)return bd end,setXOffset=function(cca,dca)return
+cca:setOffset(dca,nil)end,getYOffset=function(cca)return ad end,setYOffset=function(cca,dca)return
 cca:setOffset(nil,dca)end,getFocusHandler=function(cca)dc.getFocusHandler(cca)
 local dca,_da=cca:getPosition()
 cca:getParent():setCursor(true,dca+cd-bd,_da+dd-ad,cca:getForeground())end,loseFocusHandler=function(cca)
 dc.loseFocusHandler(cca)cca:getParent():setCursor(false)end,keyHandler=function(cca,dca)
 if
-(dc.keyHandler(cca,event,dca))then local _da=cca:getParent()local ada,bda=cca:getPosition()
+(dc.keyHandler(cca,dca))then local _da=cca:getParent()local ada,bda=cca:getPosition()
 local cda,dda=cca:getSize()
 if(dca==keys.backspace)then
 if(aba())then cba(cca)else
@@ -1532,11 +2095,11 @@ if
 local __b,a_b=cca:getPosition()local b_b,c_b=cca:getSize()
 if(__a[ada-dda+ad]~=nil)then
 if
-__b<=_da-cda+bd and __b+b_b>_da-cda+bd then cd=_da-cda+bd;dd=ada-dda+
-ad;if cd>__a[dd]:len()then
-cd=__a[dd]:len()+1 end;aaa=cd;caa=dd
-if cd<bd then bd=cd-1;if bd<1 then bd=1 end end
-bda:setCursor(not aba(),__b+cd-bd,a_b+dd-ad,cca:getForeground())cca:updateDraw()end end;return true end end,scrollHandler=function(cca,dca,_da,ada)
+(_da-cda+bd>0)and(_da-cda+bd<=b_b)then cd=_da-cda+bd
+dd=ada-dda+ad
+if cd>__a[dd]:len()then cd=__a[dd]:len()+1 end;aaa=cd;caa=dd;if cd<bd then bd=cd-1;if bd<1 then bd=1 end end
+bda:setCursor(not
+aba(),__b+cd-bd,a_b+dd-ad,cca:getForeground())cca:updateDraw()end end;return true end end,scrollHandler=function(cca,dca,_da,ada)
 if
 (dc.scrollHandler(cca,dca,_da,ada))then local bda=cca:getParent()local cda,dda=cca:getAbsolutePosition()
 local __b,a_b=cca:getPosition()local b_b,c_b=cca:getSize()ad=ad+dca;if(ad>#__a- (c_b-1))then
@@ -1555,480 +2118,43 @@ if(cd<bd)then bd=cd-1;if(bd<1)then bd=1 end end;cca:updateDraw()end
 bda:setCursor(true,__b+cd-bd,a_b+dd-ad,cca:getForeground())return true end end,mouseUpHandler=function(cca,dca,_da,ada)
 if
 (dc.mouseUpHandler(cca,dca,_da,ada))then local bda,cda=cca:getAbsolutePosition()
-local dda,__b=cca:getPosition()
-if(__a[ada-cda+ad]~=nil)then aaa=_da-bda+bd
-caa=ada-cda+ad
-if(aaa>__a[caa]:len())then aaa=__a[caa]:len()+1 end
-if(_aa==aaa)and(baa==caa)then _aa,aaa,baa,caa=nil,nil,nil,nil end;cca:updateDraw()end;return true end end,eventHandler=function(cca,dca,_da,ada,bda,cda)
 if
-(dc.eventHandler(cca,dca,_da,ada,bda,cda))then
+(__a[ada-cda+ad]~=nil)then aaa=_da-bda+bd;caa=ada-cda+ad;if(aaa>__a[caa]:len())then aaa=
+__a[caa]:len()+1 end;if(_aa==aaa)and(baa==caa)then _aa,aaa,baa,caa=
+nil,nil,nil,nil end
+cca:updateDraw()end;return true end end,eventHandler=function(cca,dca,_da,...)
+dc.eventHandler(cca,dca,_da,...)
 if(dca=="paste")then
-if(cca:isFocused())then local dda=cca:getParent()
-local __b,a_b=cca:getForeground(),cca:getBackground()local b_b,c_b=cca:getSize()
+if(cca:isFocused())then local ada=cca:getParent()
+local bda,cda=cca:getForeground(),cca:getBackground()local dda,__b=cca:getSize()
 __a[dd]=__a[dd]:sub(1,cd-1).._da..
 __a[dd]:sub(cd,__a[dd]:len())
-b_a[dd]=b_a[dd]:sub(1,cd-1)..ab[__b]:rep(_da:len())..
+b_a[dd]=b_a[dd]:sub(1,cd-1)..ab[bda]:rep(_da:len())..
 b_a[dd]:sub(cd,b_a[dd]:len())
-a_a[dd]=a_a[dd]:sub(1,cd-1)..ab[a_b]:rep(_da:len())..
-a_a[dd]:sub(cd,a_a[dd]:len())cd=cd+_da:len()if(cd>=b_b+bd)then bd=(cd+1)-b_b end
-local d_b,_ab=cca:getPosition()
-dda:setCursor(true,d_b+cd-bd,_ab+dd-ad,__b)_ca(cca)cca:updateDraw()end end end end,draw=function(cca)
+a_a[dd]=a_a[dd]:sub(1,cd-1)..ab[cda]:rep(_da:len())..
+a_a[dd]:sub(cd,a_a[dd]:len())cd=cd+_da:len()if(cd>=dda+bd)then bd=(cd+1)-dda end
+local a_b,b_b=cca:getPosition()
+ada:setCursor(true,a_b+cd-bd,b_b+dd-ad,bda)_ca(cca)cca:updateDraw()end end end,draw=function(cca)
 dc.draw(cca)
-cca:addDraw("textfield",function()local dca=cca:getParent()local _da,ada=cca:getPosition()
-local bda,cda=cca:getSize()local dda=ab[cca:getBackground()]
-local __b=ab[cca:getForeground()]
-for n=1,cda do local a_b=""local b_b=""local c_b=""if __a[n+ad-1]then a_b=__a[n+ad-1]
-c_b=b_a[n+ad-1]b_b=a_a[n+ad-1]end
-a_b=_c(a_b,bd,bda+bd-1)b_b=bb(dda,bda)c_b=bb(__b,bda)cca:addText(1,n,a_b)
-cca:addBG(1,n,b_b)cca:addFG(1,n,c_b)cca:addBlit(1,n,a_b,c_b,b_b)end
-if _aa and aaa and baa and caa then local a_b,b_b,c_b,d_b=bba(cca)
-for n=c_b,d_b do
-local _ab=#__a[n]local aab=0
-if n==c_b and n==d_b then aab=a_b-1
-_ab=_ab- (a_b-1)- (_ab-b_b)elseif n==d_b then _ab=_ab- (_ab-b_b)elseif n==c_b then _ab=_ab- (a_b-1)aab=a_b-1 end;cca:addBG(1 +aab,n,bb(ab[daa],_ab))
-cca:addFG(1 +aab,n,bb(ab[_ba],_ab))end end end)end,load=function(cca)
+cca:addDraw("textfield",function()local dca,_da=cca:getSize()
+local ada=ab[cca:getBackground()]local bda=ab[cca:getForeground()]
+for n=1,_da do local cda=""local dda=""local __b=""if __a[
+n+ad-1]then cda=__a[n+ad-1]__b=b_a[n+ad-1]
+dda=a_a[n+ad-1]end;cda=_c(cda,bd,dca+bd-1)
+dda=bb(ada,dca)__b=bb(bda,dca)cca:addText(1,n,cda)cca:addBG(1,n,dda)
+cca:addFG(1,n,__b)cca:addBlit(1,n,cda,__b,dda)end
+if _aa and aaa and baa and caa then local cda,dda,__b,a_b=bba()
+for n=__b,a_b do local b_b=#__a[n]
+local c_b=0
+if n==__b and n==a_b then c_b=cda-1 - (bd-1)b_b=
+b_b- (cda-1 - (bd-1))- (b_b-dda+ (bd-1))elseif n==a_b then b_b=b_b- (
+b_b-dda+ (bd-1))elseif n==__b then b_b=b_b- (cda-1)c_b=cda-1 -
+(bd-1)end;local d_b=math.min(b_b,dca-c_b)
+cca:addBG(1 +c_b,n,bb(ab[daa],d_b))cca:addFG(1 +c_b,n,bb(ab[_ba],d_b))end end end)end,load=function(cca)
 cca:listenEvent("mouse_click")cca:listenEvent("mouse_up")
 cca:listenEvent("mouse_scroll")cca:listenEvent("mouse_drag")
 cca:listenEvent("key")cca:listenEvent("char")
 cca:listenEvent("other_event")end}bca.__index=bca;return setmetatable(bca,dc)end end
-aa["objects"]["Flexbox"]=function(...)
-local function ab(bb,cb)local db=0;local _c=0;local ac=12;local bc,cc=bb:getSize()
-local dc={getFlexGrow=function(_d)
-return db end,setFlexGrow=function(_d,ad)db=ad;return _d end,getFlexShrink=function(_d)return _c end,setFlexShrink=function(_d,ad)_c=ad;return _d end,getFlexBasis=function(_d)return
-ac end,setFlexBasis=function(_d,ad)ac=ad;return _d end,getSize=function(_d)return bc,cc end,getWidth=function(_d)return bc end,getHeight=function(_d)return
-cc end,setSize=function(_d,ad,bd,cd,dd)bb.setSize(_d,ad,bd,cd)if not dd then
-bc,cc=bb:getSize()end;return _d end}dc.__index=dc;return setmetatable(dc,bb)end
-return
-function(bb,cb)
-local db=cb.getObject("ScrollableFrame")(bb,cb)local _c="Flexbox"local ac="row"local bc=1;local cc="flex-start"local dc="nowrap"local _d={}local ad={}
-local bd=false
-local cd=ab({getHeight=function(d_a)return 0 end,getWidth=function(d_a)return 0 end,getPosition=function(d_a)return 0,0 end,getSize=function(d_a)return 0,0 end,isType=function(d_a)return
-false end,getType=function(d_a)return"lineBreakFakeObject"end,setPosition=function(d_a)end,setSize=function(d_a)end})
-cd:setFlexBasis(0):setFlexGrow(0):setFlexShrink(0)
-local function dd(d_a)
-if(dc=="nowrap")then ad={}local _aa=1;local aaa=1;local baa=1
-for caa,daa in pairs(_d)do if(ad[_aa]==nil)then
-ad[_aa]={offset=1}end
-local _ba=ac=="row"and daa:getHeight()or daa:getWidth()if _ba>aaa then aaa=_ba end
-if(daa==cd)then baa=baa+aaa+bc;aaa=1;_aa=_aa+1
-ad[_aa]={offset=baa}else table.insert(ad[_aa],daa)end end elseif(dc=="wrap")then ad={}local _aa=1;local aaa=1;local baa=ac=="row"and d_a:getWidth()or
-d_a:getHeight()local caa=0;local daa=1
-for _ba,aba in pairs(_d)do if(
-ad[daa]==nil)then ad[daa]={offset=1}end
-if aba==cd then
-aaa=aaa+_aa+bc;caa=0;_aa=1;daa=daa+1;ad[daa]={offset=aaa}else local bba=
-ac=="row"and aba:getWidth()or aba:getHeight()
-if
-(bba+caa<=baa)then table.insert(ad[daa],aba)caa=caa+bba+bc else
-aaa=aaa+_aa+bc
-_aa=ac=="row"and aba:getHeight()or aba:getWidth()daa=daa+1;caa=bba+bc;ad[daa]={offset=aaa,aba}end
-local cba=ac=="row"and aba:getHeight()or aba:getWidth()if cba>_aa then _aa=cba end end end end end
-local function __a(d_a,_aa)local aaa,baa=d_a:getSize()local caa=0;local daa=0;local _ba=0
-for cba,dba in ipairs(_aa)do caa=caa+
-dba:getFlexGrow()daa=daa+dba:getFlexShrink()_ba=_ba+
-dba:getFlexBasis()end;local aba=aaa-_ba- (bc* (#_aa-1))local bba=1
-for cba,dba in ipairs(_aa)do
-if(dba~=cd)then
-local _ca;local aca=dba:getFlexGrow()local bca=dba:getFlexShrink()if caa>0 then _ca=
-dba:getFlexBasis()+aca/caa*aba else
-_ca=dba:getFlexBasis()end
-if aba<0 and daa>0 then _ca=
-dba:getFlexBasis()+bca/daa*aba end;dba:setPosition(bba,_aa.offset or 1)
-dba:setSize(_ca,dba:getHeight(),false,true)bba=bba+_ca+bc end end
-if cc=="flex-end"then local cba=bba-bc;local dba=aaa-cba+1
-for _ca,aca in ipairs(_aa)do
-local bca,cca=aca:getPosition()aca:setPosition(bca+dba,cca)end elseif cc=="center"then local cba=bba-bc;local dba=(aaa-cba)/2 +1
-for _ca,aca in ipairs(_aa)do
-local bca,cca=aca:getPosition()aca:setPosition(bca+dba,cca)end elseif cc=="space-between"then local cba=bba-bc
-local dba=(aaa-cba)/ (#_aa-1)+1
-for _ca,aca in ipairs(_aa)do if _ca>1 then local bca,cca=aca:getPosition()
-aca:setPosition(bca+dba* (_ca-1),cca)end end elseif cc=="space-around"then local cba=bba-bc;local dba=(aaa-cba)/#_aa
-for _ca,aca in ipairs(_aa)do
-local bca,cca=aca:getPosition()aca:setPosition(bca+dba*_ca-dba/2,cca)end elseif cc=="space-evenly"then local cba=#_aa+1;local dba=0;for cca,dca in ipairs(_aa)do
-dba=dba+dca:getWidth()end;local _ca=aaa-dba
-local aca=math.floor(_ca/cba)local bca=_ca-aca*cba;bba=aca+ (bca>0 and 1 or 0)bca=bca>
-0 and bca-1 or 0
-for cca,dca in ipairs(_aa)do
-dca:setPosition(bba,1)
-bba=bba+dca:getWidth()+aca+ (bca>0 and 1 or 0)bca=bca>0 and bca-1 or 0 end end end
-local function a_a(d_a,_aa)local aaa,baa=d_a:getSize()local caa=0;local daa=0;local _ba=0
-for cba,dba in ipairs(_aa)do caa=caa+
-dba:getFlexGrow()daa=daa+dba:getFlexShrink()_ba=_ba+
-dba:getFlexBasis()end;local aba=baa-_ba- (bc* (#_aa-1))local bba=1
-for cba,dba in ipairs(_aa)do
-if(dba~=cd)then
-local _ca;local aca=dba:getFlexGrow()local bca=dba:getFlexShrink()if caa>0 then _ca=
-dba:getFlexBasis()+aca/caa*aba else
-_ca=dba:getFlexBasis()end
-if aba<0 and daa>0 then _ca=
-dba:getFlexBasis()+bca/daa*aba end;dba:setPosition(_aa.offset,bba)
-dba:setSize(dba:getWidth(),_ca,false,true)bba=bba+_ca+bc end end
-if cc=="flex-end"then local cba=bba-bc;local dba=baa-cba+1
-for _ca,aca in ipairs(_aa)do
-local bca,cca=aca:getPosition()aca:setPosition(bca,cca+dba)end elseif cc=="center"then local cba=bba-bc;local dba=(baa-cba)/2
-for _ca,aca in ipairs(_aa)do
-local bca,cca=aca:getPosition()aca:setPosition(bca,cca+dba)end elseif cc=="space-between"then local cba=bba-bc
-local dba=(baa-cba)/ (#_aa-1)+1
-for _ca,aca in ipairs(_aa)do if _ca>1 then local bca,cca=aca:getPosition()
-aca:setPosition(bca,cca+dba* (_ca-1))end end elseif cc=="space-around"then local cba=bba-bc;local dba=(baa-cba)/#_aa
-for _ca,aca in ipairs(_aa)do
-local bca,cca=aca:getPosition()aca:setPosition(bca,cca+dba*_ca-dba/2)end elseif cc=="space-evenly"then local cba=#_aa+1;local dba=0;for cca,dca in ipairs(_aa)do
-dba=dba+dca:getHeight()end;local _ca=baa-dba
-local aca=math.floor(_ca/cba)local bca=_ca-aca*cba;bba=aca+ (bca>0 and 1 or 0)bca=bca>
-0 and bca-1 or 0
-for cca,dca in ipairs(_aa)do
-local _da,ada=dca:getPosition()dca:setPosition(_da,bba)bba=
-bba+dca:getHeight()+aca+ (bca>0 and 1 or 0)bca=bca>0 and
-bca-1 or 0 end end end
-local function b_a(d_a)dd(d_a)
-if ac=="row"then for _aa,aaa in pairs(ad)do __a(d_a,aaa)end else for _aa,aaa in pairs(ad)do
-a_a(d_a,aaa)end end;bd=false end
-local c_a={getType=function()return _c end,isType=function(d_a,_aa)return
-_c==_aa or db.isType~=nil and db.isType(_aa)or false end,setJustifyContent=function(d_a,_aa)
-cc=_aa;bd=true;return d_a end,getJustifyContent=function(d_a)return cc end,setDirection=function(d_a,_aa)ac=_aa;bd=true;return d_a end,getDirection=function(d_a)return
-ac end,setSpacing=function(d_a,_aa)bc=_aa;bd=true;return d_a end,getSpacing=function(d_a)return bc end,setWrap=function(d_a,_aa)
-dc=_aa;bd=true;return d_a end,updateLayout=function(d_a)bd=true end,addBreak=function(d_a)
-table.insert(_d,cd)bd=true;return d_a end,customEventHandler=function(d_a,_aa,...)
-db.customEventHandler(d_a,_aa,...)if _aa=="basalt_FrameResize"then bd=true end end,draw=function(d_a)
-db.draw(d_a)
-d_a:addDraw("flexboxDraw",function()if bd then b_a(d_a)end end,1)end}
-for d_a,_aa in pairs(cb.getObjects())do
-c_a["add"..d_a]=function(aaa,baa)
-local caa=db["add"..d_a](aaa,baa)local daa=ab(caa,cb)table.insert(_d,daa)bd=true;return daa end end;c_a.__index=c_a;return setmetatable(c_a,db)end end
-aa["objects"]["Object"]=function(...)local ab=da("basaltEvent")
-local bb=da("utils")local cb=bb.uuid;local db,_c=table.unpack,string.sub
-return
-function(ac,bc)ac=ac or cb()
-assert(bc~=nil,
-"Unable to find basalt instance! ID: "..ac)local cc="Object"local dc,_d=true,false;local ad=ab()local bd={}local cd={}local dd
-local __a={init=function(a_a)
-if(_d)then return false end;_d=true;return true end,load=function(a_a)end,getType=function(a_a)return cc end,isType=function(a_a,b_a)return cc==
-b_a end,getProperty=function(a_a,b_a)
-local c_a=a_a["get"..b_a:gsub("^%l",string.upper)]if(c_a~=nil)then return c_a(a_a)end end,setProperty=function(a_a,b_a,...)
-local c_a=a_a[
-"set"..b_a:gsub("^%l",string.upper)]if(c_a~=nil)then return c_a(a_a,...)end end,getName=function(a_a)return
-ac end,getParent=function(a_a)return dd end,setParent=function(a_a,b_a,c_a)if(c_a)then dd=b_a;return a_a end
-if(b_a.getType~=
-nil and b_a:isType("Container"))then a_a:remove()
-b_a:addChild(a_a)if(a_a.show)then a_a:show()end;dd=b_a end;return a_a end,updateEvents=function(a_a)for b_a,c_a in
-pairs(cd)do dd:removeEvent(b_a,a_a)
-if(c_a)then dd:addEvent(b_a,a_a)end end;return a_a end,listenEvent=function(a_a,b_a,c_a)if(
-dd~=nil)then
-if(c_a)or(c_a==nil)then cd[b_a]=true;dd:addEvent(b_a,a_a)elseif
-(c_a==false)then cd[b_a]=false;dd:removeEvent(b_a,a_a)end end
-return a_a end,getZIndex=function(a_a)return
-1 end,enable=function(a_a)dc=true;return a_a end,disable=function(a_a)dc=false;return a_a end,isEnabled=function(a_a)return
-dc end,remove=function(a_a)if(dd~=nil)then dd:removeChild(a_a)end
-a_a:updateDraw()return a_a end,getBaseFrame=function(a_a)if(dd~=nil)then
-return dd:getBaseFrame()end;return a_a end,onEvent=function(a_a,...)
-for b_a,c_a in
-pairs(table.pack(...))do if(type(c_a)=="function")then
-a_a:registerEvent("other_event",c_a)end end;return a_a end,getEventSystem=function(a_a)return
-ad end,getRegisteredEvents=function(a_a)return bd end,registerEvent=function(a_a,b_a,c_a)
-if(dd~=nil)then dd:addEvent(b_a,a_a)end;ad:registerEvent(b_a,c_a)
-if(bd[b_a]==nil)then bd[b_a]={}end;table.insert(bd[b_a],c_a)end,removeEvent=function(a_a,b_a,c_a)if(
-ad:getEventCount(b_a)<1)then
-if(dd~=nil)then dd:removeEvent(b_a,a_a)end end;ad:removeEvent(b_a,c_a)if(
-bd[b_a]~=nil)then table.remove(bd[b_a],c_a)if(#bd[b_a]==0)then
-bd[b_a]=nil end end end,eventHandler=function(a_a,b_a,...)
-local c_a=a_a:sendEvent("other_event",b_a,...)if(c_a~=nil)then return c_a end end,customEventHandler=function(a_a,b_a,...)
-local c_a=a_a:sendEvent("custom_event",b_a,...)if(c_a~=nil)then return c_a end;return true end,sendEvent=function(a_a,b_a,...)if(
-b_a=="other_event")or(b_a=="custom_event")then return
-ad:sendEvent(b_a,a_a,...)end;return
-ad:sendEvent(b_a,a_a,b_a,...)end,onClick=function(a_a,...)
-for b_a,c_a in
-pairs(table.pack(...))do if(type(c_a)=="function")then
-a_a:registerEvent("mouse_click",c_a)end end;return a_a end,onClickUp=function(a_a,...)for b_a,c_a in
-pairs(table.pack(...))do
-if(type(c_a)=="function")then a_a:registerEvent("mouse_up",c_a)end end;return a_a end,onRelease=function(a_a,...)
-for b_a,c_a in
-pairs(table.pack(...))do if(type(c_a)=="function")then
-a_a:registerEvent("mouse_release",c_a)end end;return a_a end,onScroll=function(a_a,...)
-for b_a,c_a in
-pairs(table.pack(...))do if(type(c_a)=="function")then
-a_a:registerEvent("mouse_scroll",c_a)end end;return a_a end,onHover=function(a_a,...)
-for b_a,c_a in
-pairs(table.pack(...))do if(type(c_a)=="function")then
-a_a:registerEvent("mouse_hover",c_a)end end;return a_a end,onLeave=function(a_a,...)
-for b_a,c_a in
-pairs(table.pack(...))do if(type(c_a)=="function")then
-a_a:registerEvent("mouse_leave",c_a)end end;return a_a end,onDrag=function(a_a,...)
-for b_a,c_a in
-pairs(table.pack(...))do if(type(c_a)=="function")then
-a_a:registerEvent("mouse_drag",c_a)end end;return a_a end,onKey=function(a_a,...)for b_a,c_a in
-pairs(table.pack(...))do
-if(type(c_a)=="function")then a_a:registerEvent("key",c_a)end end;return a_a end,onChar=function(a_a,...)for b_a,c_a in
-pairs(table.pack(...))do
-if(type(c_a)=="function")then a_a:registerEvent("char",c_a)end end;return a_a end,onKeyUp=function(a_a,...)for b_a,c_a in
-pairs(table.pack(...))do
-if(type(c_a)=="function")then a_a:registerEvent("key_up",c_a)end end;return a_a end}__a.__index=__a;return __a end end
-aa["objects"]["Input"]=function(...)local ab=da("utils")local bb=da("tHex")
-return
-function(cb,db)
-local _c=db.getObject("ChangeableObject")(cb,db)local ac="Input"local bc="text"local cc=0;_c:setZIndex(5)_c:setValue("")
-_c:setSize(12,1)local dc=1;local _d=1;local ad=""local bd=colors.black;local cd=colors.lightGray;local dd=ad
-local __a=false
-local a_a={load=function(b_a)b_a:listenEvent("mouse_click")
-b_a:listenEvent("key")b_a:listenEvent("char")
-b_a:listenEvent("other_event")b_a:listenEvent("mouse_drag")end,getType=function(b_a)return
-ac end,isType=function(b_a,c_a)return
-ac==c_a or _c.isType~=nil and _c.isType(c_a)or false end,setDefaultFG=function(b_a,c_a)return b_a:setDefaultText(b_a,ad,c_a,
-nil)end,setDefaultBG=function(b_a,c_a)return b_a:setDefaultText(b_a,ad,
-nil,c_a)end,setDefaultText=function(b_a,c_a,d_a,_aa)
-ad=c_a;cd=d_a or cd;bd=_aa or bd;if(b_a:isFocused())then dd=""else dd=ad end
-b_a:updateDraw()return b_a end,getDefaultText=function(b_a)return ad,cd,
-bd end,setOffset=function(b_a,c_a)_d=c_a;b_a:updateDraw()return b_a end,getOffset=function(b_a)return
-_d end,setTextOffset=function(b_a,c_a)dc=c_a;b_a:updateDraw()return b_a end,getTextOffset=function(b_a)return
-dc end,setInputType=function(b_a,c_a)bc=c_a;b_a:updateDraw()return b_a end,getInputType=function(b_a)return
-bc end,setValue=function(b_a,c_a)_c.setValue(b_a,tostring(c_a))
-if not(__a)then dc=
-tostring(c_a):len()+1
-_d=math.max(1,dc-b_a:getWidth()+1)
-if(b_a:isFocused())then local d_a=b_a:getParent()
-local _aa,aaa=b_a:getPosition()
-d_a:setCursor(true,_aa+dc-_d,aaa+math.floor(b_a:getHeight()/2),b_a:getForeground())end end;b_a:updateDraw()return b_a end,getValue=function(b_a)
-local c_a=_c.getValue(b_a)
-return bc=="number"and tonumber(c_a)or c_a end,setInputLimit=function(b_a,c_a)
-cc=tonumber(c_a)or cc;b_a:updateDraw()return b_a end,getInputLimit=function(b_a)return cc end,getFocusHandler=function(b_a)
-_c.getFocusHandler(b_a)local c_a=b_a:getParent()
-if(c_a~=nil)then local d_a,_aa=b_a:getPosition()dd=""if(ad~=
-"")then b_a:updateDraw()end
-c_a:setCursor(true,d_a+dc-_d,_aa+math.max(math.ceil(
-b_a:getHeight()/2 -1,1)),b_a:getForeground())end end,loseFocusHandler=function(b_a)
-_c.loseFocusHandler(b_a)local c_a=b_a:getParent()dd=ad
-if(ad~="")then b_a:updateDraw()end;c_a:setCursor(false)end,keyHandler=function(b_a,c_a)
-if
-(_c.keyHandler(b_a,c_a))then local d_a,_aa=b_a:getSize()local aaa=b_a:getParent()__a=true
-if
-(c_a==keys.backspace)then local _ba=tostring(_c.getValue())
-if(dc>1)then b_a:setValue(_ba:sub(1,dc-2)..
-_ba:sub(dc,_ba:len()))dc=math.max(
-dc-1,1)if(dc<_d)then _d=math.max(_d-1,1)end end end
-if(c_a==keys.enter)then aaa:clearFocusedChild(b_a)end
-if(c_a==keys.right)then
-local _ba=tostring(_c.getValue()):len()dc=dc+1;if(dc>_ba)then dc=_ba+1 end;dc=math.max(dc,1)if(dc<_d)or
-(dc>=d_a+_d)then _d=dc-d_a+1 end;_d=math.max(_d,1)end;if(c_a==keys.left)then dc=dc-1;if(dc>=1)then
-if(dc<_d)or(dc>=d_a+_d)then _d=dc end end;dc=math.max(dc,1)
-_d=math.max(_d,1)end
-local baa,caa=b_a:getPosition()local daa=tostring(_c.getValue())b_a:updateDraw()
-__a=false;return true end end,charHandler=function(b_a,c_a)
-if
-(_c.charHandler(b_a,c_a))then __a=true;local d_a,_aa=b_a:getSize()local aaa=_c.getValue()
-if(
-aaa:len()<cc or cc<=0)then
-if(bc=="number")then local _ba=aaa
-if
-(dc==1 and c_a=="-")or(c_a==".")or(tonumber(c_a)~=nil)then
-b_a:setValue(aaa:sub(1,dc-1)..
-c_a..aaa:sub(dc,aaa:len()))dc=dc+1;if(c_a==".")or(c_a=="-")and(#aaa>0)then
-if(
-tonumber(_c.getValue())==nil)then b_a:setValue(_ba)dc=dc-1 end end end else
-b_a:setValue(aaa:sub(1,dc-1)..c_a..aaa:sub(dc,aaa:len()))dc=dc+1 end;if(dc>=d_a+_d)then _d=_d+1 end end;local baa,caa=b_a:getPosition()
-local daa=tostring(_c.getValue())__a=false;b_a:updateDraw()return true end end,mouseHandler=function(b_a,c_a,d_a,_aa)
-if
-(_c.mouseHandler(b_a,c_a,d_a,_aa))then local aaa=b_a:getParent()local baa,caa=b_a:getPosition()
-local daa,_ba=b_a:getAbsolutePosition(baa,caa)local aba,bba=b_a:getSize()dc=d_a-daa+_d;local cba=_c.getValue()if(dc>
-cba:len())then dc=cba:len()+1 end;if(dc<_d)then _d=dc-1
-if(_d<1)then _d=1 end end
-aaa:setCursor(true,baa+dc-_d,caa+
-math.max(math.ceil(bba/2 -1,1)),b_a:getForeground())return true end end,dragHandler=function(b_a,c_a,d_a,_aa,aaa,baa)
-if
-(b_a:isFocused())then if(b_a:isCoordsInObject(d_a,_aa))then
-if(_c.dragHandler(b_a,c_a,d_a,_aa,aaa,baa))then return true end end
-local caa=b_a:getParent()caa:clearFocusedChild()end end,draw=function(b_a)
-_c.draw(b_a)
-b_a:addDraw("input",function()local c_a=b_a:getParent()local d_a,_aa=b_a:getPosition()
-local aaa,baa=b_a:getSize()local caa=ab.getTextVerticalAlign(baa,textVerticalAlign)
-local daa=tostring(_c.getValue())local _ba=b_a:getBackground()local aba=b_a:getForeground()local bba;if(
-daa:len()<=0)then bba=dd;_ba=bd or _ba;aba=cd or aba end
-bba=dd;if(daa~="")then bba=daa end;bba=bba:sub(_d,aaa+_d-1)local cba=aaa-
-bba:len()if(cba<0)then cba=0 end
-if
-(bc=="password")and(daa~="")then bba=string.rep("*",bba:len())end;bba=bba..string.rep(" ",cba)
-b_a:addBlit(1,caa,bba,bb[aba]:rep(bba:len()),bb[_ba]:rep(bba:len()))if(b_a:isFocused())then
-c_a:setCursor(true,d_a+dc-_d,_aa+
-math.floor(b_a:getHeight()/2),b_a:getForeground())end end)end}a_a.__index=a_a;return setmetatable(a_a,_c)end end
-aa["objects"]["Thread"]=function(...)
-return
-function(ab,bb)
-local cb=bb.getObject("Object")(ab,bb)local db="Thread"local _c;local ac;local bc=false;local cc
-local dc={getType=function(_d)return db end,start=function(_d,ad)if(ad==nil)then
-error("Function provided to thread is nil")end;_c=ad;ac=coroutine.create(_c)
-bc=true;cc=nil;local bd,cd=coroutine.resume(ac)cc=cd;if not(bd)then
-if(cd~="Terminated")then error(
-"Thread Error Occurred - "..cd)end end
-_d:listenEvent("mouse_click")_d:listenEvent("mouse_up")
-_d:listenEvent("mouse_scroll")_d:listenEvent("mouse_drag")_d:listenEvent("key")
-_d:listenEvent("key_up")_d:listenEvent("char")
-_d:listenEvent("other_event")return _d end,getStatus=function(_d,ad)if(
-ac~=nil)then return coroutine.status(ac)end;return nil end,stop=function(_d,ad)
-bc=false;_d:listenEvent("mouse_click",false)
-_d:listenEvent("mouse_up",false)_d:listenEvent("mouse_scroll",false)
-_d:listenEvent("mouse_drag",false)_d:listenEvent("key",false)
-_d:listenEvent("key_up",false)_d:listenEvent("char",false)
-_d:listenEvent("other_event",false)return _d end,mouseHandler=function(_d,...)
-_d:eventHandler("mouse_click",...)end,mouseUpHandler=function(_d,...)_d:eventHandler("mouse_up",...)end,mouseScrollHandler=function(_d,...)
-_d:eventHandler("mouse_scroll",...)end,mouseDragHandler=function(_d,...)
-_d:eventHandler("mouse_drag",...)end,mouseMoveHandler=function(_d,...)
-_d:eventHandler("mouse_move",...)end,keyHandler=function(_d,...)_d:eventHandler("key",...)end,keyUpHandler=function(_d,...)
-_d:eventHandler("key_up",...)end,charHandler=function(_d,...)_d:eventHandler("char",...)end,eventHandler=function(_d,ad,...)
-cb.eventHandler(_d,ad,...)
-if(bc)then
-if(coroutine.status(ac)=="suspended")then if(cc~=nil)then
-if(ad~=cc)then return end;cc=nil end
-local bd,cd=coroutine.resume(ac,ad,...)cc=cd;if not(bd)then if(cd~="Terminated")then
-error("Thread Error Occurred - "..cd)end end else
-_d:stop()end end end}dc.__index=dc;return setmetatable(dc,cb)end end
-aa["objects"]["Image"]=function(...)local ab=da("images")local bb=da("bimg")
-local cb,db,_c,ac=table.unpack,string.sub,math.max,math.min
-return
-function(bc,cc)local dc=cc.getObject("VisualObject")(bc,cc)
-local _d="Image"local ad=bb()local bd=ad.getFrameObject(1)local cd;local dd;local __a=1;local a_a=false;local b_a
-local c_a=false;local d_a=true;local _aa,aaa=0,0;dc:setSize(24,8)dc:setZIndex(2)
-local function baa(_ba)local aba={}
-for dba,_ca in
-pairs(colors)do if(type(_ca)=="number")then
-aba[dba]={term.nativePaletteColor(_ca)}end end;local bba=ad.getMetadata("palette")if(bba~=nil)then for dba,_ca in pairs(bba)do
-aba[dba]=tonumber(_ca)end end
-local cba=ad.getFrameData("palette")cc.log(cba)if(cba~=nil)then
-for dba,_ca in pairs(cba)do aba[dba]=tonumber(_ca)end end;return aba end;local function caa()
-if(d_a)then if(ad~=nil)then dc:setSize(ad.getSize())end end end
-local daa={getType=function(_ba)return _d end,isType=function(_ba,aba)return
-_d==aba or
-dc.isType~=nil and dc.isType(aba)or false end,setOffset=function(_ba,aba,bba,cba)
-if(cba)then _aa=_aa+
-aba or 0;aaa=aaa+bba or 0 else _aa=aba or _aa;aaa=bba or aaa end;_ba:updateDraw()return _ba end,setXOffset=function(_ba,aba)return _ba:setOffset(_ba,aba,
-nil)end,setYOffset=function(_ba,aba)return
-_ba:setOffset(_ba,nil,aba)end,setSize=function(_ba,aba,bba)dc:setSize(aba,bba)
-d_a=false;return _ba end,getOffset=function(_ba)return _aa,aaa end,getXOffset=function(_ba)return _aa end,getYOffset=function(_ba)return
-aaa end,selectFrame=function(_ba,aba)if(ad.getFrameObject(aba)==nil)then
-ad.addFrame(aba)end;bd=ad.getFrameObject(aba)
-dd=bd.getImage(aba)__a=aba;_ba:updateDraw()end,addFrame=function(_ba,aba)
-ad.addFrame(aba)return _ba end,getFrame=function(_ba,aba)return ad.getFrame(aba)end,getFrameObject=function(_ba,aba)return
-ad.getFrameObject(aba)end,removeFrame=function(_ba,aba)ad.removeFrame(aba)return _ba end,moveFrame=function(_ba,aba,bba)
-ad.moveFrame(aba,bba)return _ba end,getFrames=function(_ba)return ad.getFrames()end,getFrameCount=function(_ba)return
-#ad.getFrames()end,getActiveFrame=function(_ba)return __a end,loadImage=function(_ba,aba)if
-(fs.exists(aba))then local bba=ab.loadBIMG(aba)ad=bb(bba)__a=1
-bd=ad.getFrameObject(1)cd=ad.createBimg()dd=bd.getImage()caa()
-_ba:updateDraw()end;return
-_ba end,setPath=function(_ba,aba)return
-_ba:loadImage(aba)end,setImage=function(_ba,aba)if(type(aba)=="table")then ad=bb(aba)__a=1
-bd=ad.getFrameObject(1)cd=ad.createBimg()dd=bd.getImage()caa()
-_ba:updateDraw()end;return _ba end,clear=function(_ba)
-ad=bb()bd=ad.getFrameObject(1)dd=nil;_ba:updateDraw()return _ba end,getImage=function(_ba)return
-ad.createBimg()end,getImageFrame=function(_ba,aba)return bd.getImage(aba)end,usePalette=function(_ba,aba)c_a=
-aba~=nil and aba or true;return _ba end,getUsePalette=function(_ba)return
-c_a end,setUsePalette=function(_ba,aba)return _ba:usePalette(aba)end,play=function(_ba,aba)
-if
-(ad.getMetadata("animated"))then
-local bba=
-ad.getMetadata("duration")or ad.getMetadata("secondsPerFrame")or 0.2;_ba:listenEvent("other_event")
-b_a=os.startTimer(bba)a_a=aba or false end;return _ba end,setPlay=function(_ba,aba)return
-_ba:play(aba)end,stop=function(_ba)os.cancelTimer(b_a)b_a=nil;a_a=false
-return _ba end,eventHandler=function(_ba,aba,bba,...)
-dc.eventHandler(_ba,aba,bba,...)
-if(aba=="timer")then
-if(bba==b_a)then
-if(ad.getFrame(__a+1)~=nil)then __a=__a+1
-_ba:selectFrame(__a)
-local cba=
-ad.getFrameData(__a,"duration")or ad.getMetadata("secondsPerFrame")or 0.2;b_a=os.startTimer(cba)else
-if(a_a)then __a=1;_ba:selectFrame(__a)
-local cba=
-ad.getFrameData(__a,"duration")or ad.getMetadata("secondsPerFrame")or 0.2;b_a=os.startTimer(cba)end end;_ba:updateDraw()end end end,setMetadata=function(_ba,aba,bba)
-ad.setMetadata(aba,bba)return _ba end,getMetadata=function(_ba,aba)return ad.getMetadata(aba)end,getFrameMetadata=function(_ba,aba,bba)return
-ad.getFrameData(aba,bba)end,setFrameMetadata=function(_ba,aba,bba,cba)
-ad.setFrameData(aba,bba,cba)return _ba end,blit=function(_ba,aba,bba,cba,dba,_ca)x=dba or x;y=_ca or y
-bd.blit(aba,bba,cba,x,y)dd=bd.getImage()_ba:updateDraw()return _ba end,setText=function(_ba,aba,bba,cba)x=
-bba or x;y=cba or y;bd.text(aba,x,y)dd=bd.getImage()
-_ba:updateDraw()return _ba end,setBg=function(_ba,aba,bba,cba)x=bba or x;y=
-cba or y;bd.bg(aba,x,y)dd=bd.getImage()
-_ba:updateDraw()return _ba end,setFg=function(_ba,aba,bba,cba)x=bba or x
-y=cba or y;bd.fg(aba,x,y)dd=bd.getImage()_ba:updateDraw()return _ba end,getImageSize=function(_ba)return
-ad.getSize()end,setImageSize=function(_ba,aba,bba)ad.setSize(aba,bba)
-dd=bd.getImage()_ba:updateDraw()return _ba end,resizeImage=function(_ba,aba,bba)
-local cba=ab.resizeBIMG(cd,aba,bba)ad=bb(cba)__a=1;bd=ad.getFrameObject(1)dd=bd.getImage()
-_ba:updateDraw()return _ba end,draw=function(_ba)
-dc.draw(_ba)
-_ba:addDraw("image",function()local aba,bba=_ba:getSize()local cba,dba=_ba:getPosition()
-local _ca,aca=_ba:getParent():getSize()local bca,cca=_ba:getParent():getOffset()
-if
-(cba-bca>_ca)or(dba-cca>aca)or(cba-bca+aba<1)or(dba-
-cca+bba<1)then return end
-if(c_a)then _ba:getParent():setPalette(baa(__a))end
-if(dd~=nil)then
-for dca,_da in pairs(dd)do
-if(dca+aaa<=bba)and(dca+aaa>=1)then
-local ada,bda,cda=_da[1],_da[2],_da[3]local dda=_c(1 -_aa,1)local __b=ac(aba-_aa,#ada)
-ada=db(ada,dda,__b)bda=db(bda,dda,__b)cda=db(cda,dda,__b)
-_ba:addBlit(_c(1 +_aa,1),dca+aaa,ada,bda,cda)end end end end)end}daa.__index=daa;return setmetatable(daa,dc)end end
-aa["objects"]["MonitorFrame"]=function(...)local ab=da("basaltMon")
-local bb,cb,db,_c=math.max,math.min,string.sub,string.rep
-return
-function(ac,bc)local cc=bc.getObject("BaseFrame")(ac,bc)
-local dc="MonitorFrame"cc:setTerm(nil)local _d=false;local ad
-local bd={getType=function()return dc end,isType=function(cd,dd)
-return dc==dd or cc.isType~=nil and
-cc.isType(dd)or false end,getBase=function(cd)return cc end,setMonitor=function(cd,dd)
-if
-(type(dd)=="string")then local __a=peripheral.wrap(dd)
-if(__a~=nil)then cd:setTerm(__a)end elseif(type(dd)=="table")then cd:setTerm(dd)end;return cd end,setMonitorGroup=function(cd,dd)
-ad=ab(dd)cd:setTerm(ad)_d=true;return cd end,render=function(cd)if(cd:getTerm()~=
-nil)then cc.render(cd)end end,show=function(cd)
-cc:getBase().show(cd)bc.setActiveFrame(cd)
-for dd,__a in pairs(colors)do if(type(__a)=="number")then
-termObject.setPaletteColor(__a,colors.packRGB(term.nativePaletteColor((__a))))end end
-for dd,__a in pairs(colorTheme)do
-if(type(__a)=="number")then
-termObject.setPaletteColor(
-type(dd)=="number"and dd or colors[dd],__a)else local a_a,b_a,c_a=table.unpack(__a)
-termObject.setPaletteColor(
-type(dd)=="number"and dd or colors[dd],a_a,b_a,c_a)end end;return cd end}
-bd.mouseHandler=function(cd,dd,__a,a_a,b_a,c_a,...)
-if(_d)then __a,a_a=ad.calculateClick(c_a,__a,a_a)end;cc.mouseHandler(cd,dd,__a,a_a,b_a,c_a,...)end;bd.__index=bd;return setmetatable(bd,cc)end end
-aa["objects"]["Radio"]=function(...)local ab=da("utils")local bb=da("tHex")
-return
-function(cb,db)
-local _c=db.getObject("List")(cb,db)local ac="Radio"_c:setSize(1,1)_c:setZIndex(5)local bc={}
-local cc=colors.black;local dc=colors.green;local _d=colors.black;local ad=colors.red;local bd=true;local cd="\7"
-local dd="left"
-local __a={getType=function(a_a)return ac end,addItem=function(a_a,b_a,c_a,d_a,_aa,aaa,...)_c.addItem(a_a,b_a,_aa,aaa,...)table.insert(bc,{x=c_a or 1,y=
-d_a or#bc*2})
-return a_a end,removeItem=function(a_a,b_a)
-_c.removeItem(a_a,b_a)table.remove(bc,b_a)return a_a end,clear=function(a_a)
-_c.clear(a_a)bc={}return a_a end,editItem=function(a_a,b_a,c_a,d_a,_aa,aaa,baa,...)
-_c.editItem(a_a,b_a,c_a,aaa,baa,...)table.remove(bc,b_a)
-table.insert(bc,b_a,{x=d_a or 1,y=_aa or 1})return a_a end,setBoxSelectionColor=function(a_a,b_a,c_a)
-cc=b_a;dc=c_a;return a_a end,setBoxSelectionBG=function(a_a,b_a)
-return a_a:setBoxSelectionColor(b_a,dc)end,setBoxSelectionFG=function(a_a,b_a)
-return a_a:setBoxSelectionColor(cc,b_a)end,getBoxSelectionColor=function(a_a)return cc,dc end,getBoxSelectionBG=function(a_a)return cc end,getBoxSelectionFG=function(a_a)
-return dc end,setBoxDefaultColor=function(a_a,b_a,c_a)_d=b_a;ad=c_a;return a_a end,setBoxDefaultBG=function(a_a,b_a)return
-a_a:setBoxDefaultColor(b_a,ad)end,setBoxDefaultFG=function(a_a,b_a)return
-a_a:setBoxDefaultColor(_d,b_a)end,getBoxDefaultColor=function(a_a)return _d,ad end,getBoxDefaultBG=function(a_a)return _d end,getBoxDefaultFG=function(a_a)return
-ad end,mouseHandler=function(a_a,b_a,c_a,d_a,...)
-if(#bc>0)then local _aa,aaa=a_a:getAbsolutePosition()
-local baa=a_a:getAll()
-for caa,daa in pairs(baa)do
-if
-
-(_aa+bc[caa].x-1 <=c_a)and(_aa+bc[caa].x-1 +
-daa.text:len()+1 >=c_a)and(aaa+bc[caa].y-1 ==d_a)then a_a:setValue(daa)
-local _ba=a_a:sendEvent("mouse_click",a_a,"mouse_click",b_a,c_a,d_a,...)a_a:updateDraw()if(_ba==false)then return _ba end;return true end end end end,draw=function(a_a)
-a_a:addDraw("radio",function()
-local b_a,c_a=a_a:getSelectionColor()local d_a=a_a:getAll()
-for _aa,aaa in pairs(d_a)do
-if(aaa==a_a:getValue())then
-a_a:addBlit(bc[_aa].x,bc[_aa].y,cd,bb[dc],bb[cc])
-a_a:addBlit(bc[_aa].x+2,bc[_aa].y,aaa.text,bb[c_a]:rep(#aaa.text),bb[b_a]:rep(
-#aaa.text))else
-a_a:addBackgroundBox(bc[_aa].x,bc[_aa].y,1,1,_d or colors.black)
-a_a:addBlit(bc[_aa].x+2,bc[_aa].y,aaa.text,bb[aaa.fgCol]:rep(#aaa.text),bb[aaa.bgCol]:rep(
-#aaa.text))end end;return true end)end}__a.__index=__a;return setmetatable(__a,_c)end end
-aa["objects"]["Pane"]=function(...)
-return
-function(ab,bb)
-local cb=bb.getObject("VisualObject")(ab,bb)local db="Pane"cb:setSize(25,10)
-local _c={getType=function(ac)return db end}_c.__index=_c;return setmetatable(_c,cb)end end
 aa["objects"]["Progressbar"]=function(...)
 return
 function(ab,bb)
@@ -2068,23 +2194,11 @@ bd:addTextBox(1 +math.ceil(__a-__a/100 *_c),1,__a/100 *_c,a_a,bc)else
 bd:addBackgroundBox(1,1,math.ceil(__a/100 *_c),a_a,ac)
 bd:addForegroundBox(1,1,math.ceil(__a/100 *_c),a_a,cc)
 bd:addTextBox(1,1,math.ceil(__a/100 *_c),a_a,bc)end end)end}ad.__index=ad;return setmetatable(ad,cb)end end
-aa["objects"]["Switch"]=function(...)
+aa["objects"]["Pane"]=function(...)
 return
 function(ab,bb)
-local cb=bb.getObject("ChangeableObject")(ab,bb)local db="Switch"cb:setSize(4,1)cb:setValue(false)
-cb:setZIndex(5)local _c=colors.black;local ac=colors.red;local bc=colors.green
-local cc={getType=function(dc)return db end,setSymbol=function(dc,_d)
-_c=_d;return dc end,getSymbol=function(dc)return _c end,setActiveBackground=function(dc,_d)bc=_d;return dc end,getActiveBackground=function(dc)return bc end,setInactiveBackground=function(dc,_d)
-ac=_d;return dc end,getInactiveBackground=function(dc)return ac end,load=function(dc)
-dc:listenEvent("mouse_click")end,mouseHandler=function(dc,...)
-if(cb.mouseHandler(dc,...))then
-dc:setValue(not dc:getValue())dc:updateDraw()return true end end,draw=function(dc)cb.draw(dc)
-dc:addDraw("switch",function()
-local _d=dc:getParent()local ad,bd=dc:getBackground(),dc:getForeground()
-local cd,dd=dc:getSize()
-if(dc:getValue())then dc:addBackgroundBox(1,1,cd,dd,bc)
-dc:addBackgroundBox(cd,1,1,dd,_c)else dc:addBackgroundBox(1,1,cd,dd,ac)
-dc:addBackgroundBox(1,1,1,dd,_c)end end)end}cc.__index=cc;return setmetatable(cc,cb)end end
+local cb=bb.getObject("VisualObject")(ab,bb)local db="Pane"cb:setSize(25,10)
+local _c={getType=function(ac)return db end}_c.__index=_c;return setmetatable(_c,cb)end end
 aa["objects"]["Program"]=function(...)local ab=da("tHex")local bb=da("process")
 local cb=string.sub
 return
@@ -2302,62 +2416,100 @@ for baa,caa in
 pairs(table.pack(...))do if(type(caa)=="function")then
 _aa:registerEvent("program_done",caa)end end;local aaa=_aa:getParent()_aa:listenEvent("other_event")
 return _aa end}cc.__index=cc;return setmetatable(cc,ac)end end
-aa["objects"]["Label"]=function(...)local ab=da("utils")local bb=ab.wrapText
-local cb=ab.writeWrappedText;local db=da("tHex")
+aa["objects"]["Object"]=function(...)local ab=da("basaltEvent")
+local bb=da("utils")local cb=bb.uuid;local db,_c=table.unpack,string.sub
 return
-function(_c,ac)
-local bc=ac.getObject("VisualObject")(_c,ac)local cc="Label"bc:setZIndex(3)bc:setSize(5,1)
-bc:setBackground(false)local dc=true;local _d,ad="Label","left"
-local bd={getType=function(cd)return cc end,getBase=function(cd)return bc end,setText=function(cd,dd)
-_d=tostring(dd)
-if(dc)then local __a=bb(_d,#_d)local a_a,b_a=1,1;for c_a,d_a in pairs(__a)do b_a=b_a+1
-a_a=math.max(a_a,d_a:len())end;cd:setSize(a_a,b_a)dc=true end;cd:updateDraw()return cd end,getAutoSize=function(cd)return
-dc end,setAutoSize=function(cd,dd)dc=dd;return cd end,getText=function(cd)return _d end,setSize=function(cd,dd,__a)
-bc.setSize(cd,dd,__a)dc=false;return cd end,getTextAlign=function(cd)return ad end,setTextAlign=function(cd,dd)ad=dd or ad;return
-cd end,draw=function(cd)bc.draw(cd)
-cd:addDraw("label",function()local dd,__a=cd:getSize()
-local a_a=
-
-
-ad=="center"and math.floor(dd/2 -_d:len()/2 +0.5)or ad=="right"and dd- (_d:len()-1)or 1;cb(cd,a_a,1,_d,dd+1,__a)end)end,init=function(cd)
-bc.init(cd)local dd=cd:getParent()
-cd:setForeground(dd:getForeground())end}bd.__index=bd;return setmetatable(bd,bc)end end
-aa["objects"]["Graph"]=function(...)
+function(ac,bc)ac=ac or cb()
+assert(bc~=nil,
+"Unable to find basalt instance! ID: "..ac)local cc="Object"local dc,_d=true,false;local ad=ab()local bd={}local cd={}local dd
+local __a={init=function(a_a)
+if(_d)then return false end;_d=true;return true end,load=function(a_a)end,getType=function(a_a)return cc end,isType=function(a_a,b_a)return cc==
+b_a end,getProperty=function(a_a,b_a)
+local c_a=a_a["get"..b_a:gsub("^%l",string.upper)]if(c_a~=nil)then return c_a(a_a)end end,setProperty=function(a_a,b_a,...)
+local c_a=a_a[
+"set"..b_a:gsub("^%l",string.upper)]if(c_a~=nil)then return c_a(a_a,...)end end,getName=function(a_a)return
+ac end,getParent=function(a_a)return dd end,setParent=function(a_a,b_a,c_a)if(c_a)then dd=b_a;return a_a end
+if(b_a.getType~=
+nil and b_a:isType("Container"))then a_a:remove()
+b_a:addChild(a_a)if(a_a.show)then a_a:show()end;dd=b_a end;return a_a end,updateEvents=function(a_a)for b_a,c_a in
+pairs(cd)do dd:removeEvent(b_a,a_a)
+if(c_a)then dd:addEvent(b_a,a_a)end end;return a_a end,listenEvent=function(a_a,b_a,c_a)if(
+dd~=nil)then
+if(c_a)or(c_a==nil)then cd[b_a]=true;dd:addEvent(b_a,a_a)elseif
+(c_a==false)then cd[b_a]=false;dd:removeEvent(b_a,a_a)end end
+return a_a end,getZIndex=function(a_a)return
+1 end,enable=function(a_a)dc=true;return a_a end,disable=function(a_a)dc=false;return a_a end,isEnabled=function(a_a)return
+dc end,remove=function(a_a)if(dd~=nil)then dd:removeChild(a_a)end
+a_a:updateDraw()return a_a end,getBaseFrame=function(a_a)if(dd~=nil)then
+return dd:getBaseFrame()end;return a_a end,onEvent=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("other_event",c_a)end end;return a_a end,getEventSystem=function(a_a)return
+ad end,getRegisteredEvents=function(a_a)return bd end,registerEvent=function(a_a,b_a,c_a)
+if(dd~=nil)then dd:addEvent(b_a,a_a)end;ad:registerEvent(b_a,c_a)
+if(bd[b_a]==nil)then bd[b_a]={}end;table.insert(bd[b_a],c_a)end,removeEvent=function(a_a,b_a,c_a)if(
+ad:getEventCount(b_a)<1)then
+if(dd~=nil)then dd:removeEvent(b_a,a_a)end end;ad:removeEvent(b_a,c_a)if(
+bd[b_a]~=nil)then table.remove(bd[b_a],c_a)if(#bd[b_a]==0)then
+bd[b_a]=nil end end end,eventHandler=function(a_a,b_a,...)
+local c_a=a_a:sendEvent("other_event",b_a,...)if(c_a~=nil)then return c_a end end,customEventHandler=function(a_a,b_a,...)
+local c_a=a_a:sendEvent("custom_event",b_a,...)if(c_a~=nil)then return c_a end;return true end,sendEvent=function(a_a,b_a,...)if(
+b_a=="other_event")or(b_a=="custom_event")then return
+ad:sendEvent(b_a,a_a,...)end;return
+ad:sendEvent(b_a,a_a,b_a,...)end,onClick=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_click",c_a)end end;return a_a end,onClickUp=function(a_a,...)for b_a,c_a in
+pairs(table.pack(...))do
+if(type(c_a)=="function")then a_a:registerEvent("mouse_up",c_a)end end;return a_a end,onRelease=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_release",c_a)end end;return a_a end,onScroll=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_scroll",c_a)end end;return a_a end,onHover=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_hover",c_a)end end;return a_a end,onLeave=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_leave",c_a)end end;return a_a end,onDrag=function(a_a,...)
+for b_a,c_a in
+pairs(table.pack(...))do if(type(c_a)=="function")then
+a_a:registerEvent("mouse_drag",c_a)end end;return a_a end,onKey=function(a_a,...)for b_a,c_a in
+pairs(table.pack(...))do
+if(type(c_a)=="function")then a_a:registerEvent("key",c_a)end end;return a_a end,onChar=function(a_a,...)for b_a,c_a in
+pairs(table.pack(...))do
+if(type(c_a)=="function")then a_a:registerEvent("char",c_a)end end;return a_a end,onKeyUp=function(a_a,...)for b_a,c_a in
+pairs(table.pack(...))do
+if(type(c_a)=="function")then a_a:registerEvent("key_up",c_a)end end;return a_a end}__a.__index=__a;return __a end end
+aa["objects"]["Checkbox"]=function(...)local ab=da("utils")local bb=da("tHex")
 return
-function(ab,bb)
-local cb=bb.getObject("ChangeableObject")(ab,bb)local db="Graph"cb:setZIndex(5)cb:setSize(30,10)local _c={}
-local ac=colors.gray;local bc="\7"local cc=colors.black;local dc=100;local _d=0;local ad="line"local bd=10
-local cd={getType=function(dd)return db end,setGraphColor=function(dd,__a)ac=
-__a or ac;dd:updateDraw()return dd end,setGraphSymbol=function(dd,__a,a_a)
-bc=__a or bc;cc=a_a or cc;dd:updateDraw()return dd end,setGraphSymbolColor=function(dd,__a)return dd:setGraphSymbolColor(
-nil,__a)end,getGraphSymbol=function(dd)
-return bc,cc end,getGraphSymbolColor=function(dd)return cc end,addDataPoint=function(dd,__a)if __a>=_d and __a<=dc then
-table.insert(_c,__a)dd:updateDraw()end;if(#_c>100)then
-table.remove(_c,1)end;return dd end,setMaxValue=function(dd,__a)
-dc=__a;dd:updateDraw()return dd end,getMaxValue=function(dd)return dc end,setMinValue=function(dd,__a)
-_d=__a;dd:updateDraw()return dd end,getMinValue=function(dd)return _d end,setGraphType=function(dd,__a)if __a==
-"scatter"or __a=="line"or __a=="bar"then ad=__a
-dd:updateDraw()end;return dd end,getGraphType=function(dd)return
-ad end,setMaxEntries=function(dd,__a)bd=__a;dd:updateDraw()return dd end,getMaxEntries=function(dd)return
-bd end,clear=function(dd)_c={}dd:updateDraw()return dd end,draw=function(dd)
-cb.draw(dd)
-dd:addDraw("graph",function()local __a,a_a=dd:getPosition()local b_a,c_a=dd:getSize()
-local d_a,_aa=dd:getBackground(),dd:getForeground()local aaa=dc-_d;local baa,caa;local daa=#_c-bd+1;if daa<1 then daa=1 end
-for i=daa,#_c do local _ba=_c[i]
-local aba=math.floor(( (
-b_a-1)/ (bd-1))* (i-daa)+1.5)
-local bba=math.floor((c_a-1)- ( (c_a-1)/aaa)* (_ba-_d)+1.5)
-if ad=="scatter"then dd:addBackgroundBox(aba,bba,1,1,ac)
-dd:addForegroundBox(aba,bba,1,1,cc)dd:addTextBox(aba,bba,1,1,bc)elseif ad=="line"then
-if baa and caa then
-local cba=math.abs(aba-baa)local dba=math.abs(bba-caa)local _ca=baa<aba and 1 or-1;local aca=caa<
-bba and 1 or-1;local bca=cba-dba
-while true do
-dd:addBackgroundBox(baa,caa,1,1,ac)dd:addForegroundBox(baa,caa,1,1,cc)
-dd:addTextBox(baa,caa,1,1,bc)if baa==aba and caa==bba then break end;local cca=2 *bca;if cca>-dba then
-bca=bca-dba;baa=baa+_ca end
-if cca<cba then bca=bca+cba;caa=caa+aca end end end;baa,caa=aba,bba elseif ad=="bar"then
-dd:addBackgroundBox(aba-1,bba,1,c_a-bba,ac)end end end)end}cd.__index=cd;return setmetatable(cd,cb)end end
+function(cb,db)
+local _c=db.getObject("ChangeableObject")(cb,db)local ac="Checkbox"_c:setZIndex(5)_c:setValue(false)
+_c:setSize(1,1)local bc,cc,dc,_d="\42"," ","","right"
+local ad={load=function(bd)bd:listenEvent("mouse_click",bd)
+bd:listenEvent("mouse_up",bd)end,getType=function(bd)return ac end,isType=function(bd,cd)return
+ac==cd or
+_c.isType~=nil and _c.isType(cd)or false end,setSymbol=function(bd,cd,dd)
+bc=cd or bc;cc=dd or cc;bd:updateDraw()return bd end,setActiveSymbol=function(bd,cd)return bd:setSymbol(cd,
+nil)end,setInactiveSymbol=function(bd,cd)
+return bd:setSymbol(nil,cd)end,getSymbol=function(bd)return bc,cc end,getActiveSymbol=function(bd)return bc end,getInactiveSymbol=function(bd)return cc end,setText=function(bd,cd)
+dc=cd;return bd end,getText=function(bd)return dc end,setTextPosition=function(bd,cd)_d=cd or _d;return bd end,getTextPosition=function(bd)return
+_d end,setChecked=_c.setValue,getChecked=_c.getValue,mouseHandler=function(bd,cd,dd,__a)
+if(_c.mouseHandler(bd,cd,dd,__a))then
+if(cd==1)then
+if(
+bd:getValue()~=true)and(bd:getValue()~=false)then
+bd:setValue(false)else bd:setValue(not bd:getValue())end;bd:updateDraw()return true end end;return false end,draw=function(bd)
+_c.draw(bd)
+bd:addDraw("checkbox",function()local cd,dd=bd:getPosition()local __a,a_a=bd:getSize()
+local b_a=ab.getTextVerticalAlign(a_a,"center")local c_a,d_a=bd:getBackground(),bd:getForeground()
+if
+(bd:getValue())then
+bd:addBlit(1,b_a,ab.getTextHorizontalAlign(bc,__a,"center"),bb[d_a],bb[c_a])else
+bd:addBlit(1,b_a,ab.getTextHorizontalAlign(cc,__a,"center"),bb[d_a],bb[c_a])end;if(dc~="")then local _aa=_d=="left"and-dc:len()or 3
+bd:addText(_aa,b_a,dc)end end)end}ad.__index=ad;return setmetatable(ad,_c)end end
 aa["objects"]["List"]=function(...)local ab=da("utils")local bb=da("tHex")
 return
 function(cb,db)
@@ -2425,33 +2577,206 @@ if bc[n+bd]then local c_a=bc[n+bd].text
 local d_a,_aa=bc[n+bd].fgCol,bc[n+bd].bgCol
 if bc[n+bd]==__a:getValue()and _d then d_a,_aa=dc,cc end;__a:addText(1,n,c_a:sub(1,a_a))
 __a:addBG(1,n,bb[_aa]:rep(a_a))__a:addFG(1,n,bb[d_a]:rep(a_a))end end end)end}dd.__index=dd;return setmetatable(dd,_c)end end
-aa["objects"]["Checkbox"]=function(...)local ab=da("utils")local bb=da("tHex")
+aa["objects"]["Label"]=function(...)local ab=da("utils")local bb=ab.wrapText
+local cb=ab.writeWrappedText;local db=da("tHex")
+return
+function(_c,ac)
+local bc=ac.getObject("VisualObject")(_c,ac)local cc="Label"bc:setZIndex(3)bc:setSize(5,1)
+bc:setBackground(false)local dc=true;local _d,ad="Label","left"
+local bd={getType=function(cd)return cc end,getBase=function(cd)return bc end,setText=function(cd,dd)
+_d=tostring(dd)
+if(dc)then local __a=bb(_d,#_d)local a_a,b_a=1,1;for c_a,d_a in pairs(__a)do b_a=b_a+1
+a_a=math.max(a_a,d_a:len())end;cd:setSize(a_a,b_a)dc=true end;cd:updateDraw()return cd end,getAutoSize=function(cd)return
+dc end,setAutoSize=function(cd,dd)dc=dd;return cd end,getText=function(cd)return _d end,setSize=function(cd,dd,__a)
+bc.setSize(cd,dd,__a)dc=false;return cd end,getTextAlign=function(cd)return ad end,setTextAlign=function(cd,dd)ad=dd or ad;return
+cd end,draw=function(cd)bc.draw(cd)
+cd:addDraw("label",function()local dd,__a=cd:getSize()
+local a_a=
+
+
+ad=="center"and math.floor(dd/2 -_d:len()/2 +0.5)or ad=="right"and dd- (_d:len()-1)or 1;cb(cd,a_a,1,_d,dd+1,__a)end)end,init=function(cd)
+bc.init(cd)local dd=cd:getParent()
+cd:setForeground(dd:getForeground())end}bd.__index=bd;return setmetatable(bd,bc)end end
+aa["objects"]["Graph"]=function(...)
+return
+function(ab,bb)
+local cb=bb.getObject("ChangeableObject")(ab,bb)local db="Graph"cb:setZIndex(5)cb:setSize(30,10)local _c={}
+local ac=colors.gray;local bc="\7"local cc=colors.black;local dc=100;local _d=0;local ad="line"local bd=10
+local cd={getType=function(dd)return db end,setGraphColor=function(dd,__a)ac=
+__a or ac;dd:updateDraw()return dd end,setGraphSymbol=function(dd,__a,a_a)
+bc=__a or bc;cc=a_a or cc;dd:updateDraw()return dd end,setGraphSymbolColor=function(dd,__a)return dd:setGraphSymbolColor(
+nil,__a)end,getGraphSymbol=function(dd)
+return bc,cc end,getGraphSymbolColor=function(dd)return cc end,addDataPoint=function(dd,__a)if __a>=_d and __a<=dc then
+table.insert(_c,__a)dd:updateDraw()end;if(#_c>100)then
+table.remove(_c,1)end;return dd end,setMaxValue=function(dd,__a)
+dc=__a;dd:updateDraw()return dd end,getMaxValue=function(dd)return dc end,setMinValue=function(dd,__a)
+_d=__a;dd:updateDraw()return dd end,getMinValue=function(dd)return _d end,setGraphType=function(dd,__a)if __a==
+"scatter"or __a=="line"or __a=="bar"then ad=__a
+dd:updateDraw()end;return dd end,getGraphType=function(dd)return
+ad end,setMaxEntries=function(dd,__a)bd=__a;dd:updateDraw()return dd end,getMaxEntries=function(dd)return
+bd end,clear=function(dd)_c={}dd:updateDraw()return dd end,draw=function(dd)
+cb.draw(dd)
+dd:addDraw("graph",function()local __a,a_a=dd:getPosition()local b_a,c_a=dd:getSize()
+local d_a,_aa=dd:getBackground(),dd:getForeground()local aaa=dc-_d;local baa,caa;local daa=#_c-bd+1;if daa<1 then daa=1 end
+for i=daa,#_c do local _ba=_c[i]
+local aba=math.floor(( (
+b_a-1)/ (bd-1))* (i-daa)+1.5)
+local bba=math.floor((c_a-1)- ( (c_a-1)/aaa)* (_ba-_d)+1.5)
+if ad=="scatter"then dd:addBackgroundBox(aba,bba,1,1,ac)
+dd:addForegroundBox(aba,bba,1,1,cc)dd:addTextBox(aba,bba,1,1,bc)elseif ad=="line"then
+if baa and caa then
+local cba=math.abs(aba-baa)local dba=math.abs(bba-caa)local _ca=baa<aba and 1 or-1;local aca=caa<
+bba and 1 or-1;local bca=cba-dba
+while true do
+dd:addBackgroundBox(baa,caa,1,1,ac)dd:addForegroundBox(baa,caa,1,1,cc)
+dd:addTextBox(baa,caa,1,1,bc)if baa==aba and caa==bba then break end;local cca=2 *bca;if cca>-dba then
+bca=bca-dba;baa=baa+_ca end
+if cca<cba then bca=bca+cba;caa=caa+aca end end end;baa,caa=aba,bba elseif ad=="bar"then
+dd:addBackgroundBox(aba-1,bba,1,c_a-bba,ac)end end end)end}cd.__index=cd;return setmetatable(cd,cb)end end
+aa["objects"]["Button"]=function(...)local ab=da("utils")local bb=da("tHex")
 return
 function(cb,db)
-local _c=db.getObject("ChangeableObject")(cb,db)local ac="Checkbox"_c:setZIndex(5)_c:setValue(false)
-_c:setSize(1,1)local bc,cc,dc,_d="\42"," ","","right"
-local ad={load=function(bd)bd:listenEvent("mouse_click",bd)
-bd:listenEvent("mouse_up",bd)end,getType=function(bd)return ac end,isType=function(bd,cd)return
-ac==cd or
-_c.isType~=nil and _c.isType(cd)or false end,setSymbol=function(bd,cd,dd)
-bc=cd or bc;cc=dd or cc;bd:updateDraw()return bd end,setActiveSymbol=function(bd,cd)return bd:setSymbol(cd,
-nil)end,setInactiveSymbol=function(bd,cd)
-return bd:setSymbol(nil,cd)end,getSymbol=function(bd)return bc,cc end,getActiveSymbol=function(bd)return bc end,getInactiveSymbol=function(bd)return cc end,setText=function(bd,cd)
-dc=cd;return bd end,getText=function(bd)return dc end,setTextPosition=function(bd,cd)_d=cd or _d;return bd end,getTextPosition=function(bd)return
-_d end,setChecked=_c.setValue,getChecked=_c.getValue,mouseHandler=function(bd,cd,dd,__a)
-if(_c.mouseHandler(bd,cd,dd,__a))then
-if(cd==1)then
-if(
-bd:getValue()~=true)and(bd:getValue()~=false)then
-bd:setValue(false)else bd:setValue(not bd:getValue())end;bd:updateDraw()return true end end;return false end,draw=function(bd)
-_c.draw(bd)
-bd:addDraw("checkbox",function()local cd,dd=bd:getPosition()local __a,a_a=bd:getSize()
-local b_a=ab.getTextVerticalAlign(a_a,"center")local c_a,d_a=bd:getBackground(),bd:getForeground()
+local _c=db.getObject("VisualObject")(cb,db)local ac="Button"local bc="center"local cc="center"local dc="Button"_c:setSize(12,3)
+_c:setZIndex(5)
+local _d={getType=function(ad)return ac end,isType=function(ad,bd)return
+ac==bd or _c.isType~=nil and _c.isType(bd)or false end,getBase=function(ad)return
+_c end,getHorizontalAlign=function(ad)return bc end,setHorizontalAlign=function(ad,bd)bc=bd;ad:updateDraw()return ad end,getVerticalAlign=function(ad)return
+cc end,setVerticalAlign=function(ad,bd)cc=bd;ad:updateDraw()return ad end,getText=function(ad)
+return dc end,setText=function(ad,bd)dc=bd;ad:updateDraw()return ad end,draw=function(ad)
+_c.draw(ad)
+ad:addDraw("button",function()local bd,cd=ad:getSize()
+local dd=ab.getTextVerticalAlign(cd,cc)local __a
+if(bc=="center")then
+__a=math.floor((bd-dc:len())/2)elseif(bc=="right")then __a=bd-dc:len()end;ad:addText(__a+1,dd,dc)
+ad:addFG(__a+1,dd,bb[ad:getForeground()or colors.white]:rep(dc:len()))end)end}_d.__index=_d;return setmetatable(_d,_c)end end
+aa["objects"]["Frame"]=function(...)local ab=da("utils")
+local bb,cb,db,_c,ac=math.max,math.min,string.sub,string.rep,string.len
+return
+function(bc,cc)local dc=cc.getObject("Container")(bc,cc)local _d="Frame"
+local ad;local bd=true;local cd,dd=0,0;dc:setSize(30,10)dc:setZIndex(10)
+local __a={getType=function()return _d end,isType=function(a_a,b_a)return
+
+_d==b_a or dc.isType~=nil and dc.isType(b_a)or false end,getBase=function(a_a)
+return dc end,getOffset=function(a_a)return cd,dd end,setOffset=function(a_a,b_a,c_a)cd=b_a or cd;dd=c_a or dd
+a_a:updateDraw()return a_a end,getXOffset=function(a_a)return cd end,setXOffset=function(a_a,b_a)return
+a_a:setOffset(b_a,nil)end,getYOffset=function(a_a)return dd end,setYOffset=function(a_a,b_a)return
+a_a:setOffset(nil,b_a)end,setParent=function(a_a,b_a,...)
+dc.setParent(a_a,b_a,...)ad=b_a;return a_a end,render=function(a_a)
+if(dc.render~=nil)then
 if
-(bd:getValue())then
-bd:addBlit(1,b_a,ab.getTextHorizontalAlign(bc,__a,"center"),bb[d_a],bb[c_a])else
-bd:addBlit(1,b_a,ab.getTextHorizontalAlign(cc,__a,"center"),bb[d_a],bb[c_a])end;if(dc~="")then local _aa=_d=="left"and-dc:len()or 3
-bd:addText(_aa,b_a,dc)end end)end}ad.__index=ad;return setmetatable(ad,_c)end end
+(a_a:isVisible())then dc.render(a_a)local b_a=a_a:getChildren()for c_a,d_a in ipairs(b_a)do
+if(
+d_a.element.render~=nil)then d_a.element:render()end end end end end,updateDraw=function(a_a)if(
+ad~=nil)then ad:updateDraw()end;return a_a end,blit=function(a_a,b_a,c_a,d_a,_aa,aaa)
+local baa,caa=a_a:getPosition()local daa,_ba=ad:getOffset()baa=baa-daa;caa=caa-_ba
+local aba,bba=a_a:getSize()
+if c_a>=1 and c_a<=bba then
+local cba=db(d_a,bb(1 -b_a+1,1),bb(aba-b_a+1,1))
+local dba=db(_aa,bb(1 -b_a+1,1),bb(aba-b_a+1,1))
+local _ca=db(aaa,bb(1 -b_a+1,1),bb(aba-b_a+1,1))
+ad:blit(bb(b_a+ (baa-1),baa),caa+c_a-1,cba,dba,_ca)end end,setCursor=function(a_a,b_a,c_a,d_a,_aa)
+local aaa,baa=a_a:getPosition()local caa,daa=a_a:getOffset()
+ad:setCursor(b_a or false,(c_a or 0)+aaa-1 -caa,(
+d_a or 0)+baa-1 -daa,_aa or colors.white)return a_a end}
+for a_a,b_a in
+pairs({"drawBackgroundBox","drawForegroundBox","drawTextBox"})do
+__a[b_a]=function(c_a,d_a,_aa,aaa,baa,caa)local daa,_ba=c_a:getPosition()local aba,bba=ad:getOffset()
+daa=daa-aba;_ba=_ba-bba
+baa=(_aa<1 and(
+baa+_aa>c_a:getHeight()and c_a:getHeight()or baa+_aa-1)or(
+baa+
+_aa>c_a:getHeight()and c_a:getHeight()-_aa+1 or baa))
+aaa=(d_a<1 and(aaa+d_a>c_a:getWidth()and c_a:getWidth()or aaa+
+d_a-1)or(
+
+aaa+d_a>c_a:getWidth()and c_a:getWidth()-d_a+1 or aaa))
+ad[b_a](ad,bb(d_a+ (daa-1),daa),bb(_aa+ (_ba-1),_ba),aaa,baa,caa)end end
+for a_a,b_a in pairs({"setBG","setFG","setText"})do
+__a[b_a]=function(c_a,d_a,_aa,aaa)
+local baa,caa=c_a:getPosition()local daa,_ba=ad:getOffset()baa=baa-daa;caa=caa-_ba
+local aba,bba=c_a:getSize()if(_aa>=1)and(_aa<=bba)then
+ad[b_a](ad,bb(d_a+ (baa-1),baa),caa+_aa-1,db(aaa,bb(
+1 -d_a+1,1),bb(aba-d_a+1,1)))end end end;__a.__index=__a;return setmetatable(__a,dc)end end
+aa["objects"]["BaseFrame"]=function(...)local ab=da("basaltDraw")
+local bb=da("utils")local cb,db,_c,ac=math.max,math.min,string.sub,string.rep
+return
+function(bc,cc)
+local dc=cc.getObject("Container")(bc,cc)local _d="BaseFrame"local ad,bd=0,0;local cd={}local dd=true;local __a=cc.getTerm()
+local a_a=ab(__a)local b_a,c_a,d_a,_aa=1,1,false,colors.white
+local aaa={getType=function()return _d end,isType=function(baa,caa)
+return _d==caa or dc.isType~=nil and
+dc.isType(caa)or false end,getBase=function(baa)return dc end,getOffset=function(baa)return ad,bd end,setOffset=function(baa,caa,daa)ad=
+caa or ad;bd=daa or bd;baa:updateDraw()return baa end,getXOffset=function(baa)return
+ad end,setXOffset=function(baa,caa)return baa:setOffset(caa,nil)end,getYOffset=function(baa)return
+bd end,setYOffset=function(baa,caa)return baa:setOffset(nil,caa)end,setPalette=function(baa,caa,...)
+if(
+baa==cc.getActiveFrame())then
+if(type(caa)=="string")then cd[caa]=...
+__a.setPaletteColor(
+type(caa)=="number"and caa or colors[caa],...)elseif(type(caa)=="table")then
+for daa,_ba in pairs(caa)do cd[daa]=_ba
+if(type(_ba)=="number")then
+__a.setPaletteColor(
+type(daa)=="number"and daa or colors[daa],_ba)else local aba,bba,cba=table.unpack(_ba)
+__a.setPaletteColor(
+type(daa)=="number"and daa or colors[daa],aba,bba,cba)end end end end;return baa end,setSize=function(baa,...)
+dc.setSize(baa,...)a_a=ab(__a)return baa end,getSize=function()return __a.getSize()end,getWidth=function(baa)return
+({__a.getSize()})[1]end,getHeight=function(baa)
+return({__a.getSize()})[2]end,show=function(baa)dc.show(baa)cc.setActiveFrame(baa)
+for caa,daa in
+pairs(colors)do if(type(daa)=="number")then
+__a.setPaletteColor(daa,colors.packRGB(term.nativePaletteColor((daa))))end end
+for caa,daa in pairs(cd)do
+if(type(daa)=="number")then
+__a.setPaletteColor(
+type(caa)=="number"and caa or colors[caa],daa)else local _ba,aba,bba=table.unpack(daa)
+__a.setPaletteColor(
+type(caa)=="number"and caa or colors[caa],_ba,aba,bba)end end;cc.setMainFrame(baa)return baa end,render=function(baa)
+if(
+dc.render~=nil)then
+if(baa:isVisible())then
+if(dd)then dc.render(baa)
+local caa=baa:getChildren()for daa,_ba in ipairs(caa)do if(_ba.element.render~=nil)then
+_ba.element:render()end end
+dd=false end end end end,updateDraw=function(baa)
+dd=true;return baa end,eventHandler=function(baa,caa,...)dc.eventHandler(baa,caa,...)if
+(caa=="term_resize")then baa:setSize(__a.getSize())end end,updateTerm=function(baa)if(
+a_a~=nil)then a_a.update()end end,setTerm=function(baa,caa)__a=caa;if(caa==
+nil)then a_a=nil else a_a=ab(__a)end;return baa end,getTerm=function()return
+__a end,blit=function(baa,caa,daa,_ba,aba,bba)local cba,dba=baa:getPosition()
+local _ca,aca=baa:getSize()
+if daa>=1 and daa<=aca then
+local bca=_c(_ba,cb(1 -caa+1,1),cb(_ca-caa+1,1))
+local cca=_c(aba,cb(1 -caa+1,1),cb(_ca-caa+1,1))
+local dca=_c(bba,cb(1 -caa+1,1),cb(_ca-caa+1,1))
+a_a.blit(cb(caa+ (cba-1),cba),dba+daa-1,bca,cca,dca)end end,setCursor=function(baa,caa,daa,_ba,aba)
+local bba,cba=baa:getAbsolutePosition()local dba,_ca=baa:getOffset()d_a=caa or false;if(daa~=nil)then
+b_a=bba+daa-1 -dba end
+if(_ba~=nil)then c_a=cba+_ba-1 -_ca end;_aa=aba or _aa
+if(d_a)then __a.setTextColor(_aa)
+__a.setCursorPos(b_a,c_a)__a.setCursorBlink(d_a)else __a.setCursorBlink(false)end;return baa end}
+for baa,caa in
+pairs({mouse_click={"mouseHandler",true},mouse_up={"mouseUpHandler",false},mouse_drag={"dragHandler",false},mouse_scroll={"scrollHandler",true},mouse_hover={"hoverHandler",false}})do
+aaa[caa[1]]=function(daa,_ba,aba,bba,...)if(dc[caa[1]](daa,_ba,aba,bba,...))then
+cc.setActiveFrame(daa)end end end
+for baa,caa in
+pairs({"drawBackgroundBox","drawForegroundBox","drawTextBox"})do
+aaa[caa]=function(daa,_ba,aba,bba,cba,dba)local _ca,aca=daa:getPosition()local bca,cca=daa:getSize()
+cba=(aba<1 and(cba+
+aba>daa:getHeight()and daa:getHeight()or cba+aba-
+1)or(cba+aba>
+daa:getHeight()and daa:getHeight()-aba+1 or
+cba))
+bba=(_ba<1 and(bba+_ba>daa:getWidth()and daa:getWidth()or bba+
+_ba-1)or(
+
+bba+_ba>daa:getWidth()and daa:getWidth()-_ba+1 or bba))
+a_a[caa](cb(_ba+ (_ca-1),_ca),cb(aba+ (aca-1),aca),bba,cba,dba)end end
+for baa,caa in pairs({"setBG","setFG","setText"})do
+aaa[caa]=function(daa,_ba,aba,bba)
+local cba,dba=daa:getPosition()local _ca,aca=daa:getSize()if(aba>=1)and(aba<=aca)then
+a_a[caa](cb(_ba+ (cba-1),cba),
+dba+aba-1,_c(bba,cb(1 -_ba+1,1),cb(_ca-_ba+1,1)))end end end;aaa.__index=aaa;return setmetatable(aaa,dc)end end
 aa["objects"]["ChangeableObject"]=function(...)
 return
 function(ab,bb)
@@ -2578,406 +2903,86 @@ if(bca.element[dba]~=nil)then if
 dc["add"..cba]=function(_ca,aca)return
 _ca:addChild(db:createObject(cba,aca))end end
 dc.__index=dc;return setmetatable(dc,_c)end end
-aa["objects"]["BaseFrame"]=function(...)local ab=da("basaltDraw")
-local bb=da("utils")local cb,db,_c,ac=math.max,math.min,string.sub,string.rep
+aa["objects"]["Image"]=function(...)local ab=da("images")local bb=da("bimg")
+local cb,db,_c,ac=table.unpack,string.sub,math.max,math.min
 return
-function(bc,cc)
-local dc=cc.getObject("Container")(bc,cc)local _d="BaseFrame"local ad,bd=0,0;local cd={}local dd=true;local __a=cc.getTerm()
-local a_a=ab(__a)local b_a,c_a,d_a,_aa=1,1,false,colors.white
-local aaa={getType=function()return _d end,isType=function(baa,caa)
-return _d==caa or dc.isType~=nil and
-dc.isType(caa)or false end,getBase=function(baa)return dc end,getOffset=function(baa)return ad,bd end,setOffset=function(baa,caa,daa)ad=
-caa or ad;bd=daa or bd;baa:updateDraw()return baa end,getXOffset=function(baa)return
-ad end,setXOffset=function(baa,caa)return baa:setOffset(caa,nil)end,getYOffset=function(baa)return
-bd end,setYOffset=function(baa,caa)return baa:setOffset(nil,caa)end,setPalette=function(baa,caa,...)
-if(
-baa==cc.getActiveFrame())then
-if(type(caa)=="string")then cd[caa]=...
-__a.setPaletteColor(
-type(caa)=="number"and caa or colors[caa],...)elseif(type(caa)=="table")then
-for daa,_ba in pairs(caa)do cd[daa]=_ba
-if(type(_ba)=="number")then
-__a.setPaletteColor(
-type(daa)=="number"and daa or colors[daa],_ba)else local aba,bba,cba=table.unpack(_ba)
-__a.setPaletteColor(
-type(daa)=="number"and daa or colors[daa],aba,bba,cba)end end end end;return baa end,setSize=function(baa,...)
-dc.setSize(baa,...)a_a=ab(__a)return baa end,getSize=function()return __a.getSize()end,getWidth=function(baa)return
-({__a.getSize()})[1]end,getHeight=function(baa)
-return({__a.getSize()})[2]end,show=function(baa)dc.show(baa)cc.setActiveFrame(baa)
-for caa,daa in
-pairs(colors)do if(type(daa)=="number")then
-__a.setPaletteColor(daa,colors.packRGB(term.nativePaletteColor((daa))))end end
-for caa,daa in pairs(cd)do
-if(type(daa)=="number")then
-__a.setPaletteColor(
-type(caa)=="number"and caa or colors[caa],daa)else local _ba,aba,bba=table.unpack(daa)
-__a.setPaletteColor(
-type(caa)=="number"and caa or colors[caa],_ba,aba,bba)end end;cc.setMainFrame(baa)return baa end,render=function(baa)
-if(
-dc.render~=nil)then
-if(baa:isVisible())then
-if(dd)then dc.render(baa)
-local caa=baa:getChildren()for daa,_ba in ipairs(caa)do if(_ba.element.render~=nil)then
-_ba.element:render()end end
-dd=false end end end end,updateDraw=function(baa)
-dd=true;return baa end,eventHandler=function(baa,caa,...)dc.eventHandler(baa,caa,...)if
-(caa=="term_resize")then baa:setSize(__a.getSize())end end,updateTerm=function(baa)if(
-a_a~=nil)then a_a.update()end end,setTerm=function(baa,caa)__a=caa;if(caa==
-nil)then a_a=nil else a_a=ab(__a)end;return baa end,getTerm=function()return
-__a end,blit=function(baa,caa,daa,_ba,aba,bba)local cba,dba=baa:getPosition()
-local _ca,aca=baa:getSize()
-if daa>=1 and daa<=aca then
-local bca=_c(_ba,cb(1 -caa+1,1),cb(_ca-caa+1,1))
-local cca=_c(aba,cb(1 -caa+1,1),cb(_ca-caa+1,1))
-local dca=_c(bba,cb(1 -caa+1,1),cb(_ca-caa+1,1))
-a_a.blit(cb(caa+ (cba-1),cba),dba+daa-1,bca,cca,dca)end end,setCursor=function(baa,caa,daa,_ba,aba)
-local bba,cba=baa:getAbsolutePosition()local dba,_ca=baa:getOffset()d_a=caa or false;if(daa~=nil)then
-b_a=bba+daa-1 -dba end
-if(_ba~=nil)then c_a=cba+_ba-1 -_ca end;_aa=aba or _aa
-if(d_a)then __a.setTextColor(_aa)
-__a.setCursorPos(b_a,c_a)__a.setCursorBlink(d_a)else __a.setCursorBlink(false)end;return baa end}
-for baa,caa in
-pairs({mouse_click={"mouseHandler",true},mouse_up={"mouseUpHandler",false},mouse_drag={"dragHandler",false},mouse_scroll={"scrollHandler",true},mouse_hover={"hoverHandler",false}})do
-aaa[caa[1]]=function(daa,_ba,aba,bba,...)if(dc[caa[1]](daa,_ba,aba,bba,...))then
-cc.setActiveFrame(daa)end end end
-for baa,caa in
-pairs({"drawBackgroundBox","drawForegroundBox","drawTextBox"})do
-aaa[caa]=function(daa,_ba,aba,bba,cba,dba)local _ca,aca=daa:getPosition()local bca,cca=daa:getSize()
-cba=(aba<1 and(cba+
-aba>daa:getHeight()and daa:getHeight()or cba+aba-
-1)or(cba+aba>
-daa:getHeight()and daa:getHeight()-aba+1 or
-cba))
-bba=(_ba<1 and(bba+_ba>daa:getWidth()and daa:getWidth()or bba+
-_ba-1)or(
-
-bba+_ba>daa:getWidth()and daa:getWidth()-_ba+1 or bba))
-a_a[caa](cb(_ba+ (_ca-1),_ca),cb(aba+ (aca-1),aca),bba,cba,dba)end end
-for baa,caa in pairs({"setBG","setFG","setText"})do
-aaa[caa]=function(daa,_ba,aba,bba)
-local cba,dba=daa:getPosition()local _ca,aca=daa:getSize()if(aba>=1)and(aba<=aca)then
-a_a[caa](cb(_ba+ (cba-1),cba),
-dba+aba-1,_c(bba,cb(1 -_ba+1,1),cb(_ca-_ba+1,1)))end end end;aaa.__index=aaa;return setmetatable(aaa,dc)end end
-aa["objects"]["Frame"]=function(...)local ab=da("utils")
-local bb,cb,db,_c,ac=math.max,math.min,string.sub,string.rep,string.len
-return
-function(bc,cc)local dc=cc.getObject("Container")(bc,cc)local _d="Frame"
-local ad;local bd=true;local cd,dd=0,0;dc:setSize(30,10)dc:setZIndex(10)
-local __a={getType=function()return _d end,isType=function(a_a,b_a)return
-
-_d==b_a or dc.isType~=nil and dc.isType(b_a)or false end,getBase=function(a_a)
-return dc end,getOffset=function(a_a)return cd,dd end,setOffset=function(a_a,b_a,c_a)cd=b_a or cd;dd=c_a or dd
-a_a:updateDraw()return a_a end,getXOffset=function(a_a)return cd end,setXOffset=function(a_a,b_a)return
-a_a:setOffset(b_a,nil)end,getYOffset=function(a_a)return dd end,setYOffset=function(a_a,b_a)return
-a_a:setOffset(nil,b_a)end,setParent=function(a_a,b_a,...)
-dc.setParent(a_a,b_a,...)ad=b_a;return a_a end,render=function(a_a)
-if(dc.render~=nil)then
+function(bc,cc)local dc=cc.getObject("VisualObject")(bc,cc)
+local _d="Image"local ad=bb()local bd=ad.getFrameObject(1)local cd;local dd;local __a=1;local a_a=false;local b_a
+local c_a=false;local d_a=true;local _aa,aaa=0,0;dc:setSize(24,8)dc:setZIndex(2)
+local function baa(_ba)local aba={}
+for dba,_ca in
+pairs(colors)do if(type(_ca)=="number")then
+aba[dba]={term.nativePaletteColor(_ca)}end end;local bba=ad.getMetadata("palette")if(bba~=nil)then for dba,_ca in pairs(bba)do
+aba[dba]=tonumber(_ca)end end
+local cba=ad.getFrameData("palette")cc.log(cba)if(cba~=nil)then
+for dba,_ca in pairs(cba)do aba[dba]=tonumber(_ca)end end;return aba end;local function caa()
+if(d_a)then if(ad~=nil)then dc:setSize(ad.getSize())end end end
+local daa={getType=function(_ba)return _d end,isType=function(_ba,aba)return
+_d==aba or
+dc.isType~=nil and dc.isType(aba)or false end,setOffset=function(_ba,aba,bba,cba)
+if(cba)then _aa=_aa+
+aba or 0;aaa=aaa+bba or 0 else _aa=aba or _aa;aaa=bba or aaa end;_ba:updateDraw()return _ba end,setXOffset=function(_ba,aba)return _ba:setOffset(_ba,aba,
+nil)end,setYOffset=function(_ba,aba)return
+_ba:setOffset(_ba,nil,aba)end,setSize=function(_ba,aba,bba)dc:setSize(aba,bba)
+d_a=false;return _ba end,getOffset=function(_ba)return _aa,aaa end,getXOffset=function(_ba)return _aa end,getYOffset=function(_ba)return
+aaa end,selectFrame=function(_ba,aba)if(ad.getFrameObject(aba)==nil)then
+ad.addFrame(aba)end;bd=ad.getFrameObject(aba)
+dd=bd.getImage(aba)__a=aba;_ba:updateDraw()end,addFrame=function(_ba,aba)
+ad.addFrame(aba)return _ba end,getFrame=function(_ba,aba)return ad.getFrame(aba)end,getFrameObject=function(_ba,aba)return
+ad.getFrameObject(aba)end,removeFrame=function(_ba,aba)ad.removeFrame(aba)return _ba end,moveFrame=function(_ba,aba,bba)
+ad.moveFrame(aba,bba)return _ba end,getFrames=function(_ba)return ad.getFrames()end,getFrameCount=function(_ba)return
+#ad.getFrames()end,getActiveFrame=function(_ba)return __a end,loadImage=function(_ba,aba)if
+(fs.exists(aba))then local bba=ab.loadBIMG(aba)ad=bb(bba)__a=1
+bd=ad.getFrameObject(1)cd=ad.createBimg()dd=bd.getImage()caa()
+_ba:updateDraw()end;return
+_ba end,setPath=function(_ba,aba)return
+_ba:loadImage(aba)end,setImage=function(_ba,aba)if(type(aba)=="table")then ad=bb(aba)__a=1
+bd=ad.getFrameObject(1)cd=ad.createBimg()dd=bd.getImage()caa()
+_ba:updateDraw()end;return _ba end,clear=function(_ba)
+ad=bb()bd=ad.getFrameObject(1)dd=nil;_ba:updateDraw()return _ba end,getImage=function(_ba)return
+ad.createBimg()end,getImageFrame=function(_ba,aba)return bd.getImage(aba)end,usePalette=function(_ba,aba)c_a=
+aba~=nil and aba or true;return _ba end,getUsePalette=function(_ba)return
+c_a end,setUsePalette=function(_ba,aba)return _ba:usePalette(aba)end,play=function(_ba,aba)
 if
-(a_a:isVisible())then dc.render(a_a)local b_a=a_a:getChildren()for c_a,d_a in ipairs(b_a)do
-if(
-d_a.element.render~=nil)then d_a.element:render()end end end end end,updateDraw=function(a_a)if(
-ad~=nil)then ad:updateDraw()end;return a_a end,blit=function(a_a,b_a,c_a,d_a,_aa,aaa)
-local baa,caa=a_a:getPosition()local daa,_ba=ad:getOffset()baa=baa-daa;caa=caa-_ba
-local aba,bba=a_a:getSize()
-if c_a>=1 and c_a<=bba then
-local cba=db(d_a,bb(1 -b_a+1,1),bb(aba-b_a+1,1))
-local dba=db(_aa,bb(1 -b_a+1,1),bb(aba-b_a+1,1))
-local _ca=db(aaa,bb(1 -b_a+1,1),bb(aba-b_a+1,1))
-ad:blit(bb(b_a+ (baa-1),baa),caa+c_a-1,cba,dba,_ca)end end,setCursor=function(a_a,b_a,c_a,d_a,_aa)
-local aaa,baa=a_a:getPosition()local caa,daa=a_a:getOffset()
-ad:setCursor(b_a or false,(c_a or 0)+aaa-1 -caa,(
-d_a or 0)+baa-1 -daa,_aa or colors.white)return a_a end}
-for a_a,b_a in
-pairs({"drawBackgroundBox","drawForegroundBox","drawTextBox"})do
-__a[b_a]=function(c_a,d_a,_aa,aaa,baa,caa)local daa,_ba=c_a:getPosition()local aba,bba=ad:getOffset()
-daa=daa-aba;_ba=_ba-bba
-baa=(_aa<1 and(
-baa+_aa>c_a:getHeight()and c_a:getHeight()or baa+_aa-1)or(
-baa+
-_aa>c_a:getHeight()and c_a:getHeight()-_aa+1 or baa))
-aaa=(d_a<1 and(aaa+d_a>c_a:getWidth()and c_a:getWidth()or aaa+
-d_a-1)or(
-
-aaa+d_a>c_a:getWidth()and c_a:getWidth()-d_a+1 or aaa))
-ad[b_a](ad,bb(d_a+ (daa-1),daa),bb(_aa+ (_ba-1),_ba),aaa,baa,caa)end end
-for a_a,b_a in pairs({"setBG","setFG","setText"})do
-__a[b_a]=function(c_a,d_a,_aa,aaa)
-local baa,caa=c_a:getPosition()local daa,_ba=ad:getOffset()baa=baa-daa;caa=caa-_ba
-local aba,bba=c_a:getSize()if(_aa>=1)and(_aa<=bba)then
-ad[b_a](ad,bb(d_a+ (baa-1),baa),caa+_aa-1,db(aaa,bb(
-1 -d_a+1,1),bb(aba-d_a+1,1)))end end end;__a.__index=__a;return setmetatable(__a,dc)end end
-aa["objects"]["Timer"]=function(...)
-return
-function(ab,bb)
-local cb=bb.getObject("Object")(ab,bb)local db="Timer"local _c=0;local ac=0;local bc=0;local cc;local dc=false
-local _d={getType=function(ad)return db end,setTime=function(ad,bd,cd)_c=bd or 0
-ac=cd or 1;return ad end,getTime=function(ad)return _c end,start=function(ad)if(dc)then
-os.cancelTimer(cc)end;bc=ac;cc=os.startTimer(_c)dc=true
-ad:listenEvent("other_event")return ad end,isActive=function(ad)return dc end,cancel=function(ad)if(
-cc~=nil)then os.cancelTimer(cc)end;dc=false
-ad:removeEvent("other_event")return ad end,setStart=function(ad,bd)if(bd==true)then
-return ad:start()else return ad:cancel()end end,onCall=function(ad,bd)
-ad:registerEvent("timed_event",bd)return ad end,eventHandler=function(ad,bd,...)cb.eventHandler(ad,bd,...)
+(ad.getMetadata("animated"))then
+local bba=
+ad.getMetadata("duration")or ad.getMetadata("secondsPerFrame")or 0.2;_ba:listenEvent("other_event")
+b_a=os.startTimer(bba)a_a=aba or false end;return _ba end,setPlay=function(_ba,aba)return
+_ba:play(aba)end,stop=function(_ba)os.cancelTimer(b_a)b_a=nil;a_a=false
+return _ba end,eventHandler=function(_ba,aba,bba,...)
+dc.eventHandler(_ba,aba,bba,...)
+if(aba=="timer")then
+if(bba==b_a)then
+if(ad.getFrame(__a+1)~=nil)then __a=__a+1
+_ba:selectFrame(__a)
+local cba=
+ad.getFrameData(__a,"duration")or ad.getMetadata("secondsPerFrame")or 0.2;b_a=os.startTimer(cba)else
+if(a_a)then __a=1;_ba:selectFrame(__a)
+local cba=
+ad.getFrameData(__a,"duration")or ad.getMetadata("secondsPerFrame")or 0.2;b_a=os.startTimer(cba)end end;_ba:updateDraw()end end end,setMetadata=function(_ba,aba,bba)
+ad.setMetadata(aba,bba)return _ba end,getMetadata=function(_ba,aba)return ad.getMetadata(aba)end,getFrameMetadata=function(_ba,aba,bba)return
+ad.getFrameData(aba,bba)end,setFrameMetadata=function(_ba,aba,bba,cba)
+ad.setFrameData(aba,bba,cba)return _ba end,blit=function(_ba,aba,bba,cba,dba,_ca)x=dba or x;y=_ca or y
+bd.blit(aba,bba,cba,x,y)dd=bd.getImage()_ba:updateDraw()return _ba end,setText=function(_ba,aba,bba,cba)x=
+bba or x;y=cba or y;bd.text(aba,x,y)dd=bd.getImage()
+_ba:updateDraw()return _ba end,setBg=function(_ba,aba,bba,cba)x=bba or x;y=
+cba or y;bd.bg(aba,x,y)dd=bd.getImage()
+_ba:updateDraw()return _ba end,setFg=function(_ba,aba,bba,cba)x=bba or x
+y=cba or y;bd.fg(aba,x,y)dd=bd.getImage()_ba:updateDraw()return _ba end,getImageSize=function(_ba)return
+ad.getSize()end,setImageSize=function(_ba,aba,bba)ad.setSize(aba,bba)
+dd=bd.getImage()_ba:updateDraw()return _ba end,resizeImage=function(_ba,aba,bba)
+local cba=ab.resizeBIMG(cd,aba,bba)ad=bb(cba)__a=1;bd=ad.getFrameObject(1)dd=bd.getImage()
+_ba:updateDraw()return _ba end,draw=function(_ba)
+dc.draw(_ba)
+_ba:addDraw("image",function()local aba,bba=_ba:getSize()local cba,dba=_ba:getPosition()
+local _ca,aca=_ba:getParent():getSize()local bca,cca=_ba:getParent():getOffset()
 if
-bd=="timer"and tObj==cc and dc then
-ad:sendEvent("timed_event")if(bc>=1)then bc=bc-1;if(bc>=1)then cc=os.startTimer(_c)end elseif(bc==-1)then
-cc=os.startTimer(_c)end end end}_d.__index=_d;return setmetatable(_d,cb)end end
-aa["objects"]["Treeview"]=function(...)local ab=da("utils")local bb=da("tHex")
-return
-function(cb,db)
-local _c=db.getObject("ChangeableObject")(cb,db)local ac="Treeview"local bc={}local cc=colors.black;local dc=colors.lightGray;local _d=true
-local ad="left"local bd,cd=0,0;local dd=true;_c:setSize(16,8)_c:setZIndex(5)
-local function __a(c_a,d_a)
-c_a=c_a or""d_a=d_a or false;local _aa=false;local aaa=nil;local baa={}local caa={}local daa
-caa={getChildren=function()return baa end,setParent=function(_ba)if(
-aaa~=nil)then
-aaa.removeChild(aaa.findChildrenByText(caa.getText()))end;aaa=_ba;_c:updateDraw()return caa end,getParent=function()return
-aaa end,addChild=function(_ba,aba)local bba=__a(_ba,aba)bba.setParent(caa)
-table.insert(baa,bba)_c:updateDraw()return bba end,setExpanded=function(_ba)if
-(d_a)then _aa=_ba end;_c:updateDraw()return caa end,isExpanded=function()return
-_aa end,onSelect=function(...)for _ba,aba in pairs(table.pack(...))do if(type(aba)=="function")then
-daa=aba end end;return caa end,callOnSelect=function()if(
-daa~=nil)then daa(caa)end end,setExpandable=function(_ba)_ba=_ba
-_c:updateDraw()return caa end,isExpandable=function()return d_a end,removeChild=function(_ba)
-if(type(_ba)=="table")then for aba,bba in
-pairs(_ba)do if(bba==_ba)then _ba=aba;break end end end;table.remove(baa,_ba)_c:updateDraw()return caa end,findChildrenByText=function(_ba)
-local aba={}
-for bba,cba in ipairs(baa)do if string.find(cba.getText(),_ba)then
-table.insert(aba,cba)end end;return aba end,getText=function()return
-c_a end,setText=function(_ba)c_a=_ba;_c:updateDraw()return caa end}return caa end;local a_a=__a("Root",true)a_a.setExpanded(true)
-local b_a={init=function(c_a)
-local d_a=c_a:getParent()c_a:listenEvent("mouse_click")
-c_a:listenEvent("mouse_scroll")return _c.init(c_a)end,getBase=function(c_a)return
-_c end,getType=function(c_a)return ac end,isType=function(c_a,d_a)
-return ac==d_a or
-_c.isType~=nil and _c.isType(d_a)or false end,setOffset=function(c_a,d_a,_aa)bd=d_a;cd=_aa;return c_a end,setXOffset=function(c_a,d_a)return
-c_a:setOffset(d_a,cd)end,setYOffset=function(c_a,d_a)return c_a:setOffset(bd,d_a)end,getOffset=function(c_a)return
-bd,cd end,getXOffset=function(c_a)return bd end,getYOffset=function(c_a)return cd end,setScrollable=function(c_a,d_a)dd=d_a;return c_a end,getScrollable=function(c_a,d_a)return
-dd end,setSelectionColor=function(c_a,d_a,_aa,aaa)cc=d_a or c_a:getBackground()dc=_aa or
-c_a:getForeground()_d=aaa~=nil and aaa or true
-c_a:updateDraw()return c_a end,setSelectionBG=function(c_a,d_a)return c_a:setSelectionColor(d_a,
-nil,_d)end,setSelectionFG=function(c_a,d_a)return c_a:setSelectionColor(
-nil,d_a,_d)end,getSelectionColor=function(c_a)
-return cc,dc end,getSelectionBG=function(c_a)return cc end,getSelectionFG=function(c_a)return dc end,isSelectionColorActive=function(c_a)return _d end,getRoot=function(c_a)
-return a_a end,setRoot=function(c_a,d_a)a_a=d_a;d_a.setParent(nil)return c_a end,onSelect=function(c_a,...)
-for d_a,_aa in
-pairs(table.pack(...))do if(type(_aa)=="function")then
-c_a:registerEvent("treeview_select",_aa)end end;return c_a end,selectionHandler=function(c_a,d_a)
-d_a.callOnSelect(d_a)c_a:sendEvent("treeview_select",d_a)return c_a end,mouseHandler=function(c_a,d_a,_aa,aaa)
-if
-_c.mouseHandler(c_a,d_a,_aa,aaa)then local baa=1 -cd;local caa,daa=c_a:getAbsolutePosition()
-local _ba,aba=c_a:getSize()
-local function bba(cba,dba)
-if aaa==daa+baa-1 then
-if _aa>=caa and _aa<caa+_ba then cba.setExpanded(not
-cba.isExpanded())
-c_a:selectionHandler(cba)c_a:setValue(cba)c_a:updateDraw()return true end end;baa=baa+1
-if cba.isExpanded()then for _ca,aca in ipairs(cba.getChildren())do if bba(aca,dba+1)then return
-true end end end;return false end
-for cba,dba in ipairs(a_a.getChildren())do if bba(dba,1)then return true end end end end,scrollHandler=function(c_a,d_a,_aa,aaa)
-if
-_c.scrollHandler(c_a,d_a,_aa,aaa)then
-if dd then local baa,caa=c_a:getSize()cd=cd+d_a;if cd<0 then cd=0 end
-if d_a>=1 then local daa=0
-local function _ba(aba,bba)
-daa=daa+1;if aba.isExpanded()then
-for cba,dba in ipairs(aba.getChildren())do _ba(dba,bba+1)end end end;for aba,bba in ipairs(a_a.getChildren())do _ba(bba,1)end
-if
-daa>caa then if cd>daa-caa then cd=daa-caa end else cd=cd-1 end end;c_a:updateDraw()end;return true end;return false end,draw=function(c_a)
-_c.draw(c_a)
-c_a:addDraw("treeview",function()local d_a=1 -cd;local _aa=c_a:getValue()
-local function aaa(baa,caa)
-local daa,_ba=c_a:getSize()
-if d_a>=1 and d_a<=_ba then
-local aba=(baa==_aa)and cc or c_a:getBackground()
-local bba=(baa==_aa)and dc or c_a:getForeground()local cba=baa.getText()
-c_a:addBlit(1 +caa+bd,d_a,cba,bb[bba]:rep(#cba),bb[aba]:rep(
-#cba))end;d_a=d_a+1;if baa.isExpanded()then for aba,bba in ipairs(baa.getChildren())do
-aaa(bba,caa+1)end end end;for baa,caa in ipairs(a_a.getChildren())do aaa(caa,1)end end)end}b_a.__index=b_a;return setmetatable(b_a,_c)end end
-aa["objects"]["VisualObject"]=function(...)local ab=da("utils")local bb=da("tHex")
-local cb,db,_c=string.sub,string.find,table.insert
-return
-function(ac,bc)local cc=bc.getObject("Object")(ac,bc)
-local dc="VisualObject"local _d,ad,bd,cd,dd=true,false,false,false,false;local __a=1;local a_a,b_a,c_a,d_a=1,1,1,1
-local _aa,aaa,baa,caa=0,0,0,0;local daa,_ba,aba=colors.black,colors.white,false;local bba;local cba={}local dba={}local _ca={}
-local aca={}
-local function bca(dca,_da)local ada={}if dca==""then return ada end;_da=_da or" "local bda=1
-local cda,dda=db(dca,_da,bda)
-while cda do
-_c(ada,{x=bda,value=cb(dca,bda,cda-1)})bda=dda+1;cda,dda=db(dca,_da,bda)end;_c(ada,{x=bda,value=cb(dca,bda)})return ada end
-local cca={getType=function(dca)return dc end,getBase=function(dca)return cc end,isType=function(dca,_da)
-return dc==_da or
-cc.isType~=nil and cc.isType(_da)or false end,getBasalt=function(dca)return bc end,show=function(dca)_d=true
-dca:updateDraw()return dca end,hide=function(dca)_d=false;dca:updateDraw()return dca end,isVisible=function(dca)return
-_d end,setVisible=function(dca,_da)_d=_da or not _d;dca:updateDraw()return dca end,setTransparency=function(dca,_da)aba=
-_da~=nil and _da or true;dca:updateDraw()
-return dca end,setParent=function(dca,_da,ada)
-cc.setParent(dca,_da,ada)bba=_da;return dca end,setFocus=function(dca)if(bba~=nil)then
-bba:setFocusedChild(dca)end;return dca end,setZIndex=function(dca,_da)__a=_da
-if
-(bba~=nil)then bba:updateZIndex(dca,__a)dca:updateDraw()end;return dca end,getZIndex=function(dca)return __a end,updateDraw=function(dca)if(
-bba~=nil)then bba:updateDraw()end;return dca end,setPosition=function(dca,_da,ada,bda)
-local cda,dda=a_a,b_a
-if(type(_da)=="number")then a_a=bda and a_a+_da or _da end
-if(type(ada)=="number")then b_a=bda and b_a+ada or ada end;if(bba~=nil)then
-bba:customEventHandler("basalt_FrameReposition",dca)end;if(dca:getType()=="Container")then
-bba:customEventHandler("basalt_FrameReposition",dca)end;dca:updateDraw()
-dca:repositionHandler(cda,dda)return dca end,getX=function(dca)return
-a_a end,setX=function(dca,_da)return dca:setPosition(_da,b_a)end,getY=function(dca)return
-b_a end,setY=function(dca,_da)return dca:setPosition(a_a,_da)end,getPosition=function(dca)return
-a_a,b_a end,setSize=function(dca,_da,ada,bda)local cda,dda=c_a,d_a;if(type(_da)=="number")then c_a=
-bda and c_a+_da or _da end;if
-(type(ada)=="number")then d_a=bda and d_a+ada or ada end
-if
-(bba~=nil)then bba:customEventHandler("basalt_FrameResize",dca)if(
-dca:getType()=="Container")then
-bba:customEventHandler("basalt_FrameResize",dca)end end;dca:resizeHandler(cda,dda)dca:updateDraw()return dca end,getHeight=function(dca)return
-d_a end,setHeight=function(dca,_da)return dca:setSize(c_a,_da)end,getWidth=function(dca)return
-c_a end,setWidth=function(dca,_da)return dca:setSize(_da,d_a)end,getSize=function(dca)return
-c_a,d_a end,setBackground=function(dca,_da)daa=_da;dca:updateDraw()return dca end,getBackground=function(dca)return
-daa end,setForeground=function(dca,_da)_ba=_da or false;dca:updateDraw()return dca end,getForeground=function(dca)return
-_ba end,getAbsolutePosition=function(dca,_da,ada)if(_da==nil)or(ada==nil)then
-_da,ada=dca:getPosition()end
-if(bba~=nil)then
-local bda,cda=bba:getAbsolutePosition()_da=bda+_da-1;ada=cda+ada-1 end;return _da,ada end,ignoreOffset=function(dca,_da)
-ad=_da;if(_da==nil)then ad=true end;return dca end,getIgnoreOffset=function(dca)return ad end,isCoordsInObject=function(dca,_da,ada)
-if
-(_d)and(dca:isEnabled())then
-if(_da==nil)or(ada==nil)then return false end;local bda,cda=dca:getAbsolutePosition()local dda,__b=dca:getSize()if
-
-(bda<=_da)and(bda+dda>_da)and(cda<=ada)and(cda+__b>ada)then return true end end;return false end,onGetFocus=function(dca,...)
-for _da,ada in
-pairs(table.pack(...))do if(type(ada)=="function")then
-dca:registerEvent("get_focus",ada)end end;return dca end,onLoseFocus=function(dca,...)
-for _da,ada in
-pairs(table.pack(...))do if(type(ada)=="function")then
-dca:registerEvent("lose_focus",ada)end end;return dca end,isFocused=function(dca)if(
-bba~=nil)then return bba:getFocused()==dca end;return
-true end,resizeHandler=function(dca,...)
-if(dca:isEnabled())then
-local _da=dca:sendEvent("basalt_resize",...)if(_da==false)then return false end end;return true end,repositionHandler=function(dca,...)if
-(dca:isEnabled())then local _da=dca:sendEvent("basalt_reposition",...)if(_da==false)then
-return false end end;return
-true end,onResize=function(dca,...)
-for _da,ada in
-pairs(table.pack(...))do if(type(ada)=="function")then
-dca:registerEvent("basalt_resize",ada)end end;return dca end,onReposition=function(dca,...)
-for _da,ada in
-pairs(table.pack(...))do if(type(ada)=="function")then
-dca:registerEvent("basalt_reposition",ada)end end;return dca end,mouseHandler=function(dca,_da,ada,bda,cda)
-if
-(dca:isCoordsInObject(ada,bda))then local dda,__b=dca:getAbsolutePosition()
-local a_b=dca:sendEvent("mouse_click",_da,ada- (dda-1),
-bda- (__b-1),ada,bda,cda)if(a_b==false)then return false end;if(bba~=nil)then
-bba:setFocusedChild(dca)end;cd=true;dd=true;_aa,aaa=ada,bda;return true end end,mouseUpHandler=function(dca,_da,ada,bda)
-dd=false
-if(cd)then local cda,dda=dca:getAbsolutePosition()
-local __b=dca:sendEvent("mouse_release",_da,ada- (cda-1),
-bda- (dda-1),ada,bda)cd=false end
-if(dca:isCoordsInObject(ada,bda))then local cda,dda=dca:getAbsolutePosition()
-local __b=dca:sendEvent("mouse_up",_da,
-ada- (cda-1),bda- (dda-1),ada,bda)if(__b==false)then return false end;return true end end,dragHandler=function(dca,_da,ada,bda)
-if
-(dd)then local cda,dda=dca:getAbsolutePosition()
-local __b=dca:sendEvent("mouse_drag",_da,ada- (cda-1),bda- (
-dda-1),_aa-ada,aaa-bda,ada,bda)_aa,aaa=ada,bda;if(__b~=nil)then return __b end;if(bba~=nil)then
-bba:setFocusedChild(dca)end;return true end
-if(dca:isCoordsInObject(ada,bda))then local cda,dda=dca:getAbsolutePosition()
-_aa,aaa=ada,bda;baa,caa=cda-ada,dda-bda end end,scrollHandler=function(dca,_da,ada,bda)
-if
-(dca:isCoordsInObject(ada,bda))then local cda,dda=dca:getAbsolutePosition()
-local __b=dca:sendEvent("mouse_scroll",_da,ada- (cda-1),
-bda- (dda-1))if(__b==false)then return false end;if(bba~=nil)then
-bba:setFocusedChild(dca)end;return true end end,hoverHandler=function(dca,_da,ada,bda)
-if
-(dca:isCoordsInObject(_da,ada))then local cda=dca:sendEvent("mouse_hover",_da,ada,bda)if(cda==false)then return
-false end;bd=true;return true end
-if(bd)then local cda=dca:sendEvent("mouse_leave",_da,ada,bda)if
-(cda==false)then return false end;bd=false end end,keyHandler=function(dca,_da,ada)if
-(dca:isEnabled())and(_d)then
-if(dca:isFocused())then
-local bda=dca:sendEvent("key",_da,ada)if(bda==false)then return false end;return true end end end,keyUpHandler=function(dca,_da)if
-(dca:isEnabled())and(_d)then
-if(dca:isFocused())then
-local ada=dca:sendEvent("key_up",_da)if(ada==false)then return false end;return true end end end,charHandler=function(dca,_da)if
-(dca:isEnabled())and(_d)then
-if(dca:isFocused())then local ada=dca:sendEvent("char",_da)if(ada==
-false)then return false end;return true end end end,getFocusHandler=function(dca)
-local _da=dca:sendEvent("get_focus")if(_da~=nil)then return _da end;return true end,loseFocusHandler=function(dca)
-dd=false;local _da=dca:sendEvent("lose_focus")
-if(_da~=nil)then return _da end;return true end,addDraw=function(dca,_da,ada,bda,cda,dda)
-local __b=
-(cda==nil or cda==1)and dba or cda==2 and cba or cda==3 and _ca;bda=bda or#__b+1
-if(_da~=nil)then for b_b,c_b in pairs(__b)do if(c_b.name==_da)then
-table.remove(__b,b_b)break end end
-local a_b={name=_da,f=ada,pos=bda,active=
-dda~=nil and dda or true}table.insert(__b,bda,a_b)end;dca:updateDraw()return dca end,addPreDraw=function(dca,_da,ada,bda,cda)
-dca:addDraw(_da,ada,bda,2)return dca end,addPostDraw=function(dca,_da,ada,bda,cda)
-dca:addDraw(_da,ada,bda,3)return dca end,setDrawState=function(dca,_da,ada,bda)
-local cda=
-(bda==nil or bda==1)and dba or bda==2 and cba or bda==3 and _ca
-for dda,__b in pairs(cda)do if(__b.name==_da)then __b.active=ada;break end end;dca:updateDraw()return dca end,getDrawId=function(dca,_da,ada)local bda=
-
-ada==1 and dba or ada==2 and cba or ada==3 and _ca or dba;for cda,dda in pairs(bda)do if(
-dda.name==_da)then return cda end end end,addText=function(dca,_da,ada,bda)local cda=
-dca:getParent()or dca;local dda,__b=dca:getPosition()if(bba~=nil)then
-local b_b,c_b=bba:getOffset()dda=ad and dda or dda-b_b
-__b=ad and __b or __b-c_b end
-if not(aba)then cda:setText(_da+dda-1,
-ada+__b-1,bda)return end;local a_b=bca(bda,"\0")
-for b_b,c_b in pairs(a_b)do if
-(c_b.value~="")and(c_b.value~="\0")then
-cda:setText(_da+c_b.x+dda-2,ada+__b-1,c_b.value)end end end,addBG=function(dca,_da,ada,bda,cda)local dda=
-bba or dca;local __b,a_b=dca:getPosition()if(bba~=nil)then
-local c_b,d_b=bba:getOffset()__b=ad and __b or __b-c_b
-a_b=ad and a_b or a_b-d_b end
-if not(aba)then dda:setBG(_da+__b-1,
-ada+a_b-1,bda)return end;local b_b=bca(bda)
-for c_b,d_b in pairs(b_b)do
-if(d_b.value~="")and(d_b.value~=" ")then
-if(cda~=
-true)then
-dda:setText(_da+d_b.x+__b-2,ada+a_b-1,(" "):rep(#d_b.value))
-dda:setBG(_da+d_b.x+__b-2,ada+a_b-1,d_b.value)else
-table.insert(aca,{x=_da+d_b.x-1,y=ada,bg=d_b.value})dda:setBG(_da+__b-1,ada+a_b-1,fg)end end end end,addFG=function(dca,_da,ada,bda)local cda=
-bba or dca;local dda,__b=dca:getPosition()if(bba~=nil)then
-local b_b,c_b=bba:getOffset()dda=ad and dda or dda-b_b
-__b=ad and __b or __b-c_b end
-if not(aba)then cda:setFG(_da+dda-1,
-ada+__b-1,bda)return end;local a_b=bca(bda)
-for b_b,c_b in pairs(a_b)do if(c_b.value~="")and(c_b.value~=" ")then
-cda:setFG(
-_da+c_b.x+dda-2,ada+__b-1,c_b.value)end end end,addBlit=function(dca,_da,ada,bda,cda,dda)local __b=
-bba or dca;local a_b,b_b=dca:getPosition()if(bba~=nil)then
-local aab,bab=bba:getOffset()a_b=ad and a_b or a_b-aab
-b_b=ad and b_b or b_b-bab end
-if not(aba)then __b:blit(_da+a_b-1,
-ada+b_b-1,bda,cda,dda)return end;local c_b=bca(bda,"\0")local d_b=bca(cda)local _ab=bca(dda)
-for aab,bab in pairs(c_b)do if
-(bab.value~="")or(bab.value~="\0")then
-__b:setText(_da+bab.x+a_b-2,ada+b_b-1,bab.value)end end;for aab,bab in pairs(_ab)do
-if(bab.value~="")or(bab.value~=" ")then __b:setBG(
-_da+bab.x+a_b-2,ada+b_b-1,bab.value)end end;for aab,bab in pairs(d_b)do
-if(
-bab.value~="")or(bab.value~=" ")then __b:setFG(_da+bab.x+a_b-2,ada+
-b_b-1,bab.value)end end end,addTextBox=function(dca,_da,ada,bda,cda,dda)local __b=
-bba or dca;local a_b,b_b=dca:getPosition()if(bba~=nil)then
-local c_b,d_b=bba:getOffset()a_b=ad and a_b or a_b-c_b
-b_b=ad and b_b or b_b-d_b end;__b:drawTextBox(_da+a_b-1,
-ada+b_b-1,bda,cda,dda)end,addForegroundBox=function(dca,_da,ada,bda,cda,dda)local __b=
-bba or dca;local a_b,b_b=dca:getPosition()if(bba~=nil)then
-local c_b,d_b=bba:getOffset()a_b=ad and a_b or a_b-c_b
-b_b=ad and b_b or b_b-d_b end;__b:drawForegroundBox(_da+a_b-1,
-ada+b_b-1,bda,cda,dda)end,addBackgroundBox=function(dca,_da,ada,bda,cda,dda)local __b=
-bba or dca;local a_b,b_b=dca:getPosition()if(bba~=nil)then
-local c_b,d_b=bba:getOffset()a_b=ad and a_b or a_b-c_b
-b_b=ad and b_b or b_b-d_b end;__b:drawBackgroundBox(_da+a_b-1,
-ada+b_b-1,bda,cda,dda)end,render=function(dca)if
-(_d)then dca:redraw()end end,redraw=function(dca)for _da,ada in pairs(cba)do if(ada.active)then
-ada.f(dca)end end;for _da,ada in pairs(dba)do if(ada.active)then
-ada.f(dca)end end;for _da,ada in pairs(_ca)do if(ada.active)then
-ada.f(dca)end end;return true end,draw=function(dca)
-dca:addDraw("base",function()
-local _da,ada=dca:getSize()if(daa~=false)then dca:addTextBox(1,1,_da,ada," ")
-dca:addBackgroundBox(1,1,_da,ada,daa)end;if(_ba~=false)then
-dca:addForegroundBox(1,1,_da,ada,_ba)end end,1)end}cca.__index=cca;return setmetatable(cca,cc)end end;return aa["main"]()
+(cba-bca>_ca)or(dba-cca>aca)or(cba-bca+aba<1)or(dba-
+cca+bba<1)then return end
+if(c_a)then _ba:getParent():setPalette(baa(__a))end
+if(dd~=nil)then
+for dca,_da in pairs(dd)do
+if(dca+aaa<=bba)and(dca+aaa>=1)then
+local ada,bda,cda=_da[1],_da[2],_da[3]local dda=_c(1 -_aa,1)local __b=ac(aba-_aa,#ada)
+ada=db(ada,dda,__b)bda=db(bda,dda,__b)cda=db(cda,dda,__b)
+_ba:addBlit(_c(1 +_aa,1),dca+aaa,ada,bda,cda)end end end end)end}daa.__index=daa;return setmetatable(daa,dc)end end;return aa["main"]()
