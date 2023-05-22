@@ -96,6 +96,7 @@ return function(name, basalt)
         load = function(self)
             base.load(self)
             self:listenEvent("mouse_scroll")
+            self:listenEvent("mouse_drag")
         end,
 
         removeChildren = function(self)
@@ -121,12 +122,12 @@ return function(name, basalt)
                         if(obj.element.getIgnoreOffset())then
                             xO, yO = 0, 0
                         end
-                        if (obj.element.scrollHandler(obj.element, dir, x+xO, y+yO)) then      
+                        if (obj.element.scrollHandler(obj.element, dir, x+xO, y+yO)) then
                             return true
                         end
                     end
                 end
-                scrollHandler(self, dir, x, y)
+                scrollHandler(self, dir)
                 self:clearFocusedChild()
                 return true
             end

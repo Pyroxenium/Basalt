@@ -146,6 +146,10 @@ return function(name, basalt)
         registerEvent = function(self, event, func)
             if(parent~=nil)then
                 parent:addEvent(event, self)
+                if(event=="mouse_drag")then
+                    parent:addEvent("mouse_click", self)
+                    parent:addEvent("mouse_up", self)
+                end
             end
             eventSystem:registerEvent(event, func)
             if (registeredEvents[event] == nil) then

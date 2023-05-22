@@ -50,13 +50,10 @@ return function(name, basalt)
         dragHandler = function(self, btn, x, y)
             if(base.dragHandler(self, btn, x, y))then
                 if (isDragging) then
-                    local xO, yO = parent:getOffset()
-                    xO = xO < 0 and math.abs(xO) or -xO
-                    yO = yO < 0 and math.abs(yO) or -yO
                     local parentX = 1
                     local parentY = 1
                     parentX, parentY = parent:getAbsolutePosition()
-                    self:setPosition(x + dragXOffset - (parentX - 1) + xO, y + dragYOffset - (parentY - 1) + yO)
+                    self:setPosition(x + dragXOffset - (parentX - 1), y + dragYOffset - (parentY - 1))
                     self:updateDraw()
                 end
                 return true
