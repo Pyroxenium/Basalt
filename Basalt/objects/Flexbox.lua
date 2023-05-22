@@ -34,15 +34,15 @@ local function flexObjectPlugin(base, basalt)
             return self
         end,
 
-        getSize = function(self)
+        getBaseSize = function(self)
             return baseWidth, baseHeight
         end,
 
-        getWidth = function(self)
+        getBaseWidth = function(self)
             return baseWidth
         end,
 
-        getHeight = function(self)
+        getBaseHeight = function(self)
             return baseHeight
         end,
 
@@ -71,8 +71,8 @@ return function(name, basalt)
     local sortedChildren = {}
     local updateLayout = false
     local lineBreakFakeObject = flexObjectPlugin({
-        getHeight = function(self) return 0 end,
-        getWidth = function(self) return 0 end,
+        getBaseHeight = function(self) return 0 end,
+        getBaseWidth = function(self) return 0 end,
         getPosition = function(self) return 0, 0 end,
         getSize = function(self) return 0, 0 end,
         isType = function(self) return false end,
@@ -123,19 +123,19 @@ return function(name, basalt)
                     index = index + 1
                     sortedChildren[index] = {offset=lineOffset}
                 else
-                    local objSize = direction == "row" and v:getWidth() or v:getHeight()
+                    local objSize = direction == "row" and v:getBaseWidth() or v:getBaseHeight()
                     if(objSize+usedSize<=maxSize) then
                         table.insert(sortedChildren[index], v)
                         usedSize = usedSize + objSize + spacing
                     else
                         lineOffset = lineOffset + lineSize + spacing
-                        lineSize = direction == "row" and v:getHeight() or v:getWidth()
+                        lineSize = direction == "row" and v:getBaseHeight() or v:getBaseWidth()
                         index = index + 1
                         usedSize = objSize + spacing
                         sortedChildren[index] = {offset=lineOffset, v}
                     end
 
-                    local childHeight = direction == "row" and v:getHeight() or v:getWidth()
+                    local childHeight = direction == "row" and v:getBaseHeight() or v:getBaseWidth()
                     if childHeight > lineSize then
                         lineSize = childHeight
                     end
@@ -166,7 +166,7 @@ return function(name, basalt)
                 local flexGrow = child:getFlexGrow()
                 local flexShrink = child:getFlexShrink()
 
-                local baseWidth = child:getFlexBasis() ~= 0 and child:getFlexBasis() or child:getWidth()
+                local baseWidth = child:getFlexBasis() ~= 0 and child:getFlexBasis() or child:getBaseWidth()
                 if totalFlexGrow > 0 then
                     childWidth = baseWidth + flexGrow / totalFlexGrow * remainingSpace
                 else
@@ -255,7 +255,7 @@ return function(name, basalt)
                 local flexGrow = child:getFlexGrow()
                 local flexShrink = child:getFlexShrink()
 
-                local baseHeight = child:getFlexBasis() ~= 0 and child:getFlexBasis() or child:getHeight()
+                local baseHeight = child:getFlexBasis() ~= 0 and child:getFlexBasis() or child:getBaseHeight()
                 if totalFlexGrow > 0 then
                     childHeight = baseHeight + flexGrow / totalFlexGrow * remainingSpace
                 else
