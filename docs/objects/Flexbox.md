@@ -1,15 +1,32 @@
-Flexbox is an incredibly powerful tool for layout design in Basalt, it allows for dynamic positioning of elements in both rows and columns. This can make your program look much neater, and also simplify the placement and resizing of elements.
+A Flexbox is a layout container designed to facilitate the creation of flexible and responsive UI designs. It allows you to efficiently arrange and align its child elements within it.
 
-In addition to the methods inherited from Frame, Container, VisualObject and Object, Flexbox has the following methods:
+The Flexbox Container is still a WIP and i will add more methods from the CSS Flexbox Implementation.
+
+In addition to the methods inherited from ScrollableFrame, Frame, Container, VisualObject and Object, Flexbox has the following methods:
 
 |   |   |
 |---|---|
-|[setDirection](objects/BaseFrame/getOffset.md)|Sets the direction in which the children will be placed
-|[getDirection](objects/BaseFrame/getOffset.md)|Returns the direction
-|[setSpacing](objects/BaseFrame/setOffset.md)|Sets the space between objects
-|[getSpacing](objects/BaseFrame/setOffset.md)|Returns the space
-|[setJuustifyContent](objects/BaseFrame/getOffset.md)|Determines how the children are aligned along the main axis
-|[getJuustifyContent](objects/BaseFrame/getOffset.md)|Returns the justify content
+|[setSpacing](objects/Flexbox/setSpacing.md)|Defines the gap between child objects within the Flexbox
+|[getSpacing](objects/Flexbox/getSpacing.md)|Returns the current gap size between child objects
+|[setDirection](objects/Flexbox/setDirection.md)|Sets the direction for the arrangement of child objects (row/column)
+|[getDirection](objects/Flexbox/getDirection.md)|Returns the currently set arrangement direction of child objects
+|[setJustifyContent](objects/Flexbox/setJustifyContent.md)|Sets the alignment of child objects along the main axis (flex-start, center, flex-end, space-between, space-around, space-evenly)
+|[getJustifyContent](objects/Flexbox/getJustifyContent.md)|Returns the current alignment setting for child objects along the main axis
+|[setWrap](objects/Flexbox/setWrap.md)|Determines if child objects should wrap onto the next line when they run out of space
+|[getWrap](objects/Flexbox/getWrap.md)|Returns the current wrapping behavior for child objects
+|[updateLayout](objects/Flexbox/updateLayout.md)|Manually triggers a layout update for the Flexbox
+|[addBreak](objects/Flexbox/addBreak.md)|Introduces a line break within the Flexbox, forcing subsequent child objects to the next line
+
+Child objects added via the Flexbox have the following additional methods:
+
+|   |   |
+|---|---|
+|[getFlexGrow](objects/Flexbox/getFlexGrow.md)|Returns the flex grow factor of the child object
+|[setFlexGrow](objects/Flexbox/setFlexGrow.md)|Sets the flex grow factor of the child object
+|[getFlexShrink](objects/Flexbox/getFlexShrink.md)|Returns the flex shrink factor of the child object
+|[setFlexShrink](objects/Flexbox/setFlexShrink.md)|Sets the flex shrink factor of the child object
+|[getFlexBasis](objects/Flexbox/getFlexBasis.md)|Returns the flex basis of the child object
+|[setFlexBasis](objects/Flexbox/setFlexBasis.md)|Sets the flex basis of the child object
 
 ## Examples
 
