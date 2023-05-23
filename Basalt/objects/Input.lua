@@ -267,6 +267,13 @@ return function(name, basalt)
             end
         end,
 
+        eventHandler = function(self, event, paste, ...)
+            base.eventHandler(self, event, paste, ...)
+            if(event=="paste")then
+                self:setValue(self:getValue()..paste)
+            end
+        end,
+
         draw = function(self)
             base.draw(self)
             self:addDraw("input", function()
