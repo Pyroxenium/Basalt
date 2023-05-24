@@ -22,7 +22,7 @@ return function(name, basalt)
     base:setSize(24, 8)
     base:setZIndex(2)
 
-    local function getPalette(id)
+    local function getPalette()
         local p = {}
         for k,v in pairs(colors)do
             if(type(v)=="number")then
@@ -35,8 +35,7 @@ return function(name, basalt)
                 p[k] = tonumber(v)
             end
         end
-        local localPalette = bimgLibrary.getFrameData("palette")
-        basalt.log(localPalette)
+        local localPalette = bimgFrame.getFrameData("palette")
         if(localPalette~=nil)then
             for k,v in pairs(localPalette)do
                 p[k] = tonumber(v)
