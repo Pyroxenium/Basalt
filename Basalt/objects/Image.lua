@@ -26,19 +26,19 @@ return function(name, basalt)
         local p = {}
         for k,v in pairs(colors)do
             if(type(v)=="number")then
-                p[k] = {term.nativePaletteColor(v)}
+                p[math.log(v, 2)] = {term.nativePaletteColor(v)}
             end
         end
         local globalPalette = bimgLibrary.getMetadata("palette")
         if(globalPalette~=nil)then
             for k,v in pairs(globalPalette)do
-                p[k] = tonumber(v)
+                p[k] = v
             end
         end
         local localPalette = bimgFrame.getFrameData("palette")
         if(localPalette~=nil)then
             for k,v in pairs(localPalette)do
-                p[k] = tonumber(v)
+                p[k] = v
             end
         end
         return p

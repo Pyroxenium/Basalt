@@ -48,25 +48,6 @@ return function(name, basalt)
                 base.render(self)
             end
         end,
-        
-        show = function(self)
-            base:getBase().show(self)
-            basalt.setActiveFrame(self)
-            for k,v in pairs(colors)do
-                if(type(v)=="number")then
-                    termObject.setPaletteColor(v, colors.packRGB(term.nativePaletteColor((v))))
-                end
-            end
-            for k,v in pairs(colorTheme)do
-                if(type(v)=="number")then
-                    termObject.setPaletteColor(type(k)=="number" and k or colors[k], v)
-                else
-                    local r,g,b = table.unpack(v)
-                    termObject.setPaletteColor(type(k)=="number" and k or colors[k], r,g,b)
-                end
-            end
-            return self
-        end,
     }
 
     object.mouseHandler = function(self, btn, x, y, isMon, monitor, ...)
