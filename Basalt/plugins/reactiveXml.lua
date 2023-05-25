@@ -1,71 +1,5 @@
+local Reactive = require("reactivePrimitives")
 local XMLParser = require("xmlParser")
-
-local Reactive = {}
-
-Reactive.currentEffect = nil
-
-Reactive.observable = function(initialValue)
-    local value = initialValue
-    local observerEffects = {}
-    local get = function()
-        if (Reactive.currentEffect ~= nil) then
-            table.insert(observerEffects, Reactive.currentEffect)
-            table.insert(Reactive.currentEffect.dependencies, observerEffects)
-        end
-        return value
-    end
-    local set = function(newValue)
-        value = newValue
-        local observerEffectsCopy = {}
-        for index, effect in ipairs(observerEffects) do
-            observerEffectsCopy[index] = effect
-        end
-        for _, effect in ipairs(observerEffectsCopy) do
-            effect.execute()
-        end
-    end
-    return get, set
-end
-
-Reactive.untracked = function(getter)
-    local parentEffect = Reactive.currentEffect
-    Reactive.currentEffect = nil
-    local value = getter()
-    Reactive.currentEffect = parentEffect
-    return value
-end
-
-Reactive.effect = function(effectFn)
-    local effect = {dependencies = {}}
-    local execute = function()
-        Reactive.clearEffectDependencies(effect)
-        local parentEffect = Reactive.currentEffect
-        Reactive.currentEffect = effect
-        effectFn()
-        Reactive.currentEffect = parentEffect
-    end
-    effect.execute = execute
-    effect.execute()
-end
-
-Reactive.derived = function(computeFn)
-    local getValue, setValue = Reactive.observable();
-    Reactive.effect(function()
-        setValue(computeFn())
-    end)
-    return getValue;
-end
-
-Reactive.clearEffectDependencies = function(effect)
-    for _, dependency in ipairs(effect.dependencies) do
-        for index, backlink in ipairs(dependency) do
-            if (backlink == effect) then
-                table.remove(dependency, index)
-            end
-        end
-    end
-    effect.dependencies = {};
-end
 
 local Layout = {
     fromXML = function(text)
@@ -91,7 +25,9 @@ end
 
 local registerFunctionEvent = function(object, event, script, env)
     event(object, function(...)
-        local success, msg = pcall(load(script, nil, "t", env))
+        local success, msg = pcall(function()
+            Reactive.transaction(load(script, nil, "t", env))
+        end)
         if not success then
             error("XML Error: "..msg)
         end
@@ -116,11 +52,10 @@ return {
                 if (attribute:sub(1, 2) == "on") then
                     registerFunctionEvent(object, object[attribute], expression .. "()", env)
                 else
-                    local update = function()
+                    Reactive.effect(function()
                         local value = load("return " .. expression, nil, "t", env)()
                         object:setProperty(attribute, value)
-                    end
-                    basalt.effect(update)
+                    end)
                 end
             end
             for _, child in ipairs(node.children) do
@@ -134,9 +69,10 @@ return {
 
         local object = {
             observable = Reactive.observable,
-            untracked = Reactive.untracked,
-            effect = Reactive.effect,
             derived = Reactive.derived,
+            effect = Reactive.effect,
+            transaction = Reactive.transaction,
+            untracked = Reactive.untracked,
 
             layout = function(path)
                 if (not fs.exists(path)) then
@@ -163,7 +99,9 @@ return {
                     end
                 })
                 if (layout.script ~= nil) then
-                    executeScript(layout.script, env)
+                    Reactive.transaction(function()
+                        executeScript(layout.script, env)
+                    end)
                 end
                 local objects = {}
                 for _, node in ipairs(layout.nodes) do
