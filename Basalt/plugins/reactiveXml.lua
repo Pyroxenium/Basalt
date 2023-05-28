@@ -36,37 +36,6 @@ end
 
 return {
     basalt = function(basalt)
-        local createObjectsFromXMLNode = function(node, env)
-            local layout = env[node.tag]
-            if (layout ~= nil) then
-                local props = {}
-                for prop, expression in pairs(node.attributes) do
-                    props[prop] = load("return " .. expression, nil, "t", env)
-                end
-                return basalt.createObjectsFromLayout(layout, props)
-            end
-        
-            local objectName = node.tag:gsub("^%l", string.upper)
-            local object = basalt:createObject(objectName, node.attributes["id"])
-            for attribute, expression in pairs(node.attributes) do
-                if (attribute:sub(1, 2) == "on") then
-                    registerFunctionEvent(object, object[attribute], expression .. "()", env)
-                else
-                    Reactive.effect(function()
-                        local value = load("return " .. expression, nil, "t", env)()
-                        object:setProperty(attribute, value)
-                    end)
-                end
-            end
-            for _, child in ipairs(node.children) do
-                local childObjects = basalt.createObjectsFromXMLNode(child, env)
-                for _, childObject in ipairs(childObjects) do
-                    object:addChild(childObject)
-                end
-            end
-            return {object}
-        end
-
         local object = {
             observable = Reactive.observable,
             derived = Reactive.derived,
@@ -82,6 +51,37 @@ return {
                 local text = f.readAll()
                 f.close()
                 return Layout.fromXML(text)
+            end,
+
+            createObjectsFromXMLNode = function(node, env)
+                local layout = env[node.tag]
+                if (layout ~= nil) then
+                    local props = {}
+                    for prop, expression in pairs(node.attributes) do
+                        props[prop] = load("return " .. expression, nil, "t", env)
+                    end
+                    return basalt.createObjectsFromLayout(layout, props)
+                end
+            
+                local objectName = node.tag:gsub("^%l", string.upper)
+                local object = basalt:createObject(objectName, node.attributes["id"])
+                for attribute, expression in pairs(node.attributes) do
+                    if (attribute:sub(1, 2) == "on") then
+                        registerFunctionEvent(object, object[attribute], expression .. "()", env)
+                    else
+                        Reactive.effect(function()
+                            local value = load("return " .. expression, nil, "t", env)()
+                            object:setProperty(attribute, value)
+                        end)
+                    end
+                end
+                for _, child in ipairs(node.children) do
+                    local childObjects = basalt.createObjectsFromXMLNode(child, env)
+                    for _, childObject in ipairs(childObjects) do
+                        object:addChild(childObject)
+                    end
+                end
+                return {object}
             end,
 
             createObjectsFromLayout = function(layout, props)
@@ -105,7 +105,7 @@ return {
                 end
                 local objects = {}
                 for _, node in ipairs(layout.nodes) do
-                    local _objects = createObjectsFromXMLNode(node, env)
+                    local _objects = basalt.createObjectsFromXMLNode(node, env)
                     for _, object in ipairs(_objects) do
                         table.insert(objects, object)
                     end
