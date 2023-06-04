@@ -145,7 +145,7 @@ return function(name, basalt)
 
         loadImage = function(self, path)
             if(fs.exists(path))then
-                local newBimg = images.loadBIMG(path)
+                local newBimg = images.loadImageAsBimg(path)
                 bimgLibrary = bimg(newBimg)
                 activeFrame = 1
                 bimgFrame = bimgLibrary.getFrameObject(1)
