@@ -1,6 +1,6 @@
 The Image object is designed for adding more advanced backgrounds to your interface. It supports the loading of .nfp and .bimg images, allowing for greater customization of your interface's appearance.
 
-In addition to the Object and VisualObject methods, Progressbar objects have the following methods:
+In addition to the Object and VisualObject methods, Image objects have the following methods:
 
 |   |   |
 |---|---|
