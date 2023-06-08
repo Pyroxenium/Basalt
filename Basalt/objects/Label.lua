@@ -12,6 +12,8 @@ return function(name, basalt)
     base:setSize(5, 1)
     base:setBackground(false)
 
+    local fgChanged = false
+
     local autoSize = true
     local text, textAlign = "Label", "left"
 
@@ -44,6 +46,12 @@ return function(name, basalt)
                 autoSize = true
             end
             self:updateDraw()
+            return self
+        end,
+
+        setForeground = function(self, col)
+            base.setForeground(self, col)
+            fgChanged = true
             return self
         end,
 
@@ -105,7 +113,9 @@ return function(name, basalt)
         init = function(self)
             base.init(self)
             local parent = self:getParent()
-            self:setForeground(parent:getForeground())
+            if not(fgChanged)then
+                self:setForeground(parent:getForeground())
+            end
         end
 
     }

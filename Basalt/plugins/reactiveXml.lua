@@ -71,6 +71,7 @@ return {
                     else
                         Reactive.effect(function()
                             local value = load("return " .. expression, nil, "t", env)()
+                            if(colors[value]~=nil)then value = colors[value] end
                             object:setProperty(attribute, value)
                         end)
                     end
