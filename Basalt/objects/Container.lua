@@ -110,7 +110,7 @@ return function(name, basalt)
         objId = 0
         evId = 0
         focusedChild = nil
-        parent:removeEvents(self)
+        if parent ~= nil then parent:removeEvents(self) end
     end
 
     local function updateZIndex(self, element, newZ)
