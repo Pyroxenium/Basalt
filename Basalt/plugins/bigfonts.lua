@@ -164,6 +164,22 @@ return {
                 return self
             end,
 
+            setBackground = function(self, newColor)
+                base.setBackground(self, newColor)
+                if(fontsize>1)then
+                    self:setFontSize(fontsize)
+                end
+                return self
+            end,
+
+            setForeground = function(self, newColor)
+                base.setForeground(self, newColor)
+                if(fontsize>1)then
+                    self:setFontSize(fontsize)
+                end
+                return self
+            end,
+
             getFontSize = function(self)
                 return fontsize
             end,
