@@ -1,50 +1,24 @@
 return function(name, basalt)
-    local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Graph"
+    local base = basalt.getObject("VisualObject")(name, basalt)
+    base:setType("Graph")
 
-    base:setZIndex(5)
+    base:setZ(5)
     base:setSize(30, 10)
 
+    base:addProperty("GraphColor", "color", colors.gray)
+    base:addProperty("GraphSymbol", "char", "\7")
+    base:addProperty("GraphSymbolColor", "color", colors.black)
+    base:addProperty("MaxValue", "number", 100)
+    base:addProperty("MinValue", "number", 0)
+    base:addProperty("GraphType", {"bar", "line", "scatter"}, "line")
+    base:addProperty("MaxEntries", "number", 10)
+
     local graphData = {}
-    local graphColor = colors.gray
-    local graphSymbol = "\7"
-    local graphSymbolCol = colors.black
-    local maxValue = 100
-    local minValue = 0
-    local graphType = "line"
-    local maxEntries = 10
 
     local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        setGraphColor = function(self, color)
-            graphColor = color or graphColor
-            self:updateDraw()
-            return self
-        end,
-
-        setGraphSymbol = function(self, symbol, symbolcolor)
-            graphSymbol = symbol or graphSymbol
-            graphSymbolCol = symbolcolor or graphSymbolCol
-            self:updateDraw()
-            return self
-        end,
-
-        setGraphSymbolColor = function(self, symbolColor)
-            return self:setGraphSymbolColor(nil, symbolColor)
-        end,
-
-        getGraphSymbol = function(self)
-            return graphSymbol, graphSymbolCol
-        end,
-
-        getGraphSymbolColor = function(self)
-            return graphSymbolCol
-        end,
-
         addDataPoint = function(self, value)
+            local minValue = self:getMinValue()
+            local maxValue = self:getMaxValue()
             if value >= minValue and value <= maxValue then
                 table.insert(graphData, value)
                 self:updateDraw()
@@ -53,48 +27,6 @@ return function(name, basalt)
                 table.remove(graphData,1)
             end
             return self
-        end,
-
-        setMaxValue = function(self, value)
-            maxValue = value
-            self:updateDraw()
-            return self
-        end,
-
-        getMaxValue = function(self)
-            return maxValue
-        end,
-
-        setMinValue = function(self, value)
-            minValue = value
-            self:updateDraw()
-            return self
-        end,
-
-        getMinValue = function(self)
-            return minValue
-        end,
-
-        setGraphType = function(self, graph_type)
-            if graph_type == "scatter" or graph_type == "line" or graph_type == "bar" then
-                graphType = graph_type
-                self:updateDraw()
-            end
-            return self
-        end,
-
-        getGraphType = function(self)
-            return graphType
-        end,
-
-        setMaxEntries = function(self, value)
-            maxEntries = value
-            self:updateDraw()
-            return self
-        end,
-    
-        getMaxEntries = function(self)
-            return maxEntries
         end,
 
         clear = function(self)
@@ -106,9 +38,14 @@ return function(name, basalt)
         draw = function(self)
             base.draw(self)
             self:addDraw("graph", function()
-                local obx, oby = self:getPosition()
                 local w, h = self:getSize()
-                local bgCol, fgCol = self:getBackground(), self:getForeground()
+                local graphColor = self:getGraphColor()
+                local graphSymbol = self:getGraphSymbol()
+                local graphSymbolCol = self:getGraphSymbolColor()
+                local maxValue = self:getMaxValue()
+                local minValue = self:getMinValue()
+                local graphType = self:getGraphType()
+                local maxEntries = self:getMaxEntries()
 
                 local range = maxValue - minValue
                 local prev_x, prev_y
@@ -133,23 +70,23 @@ return function(name, basalt)
                             local sx = prev_x < x and 1 or -1
                             local sy = prev_y < y and 1 or -1
                             local err = dx - dy
-                        
+
                             while true do
                                 self:addBackgroundBox(prev_x, prev_y, 1, 1, graphColor)
                                 self:addForegroundBox(prev_x, prev_y, 1, 1, graphSymbolCol)
                                 self:addTextBox(prev_x, prev_y, 1, 1, graphSymbol)
-                        
+
                                 if prev_x == x and prev_y == y then
                                     break
                                 end
-                        
+
                                 local e2 = 2 * err
-                        
+
                                 if e2 > -dy then
                                     err = err - dy
                                     prev_x = prev_x + sx
                                 end
-                        
+
                                 if e2 < dx then
                                     err = err + dx
                                     prev_y = prev_y + sy

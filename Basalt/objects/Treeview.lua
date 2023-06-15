@@ -3,18 +3,30 @@ local tHex = require("tHex")
 
 return function(name, basalt)
     local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Treeview"
+    base:setType("Treeview")
 
-    local nodes = {}
-    local itemSelectedBG = colors.black
-    local itemSelectedFG = colors.lightGray
-    local selectionColorActive = true
-    local textAlign = "left"
-    local xOffset, yOffset = 0, 0
-    local scrollable = true
+    base:addProperty("Nodes", "table", {})
+    base:addProperty("SelectionBackground", "color", colors.black)
+    base:addProperty("SelectionForeground", "color", colors.lightGray)
+    base:combineProperty("SelectionColor", "SelectionBackground", "SelectionForeground")
+    base:addProperty("XOffset", "number", 0)
+    base:addProperty("YOffset", "number", 0)
+    base:combineProperty("Offset", "XOffset", "YOffset")
+    base:addProperty("Scrollable", "boolean", true)
+    base:addProperty("TextAlign", {"left", "center", "right"}, "left")
+    base:addProperty("ExpandableSymbol", "char", "\7")
+    base:addProperty("ExpandableSymbolForeground", "color", colors.lightGray)
+    base:addProperty("ExpandableSymbolBackground", "color", colors.black)
+    base:combineProperty("ExpandableSymbolColor", "ExpandableSymbolForeground", "ExpandableSymbolBackground")
+    base:addProperty("ExpandedSymbol", "char", "\8")
+    base:addProperty("ExpandedSymbolForeground", "color", colors.lightGray)
+    base:addProperty("ExpandedSymbolBackground", "color", colors.black)
+    base:combineProperty("ExpandedSymbolColor", "ExpandedSymbolForeground", "ExpandedSymbolBackground")
+    base:addProperty("ExpandableSymbolSpacing", "number", 1)
+    base:addProperty("selectionColorActive", "boolean", true)
 
     base:setSize(16, 8)
-    base:setZIndex(5)
+    base:setZ(5)
 
     local function newNode(text, expandable)
         text = text or ""
@@ -129,6 +141,9 @@ return function(name, basalt)
     end
 
     local root = newNode("Root", true)
+    base:addProperty("Root", "table", root, false, function(self, value)
+        value.setParent(nil)
+    end)
     root:setExpanded(true)
 
     local object = {
@@ -141,91 +156,6 @@ return function(name, basalt)
 
         getBase = function(self)
             return base
-        end,
-
-        getType = function(self)
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType == t or base.isType ~= nil and base.isType(t) or false
-        end,
-
-        setOffset = function(self, x, y)
-            xOffset = x
-            yOffset = y
-            return self
-        end,
-
-        setXOffset = function(self, x)
-            return self:setOffset(x, yOffset)
-        end,
-
-        setYOffset = function(self, y)
-            return self:setOffset(xOffset, y)
-        end,
-
-        getOffset = function(self)
-            return xOffset, yOffset
-        end,
-
-        getXOffset = function(self)
-            return xOffset
-        end,
-
-        getYOffset = function(self)
-            return yOffset
-        end,
-
-        setScrollable = function(self, scroll)
-            scrollable = scroll
-            return self
-        end,
-
-        getScrollable = function(self, scroll)
-            return scrollable
-        end,
-
-        setSelectionColor = function(self, bgCol, fgCol, active)
-            itemSelectedBG = bgCol or self:getBackground()
-            itemSelectedFG = fgCol or self:getForeground()
-            selectionColorActive = active~=nil and active or true
-            self:updateDraw()
-            return self
-        end,
-
-        setSelectionBG = function(self, bgCol)
-            return self:setSelectionColor(bgCol, nil, selectionColorActive)
-        end,
-
-        setSelectionFG = function(self, fgCol)
-            return self:setSelectionColor(nil, fgCol, selectionColorActive)
-        end,
-
-        getSelectionColor = function(self)
-            return itemSelectedBG, itemSelectedFG
-        end,
-
-        getSelectionBG = function(self)
-            return itemSelectedBG
-        end,
-
-        getSelectionFG = function(self)
-            return itemSelectedFG
-        end,
-
-        isSelectionColorActive = function(self)
-            return selectionColorActive
-        end,
-
-        getRoot = function(self)
-            return root
-        end,
-
-        setRoot = function(self, node)
-            root = node
-            node.setParent(nil)
-            return self
         end,
 
         onSelect = function(self, ...)
@@ -245,7 +175,7 @@ return function(name, basalt)
 
         mouseHandler = function(self, button, x, y)
             if base.mouseHandler(self, button, x, y) then
-                local currentLine = 1 - yOffset
+                local currentLine = 1 - self:getYOffset()
                 local obx, oby = self:getAbsolutePosition()
                 local w, h = self:getSize()
                 local function checkNodeClick(node, level)
@@ -279,6 +209,8 @@ return function(name, basalt)
 
         scrollHandler = function(self, dir, x, y)
             if base.scrollHandler(self, dir, x, y) then
+                local scrollable = self:getScrollable()
+                local yOffset = self:getYOffset()
                 if scrollable then
                     local _, h = self:getSize()
                     yOffset = yOffset + dir
@@ -310,6 +242,7 @@ return function(name, basalt)
                             yOffset = yOffset - 1
                         end
                     end
+                    self:setYOffset(yOffset)
                     self:updateDraw()
                 end
                 return true
@@ -320,6 +253,9 @@ return function(name, basalt)
         draw = function(self)
             base.draw(self)
             self:addDraw("treeview", function()
+                local xOffset, yOffset = self:getOffset()
+                local itemSelectedBG self:getSelectionBackground()
+                local itemSelectedFG self:getSelectionForeground()
                 local currentLine = 1 - yOffset
                 local lastClickedNode = self:getValue()
                 local function drawNode(node, level)
@@ -347,8 +283,6 @@ return function(name, basalt)
                 end
             end)
         end,
-
-
     }
 
     object.__index = object

@@ -1,39 +1,14 @@
 
 local function flexObjectPlugin(base, basalt)
-    local flexGrow = 0
-    local flexShrink = 0
-    local flexBasis = 0
-
     local baseWidth, baseHeight = base:getSize()
 
+    if(base:getType()~="lineBreakFakeObject")then
+        base:addProperty("FlexGrow", "number", 0)
+        base:addProperty("FlexShrink", "number", 0)
+        base:addProperty("FlexBasis", "number", 0)
+    end
+
     local object = {
-        getFlexGrow = function(self)
-            return flexGrow
-        end,
-
-        setFlexGrow = function(self, value)
-            flexGrow = value
-            return self
-        end,
-
-        getFlexShrink = function(self)
-            return flexShrink
-        end,
-
-        setFlexShrink = function(self, value)
-            flexShrink = value
-            return self
-        end,
-
-        getFlexBasis = function(self)
-            return flexBasis
-        end,
-
-        setFlexBasis = function(self, value)
-            flexBasis = value
-            return self
-        end,
-
         getBaseSize = function(self)
             return baseWidth, baseHeight
         end,
@@ -61,15 +36,29 @@ end
 
 return function(name, basalt)
     local base = basalt.getObject("ScrollableFrame")(name, basalt)
-    local objectType = "Flexbox"
+    base:setType("Flexbox")
 
-    local direction = "row"
-    local spacing = 1
-    local justifyContent = "flex-start"
-    local wrap = "nowrap"
+    local updateLayout = false
+
+    base:addProperty("FlexDirection", {"row", "column"}, "row", nil, function(self, direction)
+        if(direction=="row")then
+            self:setScrollDirection("horizontal")
+        elseif(direction=="column")then
+            self:setScrollDirection("vertical")
+        end
+    end)
+    base:addProperty("Spacing", "number", 1, nil, function(self, spacing)
+        updateLayout = true
+    end)
+    base:addProperty("JustifyContent", {"flex-start", "flex-end", "center", "space-between", "space-around", "space-evenly"}, "flex-start", nil, function(self, justifyContent)
+        updateLayout = true
+    end)
+    base:addProperty("Wrap", {"nowrap", "wrap"}, "nowrap", nil, function(self, wrap)
+        updateLayout = true
+    end)
+
     local children = {}
     local sortedChildren = {}
-    local updateLayout = false
     local lineBreakFakeObject = flexObjectPlugin({
         getBaseHeight = function(self) return 0 end,
         getBaseWidth = function(self) return 0 end,
@@ -79,10 +68,15 @@ return function(name, basalt)
         getType = function(self) return "lineBreakFakeObject" end,
         setPosition = function(self) end,
         setSize = function(self) end,
+        getFlexGrow = function(self) return 0 end,
+        getFlexShrink = function(self) return 0 end,
+        getFlexBasis = function(self) return 0 end,
     })
-    lineBreakFakeObject:setFlexBasis(0):setFlexGrow(0):setFlexShrink(0)
-
     local function sortChildren(self)
+        local direction = self:getDirection()
+        local spacing = self:getSpacing()
+        local wrap = self:getWrap()
+
         if(wrap=="nowrap")then
             sortedChildren = {}
             local index = 1
@@ -146,6 +140,9 @@ return function(name, basalt)
 
     local function calculateRow(self, children)
         local containerWidth, containerHeight = self:getSize()
+        local spacing = self:getSpacing()
+        local justifyContent = self:getJustifyContent()
+
         local totalFlexGrow = 0
         local totalFlexShrink = 0
         local totalFlexBasis = 0
@@ -234,6 +231,9 @@ return function(name, basalt)
 
     local function calculateColumn(self, children)
         local containerWidth, containerHeight = self:getSize()
+        local spacing = self:getSpacing()
+        local justifyContent = self:getJustifyContent()
+
         local totalFlexGrow = 0
         local totalFlexShrink = 0
         local totalFlexBasis = 0
@@ -324,7 +324,7 @@ return function(name, basalt)
 
     local function applyLayout(self)
         sortChildren(self)
-        if direction == "row" then
+        if self:getDirection() == "row" then
             for _,v in pairs(sortedChildren)do
                 calculateRow(self, v)
             end
@@ -337,58 +337,6 @@ return function(name, basalt)
     end
 
     local object = {
-        getType = function()
-            return objectType
-        end,
-
-        isType = function(self, t)
-            return objectType == t or base.isType ~= nil and base.isType(t) or false
-        end,
-
-        setJustifyContent = function(self, value)
-            justifyContent = value
-            updateLayout = true
-            self:updateDraw()
-            return self
-        end,
-
-        getJustifyContent = function(self)
-            return justifyContent
-        end,
-
-        setDirection = function(self, value)
-            direction = value
-            updateLayout = true
-            self:updateDraw()
-            return self
-        end,
-
-        getDirection = function(self)
-            return direction
-        end,
-
-        setSpacing = function(self, value)
-            spacing = value
-            updateLayout = true
-            self:updateDraw()
-            return self
-        end,
-
-        getSpacing = function(self)
-            return spacing
-        end,
-
-        setWrap = function(self, value)
-            wrap = value
-            updateLayout = true
-            self:updateDraw()
-            return self
-        end,
-
-        getWrap = function(self)
-            return wrap
-        end,
-
         updateLayout = function(self)
             updateLayout = true
             self:updateDraw()
@@ -431,4 +379,3 @@ return function(name, basalt)
     object.__index = object
     return setmetatable(object, base)
 end
-

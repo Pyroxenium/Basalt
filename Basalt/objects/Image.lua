@@ -4,7 +4,7 @@ local unpack,sub,max,min = table.unpack,string.sub,math.max,math.min
 return function(name, basalt)
     -- Image
     local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Image"
+    base:setType("Image")
 
     local bimgLibrary = bimg()
     local bimgFrame = bimgLibrary.getFrameObject(1)
@@ -16,11 +16,14 @@ return function(name, basalt)
     local animTimer
     local usePalette = false
     local autoSize = true
+    local x, y = 1, 1
 
-    local xOffset, yOffset = 0, 0
+    base:addProperty("XOffset", "number", 0)
+    base:addProperty("YOffset", "number", 0)
+    base:combineProperty("Offset", "XOffset", "YOffset")
 
     base:setSize(24, 8)
-    base:setZIndex(2)
+    base:setZ(2)
 
     local function getPalette()
         local p = {}
@@ -53,49 +56,10 @@ return function(name, basalt)
     end
 
     local object = {
-        getType = function(self)
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
-
-        setOffset = function(self, _x, _y, rel)
-            if(rel)then
-                xOffset = xOffset + _x or 0
-                yOffset = yOffset + _y or 0
-            else
-                xOffset = _x or xOffset
-                yOffset = _y or yOffset
-            end
-            self:updateDraw()
-            return self
-        end,
-
-        setXOffset = function(self, _x)
-            return self:setOffset(self, _x, nil)
-        end,
-
-        setYOffset = function(self, _y)
-            return self:setOffset(self, nil, _y)
-        end,
-
         setSize = function(self, _x, _y)
             base:setSize(_x, _y)
             autoSize = false
             return self
-        end,
-
-        getOffset = function(self)
-            return xOffset, yOffset
-        end,
-
-        getXOffset = function(self)
-            return xOffset
-        end,
-
-        getYOffset = function(self)
-            return yOffset
         end,
 
         selectFrame = function(self, id)
@@ -145,7 +109,7 @@ return function(name, basalt)
 
         loadImage = function(self, path)
             if(fs.exists(path))then
-                local newBimg = images.loadImageAsBimg(path)
+                local newBimg = images.loadBIMG(path)
                 bimgLibrary = bimg(newBimg)
                 activeFrame = 1
                 bimgFrame = bimgLibrary.getFrameObject(1)
@@ -334,10 +298,11 @@ return function(name, basalt)
                 end
 
                 if(usePalette)then
-                    self:getParent():setPalette(getPalette(activeFrame))
+                    self:getParent():setPalette(getPalette())
                 end
 
                 if(image~=nil)then
+                    local xOffset, yOffset = self:getOffset()
                     for k,v in pairs(image)do
                         if(k+yOffset<=h)and(k+yOffset>=1)then
                             local t,f,b = v[1],v[2],v[3]

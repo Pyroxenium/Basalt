@@ -1,5 +1,6 @@
 local basaltEvent = require("basaltEvent")
 local utils = require("utils")
+local split = utils.splitString
 local uuid = utils.uuid
 
 local unpack,sub = table.unpack,string.sub
@@ -9,52 +10,191 @@ return function(name, basalt)
     assert(basalt~=nil, "Unable to find basalt instance! ID: "..name)
 
     -- Base object
-    local objectType = "Object" -- not changeable
-    local isEnabled,initialized = true,false
+    local initialized = false
 
     local eventSystem = basaltEvent()
     local registeredEvents = {}
     local activeEvents = {}
+    local properties = {}
+    local propertyConfig = {}
+
+    local function defaultRule(typ)
+        return function(self, value)
+         local isValid = false
+            if(type(typ)=="string")then
+            local types = split(typ, "|")
+
+                for _,v in pairs(types)do
+                    if(type(value)==v)then
+                        isValid = true
+                    end
+                end
+            end
+            if(typ=="table")then
+                for _,v in pairs(typ)do
+                    if(v==value)then
+                        isValid = true
+                    end
+                end
+            end
+            if(typ=="color")then
+                if(type(value)=="string")then
+                    if(colors[value]~=nil)then
+                        isValid = true
+                        value = colors[value]
+                    end
+                else
+                    for _,v in pairs(colors)do
+                        if(v==value)then
+                            isValid = true
+                        end
+                    end
+                end
+            end
+            if(typ=="char")then
+                if(type(value)=="string")then
+                    if(#value==1)then
+                        isValid = true
+                    end
+                end
+            end
+            if(typ=="any")or(value==nil)or(type(value)=="function")then
+                isValid = true
+            end
+
+            if(not isValid)then
+                if(type(typ)=="table")then
+                    typ = table.concat(typ, ", ")
+                end
+                error(self:getType()..": Invalid type for property "..name.."! Expected "..typ..", got "..type(value))
+            end
+            return value
+        end
+    end
 
     local parent
-    
-    local object = {
+    local object
+
+    object = {
         init = function(self)
             if(initialized)then return false end
             initialized = true
             return true
         end,
 
+        isType = function(self, typ)
+            for k,v in pairs(properties["Type"])do
+                if(v==typ)then
+                    return true
+                end
+            end
+            return false
+        end,
+
+        getTypes = function(self)
+            return properties["Type"]
+        end,
+
         load = function(self)
-        end,
-
-        getType = function(self)
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t
-        end,
-
-        getProperty = function(self, name)
-            local get = self["get" .. name:gsub("^%l", string.upper)]
-            if (get ~= nil) then
-                return get(self)
-            end
-        end,
-
-        setProperty = function(self, name, ...)
-            local set = self["set" .. name:gsub("^%l", string.upper)]
-            if (set ~= nil) then
-                return set(self, ...)
-            end
         end,
 
         getName = function(self)
             return name
         end,
 
-        getParent = function(self)
-            return parent
+        getProperty = function(self, name)
+            local prop = properties[name:gsub("^%l", string.upper)]
+            if(type(prop)=="function")then
+                return prop()
+            end
+            return prop
+        end,
+
+        getProperties = function(self)
+            local p = {}
+            for k,v in pairs(properties)do
+                if(type(v)=="function")then
+                    p[k] = v()
+                else
+                    p[k] = v
+                end
+            end
+            return p
+        end,
+
+        setProperty = function(self, name, value, rule)
+            name = name:gsub("^%l", string.upper)
+            if(rule~=nil)then
+                value = rule(self, value)
+            end
+            --if(properties[name]~=value)then
+                properties[name] = value
+                if(self.updateDraw~=nil)then
+                    self:updateDraw()
+                end
+            --end
+            return self
+        end,
+
+        getPropertyConfig = function(self, name)
+            return propertyConfig[name]
+        end,
+
+        addProperty = function(self, name, typ, defaultValue, readonly, setLogic, getLogic, alteredRule)
+            name = name:gsub("^%l", string.upper)
+            propertyConfig[name] = {type=typ, defaultValue=defaultValue, readonly=readonly}
+            if(properties[name]~=nil)then
+                error("Property "..name.." in "..self:getType().." already exists!")
+            end
+            self:setProperty(name, defaultValue)
+
+            object["get" .. name] = function(self, ...)
+                if(self~=nil)then
+                    local prop = self:getProperty(name)
+                    if(getLogic~=nil)then
+                        return getLogic(self, prop, ...)
+                    end
+                    return prop
+                end
+            end
+            if(not readonly)then
+                object["set" .. name] = function(self, value, ...)
+                    if(self~=nil)then
+                        if(setLogic~=nil)then
+                            local modifiedVal = setLogic(self, value, ...)
+                            if(modifiedVal~=nil)then
+                                value = modifiedVal
+                            end
+                        end
+                        self:setProperty(name, value, alteredRule~=nil and alteredRule(typ) or defaultRule(typ))
+                    end
+                    return self
+                end
+            end
+            return self
+        end,
+
+        combineProperty = function(self, name, ...)
+            name = name:gsub("^%l", string.upper)
+            local args = {...}
+            object["get" .. name] = function(self)
+                local result = {}
+                for _,v in pairs(args)do
+                    v = v:gsub("^%l", string.upper)
+                    result[#result+1] = self["get" .. v](self)
+                end
+                return unpack(result)
+            end
+            object["set" .. name] = function(self, ...)
+                local values = {...}
+                for k,v in pairs(args)do
+                    if(self["set"..v]~=nil)then -- if später entfernen
+                        self["set" .. v](self, values[k])
+                    end
+                end
+                return self
+            end
+            return self
         end,
 
         setParent = function(self, newParent, noRemove)
@@ -62,12 +202,13 @@ return function(name, basalt)
             if (newParent.getType ~= nil and newParent:isType("Container")) then
                 self:remove()
                 newParent:addChild(self)
-                if (self.show) then
-                    self:show()
-                end
                 parent = newParent
             end
             return self
+        end,
+
+        getParent = function(self)
+            return parent
         end,
 
         updateEvents = function(self)
@@ -93,22 +234,18 @@ return function(name, basalt)
             return self
         end,
 
-        getZIndex = function(self)
-            return 1
-        end,
-
         enable = function(self)
-            isEnabled = true
+            self:setProperty("Enabled", true)
             return self
         end,
 
         disable = function(self)
-            isEnabled = false
+            self:setProperty("Enabled", false)
             return self
         end,
 
         isEnabled = function(self)
-            return isEnabled
+            return self:getProperty("Enabled")
         end,
 
         remove = function(self)
@@ -281,6 +418,24 @@ return function(name, basalt)
             return self
         end,
     }
+
+    object:addProperty("Z", "number", 1, false, function(self, value)
+        if (parent ~= nil) then
+            parent:updateZIndex(self, value)
+            self:updateDraw()
+        end
+        return value
+    end)
+    object:addProperty("Type", "string|table", {"Object"}, false, function(self, value)
+        if(type(value)=="string")then
+            table.insert(properties["Type"], 1, value)
+            return properties["Type"]
+        end
+    end,
+    function(self, _, depth)
+        return properties["Type"][depth or 1]
+    end)
+    object:addProperty("Enabled", "boolean", true)
 
     object.__index = object
     return object

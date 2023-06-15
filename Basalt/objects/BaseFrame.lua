@@ -5,9 +5,7 @@ local max,min,sub,rep = math.max,math.min,string.sub,string.rep
 
 return function(name, basalt)
     local base = basalt.getObject("Container")(name, basalt)
-    local objectType = "BaseFrame"
-
-    local xOffset, yOffset = 0, 0
+    base:setType("BaseFrame")
 
     local colorTheme = {}
 
@@ -18,49 +16,27 @@ return function(name, basalt)
 
     local xCursor, yCursor, cursorBlink, cursorColor = 1, 1, false, colors.white
 
-    local object = {   
-        getType = function()
-            return objectType
-        end,
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
-        end,
+    base:addProperty("XOffset", "number", 0)
+    base:addProperty("YOffset", "number", 0)
+    base:combineProperty("Offset", "XOffset", "YOffset")
+    base:addProperty("Term", "table", nil, false, function(self, value)
+        termObject = value
+        basaltDraw = nil
+        if(value~=nil)then
+            basaltDraw = drawSystem(value)
+        end
+    end)
+    base:setSize(termObject.getSize())
 
+    local object = {   
         getBase = function(self)
             return base
-        end,
-
-        getOffset = function(self)
-            return xOffset, yOffset
-        end,
-
-        setOffset = function(self, xOff, yOff)
-            xOffset = xOff or xOffset
-            yOffset = yOff or yOffset
-            self:updateDraw()
-            return self
-        end,
-
-        getXOffset = function(self)
-            return xOffset
-        end,
-
-        setXOffset = function(self, newXOffset)
-            return self:setOffset(newXOffset, nil)
-        end,
-
-        getYOffset = function(self)
-            return yOffset
-        end,
-
-        setYOffset = function(self, newYOffset)
-            return self:setOffset(nil, newYOffset)
         end,
 
         setPalette = function(self, col, ...)
             if(self==basalt.getActiveFrame())then
                 if(type(col)=="string")then
-                    local col = colors[col]
+                    col = colors[col]
                     colorTheme[math.log(col, 2)] = ...
                     termObject.setPaletteColor(col, ...)
                 elseif(type(col)=="table")then
@@ -82,18 +58,6 @@ return function(name, basalt)
             base.setSize(self, ...)
             basaltDraw = drawSystem(termObject)
             return self
-        end,
-
-        getSize = function()
-            return termObject.getSize()
-        end,
-
-        getWidth = function(self)
-            return ({termObject.getSize()})[1]
-        end,
-
-        getHeight = function(self)
-            return ({termObject.getSize()})[2]
         end,
 
         show = function(self)
@@ -151,20 +115,6 @@ return function(name, basalt)
             end
         end,
 
-        setTerm = function(self, newTerm)
-            termObject = newTerm
-            if(newTerm==nil)then
-                basaltDraw = nil
-            else
-                basaltDraw = drawSystem(termObject)
-            end
-            return self
-        end,
-
-        getTerm = function()
-            return termObject
-        end,
-
         blit = function (self, x, y, t, f, b)
             local obx, oby = self:getPosition()
             local w, h = self:getSize()
@@ -216,7 +166,7 @@ return function(name, basalt)
         end
     end
 
-    for _,v in pairs({"setBG", "setFG", "setText"}) do
+    for _,v in pairs({"setBg", "setFg", "setText"}) do
         object[v] = function(self, x, y, str)
             local obx, oby = self:getPosition()
             local w, h  = self:getSize()

@@ -2,33 +2,43 @@ local tHex = require("tHex")
 
 return function(name, basalt)
     local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Scrollbar"
+    base:setType("Scrollbar")
 
-    base:setZIndex(2)
+    base:setZ(2)
     base:setSize(1, 8)
-    base:setBackground(colors.lightGray, "\127", colors.gray)
+    base:setBackground(colors.lightGray, "\127", colors.black)
 
-    local barType = "vertical"
-    local symbol = " "
-    local symbolBG = colors.black
-    local symbolFG = colors.black
-    local scrollAmount = 3
+    base:addProperty("SymbolChar", "char", " ")
+    base:addProperty("SymbolBG", "color", colors.black)
+    base:addProperty("SymbolFG", "color", colors.black)
+    base:combineProperty("Symbol", "SymbolChar", "SymbolBG", "SymbolFG")
+    base:addProperty("SymbolAutoSize", "boolean", true)
+
     local index = 1
-    local symbolSize = 1
-    local symbolAutoSize = true
 
     local function updateSymbolSize()
         local w,h = base:getSize()
+        local symbolAutoSize = base:getSymbolAutoSize()
         if(symbolAutoSize)then
-            symbolSize = math.max((barType == "vertical" and h or w-(#symbol)) - (scrollAmount-1), 1)
+            local barType = base:getBarType()
+            local scrollAmount = base:getScrollAmount()
+            local symbol = base:getSymbolChar()
+            base:setSymbolSize(math.max((barType == "vertical" and h or w-(#symbol)) - (scrollAmount-1), 1))
         end
     end
+
+    base:addProperty("ScrollAmount", "number", 3, false, updateSymbolSize)
+    base:addProperty("SymbolSize", "number", 1)
+    base:addProperty("BarType", {"vertical", "horizontal"}, "vertical", false, updateSymbolSize)
     updateSymbolSize()
 
-    local function mouseEvent(self, button, x, y)
+    local function mouseEvent(self, _, x, y)
     local obx, oby = self:getAbsolutePosition()
     local w,h = self:getSize()
         updateSymbolSize()
+        local barType = self:getBarType()
+        local symbol = self:getSymbolChar()
+        local symbolSize = self:getSymbolSize()
         local size = barType == "vertical" and h or w
         for i = 0, size do
             if ((barType == "vertical" and oby + i == y) or (barType == "horizontal" and obx + i == x)) and (obx <= x) and (obx + w > x) and (oby <= y) and (oby + h > y) then
@@ -40,46 +50,12 @@ return function(name, basalt)
     end
 
     local object = {
-        getType = function(self)
-            return objectType
-        end,
-
         load = function(self)
             base.load(self)
-            local parent = self:getParent()
             self:listenEvent("mouse_click")
             self:listenEvent("mouse_up")
             self:listenEvent("mouse_scroll")
             self:listenEvent("mouse_drag")
-        end,
-
-        setSymbol = function(self, _symbol, bg, fg)
-            symbol = _symbol:sub(1,1)
-            symbolBG = bg or symbolBG
-            symbolFG = fg or symbolFG
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        setSymbolBG = function(self, bg)
-            return self:setSymbol(symbol, bg, nil)
-        end,
-
-        setSymbolFG = function(self, fg)
-            return self:setSymbol(symbol, nil, fg)
-        end,
-
-        getSymbol = function(self)
-            return symbol
-        end,
-
-        getSymbolBG = function(self)
-            return symbolBG
-        end,
-
-        getSymbolFG = function(self)
-            return symbolFG
         end,
 
         setIndex = function(self, _index)
@@ -87,50 +63,16 @@ return function(name, basalt)
             if (index < 1) then
                 index = 1
             end
-            local w,h = self:getSize()
-            --index = math.min(index, (barType == "vertical" and h or w) - (symbolSize - 1))
             updateSymbolSize()
             self:updateDraw()
             return self
-        end,
-
-        setScrollAmount = function(self, amount)
-            scrollAmount = amount
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        getScrollAmount = function(self)
-            return scrollAmount
         end,
 
         getIndex = function(self)
             local w,h = self:getSize()
+            local barType = self:getBarType()
+            local scrollAmount = self:getScrollAmount()
             return scrollAmount > (barType=="vertical" and h or w) and math.floor(scrollAmount/(barType=="vertical" and h or w) * index) or index
-        end,
-
-        setSymbolSize = function(self, size)
-            symbolSize = tonumber(size) or 1
-            symbolAutoSize = size~=false and false or true
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        getSymbolSize = function(self)
-            return symbolSize
-        end,
-
-        setBarType = function(self, _typ)
-            barType = _typ:lower()
-            updateSymbolSize()
-            self:updateDraw()
-            return self
-        end,
-
-        getBarType = function(self)
-            return barType
         end,
 
         mouseHandler = function(self, button, x, y, ...)
@@ -163,6 +105,9 @@ return function(name, basalt)
                 if (index < 1) then
                     index = 1
                 end
+                local barType = self:getBarType()
+                local symbol = self:getSymbolChar()
+                local symbolSize = self:getSymbolSize()
                 index = math.min(index, (barType == "vertical" and h or w) - (barType == "vertical" and symbolSize - 1 or #symbol+symbolSize-2))
                 self:scrollbarMoveHandler()
                 self:updateDraw()
@@ -187,24 +132,23 @@ return function(name, basalt)
             base.customEventHandler(self, event, ...)
             if(event=="basalt_FrameResize")then
                 updateSymbolSize()
-            end 
+            end
         end,
 
         draw = function(self)
             base.draw(self)
             self:addDraw("scrollbar", function()
-                local parent = self:getParent()
-                local w,h = self:getSize()
-                local bgCol,fgCol = self:getBackground(), self:getForeground()
-                if (barType == "horizontal") then
+                local p = self:getProperties()
+                local w, h = p.Width, p.Height
+                if (p.BarType == "horizontal") then
                     for n = 0, h - 1 do
-                        self:addBlit(index, 1 + n, symbol:rep(symbolSize), tHex[symbolFG]:rep(#symbol*symbolSize), tHex[symbolBG]:rep(#symbol*symbolSize))
+                        self:addBlit(index, 1 + n, p.SymbolChar:rep(p.SymbolSize), tHex[p.SymbolFG]:rep(#p.SymbolChar*p.SymbolSize), tHex[p.SymbolBG]:rep(#p.SymbolChar*p.SymbolSize))
                     end
-                elseif (barType == "vertical") then
+                elseif (p.BarType == "vertical") then
                     for n = 0, h - 1 do
                         if (index == n + 1) then
-                            for curIndexOffset = 0, math.min(symbolSize - 1, h) do
-                                self:addBlit(1, index + curIndexOffset, symbol:rep(math.max(#symbol, w)), tHex[symbolFG]:rep(math.max(#symbol, w)), tHex[symbolBG]:rep(math.max(#symbol, w)))
+                            for curIndexOffset = 0, math.min(p.SymbolSize - 1, h) do
+                                self:addBlit(1, index + curIndexOffset, p.SymbolChar:rep(math.max(#p.SymbolChar, w)), tHex[p.SymbolFG]:rep(math.max(#p.SymbolChar, w)), tHex[p.SymbolBG]:rep(math.max(#p.SymbolChar, w)))
                             end
                         end
                     end

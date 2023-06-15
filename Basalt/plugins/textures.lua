@@ -1,58 +1,87 @@
 local images = require("images")
-local utils = require("utils")
-local XMLParser = require("xmlParser")
+
+local sub = string.sub
+
 return {
     VisualObject = function(base)
-        local textureId, infinitePlay = 1, true
-        local bimg, texture, textureTimerId
-        local textureMode = "default"
+        local images = {}
 
         local object = {
-            addTexture = function(self, path, animate)
-                bimg = images.loadImageAsBimg(path)
-                texture = bimg[1]
-                if(animate)then
-                    if(bimg.animated)then
-                        self:listenEvent("other_event")
-                        local t = bimg[textureId].duration or bimg.secondsPerFrame or 0.2
-                        textureTimerId = os.startTimer(t)
+            addTexture = function(self, path, x, y, w, h, stretch, animate, infinitePlay)
+                if(type(path)=="function")then
+                    table.insert(images, path)
+                else
+                    if(type(path)=="table")then
+                        x, y, w, h, stretch, animate, infinitePlay = path.x, path.y, path.w, path.h, path.stretch, path.animate, path.infinitePlay
+                        path = path.path
+                    end
+                    local img = images.loadImageAsBimg(path)
+                    local newEntry = {
+                        image = img,
+                        x = x,
+                        y = y,
+                        w = w,
+                        h = h,
+                        animated = animate,
+                        curTextId = 1,
+                        infinitePlay = infinitePlay,
+                    }
+                    if(stretch)then
+                        newEntry.w = self:getWidth()
+                        newEntry.h = self:getHeight()
+                        newEntry.image = images.resizeBIMG(img, newEntry.w, newEntry.h)
+                    end
+                    table.insert(images, newEntry)
+                    if(animate)then
+                        if(img.animated)then
+                            self:listenEvent("other_event")
+                            local t = img[newEntry.curTextId].duration or img.secondsPerFrame or 0.2
+                            newEntry.timer = os.startTimer(t)
+                        end
                     end
                 end
-                self:setBackground(false)
-                self:setForeground(false)
                 self:setDrawState("texture-base", true)
                 self:updateDraw()
                 return self
             end,
 
-            setTextureMode = function(self, mode)
-                textureMode = mode or textureMode
+            removeTexture = function(self, id)
+                table.remove(images, id)
+                if(#images==0)then
+                    self:setDrawState("texture-base", false)
+                end
                 self:updateDraw()
                 return self
             end,
 
-            setInfinitePlay = function(self, state)
-                infinitePlay = state
+            clearTextures = function(self)
+                images = {}
+                self:setDrawState("texture-base", false)
+                self:updateDraw()
                 return self
             end,
 
             eventHandler = function(self, event, timerId, ...)
                 base.eventHandler(self, event, timerId, ...)
                 if(event=="timer")then
-                    if(timerId == textureTimerId)then
-                        if(bimg[textureId+1]~=nil)then
-                            textureId = textureId + 1
-                            texture = bimg[textureId]
-                            local t = bimg[textureId].duration or bimg.secondsPerFrame or 0.2
-                            textureTimerId = os.startTimer(t)
-                            self:updateDraw()
-                        else
-                            if(infinitePlay)then
-                                textureId = 1
-                                texture = bimg[1]
-                                local t = bimg[textureId].duration or bimg.secondsPerFrame or 0.2
-                                textureTimerId = os.startTimer(t)
-                                self:updateDraw()
+                    for _,v in pairs(images)do
+                        if(type(v)=="table")then
+                            if(v.timer==timerId)then
+                                if(v.animated)then
+                                    if(v.image[v.curTextId+1]~=nil)then
+                                        v.curTextId = v.curTextId + 1
+                                        local t = v.image[v.curTextId].duration or v.image.secondsPerFrame or 0.2
+                                        v.timer = os.startTimer(t)
+                                        self:updateDraw()
+                                    else
+                                        if(v.infinitePlay)then
+                                            v.curTextId = 1
+                                            local t = v.image[v.curTextId].duration or v.image.secondsPerFrame or 0.2
+                                            v.timer = os.startTimer(t)
+                                            self:updateDraw()
+                                        end
+                                    end
+                                end
                             end
                         end
                     end
@@ -62,50 +91,25 @@ return {
             draw = function(self)
                 base.draw(self)
                 self:addDraw("texture-base", function()
-                    local obj = self:getParent() or self
-                    local x, y = self:getPosition()
-                    local w,h = self:getSize()
-                    local wP,hP = obj:getSize()
-
-                    local textureWidth = bimg.width or #bimg[textureId][1][1]
-                    local textureHeight = bimg.height or #bimg[textureId]
-
-                    local startX, startY = 0, 0
-
-                    if (textureMode == "center") then
-                        startX = x + math.floor((w - textureWidth) / 2 + 0.5) - 1
-                        startY = y + math.floor((h - textureHeight) / 2 + 0.5) - 1
-                    elseif (textureMode == "default") then
-                        startX, startY = x, y
-                    elseif (textureMode == "right") then
-                        startX, startY = x + w - textureWidth, y + h - textureHeight
-                    end
-
-                    local textureX = x - startX
-                    local textureY = y - startY
-
-                    if startX < x then
-                        startX = x
-                        textureWidth = textureWidth - textureX
-                    end
-                    if startY < y then
-                        startY = y
-                        textureHeight = textureHeight - textureY
-                    end
-                    if startX + textureWidth > x + w then
-                        textureWidth = (x + w) - startX
-                    end
-                    if startY + textureHeight > y + h then
-                        textureHeight = (y + h) - startY
-                    end
-
-                    for k = 1, textureHeight do
-                        if(texture[k+textureY]~=nil)then
-                        local t, f, b = table.unpack(texture[k+textureY])
-                            self:addBlit(1, k, t:sub(textureX, textureX + textureWidth), f:sub(textureX, textureX + textureWidth), b:sub(textureX, textureX + textureWidth))
+                    for _,v in pairs(images)do
+                        if(type(v)=="table")then
+                            local tWidth = #v.image[v.curTextId][1][1]
+                            local tHeight = #v.image[v.curTextId][1]
+                            local textureWidth = v.w>tWidth and tWidth or v.w
+                            local textureHeight = v.h>tHeight and tHeight or v.h
+                            for k = 1, textureHeight do
+                                if(v.image[k]~=nil)then
+                                local t, f, b = table.unpack(v.image[k])
+                                    self:addBlit(1, k, sub(t, 1, textureWidth), sub(f, 1, textureWidth), sub(b, 1, textureWidth))
+                                end
+                            end
+                        else
+                            if(type(v)=="function")then
+                                v(self)
+                            end
                         end
                     end
-                end, 1)
+                end)
                 self:setDrawState("texture-base", false)
             end
         }

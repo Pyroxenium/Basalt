@@ -1,7 +1,6 @@
 return function(name, basalt)
     local base = basalt.getObject("Object")(name, basalt)
-
-    local objectType = "Thread"
+    base:setType("Thread")
 
     local func
     local cRoutine
@@ -9,10 +8,6 @@ return function(name, basalt)
     local filter
 
     local object = {
-        getType = function(self)
-            return objectType
-        end,
-
         start = function(self, f)
             if (f == nil) then
                 error("Function provided to thread is nil")

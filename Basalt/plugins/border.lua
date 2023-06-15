@@ -74,7 +74,7 @@ return {
                         end
                         if(borderColors["bottom"]~=false)and(borderColors["left"]~=false)then
                             self:addTextBox(1, h, 1, 1, "\138")
-                            if(bgCol~=false)then self:addForegroundBox(0, h, 1, 1, bgCol) end
+                            if(bgCol~=false)then self:addForegroundBox(1, h, 1, 1, bgCol) end
                             self:addBackgroundBox(1, h, 1, 1, borderColors["left"])
                         end
                     end

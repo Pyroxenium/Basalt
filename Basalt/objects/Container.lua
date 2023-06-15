@@ -1,9 +1,10 @@
 local utils = require("utils")
 local tableCount = utils.tableCount
+local rpairs = utils.rpairs
 
 return function(name, basalt)
     local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Container"
+    base:setType("Container")
 
     local children = {}
 
@@ -66,7 +67,7 @@ return function(name, basalt)
             return
         end
         objId = objId + 1
-        local zIndex = element:getZIndex()
+        local zIndex = element:getZ()
         table.insert(children, {element = element, zIndex = zIndex, objId = objId})
         sorted = false
         element:setParent(self, true)
@@ -95,11 +96,11 @@ return function(name, basalt)
         for i, v in ipairs(children) do
             if v.element == element then
                 table.remove(children, i)
+                self:removeEvents(element)
+                sorted = false
                 return true
             end
         end
-        self:removeEvents(element)
-        sorted = false
     end
 
     local function removeChildren(self)
@@ -110,7 +111,8 @@ return function(name, basalt)
         objId = 0
         evId = 0
         focusedChild = nil
-        if parent ~= nil then parent:removeEvents(self) end
+        parent:removeEvents(self)
+        self:updateEvents()
     end
 
     local function updateZIndex(self, element, newZ)
@@ -145,7 +147,10 @@ return function(name, basalt)
             end
             if(tableCount(events[a])<=0)then
                 if(parent~=nil)then
-                    parent:removeEvent(a, self)
+                    if(self:getEventSystem().getEventCount(a)<=0)then
+                        parent:removeEvent(a, self)
+                        self:updateEvents()
+                    end
                 end
             end
         end
@@ -167,7 +172,7 @@ return function(name, basalt)
         if (getEvent(self, event, element:getName()) ~= nil) then
             return
         end
-        local zIndex = element:getZIndex() 
+        local zIndex = element:getZ() 
         evId = evId + 1
         if(events[event]==nil)then events[event] = {} end
         table.insert(events[event], {element = element, zIndex = zIndex, evId = evId})
@@ -195,18 +200,10 @@ return function(name, basalt)
     end
 
     container = {
-        getType = function()
-            return objectType
-        end,
-
         getBase = function(self)
             return base
-        end,  
-        
-        isType = function(self, t)
-            return objectType==t or base.isType~=nil and base.isType(t) or false
         end,
-        
+
         setSize = function(self, ...)
             base.setSize(self, ...)
             self:customEventHandler("basalt_FrameResize")
@@ -308,6 +305,23 @@ return function(name, basalt)
         getFocused = function(self)
             return focusedChild
         end,
+
+        getChildrenAt = function(self, x, y)
+            local results = {}
+            for _, child in rpairs(children) do
+                if(child.element.getPosition~=nil)and(child.element.getSize~=nil)then
+                    local xObj, yObj = child.element:getPosition()
+                    local wObj, hObj = child.element:getSize()
+                    local isVisible = child.element:getVisible()
+                    if(isVisible)then
+                        if (x >= xObj and x <= xObj + wObj - 1 and y >= yObj and y <= yObj + hObj - 1) then
+                            table.insert(results, child.element)
+                        end
+                    end
+                end
+            end
+            return results
+        end,
         
         getChild = getChild,
         getChildren = getChildren,
@@ -384,7 +398,7 @@ return function(name, basalt)
                                         xO, yO = 0, 0
                                     end
                                 end
-                                if (obj.element[v[1]](obj.element, btn, x+xO, y+yO, ...)) then      
+                                if (obj.element[v[1]](obj.element, btn, x+xO, y+yO, ...)) then 
                                     return true
                                 end
                             end

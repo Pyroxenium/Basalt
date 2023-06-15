@@ -1,3 +1,5 @@
+local tableCount = require("utils").tableCount
+
 return function()
     local events = {}
 
@@ -18,7 +20,7 @@ return function()
         end,
         
         getEventCount = function(self, _event)
-            return events[_event]~=nil and #events[_event] or 0
+            return _event~=nil and events[_event]~=nil and tableCount(events[_event]) or tableCount(events)
         end,
 
         getEvents = function(self)

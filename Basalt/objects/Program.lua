@@ -5,10 +5,11 @@ local sub = string.sub
 
 return function(name, basalt)
     local base = basalt.getObject("VisualObject")(name, basalt)
-    local objectType = "Program"
+    base:setType("Program")
     local object
-    local cachedPath
-    local enviroment = {}
+
+    base:addProperty("Path", "string", nil)
+    base:addProperty("Enviroment", "table", nil)
 
     local function createBasaltWindow(x, y, width, height)
         local xCursor, yCursor = 1, 1
@@ -346,7 +347,7 @@ return function(name, basalt)
         return basaltwindow
     end
 
-    base:setZIndex(5)
+    base:setZ(5)
     base:setSize(30, 12)
     local pWindow = createBasaltWindow(1, 1, 30, 12)
     local curProcess
@@ -405,23 +406,19 @@ return function(name, basalt)
     end
 
     object = {
-        getType = function(self)
-            return objectType
-        end;
-
         show = function(self)
             base.show(self)
             pWindow.setBackgroundColor(self:getBackground())
             pWindow.setTextColor(self:getForeground())
             pWindow.basalt_setVisible(true)
             return self
-        end;
+        end,
 
         hide = function(self)
             base.hide(self)
             pWindow.basalt_setVisible(false)
             return self
-        end;
+        end,
 
         setPosition = function(self, x, y, rel)
             base.setPosition(self, x, y, rel)
@@ -431,32 +428,32 @@ return function(name, basalt)
 
         getBasaltWindow = function()
             return pWindow
-        end;
+        end,
 
         getBasaltProcess = function()
             return curProcess
-        end;
+        end,
 
         setSize = function(self, width, height, rel)
             base.setSize(self, width, height, rel)
             pWindow.basalt_resize(self:getWidth(), self:getHeight())
             return self
-        end;
+        end,
 
         getStatus = function(self)
             if (curProcess ~= nil) then
                 return curProcess:getStatus()
             end
             return "inactive"
-        end;
-
-        setEnviroment = function(self, env)
-            enviroment = env or {}
-            return self
         end,
 
         execute = function(self, path, ...)
+            local cachedPath = self:getPath()
+            local enviroment = self:getEnviroment()
             cachedPath = path or cachedPath
+            if(path~=nil)then
+                self:setPath(path)
+            end
             curProcess = process:new(cachedPath, pWindow, enviroment, ...)
             pWindow.setBackgroundColor(colors.black)
             pWindow.setTextColor(colors.white)
@@ -477,7 +474,7 @@ return function(name, basalt)
             self:listenEvent("char", self)
             self:listenEvent("other_event", self)
             return self
-        end;
+        end,
 
         setExecute = function(self, path, ...)
             return self:execute(path, ...)
@@ -495,7 +492,7 @@ return function(name, basalt)
             end
             parent:removeEvents(self)
             return self
-        end;
+        end,
 
         pause = function(self, p)
             paused = p or (not paused)
@@ -508,11 +505,11 @@ return function(name, basalt)
                 end
             end
             return self
-        end;
+        end,
 
         isPaused = function(self)
             return paused
-        end;
+        end,
 
         injectEvent = function(self, event, ign, ...)
             if (curProcess ~= nil) then
@@ -525,16 +522,16 @@ return function(name, basalt)
                 end
             end
             return self
-        end;
+        end,
 
         getQueuedEvents = function(self)
             return queuedEvent
-        end;
+        end,
 
         updateQueuedEvents = function(self, events)
             queuedEvent = events or queuedEvent
             return self
-        end;
+        end,
 
         injectEvents = function(self, ...)
             if (curProcess ~= nil) then
@@ -545,7 +542,7 @@ return function(name, basalt)
                 end
             end
             return self
-        end;
+        end,
 
         mouseHandler = function(self, button, x, y)
             if (base.mouseHandler(self, button, x, y)) then
@@ -684,10 +681,6 @@ return function(name, basalt)
         draw = function(self)
             base.draw(self)
             self:addDraw("program", function()
-                local parent = self:getParent()
-                local obx, oby = self:getPosition()
-                local xCur, yCur = pWindow.getCursorPos()
-                local w,h = self:getSize()
                 pWindow.basalt_update()
             end)
         end,
@@ -698,7 +691,6 @@ return function(name, basalt)
                     self:registerEvent("program_error", v)
                 end
             end
-            local parent = self:getParent()
             self:listenEvent("other_event")
             return self
         end,
@@ -709,7 +701,6 @@ return function(name, basalt)
                     self:registerEvent("program_done", v)
                 end
             end
-            local parent = self:getParent()
             self:listenEvent("other_event")
             return self
         end,

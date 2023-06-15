@@ -1,48 +1,16 @@
 return function(name, basalt)
     local base = basalt.getObject("ChangeableObject")(name, basalt)
-    local objectType = "Switch"
+    base:setType("Switch")
 
     base:setSize(4, 1)
     base:setValue(false)
-    base:setZIndex(5)
+    base:setZ(5)
 
-    local bgSymbol = colors.black
-    local inactiveBG = colors.red
-    local activeBG = colors.green
+    base:addProperty("SymbolColor", "color", colors.black)
+    base:addProperty("ActiveBackground", "color", colors.green)
+    base:addProperty("InactiveBackground", "color", colors.red)
 
     local object = {
-        getType = function(self)
-            return objectType
-        end,
-
-        setSymbol = function(self, col)
-            bgSymbol = col
-            return self
-        end,
-
-        getSymbol = function(self)
-            return bgSymbol
-        end,
-
-        setActiveBackground = function(self, col)
-            activeBG = col
-            return self
-        end,
-
-        getActiveBackground = function(self)
-            return activeBG
-        end,
-
-        setInactiveBackground = function(self, col)
-            inactiveBG = col
-            return self
-        end,
-
-        getInactiveBackground = function(self)
-            return inactiveBG
-        end,
-
-
         load = function(self)
             self:listenEvent("mouse_click")
         end,
@@ -58,8 +26,9 @@ return function(name, basalt)
         draw = function(self)
             base.draw(self)
             self:addDraw("switch", function()
-                local parent = self:getParent()
-                local bgCol,fgCol = self:getBackground(), self:getForeground()
+                local activeBG = self:getActiveBackground()
+                local inactiveBG = self:getInactiveBackground()
+                local bgSymbol = self:getSymbolColor()
                 local w,h = self:getSize()
                 if(self:getValue())then
                     self:addBackgroundBox(1, 1, w, h, activeBG)

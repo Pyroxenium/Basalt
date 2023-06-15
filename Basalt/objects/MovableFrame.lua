@@ -2,37 +2,19 @@ local max,min,sub,rep = math.max,math.min,string.sub,string.rep
 
 return function(name, basalt)
     local base = basalt.getObject("Frame")(name, basalt)
-    local objectType = "MovableFrame"
+    base:setType("MovableFrame")
     local parent
 
     local dragXOffset, dragYOffset, isDragging = 0, 0, false
+    local renderThrottle = basalt.getRenderingThrottle()
 
-    local dragMap = {
-        {x1 = 1, x2 = "width", y1 = 1, y2 = 1}
-    }
+    base:addProperty("DraggingMap", "table", {{x1 = 1, x2 = "width", y1 = 1, y2 = 1}})
 
-    local object = {    
-        getType = function()
-            return objectType
-        end,
-
-        setDraggingMap = function(self, t)
-            dragMap = t
-            return self
-        end,
-
-        getDraggingMap = function(self)
-            return dragMap
-        end,
-
-        isType = function(self, t)
-            return objectType==t or (base.isType~=nil and base.isType(t)) or false
-        end,
-
+    local object = {
         getBase = function(self)
             return base
-        end, 
-        
+        end,
+
         load = function(self)
             base.load(self)
             self:listenEvent("mouse_click")
@@ -65,10 +47,13 @@ return function(name, basalt)
                 parent:setImportant(self)
                 local fx, fy = self:getAbsolutePosition()
                 local w, h = self:getSize()
+                local dragMap = self:getDraggingMap()
                 for k,v in pairs(dragMap)do
                     local x1, x2 = v.x1=="width" and w or v.x1, v.x2=="width" and w or v.x2
                     local y1, y2= v.y1=="height" and h or v.y1, v.y2=="height" and h or v.y2
                     if(x>=fx+x1-1)and(x<=fx+x2-1)and(y>=fy+y1-1)and(y<=fy+y2-1)then
+                        renderThrottle = basalt.getRenderingThrottle()
+                        basalt.setRenderingThrottle(50)
                         isDragging = true
                         dragXOffset = fx - x
                         dragYOffset = fy - y
@@ -81,6 +66,7 @@ return function(name, basalt)
 
         mouseUpHandler = function(self, ...)
             isDragging = false
+            basalt.setRenderingThrottle(0)
             return base.mouseUpHandler(self, ...)
         end,
 
