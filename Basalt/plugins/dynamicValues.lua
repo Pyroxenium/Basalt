@@ -135,7 +135,7 @@ local function dynamicValue(object, name, dynamicString, basalt)
     return {
         get = function(self)
             if(needsUpdate)then
-                cachedValue = calculate()
+                cachedValue = math.floor(calculate() + 0.5)
                 needsUpdate = false
                 object:updatePropertyObservers(name)
             end
