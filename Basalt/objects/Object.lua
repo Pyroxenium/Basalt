@@ -30,7 +30,7 @@ return function(name, basalt)
                     end
                 end
             end
-            if(typ=="table")then
+            if(type(typ)=="table")then
                 for _,v in pairs(typ)do
                     if(v==value)then
                         isValid = true
@@ -63,10 +63,12 @@ return function(name, basalt)
             end
 
             if(not isValid)then
+                local t = type(value)
                 if(type(typ)=="table")then
                     typ = table.concat(typ, ", ")
+                    t = value
                 end
-                error(self:getType()..": Invalid type for property "..name.."! Expected "..typ..", got "..type(value))
+                error(self:getType()..": Invalid type for property "..name.."! Expected "..typ..", got "..t)
             end
             return value
         end

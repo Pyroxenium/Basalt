@@ -207,8 +207,8 @@ return {
                         oby = oby or math.floor((oY - cY) / 2) + 1
                     
                         for i = 1, cY do
-                            self:addFG(1, i, bigfont[2][i])
-                            self:addBG(1, i, bigfont[3][i])
+                            self:addFg(1, i, bigfont[2][i])
+                            self:addBg(1, i, bigfont[3][i])
                             self:addText(1, i, bigfont[1][i])
                         end
                     end
