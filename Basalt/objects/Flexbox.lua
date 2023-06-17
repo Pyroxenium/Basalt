@@ -42,9 +42,9 @@ return function(name, basalt)
 
     base:addProperty("FlexDirection", {"row", "column"}, "row", nil, function(self, direction)
         if(direction=="row")then
-            self:setScrollDirection("horizontal")
+            base:setDirection("horizontal")
         elseif(direction=="column")then
-            self:setScrollDirection("vertical")
+            base:setDirection("vertical")
         end
     end)
     base:addProperty("Spacing", "number", 1, nil, function(self, spacing)
@@ -324,7 +324,7 @@ return function(name, basalt)
 
     local function applyLayout(self)
         sortChildren(self)
-        if self:getDirection() == "row" then
+        if self:getFlexDirection() == "row" then
             for _,v in pairs(sortedChildren)do
                 calculateRow(self, v)
             end
