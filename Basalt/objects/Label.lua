@@ -14,11 +14,12 @@ return function(name, basalt)
         local autoSize = self:getAutoSize()
         if(autoSize)then
             local t = wrapText(value, #value)
-            local newW, newH = 1,1
+            local newW, newH = 1,0
             for _,v in pairs(t)do
-                newH = newH+1
+                newH = newH + 1
                 newW = math.max(newW, v:len())
             end
+            if(newH==0)then newH = 1 end
             self:setSize(newW, newH)
             self:setAutoSize(true)
         end
