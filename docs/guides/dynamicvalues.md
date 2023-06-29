@@ -2,12 +2,12 @@ Dynamic Values provide a way to define the size and position of UI elements in a
 
 ### Basic Syntax
 
-Dynamic Values are defined using expressions enclosed in double quotes (" "). These expressions can include arithmetic operations, as well as references to properties of other UI elements, such as their width or height.
+Dynamic Values are defined by using expressions enclosed within double quotes (" ") and curly braces ({ }). These expressions can include arithmetic operations, as well as references to properties of other UI elements, such as their width or height.
 
 Here's an example of a simple Dynamic Value expression:
 
 ```lua
-"parent.w / 2"
+"{parent.w / 2}"
 ```
 
 This expression calculates half of the parent container's width.
@@ -20,7 +20,7 @@ Here's an example of how to use Dynamic Values to set the size of a frame:
 
 ```lua
 local mainFrame = basalt.createFrame()
-local childFrame = mainFrame:addFrame():setSize("parent.w / 2", "parent.h / 2")
+local childFrame = mainFrame:addFrame():setSize("{parent.w / 2}", "{parent.h / 2}")
 ```
 
 In this example, the child frame's size is set to half of the parent frame's width and height.
@@ -33,7 +33,7 @@ Here's an example of how to do this:
 
 ```lua
 local mainFrame = basalt.createFrame()
-local childFrame = mainFrame:addFrame():setSize("parent.w / 2", 10)
+local childFrame = mainFrame:addFrame():setSize("{parent.w / 2}", 10)
 ```
 
 In this example, the child frame's width is set to half of the parent frame's width, while its height is set to a static value of 100 pixels.
@@ -62,10 +62,10 @@ local main = basalt.createFrame()
 local childFrame = main:addFrame()
 
 -- Set the size of the child frame to half the width and height of its parent frame
-childFrame:setSize("parent.w / 2", "parent.h / 2")
+childFrame:setSize("{parent.w / 2}", "parent.h / 2}")
 
 -- Position the child frame at the center of its parent frame
-childFrame:setPosition("parent.w / 2 - self.w / 2", "parent.h / 2 - self.h / 2")
+childFrame:setPosition("{parent.w / 2 - self.w / 2}", "{parent.h / 2 - self.h / 2}")
 ```
 
 In this example, the child frame's size and position are dynamically calculated based on the parent frame's dimensions, ensuring a responsive layout that adapts to changes in the parent frame's size.
@@ -78,7 +78,7 @@ local frameA = main:addFrame("frameA"):setSize(20, 20)
 local frameB = main:addFrame("frameB"):setSize(10, 10)
 
 -- Position frameB to the right of frameA
-frameB:setPosition("frameA.x + frameA.w + 2", "frameA.y")
+frameB:setPosition("{frameA.x + frameA.w + 2}", "{frameA.y}")
 ```
 
 ### Using Math Functions with Dynamic Values
@@ -88,7 +88,7 @@ In addition to basic arithmetic operations, you can also use functions from the 
 For example, you can use the `math.floor()` function to round down the result of a division operation:
 
 ```lua
-"math.floor(parent.w / 2)"
+"{math.floor(parent.w / 2)}"
 ```
 
 This expression calculates half of the parent container's width and rounds the result down to the nearest integer.
@@ -97,7 +97,35 @@ Here's an example of how to use a Math function within a Dynamic Value expressio
 
 ```lua
 local mainFrame = basalt.createFrame()
-local childFrame = mainFrame:addFrame():setSize("math.floor(parent.w / 3)", "math.ceil(parent.h / 4)")
+local childFrame = mainFrame:addFrame():setSize("{math.floor(parent.w / 3)}", "{math.ceil(parent.h / 4)}")
 ```
 
 In this example, the child frame's width is set to one-third of the parent frame's width, rounded down to the nearest integer, and its height is set to one-fourth of the parent frame's height, rounded up to the nearest integer.
+
+### Manipulating Background and Foreground Dynamically
+
+With Dynamic Values, you can also manipulate the background and foreground color of your UI elements depending on certain conditions. This provides a way to give visual feedback to user interactions or state changes in the application.
+
+Here's an example on how you can use Dynamic Values to change the background color of a UI element based on its clicked state:
+
+```lua
+local mainFrame = basalt.createFrame()
+local button = mainFrame:addButton():setBackground("{self.clicked ? blue : green}")
+```
+
+In this example, the `setBackground` method is used with a Dynamic Value expression to change the background color of a button. The color is 'blue' when the button is clicked (`self.clicked` is true), and 'green' when it's not clicked (`self.clicked` is false).
+
+Just like with sizes and positions, you can use the self keyword to refer to the current UI element. The clicked attribute is a boolean that indicates whether the UI element has been clicked or not.
+
+The Dynamic Value expression for color uses a ternary operator, which takes the form of `condition ? value_if_true : value_if_false`. This allows you to specify different colors depending on whether the condition (in this case, `self.clicked`) is true or false.
+
+The same approach can be used to change the foreground color, text properties, or any other attributes of a UI element. Just remember to use the correct method for the attribute you want to change, and to format your Dynamic Value expression appropriately.
+
+Here's an example of changing the foreground color:
+
+```lua
+local mainFrame = basalt.createFrame()
+local button = mainFrame:addButton():setForeground("{self.clicked ? white : black}")
+```
+
+In this example, the button's text color is 'white' when clicked and 'black' when not clicked. This helps provide visual feedback to the user about the button's state.
