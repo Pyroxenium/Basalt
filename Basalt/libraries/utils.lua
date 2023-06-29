@@ -327,8 +327,11 @@ wrapRichText = wrapRichText,
 --- @param height number Height
 writeWrappedText = function(obj, x, y, text, width, height)
     local wrapped = wrapRichText(text, width)
-    for _,v in pairs(wrapped)do
+    for k,v in pairs(wrapped)do
         if(v.y>height)then
+            break
+        end
+        if(k==#wrapped)and(v=="")then
             break
         end
         if(v.text~=nil)then

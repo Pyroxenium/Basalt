@@ -24,6 +24,7 @@ return function(name, basalt)
         basaltDraw = nil
         if(value~=nil)then
             basaltDraw = drawSystem(value)
+            base:setSize(value.getSize())
         end
     end)
     base:setSize(termObject.getSize())
@@ -160,6 +161,7 @@ return function(name, basalt)
         object[v] = function(self, x, y, width, height, symbol)
             local obx, oby = self:getPosition()
             local w, h  = self:getSize()
+            if(height==nil)then return end
             height = (y < 1 and (height + y > self:getHeight() and self:getHeight() or height + y - 1) or (height + y > self:getHeight() and self:getHeight() - y + 1 or height))
             width = (x < 1 and (width + x > self:getWidth() and self:getWidth() or width + x - 1) or (width + x > self:getWidth() and self:getWidth() - x + 1 or width))
             basaltDraw[v](max(x + (obx - 1), obx), max(y + (oby - 1), oby), width, height, symbol)
