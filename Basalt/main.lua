@@ -14,7 +14,7 @@ local newObjects = {}
 local mousePos = {0, 0}
 
 local baseTerm = term.current()
-local version = "1.7.0"
+local version = "1.7.1"
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
 
