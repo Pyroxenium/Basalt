@@ -23,7 +23,7 @@ return function(name, basalt)
                 table.insert(graphData, value)
                 self:updateDraw()
             end
-            if(#graphData>100)then -- 100 is hard capped to prevent memory leaks
+            while #graphData>self:getMaxEntries() do
                 table.remove(graphData,1)
             end
             return self
