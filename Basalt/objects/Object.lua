@@ -61,6 +61,10 @@ return function(name, basalt)
             if(typ=="any")or(value==nil)or(type(value)=="function")then
                 isValid = true
             end
+            if(typ=="string")and(type(value)~="function")then
+                value = tostring(value)
+                isValid = true
+            end
 
             if(not isValid)then
                 local t = type(value)

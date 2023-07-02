@@ -166,6 +166,7 @@ return {
             setText = function(self, text)
                 base.setText(self, text)
                 if(fontsize>1)then
+                    bigfont = makeText(fontsize-1, self:getText(), self:getForeground(), self:getBackground() or colors.lightGray)
                     if(self:getAutoSize())then
                         self:getBase():setSize(#bigfont[1][1], #bigfont[1]-1)
                     end

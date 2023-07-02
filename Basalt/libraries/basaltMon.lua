@@ -1,180 +1,143 @@
--- Right now this doesn't support scroll(n)
--- Because this lbirary is mainly made for basalt - it doesn't need scroll support, maybe i will add it in the future
 
-local tHex = {
-    [colors.white] = "0",
-    [colors.orange] = "1",
-    [colors.magenta] = "2",
-    [colors.lightBlue] = "3",
-    [colors.yellow] = "4",
-    [colors.lime] = "5",
-    [colors.pink] = "6",
-    [colors.gray] = "7",
-    [colors.lightGray] = "8",
-    [colors.cyan] = "9",
-    [colors.purple] = "a",
-    [colors.blue] = "b",
-    [colors.brown] = "c",
-    [colors.green] = "d",
-    [colors.red] = "e",
-    [colors.black] = "f",
-}
+local max, sub = math.max,string.sub
 
-local type,len,rep,sub = type,string.len,string.rep,string.sub
-
-
-return function (monitorNames)
+return function(monitorNames)
     local monitors = {}
-    for k,v in pairs(monitorNames)do
-        monitors[k] = {}
+    local multiMonWidth, multiMonHeight = 0,0
+    local multiMonX, multiMonY = 1, 1
+    local bgColor, txtColor = colors.black, colors.white
+    for k,v in pairs(monitorNames) do
+            monitors[k] = {}
         for a,b in pairs(v)do
-            local mon = peripheral.wrap(b)
-            if(mon==nil)then
-                error("Unable to find monitor "..b)
-            end
-            monitors[k][a] = mon
-            monitors[k][a].name = b
+            monitors[k][a] = {name=b, monitor=peripheral.wrap(b)}
         end
     end
 
+    local function calculateSize()
+        local absWidth, absHeight = 0,0
+        local height = 0
+        for _,v in pairs(monitors)do
+            local width = 0
+            for _,b in pairs(v)do
+                local w, h = b.monitor.getSize()
+                width = width + w
+                height = max(height, h)
+            end
+            absWidth = max(absWidth, width)
+            absHeight = absHeight + height
+            height = 0
+        end
+        multiMonWidth, multiMonHeight = absWidth, absHeight
+    end
+    calculateSize()
 
-    local x,y,monX,monY,monW,monH,w,h = 1,1,1,1,0,0,0,0
-    local blink,scale = false,1
-    local fg,bg = colors.white,colors.black
-
-  
-    local function calcSize()
-        local maxW,maxH = 0,0
+    local function getMonitorFromPosition(x, y)
+        local absWidth, absHeight = 0,0
+        local height = 0
         for k,v in pairs(monitors)do
-            local _maxW,_maxH = 0,0
+            local width = 0
             for a,b in pairs(v)do
-                local nw,nh = b.getSize()
-                _maxW = _maxW + nw
-                _maxH = nh > _maxH and nh or _maxH
+                local w, h = b.monitor.getSize()
+                width = width + w
+                height = max(height, h)
+                if(x >= absWidth and x <= absWidth + w and y >= absHeight and y <= absHeight + h)then
+                    return b.monitor, a, k
+                end
+                absWidth = absWidth + w
             end
-            maxW = maxW > _maxW and maxW or _maxW
-            maxH = maxH + _maxH
+            absWidth = 0
+            absHeight = absHeight + height
+            height = 0
         end
-        w,h = maxW,maxH
     end
-    calcSize()
 
-    local function calcPosition()
-        local relY = 0
-        local mX,mY = 0,0
+    local function getRelativeCursorPos(mon, x, y)
+        local absWidth, absHeight = 0,0
+        local height = 0
         for k,v in pairs(monitors)do
-            local relX = 0
-            local _mh = 0
+            local width = 0
             for a,b in pairs(v)do
-                local mw,mh = b.getSize()
-                if(x-relX>=1)and(x-relX<=mw)then
-                    mX = a
+                local w, h = b.monitor.getSize()
+                width = width + w
+                height = max(height, h)
+                if(b.monitor == mon)then
+                    return x - absWidth, y - absHeight
                 end
-                b.setCursorPos(x-relX, y-relY)
-                relX = relX + mw
-                if(_mh<mh)then _mh = mh end
+                absWidth = absWidth + w
             end
-            if(y-relY>=1)and(y-relY<=_mh)then
-                mY = k
-            end
-            relY = relY + _mh
+            absWidth = 0
+            absHeight = absHeight + height
+            height = 0
         end
-        monX,monY = mX,mY
     end
-    calcPosition()
 
-    local function call(f, ...)
-        local t = {...}
-        return function()
-            for k,v in pairs(monitors)do
-                for a,b in pairs(v)do
-                    b[f](table.unpack(t))
+    local function blit(text, fgColor, bgColor)
+        local mon, x, y = getMonitorFromPosition(multiMonX, multiMonY)
+
+        for k, v in pairs(monitors[y])do
+            if(k >= x)then
+                local xCursor, yCursor = getRelativeCursorPos(v.monitor, multiMonX, multiMonY)
+                local w, h = v.monitor.getSize()
+                local textToScreen = sub(text, 1, w)
+                text = sub(text, w+1)
+                local fgColorToScreen = sub(fgColor, 1, w)
+                fgColor = sub(fgColor, w+1)
+                local bgColorToScreen = sub(bgColor, 1, w)
+                bgColor = sub(bgColor, w+1)
+                v.monitor.setCursorPos(xCursor, yCursor)
+                v.monitor.blit(textToScreen, fgColorToScreen, bgColorToScreen)
+                multiMonX = multiMonX + w
+            end
+        end
+    end
+
+    return {
+        getSize = function()
+            return multiMonWidth, multiMonHeight
+        end,
+
+        blit = blit,
+        getCursorPos = function()
+            return multiMonX, multiMonY
+        end,
+
+        setCursorPos = function(x, y)
+            multiMonX, multiMonY = x, y
+            for _,v in pairs(monitors)do
+                for _,b in pairs(v)do
+                    local xCursor, yCursor = getRelativeCursorPos(b.monitor, multiMonX, multiMonY)
+                    b.monitor.setCursorPos(xCursor, yCursor)
                 end
             end
-        end
-    end
-
-    local function cursorBlink()
-        call("setCursorBlink", false)()
-        if not(blink)then return end
-        if(monitors[monY]==nil)then return end
-        local mon = monitors[monY][monX]
-        if(mon==nil)then return end
-        mon.setCursorBlink(blink)
-    end
-
-    local function blit(text, tCol, bCol)
-        if(monitors[monY]==nil)then return end
-        local mon = monitors[monY][monX]
-        if(mon==nil)then return end
-        mon.blit(text, tCol, bCol)
-        local mW, mH = mon.getSize()
-        if(len(text)+x>mW)then
-            local monRight = monitors[monY][monX+1]
-            if(monRight~=nil)then
-                monRight.blit(text, tCol, bCol)
-                monX = monX + 1
-                x = x + len(text)
-            end
-        end
-        calcPosition()
-    end
-
-   return {
-        clear = call("clear"),
-
-        setCursorBlink = function(_blink)
-            blink = _blink
-            cursorBlink()
         end,
 
         getCursorBlink = function()
-            return blink
+            local mon = getMonitorFromPosition(multiMonX, multiMonY)
+            return mon.getCursorBlink()
         end,
 
-        getCursorPos = function()
-            return x, y
-        end,
-        
-        setCursorPos = function(newX,newY)
-            x, y = newX, newY
-            calcPosition()
-            cursorBlink()
+        setCursorBlink = function(blink)
+            for _,v in pairs(monitors)do
+                for _,b in pairs(v)do
+                    b.monitor.setCursorBlink(blink)
+                end
+            end
         end,
 
-        setTextScale = function(_scale)
-            call("setTextScale", _scale)()
-            calcSize()
-            calcPosition()
-            scale = _scale
+        setBackgroundColor = function(color)
+            bgColor = color
         end,
 
-        getTextScale = function()
-            return scale
+        getBackgroundColor = function()
+            return bgColor
         end,
 
-        blit = function(text,fgCol,bgCol)
-            blit(text,fgCol,bgCol)
+        setTextColor = function(color)
+            txtColor = color
         end,
 
-        write = function(text)
-            text = tostring(text)
-            local l = len(text)
-            blit(text, rep(tHex[fg], l), rep(tHex[bg], l))
-        end,
-
-        getSize = function()
-            return w,h
-        end,
-
-        setBackgroundColor = function(col)
-            call("setBackgroundColor", col)()
-            bg = col
-        end,
-
-        setTextColor = function(col)
-            call("setTextColor", col)()
-            fg = col
+        getTextColor = function()
+            return txtColor
         end,
 
         calculateClick = function(name, xClick, yClick)
@@ -183,7 +146,7 @@ return function (monitorNames)
                 local relX = 0
                 local maxY = 0
                 for a,b in pairs(v)do
-                    local wM,hM = b.getSize()
+                    local wM,hM = b.monitor.getSize()
                     if(b.name==name)then
                         return xClick + relX, yClick + relY
                     end
@@ -194,6 +157,5 @@ return function (monitorNames)
             end
             return xClick, yClick
         end,
-
-   }
+    }
 end

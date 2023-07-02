@@ -12,6 +12,7 @@ return function(name, basalt)
 
     base:addProperty("text", "string", "Label", nil, function(self, value)
         local autoSize = self:getAutoSize()
+        value = tostring(value)
         if(autoSize)then
             local t = wrapText(value, #value)
             local newW, newH = 1,0

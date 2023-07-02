@@ -74,9 +74,6 @@ local plugin = {
                 Input = {
                     Background = "{self.focused ? gray : black}",
                     Foreground = "{self.focused ? black : lightGray}",
-                    defaultBackground = "{self.focused ? gray : black}",
-                    defaultForeground = "{self.focused ? black : lightGray}",
-                    defaultText = "..."
                 },
             },
         }
