@@ -66,9 +66,7 @@ return function(name, basalt)
             end,
 
             setExpanded = function(self, exp)
-                if(expandable)then
-                    expanded = exp
-                end
+                expanded = exp
                 base:updateDraw()
                 return node
             end,
@@ -91,9 +89,9 @@ return function(name, basalt)
                     onSelect(node)
                 end
             end,
-
-            setExpandable = function(self, expandable)
-                expandable = expandable
+            
+            setExpandable = function(self, _expandable)
+                expandable = _expandable
                 base:updateDraw()
                 return node
             end,
