@@ -24,9 +24,9 @@ local basalt = require("basalt") -- we need basalt here
 local main = basalt.createFrame():setTheme({FrameBG = colors.lightGray, FrameFG = colors.black}) -- we change the default bg and fg color for frames
 
 local sub = { -- here we create a table where we gonna add some frames
-    main:addFrame():setPosition(1, 2):setSize("parent.w", "parent.h - 1"), -- obviously the first one should be shown on program start
-    main:addFrame():setPosition(1, 2):setSize("parent.w", "parent.h - 1"):hide(),
-    main:addFrame():setPosition(1, 2):setSize("parent.w", "parent.h - 1"):hide(),
+    main:addFrame():setPosition(1, 2):setSize("{parent.w}", "{parent.h - 1}"), -- obviously the first one should be shown on program start
+    main:addFrame():setPosition(1, 2):setSize("{parent.w}", "{parent.h - 1}"):hide(),
+    main:addFrame():setPosition(1, 2):setSize("{parent.w}", "{parent.h - 1}"):hide(),
 }
 
 local function openSubFrame(id) -- we create a function which switches the frame for us
@@ -39,7 +39,7 @@ local function openSubFrame(id) -- we create a function which switches the frame
 end
 
 local menubar = main:addMenubar():setScrollable() -- we create a menubar in our main frame.
-    :setSize("parent.w")
+    :setSize("{parent.w}")
     :onChange(function(self, val)
         openSubFrame(self:getItemIndex()) -- here we open the sub frame based on the table index
     end)
@@ -71,7 +71,6 @@ This example illustrates how to create a sidebar with buttons that can be used t
 <details>
 <summary>Click here to show code</summary>
 
-
 ```lua
 local basalt = require("basalt") -- we need basalt here
 
@@ -79,7 +78,7 @@ local main = basalt.createFrame():setTheme({FrameBG = colors.lightGray, FrameFG 
 
 --[[ 
 Here we create the sidebar, on focus it should change the position to parent.w - (self.w-1) which "opens the frame"
-when the focus gets lost we simply change the position to "parent.w"
+when the focus gets lost we simply change the position to "{parent.w}"
 As you can see we add :setZIndex(25) - this makes sure the sidebar frame is always more important than our normal sub frames.
 :setScrollable just makes the sidebar frame scrollable (in case you're adding more frames)
 ]]
