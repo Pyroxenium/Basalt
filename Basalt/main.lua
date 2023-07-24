@@ -554,7 +554,7 @@ basalt = {
     
     getFrame = function(name)
         for _, value in pairs(frames) do
-            if (value.name == name) then
+            if (value:getName() == name) then
                 return value
             end
         end
