@@ -19,5 +19,5 @@ Sets a data point in the graph with specified value.
 ```lua
 local mainFrame = basalt.createFrame()
 local aGraph = mainFrame:addGraph()
-aGraph:setDataPoint(13)
+aGraph:addDataPoint(13)
 ```
