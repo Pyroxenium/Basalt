@@ -137,6 +137,7 @@ return function(name, basalt)
 
     local function updateColors(self, l)
         l = l or self:getTextYPosition()
+        if(l>#lines)then return end
         local fgLine = tHex[self:getForeground()]:rep(fgLines[l]:len())
         local bgLine = tHex[self:getBackground()]:rep(bgLines[l]:len())
         for k,v in pairs(rules)do
