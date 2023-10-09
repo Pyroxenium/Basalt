@@ -18,7 +18,7 @@ return function(name, basalt)
         return progress
     end)
     base:addProperty("Direction", "number", 0)
-    base:addProperty("ActiveBarSymbol", "char", "")
+    base:addProperty("ActiveBarSymbol", "string", " ")
     base:addProperty("ActiveBarColor", "color", colors.black)
     base:addProperty("ActiveBarSymbolColor", "color", colors.white)
     base:combineProperty("ProgressBar", "ActiveBarColor", "ActiveBarSymbol", "ActiveBarSymbolColor")
@@ -39,7 +39,10 @@ return function(name, basalt)
             self:addDraw("progressbar", function()
                 local w,h = self:getSize()
                 local p = self:getProperties()
-                local activeBarColor, activeBarSymbol, activeBarSymbolCol = self:getProgressBar()
+                local activeBarColor, activeBarSymbol, activeBarSymbolCol = self:getActiveBarColor(), self:getActiveBarSymbol(), self:getActiveBarSymbolColor()
+                activeBarColor = activeBarColor or colors.red
+                activeBarSymbol = activeBarSymbol or " "
+                activeBarSymbolCol = activeBarSymbolCol or colors.white
                 if(p.Background~=nil)then self:addBackgroundBox(1, 1, w, h, p.Background) end
                 if(p.BgSymbol~="")then self:addTextBox(1, 1, w, h, p.BgSymbol) end
                 if(p.Foreground~=nil)then self:addForegroundBox(1, 1, w, h, p.Foreground) end
