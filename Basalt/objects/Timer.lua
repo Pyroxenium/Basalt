@@ -1,36 +1,33 @@
 return function(name, basalt)
     local base = basalt.getObject("Object")(name, basalt)
-    base:setType("Timer")
+    local objectType = "Timer"
 
-    base:addProperty("Timer", "number", 0, false, function(self, value)
-        if (value < 0) then
-            value = 0
-        end
-        return value
-    end)
-
-    base:addProperty("Repeat", "number", 1, false, function(self, value)
-        if(value~=nil)then
-            if (value < 0) then
-                value = 0
-            end
-        else
-            value = 0
-        end
-        return value
-    end)
-
-    base:combineProperty("Time", "Timer", "Repeat")
-
+    local timer = 0
+    local savedRepeats = 0
+    local repeats = 0
     local timerObj
     local timerIsActive = false
 
     local object = {
+        getType = function(self)
+            return objectType
+        end,
+
+        setTime = function(self, _timer, _repeats)
+            timer = _timer or 0
+            savedRepeats = _repeats or 1
+            return self
+        end,
+
+        getTime = function(self)
+            return timer
+        end,
+
         start = function(self)
             if(timerIsActive)then
                 os.cancelTimer(timerObj)
             end
-            local timer, repeatAmount = self:getTime()
+            repeats = savedRepeats
             timerObj = os.startTimer(timer)
             timerIsActive = true
             self:listenEvent("other_event")
@@ -63,12 +60,10 @@ return function(name, basalt)
             return self
         end,
 
-        eventHandler = function(self, event, tObj, ...)
-            base.eventHandler(self, event, tObj, ...)
+        eventHandler = function(self, event, ...)
+            base.eventHandler(self, event, ...)
             if event == "timer" and tObj == timerObj and timerIsActive then
                 self:sendEvent("timed_event")
-                local timer = self:getTimer()
-                local repeats = self:getRepeat()
                 if (repeats >= 1) then
                     repeats = repeats - 1
                     if (repeats >= 1) then

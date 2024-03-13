@@ -1,4 +1,6 @@
 local tHex = require("tHex")
+local utils = require("utils")
+local split = utils.splitString
 local sub,rep = string.sub,string.rep
 
 return function(drawTerm)
@@ -40,27 +42,33 @@ return function(drawTerm)
         if #t == #fg and #t == #bg then
             if y >= 1 and y <= height then
                 if x + #t > 0 and x <= width then
-                    local startN = x < 1 and 1 - x + 1 or 1
-                    local endN = x + #t > width and width - x + 1 or #t
-
+                    local newCacheT, newCacheFG, newCacheBG
                     local oldCacheT, oldCacheFG, oldCacheBG = cacheT[y], cacheFG[y], cacheBG[y]
-
-                    local newCacheT = sub(oldCacheT, 1, x - 1) .. sub(t, startN, endN)
-                    local newCacheFG = sub(oldCacheFG, 1, x - 1) .. sub(fg, startN, endN)
-                    local newCacheBG = sub(oldCacheBG, 1, x - 1) .. sub(bg, startN, endN)
-
+                    local startN, endN = 1, #t
+    
+                    if x < 1 then
+                        startN = 1 - x + 1
+                        endN = width - x + 1
+                    elseif x + #t > width then
+                        endN = width - x + 1
+                    end
+    
+                    newCacheT = sub(oldCacheT, 1, x - 1) .. sub(t, startN, endN)
+                    newCacheFG = sub(oldCacheFG, 1, x - 1) .. sub(fg, startN, endN)
+                    newCacheBG = sub(oldCacheBG, 1, x - 1) .. sub(bg, startN, endN)
+    
                     if x + #t <= width then
                         newCacheT = newCacheT .. sub(oldCacheT, x + #t, width)
                         newCacheFG = newCacheFG .. sub(oldCacheFG, x + #t, width)
                         newCacheBG = newCacheBG .. sub(oldCacheBG, x + #t, width)
                     end
-
+    
                     cacheT[y], cacheFG[y], cacheBG[y] = newCacheT,newCacheFG,newCacheBG
                 end
             end
         end
     end
-    
+
     local function setText(x, y, t)
         if y >= 1 and y <= height then
             if x + #t > 0 and x <= width then
@@ -86,7 +94,7 @@ return function(drawTerm)
         end
     end
 
-    local function setBg(x, y, bg)
+    local function setBG(x, y, bg)
         if y >= 1 and y <= height then
             if x + #bg > 0 and x <= width then
                 local newCacheBG
@@ -111,7 +119,7 @@ return function(drawTerm)
         end
     end
 
-    local function setFg(x, y, fg)
+    local function setFG(x, y, fg)
         if y >= 1 and y <= height then
             if x + #fg > 0 and x <= width then
                 local newCacheFG
@@ -136,6 +144,32 @@ return function(drawTerm)
         end
     end
 
+    --[[
+    local function setText(x, y, text)
+        if (y >= 1) and (y <= height) then
+            local emptyLine = rep(" ", #text)
+            blit(x, y, text, emptyLine, emptyLine)
+        end
+    end
+
+    local function setFG(x, y, colorStr)
+        if (y >= 1) and (y <= height) then
+            local w = #colorStr
+            local emptyLine = rep(" ", w)
+            local text = sub(cacheT[y], x, w)
+            blit(x, y, text, colorStr, emptyLine)
+        end
+    end
+
+    local function setBG(x, y, colorStr)
+        if (y >= 1) and (y <= height) then
+            local w = #colorStr
+            local emptyLine = rep(" ", w)
+            local text = sub(cacheT[y], x, w)
+            blit(x, y, text, emptyLine, colorStr)
+        end
+    end]]
+
     local drawHelper = {
         setSize = function(w, h)
             width, height = w, h
@@ -146,17 +180,17 @@ return function(drawTerm)
             mirrorTerm = mirror
         end,
 
-        setBg = function(x, y, colorStr)
-            setBg(x, y, colorStr)
+        setBG = function(x, y, colorStr)
+            setBG(x, y, colorStr)
         end,
 
         setText = function(x, y, text)
             setText(x, y, text)
         end,
 
-        setFg = function(x, y, colorStr)
-            setFg(x, y, colorStr)
-        end,
+        setFG = function(x, y, colorStr)
+            setFG(x, y, colorStr)
+        end;
 
         blit = function(x, y, t, fg, bg)
             blit(x, y, t, fg, bg)
@@ -165,13 +199,13 @@ return function(drawTerm)
         drawBackgroundBox = function(x, y, width, height, bgCol)
             local colorStr = rep(tHex[bgCol], width)
             for n = 1, height do
-                setBg(x, y + (n - 1), colorStr)
+                setBG(x, y + (n - 1), colorStr)
             end
         end,
         drawForegroundBox = function(x, y, width, height, fgCol)
             local colorStr = rep(tHex[fgCol], width)
             for n = 1, height do
-                setFg(x, y + (n - 1), colorStr)
+                setFG(x, y + (n - 1), colorStr)
             end
         end,
         drawTextBox = function(x, y, width, height, symbol)

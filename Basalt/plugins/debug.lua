@@ -3,28 +3,27 @@ local wrapText = utils.wrapText
 
 return {
     basalt = function(basalt)
-        local mainFrame
+        local mainFrame = basalt.getMainFrame()
         local debugFrame
         local debugList
         local debugLabel
         local debugExitButton
 
         local function createDebuggingFrame()
-            if(mainFrame==nil)then mainFrame = basalt.getMainFrame() end
             local minW = 16
             local minH = 6
             local maxW = 99
             local maxH = 99
             local w, h = mainFrame:getSize()
-            debugFrame = mainFrame:addMovableFrame("basaltDebuggingFrame"):setSize(w-10, h-6):setBackground(colors.black):setForeground(colors.white):setZ(100):hide()
-            debugFrame:addPane():setSize("{parent.w}", 1):setPosition(1, 1):setBackground(colors.cyan):setForeground(colors.black)
-            debugFrame:setPosition(-w, h/2-debugFrame:getHeight()/2):setBorder(colors.cyan)
+            debugFrame = mainFrame:addMovableFrame("basaltDebuggingFrame"):setSize(w-20, h-10):setBackground(colors.gray):setForeground(colors.white):setZIndex(100):hide()
+            debugFrame:addPane():setSize("parent.w", 1):setPosition(1, 1):setBackground(colors.black):setForeground(colors.white)
+            debugFrame:setPosition(-w, h/2-debugFrame:getHeight()/2):setBorder(colors.black)
             local resizeButton = debugFrame:addButton()
-                :setPosition("{parent.w}", "{parent.h}")
+                :setPosition("parent.w", "parent.h")
                 :setSize(1, 1)
                 :setText("\133")
-                :setForeground(colors.black)
-                :setBackground(colors.cyan)
+                :setForeground(colors.gray)
+                :setBackground(colors.black)
                 :onClick(function() end)
                 :onDrag(function(self, event, btn, xOffset, yOffset)
                     local w, h = debugFrame:getSize()
@@ -38,21 +37,21 @@ return {
                     debugFrame:setSize(wOff, hOff)
                 end)
 
-            debugExitButton = debugFrame:addButton():setText("Close"):setPosition("{parent.w - 6}", 1):setSize(7, 1):setBackground(colors.red):setForeground(colors.white):onClick(function() 
+            debugExitButton = debugFrame:addButton():setText("Close"):setPosition("parent.w - 6", 1):setSize(7, 1):setBackground(colors.red):setForeground(colors.white):onClick(function() 
                 debugFrame:animatePosition(-w, h/2-debugFrame:getHeight()/2, 0.5)
             end)
             debugList = debugFrame:addList()
-                        :setSize("{parent.w - 2}", "{parent.h - 3}")
+                        :setSize("parent.w - 2", "parent.h - 3")
                         :setPosition(2, 3)
-                        :setBackground(colors.black)
+                        :setBackground(colors.gray)
                         :setForeground(colors.white)
-                        :setSelectionColor(colors.black, colors.white)
+                        :setSelectionColor(colors.gray, colors.white)
             if(debugLabel==nil)then 
                 debugLabel = mainFrame:addLabel()
-                :setPosition(1, "{parent.h}")
+                :setPosition(1, "parent.h")
                 :setBackground(colors.black)
                 :setForeground(colors.white)
-                :setZ(100)
+                :setZIndex(100)
                 :onClick(function()
                     debugFrame:show()
                     debugFrame:animatePosition(w/2-debugFrame:getWidth()/2, h/2-debugFrame:getHeight()/2, 0.5)

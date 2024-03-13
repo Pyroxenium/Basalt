@@ -3,20 +3,20 @@ local tHex = require("tHex")
 
 return function(name, basalt)
     local base = basalt.getObject("List")(name, basalt)
-    base:setType("Menubar")
+    local objectType = "Menubar"
     local object = {}
 
     base:setSize(30, 1)
-    base:setZ(5)
+    base:setZIndex(5)
 
-    base:addProperty("ItemOffset", "number", 0)
-    base:addProperty("Space", "number", 1)
+    local itemOffset = 0
+    local space, outerSpace = 1, 1
+    local scrollable = true
 
     local function maxScroll()
         local mScroll = 0
         local w = base:getWidth()
         local list = base:getAll()
-        local space = base:getSpace()
         for n = 1, #list do
             mScroll = mScroll + list[n].text:len() + space * 2
         end
@@ -25,14 +25,39 @@ return function(name, basalt)
 
     object = {
         init = function(self)
+            local parent = self:getParent()
             self:listenEvent("mouse_click")
             self:listenEvent("mouse_drag")
             self:listenEvent("mouse_scroll")
             return base.init(self)
         end,
 
+        getType = function(self)
+            return objectType
+        end,
+
         getBase = function(self)
             return base
+        end,
+
+        setSpace = function(self, _space)
+            space = _space or space
+            self:updateDraw()
+            return self
+        end,
+
+        getSpace = function(self)
+            return space
+        end,
+
+        setScrollable = function(self, scroll)
+            scrollable = scroll
+            if(scroll==nil)then scrollable = true end
+            return self
+        end,
+
+        getScrollable = function(self)
+            return scrollable
         end,
 
         mouseHandler = function(self, button, x, y)
@@ -41,13 +66,11 @@ return function(name, basalt)
                 local w,h = self:getSize()
                     local xPos = 0
                     local list = self:getAll()
-                    local space = self:getSpace()
-                    local itemOffset = self:getItemOffset()
                     for n = 1, #list do
                         if (list[n] ~= nil) then
                             if (objX + xPos <= x + itemOffset) and (objX + xPos + list[n].text:len() + (space*2) > x + itemOffset) and (objY == y) then
                                 self:setValue(list[n])
-                                self:selectHandler()
+                                self:sendEvent(event, self, event, 0, x, y, list[n])
                             end
                             xPos = xPos + list[n].text:len() + space * 2
                         end
@@ -59,9 +82,7 @@ return function(name, basalt)
 
         scrollHandler = function(self, dir, x, y)
             if(base:getBase().scrollHandler(self, dir, x, y))then
-                local scrollable = self:getScrollable()
                 if(scrollable)then
-                    local itemOffset = self:getItemOffset()
                     itemOffset = itemOffset + dir
                     if (itemOffset < 0) then
                         itemOffset = 0
@@ -72,7 +93,6 @@ return function(name, basalt)
                     if (itemOffset > mScroll) then
                         itemOffset = mScroll
                     end
-                    self:setItemOffset(itemOffset)
                     self:updateDraw()
                 end
                 return true
@@ -83,13 +103,12 @@ return function(name, basalt)
         draw = function(self)
             base.draw(self)
             self:addDraw("list", function()
+                local parent = self:getParent()
                 local w,h = self:getSize()
                 local text = ""
                 local textBGCol = ""
                 local textFGCol = ""
                 local itemSelectedBG, itemSelectedFG = self:getSelectionColor()
-                local itemOffset = self:getItemOffset()
-                local space = self:getSpace()
                 for _, v in pairs(self:getAll()) do
                     local newItem = (" "):rep(space) .. v.text .. (" "):rep(space)
                     text = text .. newItem

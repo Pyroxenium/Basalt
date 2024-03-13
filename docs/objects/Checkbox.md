@@ -1,6 +1,6 @@
-The Checkbox object is derived from the VisualObject class and allows users to set a boolean value to true or false by clicking on it. Checkboxes are commonly used in forms and settings to enable or disable specific options.
+The Checkbox object is derived from the ChangeableObject class and allows users to set a boolean value to true or false by clicking on it. Checkboxes are commonly used in forms and settings to enable or disable specific options.
 
-In addition to the Object and VisualObject methods, checkboxes also have the following method:
+In addition to the Object, VisualObject and ChangeableObject methods, checkboxes also have the following method:
 
 |   |   |
 |---|---|

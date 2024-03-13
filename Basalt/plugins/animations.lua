@@ -217,16 +217,10 @@ local lerp = {
 
 local XMLParser = require("xmlParser")
 
-local animationCount = 0
-local renderThrottleCACHE
-
 return {
     VisualObject = function(base, basalt)
         local activeAnimations = {}
         local defaultMode = "linear"
-        if(renderThrottleCACHE==nil)then
-            renderThrottleCACHE = basalt.getRenderingThrottle()
-        end
 
         local function getAnimation(self, timerId)
             for k,v in pairs(activeAnimations)do
@@ -250,10 +244,6 @@ return {
             end
             activeAnimations[typ].finished = function()
                 set(self, v1, v2)
-                animationCount = animationCount - 1
-                if(animationCount==0)then
-                    basalt.setRenderingThrottle(renderThrottleCACHE)
-                end
                 if(f~=nil)then f(self) end
             end
 
@@ -261,8 +251,6 @@ return {
             activeAnimations[typ].progress=0
             activeAnimations[typ].duration=duration
             activeAnimations[typ].mode=mode
-            animationCount = animationCount + 1
-            basalt.setRenderingThrottle(0)
             self:listenEvent("other_event")
         end
 

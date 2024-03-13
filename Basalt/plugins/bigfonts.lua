@@ -140,11 +140,12 @@ local function makeText(nSize, sString, nFC, nBC, bBlit)
 end
 
 -- The following code is related to basalt and has nothing to do with bigfonts, it creates a plugin which will be added to labels:
+local XMLParser = require("xmlParser")
 return {
     Label = function(base)
         local fontsize = 1
         local bigfont
-
+    
         local object = {
             setFontSize = function(self, newFont)
                 if(type(newFont)=="number")then
@@ -163,30 +164,51 @@ return {
                 return self
             end,
 
-            setText = function(self, text)
-                base.setText(self, text)
-                if(fontsize>1)then
-                    bigfont = makeText(fontsize-1, self:getText(), self:getForeground(), self:getBackground() or colors.lightGray)
-                    if(self:getAutoSize())then
-                        self:getBase():setSize(#bigfont[1][1], #bigfont[1]-1)
-                    end
-                end
-                return self
-            end,
-
             getFontSize = function(self)
                 return fontsize
+            end,
+
+            getSize = function(self)
+                local w, h = base.getSize(self)
+                if(fontsize>1)and(self:getAutoSize())then
+                    return fontsize==2 and self:getText():len()*3 or math.floor(self:getText():len() * 8.5), fontsize==2 and h * 2 or math.floor(h)
+                else
+                    return w, h
+                end
+            end,
+
+            getWidth = function(self)
+                local w = base.getWidth(self)
+                if(fontsize>1)and(self:getAutoSize())then
+                    return fontsize==2 and self:getText():len()*3 or math.floor(self:getText():len() * 8.5)
+                else
+                    return w
+                end
+            end,
+
+            getHeight = function(self)
+                local h = base.getHeight(self)
+                if(fontsize>1)and(self:getAutoSize())then
+                    return fontsize==2 and h * 2 or math.floor(h)
+                else
+                    return h
+                end
             end,
 
             draw = function(self)
                 base.draw(self)
                 self:addDraw("bigfonts", function()
                     if(fontsize>1)then
+                        local obx, oby = self:getPosition()
+                        local parent = self:getParent()
+                        local oX, oY = parent:getSize()
                         local cX, cY = #bigfont[1][1], #bigfont[1]
+                        obx = obx or math.floor((oX - cX) / 2) + 1
+                        oby = oby or math.floor((oY - cY) / 2) + 1
                     
                         for i = 1, cY do
-                            self:addFg(1, i, bigfont[2][i])
-                            self:addBg(1, i, bigfont[3][i])
+                            self:addFG(1, i, bigfont[2][i])
+                            self:addBG(1, i, bigfont[3][i])
                             self:addText(1, i, bigfont[1][i])
                         end
                     end

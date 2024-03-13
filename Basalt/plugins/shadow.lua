@@ -1,3 +1,5 @@
+local XMLParser = require("xmlParser")
+
 return {
     VisualObject = function(base)
         local shadow = false        

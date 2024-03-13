@@ -167,42 +167,34 @@ local function wrapRichText(text, width)
         elseif entry.bgColor then
             currentBgColor = entry.bgColor
         else
-            local paragraphs = splitString(entry.text, "\n")
-            for p, paragraph in ipairs(paragraphs) do
-                local words = splitString(paragraph, " ")
+            local words = splitString(entry.text, " ")
 
-                for i, word in ipairs(words) do
-                    local wordLength = #word
+            for i, word in ipairs(words) do
+                local wordLength = #word
 
-                    if i > 1 then
-                        if x + 1 + wordLength <= width then
-                            addFormattedEntry({ text = " " })
-                            x = x + 1
-                        else
-                            x = 1
-                            y = y + 1
-                        end
-                    end
-
-                    while wordLength > 0 do
-                        local line = word:sub(1, width - x + 1)
-                        word = word:sub(width - x + 2)
-                        wordLength = #word
-
-                        addFormattedEntry({ text = line })
-
-                        if wordLength > 0 then
-                            x = 1
-                            y = y + 1
-                        else
-                            x = x + #line
-                        end
+                if i > 1 then
+                    if x + 1 + wordLength <= width then
+                        addFormattedEntry({ text = " " })
+                        x = x + 1
+                    else
+                        x = 1
+                        y = y + 1
                     end
                 end
 
-                if p ~= #paragraphs then
-                    x = 1
-                    y = y + 1
+                while wordLength > 0 do
+                    local line = word:sub(1, width - x + 1)
+                    word = word:sub(width - x + 2)
+                    wordLength = #word
+
+                    addFormattedEntry({ text = line })
+
+                    if wordLength > 0 then
+                        x = 1
+                        y = y + 1
+                    else
+                        x = x + #line
+                    end
                 end
             end
         end
@@ -215,7 +207,6 @@ local function wrapRichText(text, width)
 
     return formattedLines
 end
-
 
 
     
@@ -327,11 +318,8 @@ wrapRichText = wrapRichText,
 --- @param height number Height
 writeWrappedText = function(obj, x, y, text, width, height)
     local wrapped = wrapRichText(text, width)
-    for k,v in pairs(wrapped)do
+    for _,v in pairs(wrapped)do
         if(v.y>height)then
-            break
-        end
-        if(k==#wrapped)and(v=="")then
             break
         end
         if(v.text~=nil)then

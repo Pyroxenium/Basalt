@@ -2,7 +2,6 @@ A Label object is used to display simple text on the interface.
 
 In addition to the Object and VisualObject methods, Label objects have the following methods:
 
-[Object](objects/Object.md) methods also apply for labels.
 
 |   |   |
 |---|---|

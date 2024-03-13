@@ -27,29 +27,24 @@ local function loadBBFAsBimg(path)
 
 end
 
-local function loadImage(path, binaryMode)
-    --Loads the image with the right loader, returns error if  the file type is unknown.
-    if(sub(path, -5) == ".bimg")then
+local function loadImage(path, f, binaryMode)
+    if(sub(path, -4) == ".bimg")then
         return loadBIMG(path, binaryMode)
-    elseif(sub(path, -4) == ".bbf")then
-        return loadBBF(path)
-    elseif(sub(path, -4) == ".nfp")then
-        return loadNFP(path)
+    elseif(sub(path, -3) == ".bbf")then
+        return loadBBF(path, binaryMode)
     else
-        error("Unknown file type")
+        return loadNFP(path, binaryMode)
     end
+    -- ...
 end
 
-local function loadImageAsBimg(path, binaryMode)
-    --Loads the image with the right Bimg loader, returns error if  the file type is unknown.
-    if(sub(path, -5) == ".bimg")then
-        return loadBIMG(path, binaryMode)
-    elseif(sub(path, -4) == ".bbf")then
+local function loadImageAsBimg(path)
+    if(path:find(".bimg"))then
+        return loadBIMG(path)
+    elseif(path:find(".bbf"))then
         return loadBBFAsBimg(path)
-    elseif(sub(path, -4) == ".nfp")then
-        return loadNFPAsBimg(path)
     else
-        error("Unknown file type")
+        return loadNFPAsBimg(path)
     end
 end
 

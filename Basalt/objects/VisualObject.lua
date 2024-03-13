@@ -3,31 +3,18 @@ local tHex = require("tHex")
 
 local sub, find, insert = string.sub, string.find, table.insert
 
-local function split(str, d)
-    local result = {}
-    if str == "" then
-        return result
-    end
-    d = d or " "
-    local start = 1
-    local delim_start, delim_end = find(str, d, start)
-        while delim_start do
-            insert(result, {x=start, value=sub(str, start, delim_start - 1)})
-            start = delim_end + 1
-            delim_start, delim_end = find(str, d, start)
-        end
-    insert(result, {x=start, value=sub(str, start)})
-    return result
-end
-
 return function(name, basalt)
     local base = basalt.getObject("Object")(name, basalt)
-    base:setType("VisualObject")
+    -- Base object
+    local objectType = "VisualObject" -- not changeable
 
-    local ignOffset,isHovered,isClicked,isDragging = false,false,false,false
+    local isVisible,ignOffset,isHovered,isClicked,isDragging = true,false,false,false,false
+    local zIndex = 1
 
-    local dragStartX, dragStartY = 0, 0
+    local x, y, width, height = 1,1,1,1
+    local dragStartX, dragStartY, dragXOffset, dragYOffset = 0, 0, 0, 0
 
+    local bgColor,fgColor, transparency = colors.black, colors.white, false
     local parent
 
     local preDrawQueue = {}
@@ -36,54 +23,35 @@ return function(name, basalt)
 
     local renderObject = {}
 
-    base:addProperty("Visible", "boolean", true, false, function(self, val)
-        self:setProperty("Enabled", val)
-    end)
-    base:addProperty("Transparent", "boolean", false)
-    base:addProperty("Background", "color", colors.black)
-    base:addProperty("BgSymbol", "char", "")
-    base:addProperty("BgSymbolColor", "color", colors.red)
-    base:addProperty("Foreground", "color", colors.white)
-    base:addProperty("X", "number", 1, false, function(self, val)
-        local y = self:getProperty("Y")
-        if (parent ~= nil) then
-            parent:customEventHandler("basalt_FrameReposition", self, val, y)
+    local function split(str, d)
+        local result = {}
+        if str == "" then
+            return result
         end
-        self:repositionHandler(val, y)
-    end)
-    base:addProperty("Y", "number", 1, false, function(self, val)
-        local x = self:getProperty("X")
-        if (parent ~= nil) then
-            parent:customEventHandler("basalt_FrameReposition", self, x, val)
-        end
-        self:repositionHandler(x, val)
-    end)
-    base:addProperty("Width", "number", 1, false, function(self, val)
-        local height = self:getProperty("Height")
-        if (parent ~= nil) then
-            parent:customEventHandler("basalt_FrameResize", self, val, height)
-        end
-        self:resizeHandler(val, height)
-    end)
-    base:addProperty("Height", "number", 1, false, function(self, val)
-        local width = self:getProperty("Width")
-        if (parent ~= nil) then
-            parent:customEventHandler("basalt_FrameResize", self, width, val)
-        end
-        self:resizeHandler(width, val)
-    end)
-    base:addProperty("IgnoreOffset", "boolean", false, false)
-    base:combineProperty("Position", "X", "Y")
-    base:combineProperty("Size", "Width", "Height")
+        d = d or " "
+        local start = 1
+        local delim_start, delim_end = find(str, d, start)
+            while delim_start do
+                insert(result, {x=start, value=sub(str, start, delim_start - 1)})
+                start = delim_end + 1
+                delim_start, delim_end = find(str, d, start)
+            end
+        insert(result, {x=start, value=sub(str, start)})
+        return result
+    end
 
-    base:setProperty("Clicked", false)
-    base:setProperty("Hovered", false)
-    base:setProperty("Dragging", false)
-    base:setProperty("Focused", false)
 
     local object = {
+        getType = function(self)
+            return objectType
+        end,
+
         getBase = function(self)
             return base
+        end,  
+      
+        isType = function(self, t)
+            return objectType==t or base.isType~=nil and base.isType(t) or false
         end,
 
         getBasalt = function(self)
@@ -91,22 +59,36 @@ return function(name, basalt)
         end,
 
         show = function(self)
-            self:setVisible(true)
+            isVisible = true
+            self:updateDraw()
             return self
         end,
 
         hide = function(self)
-            self:setVisible(false)
+            isVisible = false
+            self:updateDraw()
             return self
         end,
 
         isVisible = function(self)
-            return self:getVisible()
+            return isVisible
+        end,
+
+        setVisible = function(self, _isVisible)
+            isVisible = _isVisible or not isVisible
+            self:updateDraw()
+            return self
+        end,
+
+        setTransparency = function(self, _transparency)
+            transparency = _transparency~= nil and _transparency or true
+            self:updateDraw()
+            return self
         end,
 
         setParent = function(self, newParent, noRemove)
-            parent = newParent
             base.setParent(self, newParent, noRemove)
+            parent = newParent
             return self
         end,
 
@@ -117,6 +99,19 @@ return function(name, basalt)
             return self
         end,
 
+        setZIndex = function(self, index)
+            zIndex = index
+            if (parent ~= nil) then
+                parent:updateZIndex(self, zIndex)
+                self:updateDraw()
+            end            
+            return self
+        end,
+
+        getZIndex = function(self)
+            return zIndex
+        end,
+
         updateDraw = function(self)
             if (parent ~= nil) then
                 parent:updateDraw()
@@ -124,7 +119,100 @@ return function(name, basalt)
             return self
         end,
 
+        setPosition = function(self, xPos, yPos, rel)
+            local curX, curY = x, y
+            if(type(xPos)=="number")then
+                x = rel and x+xPos or xPos
+            end
+            if(type(yPos)=="number")then
+                y = rel and y+yPos or yPos
+            end
+            if(parent~=nil)then parent:customEventHandler("basalt_FrameReposition", self) end
+            if(self:getType()=="Container")then parent:customEventHandler("basalt_FrameReposition", self) end
+            self:updateDraw()
+            self:repositionHandler(curX, curY)
+            return self
+        end,
+
+        getX = function(self)
+            return x
+        end,
+
+        setX = function(self, newX)
+            return self:setPosition(newX, y)
+        end,
+
+        getY = function(self)
+            return y
+        end,
+
+        setY = function(self, newY)
+            return self:setPosition(x, newY)
+        end,
+
+        getPosition = function(self)
+            return x, y
+        end,
+
+        setSize = function(self, newWidth, newHeight, rel)
+            local oldW, oldH = width, height
+            if(type(newWidth)=="number")then
+                width = rel and width+newWidth or newWidth
+            end
+            if(type(newHeight)=="number")then
+                height = rel and height+newHeight or newHeight
+            end
+            if(parent~=nil)then 
+                parent:customEventHandler("basalt_FrameResize", self)
+                if(self:getType()=="Container")then parent:customEventHandler("basalt_FrameResize", self) end
+            end
+            self:resizeHandler(oldW, oldH)
+            self:updateDraw()
+            return self
+        end,
+
+        getHeight = function(self)
+            return height
+        end,
+
+        setHeight = function(self, newHeight)
+            return self:setSize(width, newHeight)
+        end,
+
+        getWidth = function(self)
+            return width
+        end,
+
+        setWidth = function(self, newWidth)
+            return self:setSize(newWidth, height)
+        end,
+
+        getSize = function(self)
+            return width, height
+        end,
+
+        setBackground = function(self, color)
+            bgColor = color
+            self:updateDraw()
+            return self
+        end,
+
+        getBackground = function(self)
+            return bgColor
+        end,
+
+        setForeground = function(self, color)
+            fgColor = color or false
+            self:updateDraw()
+            return self
+        end,
+
+        getForeground = function(self)
+            return fgColor
+        end,
+
         getAbsolutePosition = function(self, x, y)
+            -- relative position to absolute position
             if (x == nil) or (y == nil) then
                 x, y = self:getPosition()
             end
@@ -137,24 +225,21 @@ return function(name, basalt)
             return x, y
         end,
 
-        getRelativePosition = function(self, x, y)
-            if (x == nil) or (y == nil) then
-                x, y = 1, 1
-            end
+        ignoreOffset = function(self, ignore)
+            ignOffset = ignore
+            if(ignore==nil)then ignOffset = true end
+            return self
+        end,
 
-            if (parent ~= nil) then
-                local xO, yO = self:getAbsolutePosition()
-                x = xO - x + 1
-                y = yO - y + 1
-            end
-            return x, y
+        getIgnoreOffset = function(self)
+            return ignOffset
         end,
 
         isCoordsInObject = function(self, x, y)
-            if(self:getVisible())and(self:getEnabled())then
+            if(isVisible)and(self:isEnabled())then
                 if(x==nil)or(y==nil)then return false end
                 local objX, objY = self:getAbsolutePosition()
-                local w, h = self:getSize()
+                local w, h = self:getSize()            
                 if (objX <= x) and (objX + w > x) and (objY <= y) and (objY + h > y) then
                     return true
                 end
@@ -231,9 +316,7 @@ return function(name, basalt)
                 end
                 isClicked = true
                 isDragging = true
-                self:setProperty("Dragging", true)
-                self:setProperty("Clicked", true)
-                dragStartX, dragStartY = x, y
+                dragStartX, dragStartY = x, y 
                 return true
             end
         end,
@@ -244,8 +327,6 @@ return function(name, basalt)
                 local objX, objY = self:getAbsolutePosition()
                 local val = self:sendEvent("mouse_release", button, x - (objX-1), y - (objY-1), x, y)
                 isClicked = false
-                self:setProperty("Clicked", false)
-                self:setProperty("Dragging", false)
             end
             if(self:isCoordsInObject(x, y))then
                 local objX, objY = self:getAbsolutePosition()
@@ -256,11 +337,11 @@ return function(name, basalt)
         end,
 
         dragHandler = function(self, button, x, y)
-            if(isDragging)then 
+            if(isDragging)then
                 local objX, objY = self:getAbsolutePosition()
                 local val = self:sendEvent("mouse_drag", button, x - (objX-1), y - (objY-1), dragStartX-x, dragStartY-y, x, y)
                 dragStartX, dragStartY = x, y 
-                if(val~=nil)then return val end
+                if(val==false)then return false end
                 if(parent~=nil)then
                     parent:setFocusedChild(self)
                 end
@@ -268,7 +349,9 @@ return function(name, basalt)
             end
 
             if(self:isCoordsInObject(x, y))then
-                dragStartX, dragStartY = x, y
+                local objX, objY = self:getAbsolutePosition()
+                dragStartX, dragStartY = x, y 
+                dragXOffset, dragYOffset = objX - x, objY - y
             end
         end,
 
@@ -289,19 +372,17 @@ return function(name, basalt)
                 local val = self:sendEvent("mouse_hover", x, y, stopped)
                 if(val==false)then return false end
                 isHovered = true
-                self:setProperty("Hovered", true)
                 return true
             end
             if(isHovered)then
                 local val = self:sendEvent("mouse_leave", x, y, stopped)
                 if(val==false)then return false end
                 isHovered = false
-                self:setProperty("Hovered", false)
             end
         end,
 
         keyHandler = function(self, key, isHolding)
-            if(self:isEnabled())and(self:getVisible())then
+            if(self:isEnabled())and(isVisible)then
                 if (self:isFocused()) then
                 local val = self:sendEvent("key", key, isHolding)
                 if(val==false)then return false end
@@ -311,7 +392,7 @@ return function(name, basalt)
         end,
 
         keyUpHandler = function(self, key)
-            if(self:isEnabled())and(self:getVisible())then
+            if(self:isEnabled())and(isVisible)then
                 if (self:isFocused()) then
                     local val = self:sendEvent("key_up", key)
                 if(val==false)then return false end
@@ -321,7 +402,7 @@ return function(name, basalt)
         end,
 
         charHandler = function(self, char)
-            if(self:isEnabled())and(self:getVisible())then
+            if(self:isEnabled())and(isVisible)then
                 if(self:isFocused())then
                 local val = self:sendEvent("char", char)
                 if(val==false)then return false end
@@ -332,15 +413,12 @@ return function(name, basalt)
 
         getFocusHandler = function(self)
             local val = self:sendEvent("get_focus")
-            self:setProperty("Focused", true)
             if(val~=nil)then return val end
             return true
         end,
 
         loseFocusHandler = function(self)
             isDragging = false
-            self:setProperty("Dragging", false)
-            self:setProperty("Focused", false)
             local val = self:sendEvent("lose_focus")
             if(val~=nil)then return val end
             return true
@@ -376,7 +454,7 @@ return function(name, basalt)
         setDrawState = function(self, name, state, typ)
             local queue = (typ==nil or typ==1) and drawQueue or typ==2 and preDrawQueue or typ==3 and postDrawQueue
             for k,v in pairs(queue)do
-                if(v.name==name)then
+                if(v.name==name)then 
                     v.active = state
                     break
                 end
@@ -397,13 +475,12 @@ return function(name, basalt)
         addText = function(self, x, y, text)
             local obj = self:getParent() or self
             local xPos,yPos = self:getPosition()
-            local transparent = self:getTransparent()
             if(parent~=nil)then
                 local xO, yO = parent:getOffset()
                 xPos = ignOffset and xPos or xPos - xO
                 yPos = ignOffset and yPos or yPos - yO
             end
-            if not(transparent)then
+            if not(transparency)then
                 obj:setText(x+xPos-1, y+yPos-1, text)
                 return
             end
@@ -415,50 +492,48 @@ return function(name, basalt)
             end
         end,
 
-        addBg = function(self, x, y, bg, noText)
+        addBG = function(self, x, y, bg, noText)
             local obj = parent or self
             local xPos,yPos = self:getPosition()
-            local transparent = self:getTransparent()
             if(parent~=nil)then
                 local xO, yO = parent:getOffset()
                 xPos = ignOffset and xPos or xPos - xO
                 yPos = ignOffset and yPos or yPos - yO
             end
-            if not(transparent)then
-                obj:setBg(x+xPos-1, y+yPos-1, bg)
+            if not(transparency)then
+                obj:setBG(x+xPos-1, y+yPos-1, bg)
                 return
             end
             local t = split(bg)
-            for _,v in pairs(t)do
+            for k,v in pairs(t)do
                 if(v.value~="")and(v.value~=" ")then
                     if(noText~=true)then
                         obj:setText(x+v.x+xPos-2, y+yPos-1, (" "):rep(#v.value))
-                        obj:setBg(x+v.x+xPos-2, y+yPos-1, v.value)
+                        obj:setBG(x+v.x+xPos-2, y+yPos-1, v.value)
                     else
                         table.insert(renderObject, {x=x+v.x-1,y=y,bg=v.value})
-                        obj:setBg(x+xPos-1, y+yPos-1, v.value)
+                        obj:setBG(x+xPos-1, y+yPos-1, fg)
                     end
                 end
             end
         end,
 
-        addFg = function(self, x, y, fg)
+        addFG = function(self, x, y, fg)
             local obj = parent or self
             local xPos,yPos = self:getPosition()
-            local transparent = self:getTransparent()
             if(parent~=nil)then
                 local xO, yO = parent:getOffset()
                 xPos = ignOffset and xPos or xPos - xO
                 yPos = ignOffset and yPos or yPos - yO
             end
-            if not(transparent)then
-                obj:setFg(x+xPos-1, y+yPos-1, fg)
+            if not(transparency)then
+                obj:setFG(x+xPos-1, y+yPos-1, fg)
                 return
             end
             local t = split(fg)
-            for _,v in pairs(t)do
+            for k,v in pairs(t)do
                 if(v.value~="")and(v.value~=" ")then
-                    obj:setFg(x+v.x+xPos-2, y+yPos-1, v.value)
+                    obj:setFG(x+v.x+xPos-2, y+yPos-1, v.value)
                 end
             end
         end,
@@ -466,32 +541,31 @@ return function(name, basalt)
         addBlit = function(self, x, y, t, fg, bg)
             local obj = parent or self
             local xPos,yPos = self:getPosition()
-            local transparent = self:getTransparent()
             if(parent~=nil)then
                 local xO, yO = parent:getOffset()
                 xPos = ignOffset and xPos or xPos - xO
                 yPos = ignOffset and yPos or yPos - yO
             end
-            if not(transparent)then
+            if not(transparency)then
                 obj:blit(x+xPos-1, y+yPos-1, t, fg, bg)
                 return
             end
             local _text = split(t, "\0")
             local _fg = split(fg)
             local _bg = split(bg)
-            for _,v in pairs(_text)do
+            for k,v in pairs(_text)do
                 if(v.value~="")or(v.value~="\0")then
                     obj:setText(x+v.x+xPos-2, y+yPos-1, v.value)
                 end
             end
-            for _,v in pairs(_bg)do
+            for k,v in pairs(_bg)do
                 if(v.value~="")or(v.value~=" ")then
-                    obj:setBg(x+v.x+xPos-2, y+yPos-1, v.value)
+                    obj:setBG(x+v.x+xPos-2, y+yPos-1, v.value)
                 end
             end
-            for _,v in pairs(_fg)do
+            for k,v in pairs(_fg)do
                 if(v.value~="")or(v.value~=" ")then
-                    obj:setFg(x+v.x+xPos-2, y+yPos-1, v.value)
+                    obj:setFG(x+v.x+xPos-2, y+yPos-1, v.value)
                 end
             end
         end,
@@ -530,7 +604,7 @@ return function(name, basalt)
         end,
 
         render = function(self)
-            if (self:getVisible())then
+            if (isVisible)then
                 self:redraw()
             end
         end,
@@ -557,25 +631,16 @@ return function(name, basalt)
         draw = function(self)
             self:addDraw("base", function()
                 local w,h = self:getSize()
-                local bgColor = self:getBackground()
-                local bgSymbol = self:getBgSymbol()
-                local bgSymbolColor = self:getBgSymbolColor()
-                local fgColor = self:getForeground()
-                if(bgColor~=nil)then
+                if(bgColor~=false)then
                     self:addTextBox(1, 1, w, h, " ")
                     self:addBackgroundBox(1, 1, w, h, bgColor)
                 end
-                if(bgSymbol~=nil)and(bgSymbol~="")then
-                    self:addTextBox(1, 1, w, h, bgSymbol)
-                    self:addForegroundBox(1, 1, w, h, bgSymbolColor)
-                end
-                if(fgColor~=nil)then
+                if(fgColor~=false)then
                     self:addForegroundBox(1, 1, w, h, fgColor)
                 end
             end, 1)
         end,
     }
-
     object.__index = object
     return setmetatable(object, base)
 end

@@ -4,19 +4,54 @@ local max,min,sub,rep,len = math.max,math.min,string.sub,string.rep,string.len
 
 return function(name, basalt)
     local base = basalt.getObject("Container")(name, basalt)
-    base:setType("Frame")
+    local objectType = "Frame"
     local parent
     
+    local updateRender = true
+
+    local xOffset, yOffset = 0, 0
+
     base:setSize(30, 10)
-    base:setZ(10)
+    base:setZIndex(10)
 
-    base:addProperty("XOffset", "number", 0)
-    base:addProperty("YOffset", "number", 0)
-    base:combineProperty("Offset", "XOffset", "YOffset")
+    local object = {    
+        getType = function()
+            return objectType
+        end,
 
-    local object = {
+        isType = function(self, t)
+            return objectType==t or base.isType~=nil and base.isType(t) or false
+        end,
+
         getBase = function(self)
             return base
+        end,  
+        
+        getOffset = function(self)
+            return xOffset, yOffset
+        end,
+
+        setOffset = function(self, xOff, yOff)
+            xOffset = xOff or xOffset
+            yOffset = yOff or yOffset
+            self:updateDraw()
+            return self
+        end,
+
+        getXOffset = function(self)
+            return xOffset
+        end,
+
+        setXOffset = function(self, newXOffset)
+            return self:setOffset(newXOffset, nil)
+        end,
+
+        getYOffset = function(self)
+            return yOffset
+        end,
+
+        setYOffset = function(self, newYOffset)
+            return self:setOffset(nil, newYOffset)
         end,
 
         setParent = function(self, p, ...)
@@ -58,7 +93,7 @@ return function(name, basalt)
                 local b_visible = sub(b, max(1 - x + 1, 1), max(w - x + 1, 1))        
                 parent:blit(max(x + (obx - 1), obx), oby + y - 1, t_visible, f_visible, b_visible)
             end
-        end,
+        end,      
 
         setCursor = function(self, blink, x, y, color)
             local obx, oby = self:getPosition()
@@ -68,7 +103,7 @@ return function(name, basalt)
         end,
     }
 
-    for _,v in pairs({"drawBackgroundBox", "drawForegroundBox", "drawTextBox"})do
+    for k,v in pairs({"drawBackgroundBox", "drawForegroundBox", "drawTextBox"})do
         object[v] = function(self, x, y, width, height, symbol)
             local obx, oby = self:getPosition()
             local xO, yO = parent:getOffset()
@@ -80,7 +115,7 @@ return function(name, basalt)
         end
     end
 
-    for _,v in pairs({"setBg", "setFg", "setText"})do
+    for k,v in pairs({"setBG", "setFG", "setText"})do
         object[v] = function(self, x, y, str)
             local obx, oby = self:getPosition()
             local xO, yO = parent:getOffset()

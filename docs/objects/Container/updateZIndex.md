@@ -1,4 +1,4 @@
-## setFocusedObject
+## updateZIndex
 
 ### Description
 

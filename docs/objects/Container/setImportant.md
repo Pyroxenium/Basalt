@@ -6,7 +6,7 @@ Sets the specified object as "important" within the container. This means the ob
 
 ### Parameters
 
-1. `string` The object to set as important
+1. `string|object` The object ID or object to set as important
 
 ### Returns
 

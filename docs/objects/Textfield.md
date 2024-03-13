@@ -12,13 +12,13 @@ In addition to the Object and VisualObject methods, Textfield objects have the f
 |[getTextCursor](objects/Textfield/getTextCursor.md)|Returns the current text cursor position
 |[addKeywords](objects/Textfield/addKeywords.md)|Adds syntax highlighting keywords
 |[addRule](objects/Textfield/addRule.md)|Adds a custom syntax highlighting rule
-|[editRule](objects/Textfield/addRule.md)|Edits an existing syntax highlighting rule
-|[removeRule](objects/Textfield/addRule.md)|Removes an existing syntax highlighting rule
-|[getOffset](objects/Textfield/addRule.md)|Returns the current offset inside the Textfield
-|[setOffset](objects/Textfield/addRule.md)|Changes the offset inside the Textfield
-|[clear](objects/Textfield/addRule.md)|Clears the Textfield content
-|[setSelection](objects/Textfield/addRule.md)|Sets the selection color (text color and background color)
-|[getSelection](objects/Textfield/addRule.md)|Returns the current selection color
+|[editRule](objects/Textfield/editRule.md)|Edits an existing syntax highlighting rule
+|[removeRule](objects/Textfield/removeRule.md)|Removes an existing syntax highlighting rule
+|[getOffset](objects/Textfield/getOffset.md)|Returns the current offset inside the Textfield
+|[setOffset](objects/Textfield/setOffset.md)|Changes the offset inside the Textfield
+|[clear](objects/Textfield/clear.md)|Clears the Textfield content
+|[setSelection](objects/Textfield/setSelection.md)|Sets the selection color (text color and background color)
+|[getSelection](objects/Textfield/getSelection.md)|Returns the current selection color
 
 In version 1.7, Textfields now allow the user to select text with the mouse. The setSelection method is used to choose the text color and background color for selected text.
 

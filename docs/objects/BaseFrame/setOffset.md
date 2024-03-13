@@ -11,8 +11,7 @@ Sets the frame's offset, this offset is beeing used to move all children object'
 
 ### Returns
 
-1. `number` x position
-2. `number` y position
+1. `object` The object in use
 
 ### Usage
 

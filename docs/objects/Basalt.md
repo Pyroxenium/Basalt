@@ -21,7 +21,7 @@ You are now able to access the following list of methods:
 |[getVersion](objects/Basalt/getVersion.md)|Returns the Basalt version
 |[isKeyDown](objects/Basalt/isKeyDown.md)|Returns if the key is held down
 |[log](objects/Basalt/log.md)|Writes something into the log file
-|[memory](objects/Basalt/log.md)|Returns the current memory usage of Basalt
+|[memory](objects/Basalt/memory.md)|Returns the current memory usage of Basalt
 |[onEvent](objects/Basalt/onEvent.md)|Event listener
 |[removeFrame](objects/Basalt/removeFrame.md)|Removes a previously created base frame
 |[schedule](objects/Basalt/schedule.md)|Schedules a new task
@@ -29,7 +29,7 @@ You are now able to access the following list of methods:
 |[setTheme](objects/Basalt/setTheme.md)|Changes the base theme of basalt
 |[setMouseDragThrottle](objects/Basalt/setMouseDragThrottle.md)|Changes the mouse drag throttle amount
 |[setMouseMoveThrottle](objects/Basalt/setMouseMoveThrottle.md)|CraftOS-PC: Changes the mouse move throttle amount
-|[setRenderingThrottle](objects/Basalt/setMouseMoveThrottle.md)|Sets the rendering throttle amount
+|[setRenderingThrottle](objects/Basalt/setRenderingThrottle.md)|Sets the rendering throttle amount
 |[setVariable](objects/Basalt/setVariable.md)|Sets a variable which you can access via XML
 |[stopUpdate / stop](objects/Basalt/stopUpdate.md)|Stops the currently active event and draw listener
 |[update](objects/Basalt/update.md)|Starts the event and draw listener once

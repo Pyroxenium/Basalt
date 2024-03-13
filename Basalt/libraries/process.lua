@@ -6,7 +6,6 @@ local newPackage = dofile("rom/modules/main/cc/require.lua").make
 
 function process:new(path, window, newEnv, ...)
     local args = {...}
-    newEnv = newEnv or {}
     local newP = setmetatable({ path = path }, { __index = self })
     newP.window = window
     window.current = term.current

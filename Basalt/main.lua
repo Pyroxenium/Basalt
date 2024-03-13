@@ -9,18 +9,16 @@ local wrapText = utils.wrapText
 local count = utils.tableCount
 local moveThrottle = 300
 local dragThrottle = 0
-local renderingThrottle = 50
+local renderingThrottle = 0
 local newObjects = {}
-local mousePos = {0, 0}
 
 local baseTerm = term.current()
-local version = "1.7.1"
+local version = "1.7.0"
 
 local projectDirectory = fs.getDir(table.pack(...)[2] or "")
 
 local activeKey, frames, monFrames, variables, schedules = {}, {}, {}, {}, {}
 local mainFrame, activeFrame, focusedObject, updaterActive
-local renderingTimer = nil
 
 local basalt = {}
 
@@ -84,39 +82,11 @@ local createObject = function(basalt, objectName, id)
     return getObject(objectName)(id, basalt)
 end
 
-local setRenderingThrottle = function(amount)
-    if(amount<=0)then
-        renderingThrottle = 0
-    else
-        renderingTimer = nil
-        renderingThrottle = amount
-    end
-end
-
-local getRenderingThrottle = function()
-    return renderingThrottle
-end
-
-local debugTimer = 0
-local startTimer = function()
-    debugTimer = os.clock("utc")
-    basalt.log("Timer started at "..debugTimer.." seconds")
-end
-
-local endTimer = function()
-    local endT = os.clock("utc") - debugTimer
-    basalt.log("Timer ended at "..os.clock().." seconds")
-    basalt.log("Timer ended after "..endT.." seconds")
-end
-
 local bInstance = {
     getDynamicValueEventSetting = function()
         return basalt.dynamicValueEvents
     end,
-
-    getRenderingThrottle = getRenderingThrottle,
-    setRenderingThrottle = setRenderingThrottle,
-
+    
     getMainFrame = function()
         return mainFrame
     end,
@@ -269,14 +239,15 @@ local function mouseDragEvent(_, b, x, y)
 end
 
 
+local renderingTimer = nil
 local function renderingUpdateTimer()
     renderingTimer = nil
-    drawFrames()
+    drawFrames() 
 end
 
 local function renderingUpdateEvent(timer)
-    if(renderingThrottle<50)then
-        drawFrames()
+    if(renderingThrottle<50)then 
+        drawFrames() 
     else
         if(renderingTimer==nil)then
             renderingTimer = os.startTimer(renderingThrottle/1000)
@@ -298,10 +269,6 @@ local function basaltUpdateEvent(event, ...)
         }
         local mouseEvent = mouseEvents[event]
         if(mouseEvent~=nil)then
-            local mouseX, mouseY = a[3], a[4]
-            if(mouseX~=nil and mouseY~=nil)then
-                mousePos = {mouseX, mouseY}
-            end
             mouseEvent(mainFrame, ...)
             handleSchedules(event, ...)
             renderingUpdateEvent()
@@ -412,9 +379,9 @@ local function InitializeBasalt()
         loadedPlugins = true
     end
 end
-InitializeBasalt()
 
 local function createFrame(name)
+    InitializeBasalt()
     for _, v in pairs(frames) do
         if (v:getName() == name) then
             return nil
@@ -466,9 +433,6 @@ basalt = {
         end
         return objectNames
     end,
-    getMousePosition = function()
-        return mousePos[1], mousePos[2]
-    end,
 
     setVariable = setVariable,
     getVariable = getVariable,
@@ -503,9 +467,14 @@ basalt = {
         return false
     end,
 
-    setRenderingThrottle = setRenderingThrottle,
-
-    getRenderingThrottle = getRenderingThrottle,
+    setRenderingThrottle = function(amount)
+        if(amount<=0)then
+            renderingThrottle = 0
+        else
+            renderingTimer = nil
+            renderingThrottle = amount
+        end
+    end,
 
     setMouseDragThrottle = function(amount)
         if(amount<=0)then
@@ -554,7 +523,7 @@ basalt = {
     
     getFrame = function(name)
         for _, value in pairs(frames) do
-            if (value:getName() == name) then
+            if (value.name == name) then
                 return value
             end
         end
@@ -590,6 +559,7 @@ basalt = {
     createFrame = createFrame,
 
     addMonitor = function(name)
+        InitializeBasalt()
         for _, v in pairs(frames) do
             if (v:getName() == name) then
                 return nil
@@ -602,7 +572,7 @@ basalt = {
         table.insert(monFrames, newFrame)
         return newFrame
     end,
-
+    
     removeFrame = function(name)
         frames[name] = nil
     end,
