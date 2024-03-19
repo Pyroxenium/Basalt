@@ -93,7 +93,7 @@ return function(name, basalt)
             return
         end
         for i, v in ipairs(children) do
-            if v.element == element then
+            if v.element:getName() == element:getName() then
                 table.remove(children, i)
                 return true
             end

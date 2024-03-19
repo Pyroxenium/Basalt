@@ -408,6 +408,25 @@ return function(name, basalt)
             end
         end,
 
+        removeChild = function(self, child)
+            if (type(child)=="string") then
+                child = getChild(element:getName())
+            end
+            if (child==nil) then
+                return
+            end
+            base.removeChild(self, child)
+            for k, v in pairs(children) do
+                if v:getName() == child:getName() then
+                    table.remove(children, k)
+                    break
+                end
+            end
+            updateLayout = true
+            self:updateDraw()
+            return self
+        end,
+
         draw = function(self)
             base.draw(self)
             self:addDraw("flexboxDraw", function()
