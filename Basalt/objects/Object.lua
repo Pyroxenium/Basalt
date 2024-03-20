@@ -149,6 +149,9 @@ return function(name, basalt)
                     parent:addEvent("mouse_click", self)
                     parent:addEvent("mouse_up", self)
                 end
+                if(event=="mouse_release")then
+                    parent:addEvent("mouse_up", self)
+                end
                 parent:addEvent(event, self)
             end
             eventSystem:registerEvent(event, func)
