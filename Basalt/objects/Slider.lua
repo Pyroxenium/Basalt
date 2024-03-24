@@ -131,6 +131,7 @@ return function(name, basalt)
             self:addDraw("slider", function()
                 local w,h = self:getSize()
                 local bgCol,fgCol = self:getBackground(), self:getForeground()
+                local obx, oby = self:getPosition()
                 if (barType == "horizontal") then
                     self:addText(index, oby, symbol:rep(symbolSize))
                     if(symbolBG~=false)then self:addBG(index, 1, tHex[symbolBG]:rep(#symbol*symbolSize)) end
