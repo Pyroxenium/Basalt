@@ -10,8 +10,10 @@ return function(name, basalt)
 
     local barType = "horizontal"
     local symbol = " "
-    local symbolFG = colors.black
+    local symbolFG = colors.gray
     local symbolBG = colors.gray
+    local bgSymbol = " "
+    local symbolColor = colors.black
     local maxValue = 12
     local index = 1
     local symbolSize = 1
@@ -130,8 +132,8 @@ return function(name, basalt)
             base.draw(self)
             self:addDraw("slider", function()
                 local w,h = self:getSize()
-                local bgCol,fgCol = self:getBackground(), self:getForeground()
                 local obx, oby = self:getPosition()
+                local bgCol,fgCol = self:getBackground(), self:getForeground()
                 if (barType == "horizontal") then
                     self:addText(index, oby, symbol:rep(symbolSize))
                     if(symbolBG~=false)then self:addBG(index, 1, tHex[symbolBG]:rep(#symbol*symbolSize)) end
@@ -146,7 +148,10 @@ return function(name, basalt)
                             end
                         else
                             if (n + 1 < index) or (n + 1 > index - 1 + symbolSize) then
-                                self:addBlit(1, 1+n, bgSymbol, tHex[fgCol], tHex[bgCol])
+                                self:addText(1, 1+n, bgSymbol)
+                                if(bgCol~=false)then self:addBG(1, 1+n, tHex[bgCol]) end
+                                if(fgCol~=false)then self:addFG(1, 1+n, tHex[fgCol]) end
+                                --self:addBlit(1, 1+n, bgSymbol, tHex[fgCol], tHex[bgCol])
                             end
                         end
                     end
