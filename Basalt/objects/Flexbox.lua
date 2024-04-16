@@ -410,7 +410,7 @@ return function(name, basalt)
 
         removeChild = function(self, child)
             if (type(child)=="string") then
-                child = getChild(element:getName())
+                child = self:getChild(child)
             end
             if (child==nil) then
                 return
