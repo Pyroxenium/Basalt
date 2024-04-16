@@ -36,9 +36,6 @@ return function(name, basalt)
     end
 
     local function getChild(self, name)
-        if (type(name)=="table") then
-            name = name:getName()
-        end
         for _, v in ipairs(children) do
             if v.element:getName() == name then
                 return v.element
@@ -47,7 +44,7 @@ return function(name, basalt)
     end
 
     local function getDeepChild(self, name)
-        local maybeChild = getChild(name)
+        local maybeChild = self:getChild(name)
         if (maybeChild ~= nil) then
             return maybeChild
         end
@@ -87,7 +84,7 @@ return function(name, basalt)
 
     local function removeChild(self, element)
         if (type(element)=="string") then
-            element = getChild(element:getName())
+            element = self:getChild(element)
         end
         if (element==nil) then
             return
@@ -95,11 +92,13 @@ return function(name, basalt)
         for i, v in ipairs(children) do
             if v.element:getName() == element:getName() then
                 table.remove(children, i)
+                self:removeEvents(element)
+                sorted = false
+                self:updateDraw()
                 return true
             end
         end
-        self:removeEvents(element)
-        sorted = false
+        return false
     end
 
     local function removeChildren(self)
