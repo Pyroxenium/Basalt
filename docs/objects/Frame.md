@@ -24,9 +24,9 @@ local basalt = require("basalt") -- we need basalt here
 local main = basalt.createFrame():setTheme({FrameBG = colors.lightGray, FrameFG = colors.black}) -- we change the default bg and fg color for frames
 
 local sub = { -- here we create a table where we gonna add some frames
-    main:addFrame():setPosition(1, 2):setSize("{parent.w}", "{parent.h - 1}"), -- obviously the first one should be shown on program start
-    main:addFrame():setPosition(1, 2):setSize("{parent.w}", "{parent.h - 1}"):hide(),
-    main:addFrame():setPosition(1, 2):setSize("{parent.w}", "{parent.h - 1}"):hide(),
+    main:addFrame():setPosition(1, 2):setSize("parent.w", "parent.h - 1"), -- obviously the first one should be shown on program start
+    main:addFrame():setPosition(1, 2):setSize("parent.w", "parent.h - 1"):hide(),
+    main:addFrame():setPosition(1, 2):setSize("parent.w", "parent.h - 1"):hide(),
 }
 
 local function openSubFrame(id) -- we create a function which switches the frame for us
@@ -39,7 +39,7 @@ local function openSubFrame(id) -- we create a function which switches the frame
 end
 
 local menubar = main:addMenubar():setScrollable() -- we create a menubar in our main frame.
-    :setSize("{parent.w}")
+    :setSize("parent.w")
     :onChange(function(self, val)
         openSubFrame(self:getItemIndex()) -- here we open the sub frame based on the table index
     end)
@@ -78,23 +78,23 @@ local main = basalt.createFrame():setTheme({FrameBG = colors.lightGray, FrameFG 
 
 --[[ 
 Here we create the sidebar, on focus it should change the position to parent.w - (self.w-1) which "opens the frame"
-when the focus gets lost we simply change the position to "{parent.w}"
+when the focus gets lost we simply change the position to "parent.w"
 As you can see we add :setZIndex(25) - this makes sure the sidebar frame is always more important than our normal sub frames.
 :setScrollable just makes the sidebar frame scrollable (in case you're adding more frames)
 ]]
-local sidebar = main:addFrame():setBackground(colors.gray):setPosition("{parent.w}", 1):setSize(15, "{parent.h}"):setZIndex(25):setScrollable()
+local sidebar = main:addFrame():setBackground(colors.gray):setPosition("parent.w", 1):setSize(15, "parent.h"):setZIndex(25):setScrollable()
 :onGetFocus(function(self)
-    self:setPosition("{parent.w - (self.w-1)}")
+    self:setPosition("parent.w - (self.w-1)")
 end)
 :onLoseFocus(function(self)
-    self:setPosition("{parent.w}")
+    self:setPosition("parent.w")
 end)
 
 -- Once again we add 3 frames, the first one should be immediatly visible
 local sub = {
-    main:addFrame():setPosition(1, 1):setSize("{parent.w}", "{parent.h}"),
-    main:addFrame():setPosition(1, 1):setSize("{parent.w}", "{parent.h}"):hide(),
-    main:addFrame():setPosition(1, 1):setSize("{parent.w}", "{parent.h}"):hide(),
+    main:addFrame():setPosition(1, 1):setSize("parent.w", "parent.h"),
+    main:addFrame():setPosition(1, 1):setSize("parent.w", "parent.h"):hide(),
+    main:addFrame():setPosition(1, 1):setSize("parent.w", "parent.h"):hide(),
 }
 
 --This part of the code adds buttons based on the sub table.
@@ -103,7 +103,7 @@ for k,v in pairs(sub)do
     sidebar:addButton():setText("Example "..k) -- creating the button and adding a name k is just the index
     :setBackground(colors.black)
     :setForeground(colors.lightGray)
-    :setSize("{parent.w - 2}", 3)
+    :setSize("parent.w - 2", 3)
     :setPosition(2, y)
     :onClick(function() -- here we create a on click event which hides ALL sub frames and then shows the one which is linked to the button
         for a, b in pairs(sub)do
@@ -153,13 +153,13 @@ local function openProgram(path, title, x, y, w, h)
         :setPosition(x or math.random(2, 12), y or math.random(2, 8))
 
     f:addLabel()
-        :setSize("{parent.w}", 1)
+        :setSize("parent.w", 1)
         :setBackground(colors.black)
         :setForeground(colors.lightGray)
         :setText(title or "New Program")
 
     f:addProgram()
-        :setSize("{parent.w-1}", "{parent.h - 2}")
+        :setSize("parent.w-1", "parent.h - 2")
         :setPosition(1, 2)
         :execute(path or "rom/programs/shell.lua")
 
@@ -168,7 +168,7 @@ local function openProgram(path, title, x, y, w, h)
         :setText("X")
         :setBackground(colors.black)
         :setForeground(colors.red)
-        :setPosition("{parent.w-1}", 1)
+        :setPosition("parent.w-1", 1)
         :onClick(function()
             f:remove()
             processes[pId] = nil
@@ -179,7 +179,7 @@ end
 
 openProgram("rom/programs/fun/worm.lua")
 
-main:addButton():setPosition("{parent.w - 16}", 2):setText("Open"):onClick(function()
+main:addButton():setPosition("parent.w - 16", 2):setText("Open"):onClick(function()
     openProgram()
 end)
 
@@ -215,7 +215,7 @@ local function makeResizeable(frame, minW, minH, maxW, maxH)
     maxW = maxW or 99
     maxH = maxH or 99
     local btn = frame:addButton()
-        :setPosition("{parent.w-1}", "{parent.h-1}")
+        :setPosition("parent.w-1", "parent.h-1")
         :setSize(1, 1)
         :setText("/")
         :setForeground(colors.blue)
