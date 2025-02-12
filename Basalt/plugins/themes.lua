@@ -88,7 +88,7 @@ plugin[v] = function(base, name, basalt)
                 if(base.init(self))then
                     local parent = self:getParent() or self
                     self:setBackground(parent:getTheme(v.."BG"))
-                    self:setForeground(parent:getTheme(v.."Text"))      
+                    self:setForeground(parent:getTheme(v.."Text"))
                 end
             end
         }

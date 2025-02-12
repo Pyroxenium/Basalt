@@ -78,7 +78,7 @@ local getObject = function(objectName)
     return getObjects()[objectName]
 end
 
-local createObject = function(basalt, objectName, id)
+local createObject = function(objectName, id)
     return getObject(objectName)(id, basalt)
 end
 

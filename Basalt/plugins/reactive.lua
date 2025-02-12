@@ -100,7 +100,7 @@ end
 
 return {
     basalt = function(basalt)
-        local createObjectsFromXMLNode = function(node, env)
+        local function createObjectsFromXMLNode(node, env)
             local layout = env[node.tag]
             if (layout ~= nil) then
                 local props = {}
@@ -109,12 +109,20 @@ return {
                 end
                 return basalt.createObjectsFromLayout(layout, props)
             end
-        
             local objectName = node.tag:gsub("^%l", string.upper)
-            local object = basalt:createObject(objectName, node.attributes["id"])
+            local object = basalt.createObject(objectName, node.attributes["id"])
             for attribute, expression in pairs(node.attributes) do
                 if (attribute:sub(1, 2) == "on") then
-                    registerFunctionEvent(object, object[attribute], expression .. "()", env)
+                    object[attribute](object, function(...)
+                        local basaltCallback = basalt.getVariable(expression:gsub("\"", ""):gsub("\'", ""))
+                        if(basaltCallback ~= nil) then
+                            basaltCallback()
+                        elseif(env[expression] ~= nil) then
+                            env[expression]()
+                        else
+                            registerFunctionEvent(object, object[attribute], expression .. "()", env)
+                        end
+                    end)
                 else
                     local update = function()
                         local value = load("return " .. expression, nil, "t", env)()
@@ -124,7 +132,7 @@ return {
                 end
             end
             for _, child in ipairs(node.children) do
-                local childObjects = basalt.createObjectsFromXMLNode(child, env)
+                local childObjects = createObjectsFromXMLNode(child, env)
                 for _, childObject in ipairs(childObjects) do
                     object:addChild(childObject)
                 end
@@ -159,6 +167,9 @@ return {
                 end
                 setmetatable(env.props, {
                     __index = function(_, k)
+                        if(updateFns[k] == nil) then
+                            error("Property " .. k .. " not found")
+                        end
                         return updateFns[k]()
                     end
                 })
