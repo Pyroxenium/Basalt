@@ -515,6 +515,9 @@ basalt = {
     
     stop = stop,
     stopUpdate = stop,
+    getTerm = function()
+        return baseTerm
+    end,
     
     isKeyDown = function(key)
         if(activeKey[key]==nil)then return false end
