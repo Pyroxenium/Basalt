@@ -6,11 +6,11 @@ The Release version provides a specific, stable version of Basalt. Use this vers
 
 To download the Release version, use the following command:
 
-`wget run https://basalt.madefor.cc/install.lua release [remote_filename] [local_filename]`
+`wget run https://raw.githubusercontent.com/Pyroxenium/Basalt/refs/heads/master/docs/install.lua release [remote_filename] [local_filename]`
 
 In most cases, you'll likely want to use:
 
-`wget run https://basalt.madefor.cc/install.lua release latest.lua`
+`wget run https://raw.githubusercontent.com/Pyroxenium/Basalt/refs/heads/master/docs/install.lua release latest.lua`
 
 - `remote_filename`: The file name of the Basalt release you want to download (e.g., basalt-1.6.6.lua, latest.lua).
 - `local_filename` (optional): The file name for the Basalt installation on your local system (e.g., basalt.lua).
@@ -23,7 +23,7 @@ The Minified/Packed version is a compressed version of the Basalt code directly 
 
 To download the Minified/Packed version, use the following command:
 
-`wget run https://basalt.madefor.cc/install.lua packed [filename] [branch]`
+`wget run https://raw.githubusercontent.com/Pyroxenium/Basalt/refs/heads/master/docs/install.lua packed [filename] [branch]`
 
 - `filename` (optional): The file name for the Basalt installation (default: `basalt.lua`).
 - `branch` (optional): Choose between `master` and `dev` branches (default: `master`).
@@ -34,7 +34,7 @@ The Source version, as the name suggests, contains the unmodified source code of
 
 To download the Source version, use the following command:
 
-`wget run https://basalt.madefor.cc/install.lua source [foldername] [branch]`
+`wget run https://raw.githubusercontent.com/Pyroxenium/Basalt/refs/heads/master/docs/install.lua source [foldername] [branch]`
 
 - `foldername` (optional): The folder name for the Basalt installation (default: `basalt`).
 - `branch` (optional): Choose between `master` and `dev` branches (default: `master`).
@@ -45,7 +45,7 @@ The Web version is designed for minimal project size and fetches the required co
 
 To download the Web version, use the following command:
 
-`wget run https://basalt.madefor.cc/install.lua web [version] [filename]`
+`wget run https://raw.githubusercontent.com/Pyroxenium/Basalt/refs/heads/master/docs/install.lua web [version] [filename]`
 
 - `version` (optional): Specify the desired version of Basalt (default: latest version). [Click here](https://github.com/Pyroxenium/Basalt/tree/master/docs/versions) to see the available versions.
 - `filename` (optional): The file name for the Basalt installation (default: `basaltWeb.lua`).
