@@ -207,6 +207,24 @@ return {
                     self:addChild(object)
                 end
                 return self
+            end,
+
+            loadLayoutFromString = function(self, xmlContent, props)
+                local wrappedProps = {}
+                if (props == nil) then
+                    props = {}
+                end
+                for prop, value in pairs(props) do
+                    wrappedProps[prop] = function()
+                        return value
+                    end
+                end
+                local layout = Layout.fromXML(xmlContent)
+                local objects = basalt.createObjectsFromLayout(layout, wrappedProps)
+                for _, object in ipairs(objects) do
+                    self:addChild(object)
+                end
+                return self
             end
         }
         return object
